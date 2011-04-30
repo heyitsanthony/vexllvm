@@ -95,9 +95,9 @@ private:
 class VexExprLoad : public VexExpr
 {
 public:
-	VexExprLoad(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent, expr) {}
-	virtual ~VexExprLoad(void) {}
+	VexExprLoad(VexStmt* in_parent, const IRExpr* expr);
+	virtual ~VexExprLoad(void);
+	virtual llvm::Value* emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
       /* A load from memory -- a normal load, not a load-linked.
@@ -106,11 +106,9 @@ private:
          are not semantically valid const IRExpr's.
          ppconst IRExpr output: LD<end>:<ty>(<addr>), eg. LDle:I32(t1)
       */
-      struct {
-         IREndness end;    /* Endian-ness of the load */
-         IRType    ty;     /* Type of the loaded value */
-         const IRExpr*   addr;   /* Address being loaded from */
-      } Load;
+	bool	little_endian;
+	IRType	ty;	/* Type of the loaded value */
+	VexExpr	*addr;
 };
 
 class VexExprConst : public VexExpr
@@ -120,6 +118,7 @@ public:
 	virtual void print(std::ostream& os) const = 0;
 	static VexExprConst* createConst(
 		VexStmt* in_parent, const IRExpr* expr);
+	virtual uint64_t toValue(void) const = 0;
 protected:
 	VexExprConst(VexStmt* in_parent, const IRExpr* expr)
 	: VexExpr(in_parent, expr) {}
@@ -137,6 +136,7 @@ public:	\
 	x(expr->Iex.Const.con->Ico.x) {}	\
 	void print(std::ostream& os) const { os << x << ":" #x; } \
 	llvm::Value* emit(void) const;		\
+	virtual uint64_t toValue(void) const { return x; }	\
 private:					\
 	y	x;				\
 }

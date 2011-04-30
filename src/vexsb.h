@@ -12,6 +12,8 @@ extern "C" {
 #include "collection.h"
 
 class VexStmt;
+class VexStmtIMark;
+class VexExpr;
 
 namespace llvm
 {
@@ -33,14 +35,23 @@ public:
 	void printRegisters(std::ostream& os) const;
 	static unsigned int getTypeBitWidth(IRType ty);
 	static const char* getTypeStr(IRType ty);
+	uint64_t getJmp(void) const;
+	uint64_t getEndAddr(void) const;
+	bool fallsThrough(void) const;
 private:
 	void loadBitWidths(const IRTypeEnv* tyenv);
 	void loadInstructions(const IRSB* irsb);
+	void loadJump(const IRSB* irsb);
+
 	VexStmt* loadNextInstruction(const IRStmt* stmt);
+
+	IRJumpKind		jump_kind;
+	VexExpr			*jump_expr;
 	uint64_t		guest_addr;
 	unsigned int		reg_c;
 	unsigned int		*reg_bitwidth;
 	unsigned int		stmt_c;
+	VexStmtIMark		*last_imark;
 	PtrList<VexStmt>	stmts;
 	llvm::Value		**values;
 };

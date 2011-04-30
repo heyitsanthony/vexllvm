@@ -8,6 +8,7 @@
 
 #include "vexsb.h"
 #include "vexstmt.h"
+#include "vexexpr.h"
 
 using namespace llvm;
 
@@ -23,6 +24,7 @@ VexSB::VexSB(uint64_t in_guest_addr, const IRSB* irsb)
 
 	loadBitWidths(irsb->tyenv);
 	loadInstructions(irsb);
+	loadJump(irsb);
 }
 
 VexSB::~VexSB(void)
@@ -146,9 +148,16 @@ VexStmt* VexSB::loadNextInstruction(const IRStmt* stmt)
 
 void VexSB::loadInstructions(const IRSB* irsb)
 {
-	for (unsigned int i = 0; i < getNumStmts(); i++)
-		stmts.push_back(
-			loadNextInstruction(irsb->stmts[i]));
+	for (unsigned int i = 0; i < getNumStmts(); i++) {
+		VexStmt		*stmt;
+		VexStmtIMark	*imark;
+
+		stmt = loadNextInstruction(irsb->stmts[i]);
+		stmts.push_back(stmt);
+
+		imark = dynamic_cast<VexStmtIMark*>(stmt);
+		if (imark != NULL) last_imark = imark;
+	}
 }
 
 void VexSB::setRegValue(unsigned int reg_idx, Value* v)
@@ -163,3 +172,40 @@ Value* VexSB::getRegValue(unsigned int reg_idx) const
 	return values[reg_idx];
 }
 
+void VexSB::loadJump(const IRSB* irsb)
+{
+	jump_kind = irsb->jumpkind;
+	switch(irsb->jumpkind) {
+	case Ijk_Call:
+	case Ijk_Ret:
+	case Ijk_Boring:
+	case Ijk_NoRedir:
+		jump_expr = VexExpr::create(stmts.back(), irsb->next);
+		break;
+	default:
+		fprintf(stderr, "UNKNOWN JUMP TYPE %x\n", irsb->jumpkind);
+		assert(0 == 1 && "BAD JUMP");
+	}
+}
+
+uint64_t VexSB::getJmp(void) const
+{
+	VexExprConst	*cexpr;
+
+	cexpr = dynamic_cast<VexExprConst*>(jump_expr);
+	if (cexpr == NULL) return 0;
+
+	return cexpr->toValue();
+}
+
+uint64_t VexSB::getEndAddr(void) const
+{
+	assert (last_imark != NULL);
+	return last_imark->getAddr() + last_imark->getLen();
+}
+
+bool VexSB::fallsThrough(void) const
+{
+	if (jump_kind == Ijk_Call) return true;
+	return false;
+}

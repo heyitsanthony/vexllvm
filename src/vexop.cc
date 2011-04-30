@@ -212,6 +212,13 @@ Value* VexExprBinopSub64::emit(void) const
 	return (theGenLLVM->getBuilder())->CreateSub(v1, v2);
 }
 
+Value* VexExprBinopAnd64::emit(void) const
+{
+	Value	*v1, *v2;
+	v1 = args[0]->emit();
+	v2 = args[1]->emit();
+	return (theGenLLVM->getBuilder())->CreateAnd(v1, v2);
+}
 
 Value* VexExprUnop32Uto64::emit(void) const
 {

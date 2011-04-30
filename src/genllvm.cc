@@ -125,3 +125,13 @@ void GenLLVM::store(llvm::Value* addr_v, llvm::Value* data_v)
 	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "storePtr");
 	builder->CreateStore(data_v, addr_ptr);
 }
+
+Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
+{
+	Type	*ptrTy;
+	Value	*addr_ptr;
+
+	ptrTy = llvm::PointerType::get(vexTy2LLVM(vex_type), 0);
+	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "loadPtr");
+	return builder->CreateLoad(addr_ptr);
+}

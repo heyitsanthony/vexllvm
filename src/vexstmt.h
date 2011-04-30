@@ -43,6 +43,8 @@ public:
 	virtual ~VexStmtIMark() {}
 	virtual void emit(void) const { /* ignore */ }
 	virtual void print(std::ostream& os) const;
+	uint64_t getAddr(void) const { return guest_addr; }
+	unsigned int getLen(void) const { return guest_op_len; }
 private:
 	uint64_t	guest_addr;
 	unsigned int	guest_op_len;
@@ -70,7 +72,6 @@ private:
 	int	offset; /* Offset into the guest state */
 	VexExpr	*data_expr; /* The value to write */
 };
-
 
 /* Write a guest register, at a non-fixed offset in the guest
  state.  See the comment for GetI expressions for more

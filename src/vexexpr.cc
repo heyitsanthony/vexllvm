@@ -43,6 +43,7 @@ VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 return new VexExprBinop##x(in_parent, expr);
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
+	BINOP_TAGOP(And64);
 	BINOP_TAGOP(Add64);
 	BINOP_TAGOP(Sub64);
 	UNOP_TAGOP(32Uto64);
@@ -161,7 +162,34 @@ void VexExprNaryOp::print(std::ostream& os) const
 	os << ")";
 }
 
-void VexExprLoad::print(std::ostream& os) const { os << "Load"; }
+VexExprLoad::VexExprLoad(VexStmt* in_parent, const IRExpr* expr)
+: VexExpr(in_parent, expr)
+{
+	little_endian = expr->Iex.Load.end == Iend_LE;
+	assert (little_endian);
+
+	ty = expr->Iex.Load.ty;
+	addr = VexExpr::create(in_parent, expr->Iex.Load.addr);
+}
+
+VexExprLoad::~VexExprLoad(void)
+{
+	delete addr;
+}
+
+llvm::Value* VexExprLoad::emit(void) const
+{
+	llvm::Value	*addr_expr;
+	addr_expr = addr->emit();
+	return theGenLLVM->load(addr_expr, ty);
+}
+
+void VexExprLoad::print(std::ostream& os) const
+{
+	os << "Load(";
+	addr->print(os);
+	os << "):" << VexSB::getTypeStr(ty); 
+}
 void VexExprCCall::print(std::ostream& os) const { os << "CCall"; }
 void VexExprMux0X::print(std::ostream& os) const { os << "Mux0X"; }
 
