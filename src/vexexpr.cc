@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include "vexsb.h"
+#include "vexstmt.h"
 #include "vexop.h"
 
 #include "vexexpr.h"
@@ -14,11 +15,11 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 	EXPR_TAGOP(Get);
 	EXPR_TAGOP(GetI);
 	EXPR_TAGOP(RdTmp);
-	EXPR_TAGOP(Qop);
-	EXPR_TAGOP(Triop);
-	EXPR_TAGOP(Binop);
-	case Iex_Unop:
-		return VexExprUnop::createUnop(in_parent, expr);
+	case Iex_Qop:
+	case Iex_Triop:
+	case Iex_Binop:
+	case Iex_Unop: 
+	return VexExprNaryOp::createOp(in_parent, expr);
 	EXPR_TAGOP(Load);
 	case Iex_Const:
 		return VexExprConst::createConst(in_parent, expr);
@@ -27,20 +28,39 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 	EXPR_TAGOP(CCall);
 	case Iex_Binder:
 	default:
-		fprintf(stderr, "??? %d", expr->tag);
+		fprintf(stderr, "Expr: ??? %x\n", expr->tag);
 	}
 	return NULL;
 }
 
-VexExprUnop* VexExprUnop::createUnop(
-	VexStmt* in_parent, const IRExpr* expr)
+VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 {
-	switch (expr->Iex.Unop.op) {
+	IROp	op = expr->Iex.Unop.op;
+
+	/* known ops */
+	switch (op) {
+#define BINOP_TAGOP(x) case Iop_##x : \
+return new VexExprBinop##x(in_parent, expr);
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
+	BINOP_TAGOP(Add64);
+	BINOP_TAGOP(Sub64);
 	UNOP_TAGOP(32Uto64);
 	UNOP_TAGOP(64to32);
-	default: break;
+	default:
+		fprintf(stderr, "UNKNOWN OP %x\n", expr->Iex.Unop.op);
+		break;
+	}
+
+	/* unhandled ops */
+	switch (expr->tag) {
+	case Iex_Qop: return new VexExprQop(in_parent, expr);
+	case Iex_Triop: return new VexExprTriop(in_parent, expr);
+	case Iex_Binop: return new VexExprBinop(in_parent, expr);
+	case Iex_Unop: return new VexExprUnop(in_parent, expr);
+	default:
+		fprintf(stderr, "createOP but not N-OP?\n");
+		break;
 	}
 	return NULL;
 }
@@ -61,15 +81,37 @@ VexExprConst* VexExprConst::createConst(
 	CONST_TAGOP(F32i);
 	CONST_TAGOP(F64);
 	CONST_TAGOP(F64i);
-	CONST_TAGOP(V128);
+//	CONST_TAGOP(V128); TODO
+	default: break;
 	}
 	return NULL;
 }
 
+#define EMIT_CONST_INT(x,y)	\
+llvm::Value* VexExprConst##x::emit(void) const { 	\
+	return llvm::ConstantInt::get(			\
+		llvm::getGlobalContext(), llvm::APInt(y, x)); }		
+EMIT_CONST_INT(U1, 1)
+EMIT_CONST_INT(U8, 8)
+EMIT_CONST_INT(U16, 16)
+EMIT_CONST_INT(U32, 32)
+EMIT_CONST_INT(U64, 64)
+EMIT_CONST_INT(F32i, 32)
+EMIT_CONST_INT(F64i, 64)
+
+llvm::Value* VexExprConstF32::emit(void) const {
+	return llvm::ConstantFP::get(
+		llvm::getGlobalContext(),
+		llvm::APFloat(F32)); }
+
+llvm::Value* VexExprConstF64::emit(void) const {
+	return llvm::ConstantFP::get(
+		llvm::getGlobalContext(),
+		llvm::APFloat(F64)); }
+
 void VexExprGet::print(std::ostream& os) const
 {
-	os <<	"Expr: GET(" << offset << 
-		"):" << VexSB::getTypeStr(ty);
+	os << "GET(" << offset << "):" << VexSB::getTypeStr(ty);
 }
 
 void VexExprGetI::print(std::ostream& os) const { os << "GetI"; }
@@ -79,42 +121,43 @@ void VexExprRdTmp::print(std::ostream& os) const
 	os << "RdTmp(t" << tmp_reg << ")";
 }
 
-void VexExprQop::print(std::ostream& os) const { os << "Qop"; }
-void VexExprTriop::print(std::ostream& os) const { os << "Triop"; }
-VexExprBinop::VexExprBinop(VexStmt* in_parent, const IRExpr* expr)
-: VexExpr(in_parent, expr),
- op(expr->Iex.Binop.op),
- arg1(VexExpr::create(in_parent, expr->Iex.Binop.arg1)),
- arg2(VexExpr::create(in_parent, expr->Iex.Binop.arg2))
-{}
-VexExprBinop::~VexExprBinop(void)
+llvm::Value* VexExprRdTmp::emit(void) const
 {
-	delete arg1;
-	delete arg2;
+	const VexStmt	*stmt = getParent();
+	const VexSB	*sb = stmt->getParent();
+	return sb->getRegValue(tmp_reg);
 }
 
-void VexExprBinop::print(std::ostream& os) const
-{
-	os << getVexOpName(op) << "(";
-	arg1->print(os);
-	os << ", ";
-	arg2->print(os);
-	os << ")";
-}
-	
-VexExprUnop::VexExprUnop(VexStmt* in_parent, const IRExpr* expr)
+VexExprNaryOp::VexExprNaryOp(
+	VexStmt* in_parent, const IRExpr* expr, unsigned int in_n_ops)
 : VexExpr(in_parent, expr),
   op(expr->Iex.Unop.op),
-  arg_expr(VexExpr::create(in_parent, expr->Iex.Unop.arg))
+  n_ops(in_n_ops)
 {
+	/* HACK HACK cough */
+	const IRExpr**	ir_exprs;
+	ir_exprs = (const IRExpr**)((void*)(&expr->Iex.Unop.arg));
+
+	args = new VexExpr*[n_ops];
+	for (unsigned int i = 0; i < n_ops; i++)
+		args[i] = VexExpr::create(in_parent, ir_exprs[i]);
 }
 
-VexExprUnop::~VexExprUnop(void) { delete arg_expr; }
-
-void VexExprUnop::print(std::ostream& os) const
+VexExprNaryOp::~VexExprNaryOp()
 {
-	os << getOpName() << "(";
-	arg_expr->print(os);
+	for (unsigned int i = 0; i < n_ops; i++)
+		delete args[i];
+	delete [] args;
+}
+
+void VexExprNaryOp::print(std::ostream& os) const
+{
+	os << getVexOpName(op) << "(";
+	for (unsigned int i = 0; i < n_ops-1; i++) {
+		args[i]->print(os);
+		os << ", ";
+	}
+	args[n_ops-1]->print(os);
 	os << ")";
 }
 
@@ -128,5 +171,3 @@ llvm::Value* VexExprGet::emit(void) const
 	/* XXX should we worry about doing coercion here? */
 	return theGenLLVM->readCtx(offset);
 }
-
-

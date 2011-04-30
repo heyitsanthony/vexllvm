@@ -6,6 +6,7 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Intrinsics.h>
 
+#include <vector>
 #include <iostream>
 
 #include "gueststate.h"
@@ -18,9 +19,24 @@ using namespace llvm;
 
 GenLLVM::GenLLVM(const char* name)
 {
-	builder = new IRBuilder<>(llvm::getGlobalContext());
-	mod = new Module(name, llvm::getGlobalContext());
+	builder = new IRBuilder<>(getGlobalContext());
+	mod = new Module(name, getGlobalContext());
 	guestState = new GuestState();
+	mod->addTypeName("guestCtxTy", guestState->getTy());
+
+	ctxData = new GlobalVariable(
+		*mod,
+		guestState->getTy(),
+		false,	/* not constant */
+		GlobalVariable::InternalLinkage,
+		NULL,
+		"genllvm_ctxdata");
+	ctxData->dump();
+	std::cerr << "......." << std::endl;
+
+	std::vector<const llvm::Type*>	f_args;
+	f_args.push_back(builder->getVoidTy());
+	funcTy = FunctionType::get(builder->getVoidTy(), f_args, false);
 }
 
 GenLLVM::~GenLLVM(void)
@@ -28,6 +44,33 @@ GenLLVM::~GenLLVM(void)
 	delete guestState;
 	delete mod;
 	delete builder;
+}
+
+void GenLLVM::beginBB(const char* name)
+{
+	assert (cur_bb == NULL && "nested beginBB");
+	cur_f = Function::Create(
+		funcTy,
+		Function::ExternalLinkage,
+		name,
+		mod);
+			
+	cur_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
+	builder->SetInsertPoint(cur_bb);
+}
+
+Function* GenLLVM::endBB(void)
+{
+	Function	*ret_f;
+
+	assert (cur_bb != NULL && "ending missing bb");
+
+	/* XXX */
+	builder->CreateRetVoid();
+	ret_f = cur_f;
+	cur_f = NULL;
+	cur_bb = NULL;
+	return ret_f;
 }
 
 const Type* GenLLVM::vexTy2LLVM(IRType ty) const
@@ -54,16 +97,31 @@ Value* GenLLVM::readCtx(unsigned int byteOff)
 	Value		*ret;
 	
 	idx = guestState->byteOffset2ElemIdx(byteOff);
-
-	std::cerr << byteOff << " byteoff -> " << idx << " elem idx\n";
-	ret = builder->CreateExtractValue(
-		builder->CreateLoad(guestState->getLValue()),
-		idx);
+	ret = builder->CreateStructGEP(ctxData, idx, "readCtx");
+	ret = builder->CreateLoad(ret);
 	
 	return ret;
 }
 
 Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 {
-	assert (0 == 1 && "STUB");
+	unsigned int 	idx;
+	Value		*ret;
+	
+	idx = guestState->byteOffset2ElemIdx(byteOff);
+	ret = builder->CreateStructGEP(ctxData, idx, "readCtx");
+	ret = builder->CreateStore(v, ret);
+	
+	return ret;
+
+}
+
+void GenLLVM::store(llvm::Value* addr_v, llvm::Value* data_v)
+{
+	Type	*ptrTy;
+	Value	*addr_ptr;
+
+	ptrTy = llvm::PointerType::get(data_v->getType(), 0);
+	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "storePtr");
+	builder->CreateStore(data_v, addr_ptr);
 }

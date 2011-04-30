@@ -26,10 +26,14 @@ public:
 	virtual void print(std::ostream& os) const = 0;
 	virtual llvm::Value* emit(void) const
 	{ 
+		std::cerr << "OOPS emitting: ";
+		print(std::cerr);
+		std::cerr << "\n";
 		assert (0 == 1 && "STUB");
 		return NULL;
 	}
 	static VexExpr* create(VexStmt* in_parent, const IRExpr* expr);
+	const VexStmt* getParent(void) const { return parent; }
 protected:
 	VexExpr(VexStmt* in_parent, const IRExpr* expr)
 	: parent(in_parent) {}
@@ -78,6 +82,7 @@ public:
 	: VexExpr(in_parent, expr), tmp_reg(expr->Iex.RdTmp.tmp) {}
 	virtual ~VexExprRdTmp(void) {}
 	virtual void print(std::ostream& os) const;
+	virtual llvm::Value* emit(void) const;
 private:
       /* The value held by a temporary.
          ppconst IRExpr output: t<tmp>, eg. t1
@@ -85,86 +90,7 @@ private:
       unsigned int tmp_reg;
 };
 
-class VexExprQop : public VexExpr
-{
-public:
-	VexExprQop(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent, expr) {}
-	virtual ~VexExprQop(void) {}
-	virtual void print(std::ostream& os) const;
-private:
-      /* A quaternary operation.
-         ppconst IRExpr output: <op>(<arg1>, <arg2>, <arg3>, <arg4>),
-                      eg. MAddF64r32(t1, t2, t3, t4)
-      */
-      struct {
-         IROp op;          /* op-code   */
-         const IRExpr* arg1;     /* operand 1 */
-         const IRExpr* arg2;     /* operand 2 */
-         const IRExpr* arg3;     /* operand 3 */
-         const IRExpr* arg4;     /* operand 4 */
-      } Qop;
-};
-
-class VexExprTriop : public VexExpr
-{
-public:
-	VexExprTriop(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent, expr) {}
-	virtual ~VexExprTriop(void) {}
-	virtual void print(std::ostream& os) const;
-private:
-      /* A ternary operation.
-         ppconst IRExpr output: <op>(<arg1>, <arg2>, <arg3>),
-                      eg. MulF64(1, 2.0, 3.0)
-      */
-      struct {
-         IROp op;          /* op-code   */
-         const IRExpr* arg1;     /* operand 1 */
-         const IRExpr* arg2;     /* operand 2 */
-         const IRExpr* arg3;     /* operand 3 */
-      } Triop;
-};
-
-class VexExprBinop : public VexExpr
-{
-public:
-	VexExprBinop(VexStmt* in_parent, const IRExpr* expr);
-	virtual ~VexExprBinop(void);
-	virtual void print(std::ostream& os) const;
-private:
-	IROp op;		/* op-code   */
-	VexExpr* arg1;	/* operand 1 */
-	VexExpr* arg2;	/* operand 2 */
-};
-
-class VexExprUnop : public VexExpr
-{
-public:
-	VexExprUnop(VexStmt* in_parent, const IRExpr* expr);
-	virtual ~VexExprUnop(void);
-	virtual void print(std::ostream& os) const;
-	virtual const char* getOpName(void) const = 0;
-	static VexExprUnop* createUnop(VexStmt* in_parent, const IRExpr* expr);
-protected:
-	/* A unary operation. */
-	IROp    op;		/* op-code */
-	VexExpr	*arg_expr;	/* operand */
-};
-
-#define UNOP_CLASS(x)	\
-class VexExprUnop##x : public VexExprUnop	\
-{	\
-public:	\
-	VexExprUnop##x(VexStmt* in_parent, const IRExpr* expr)	\
-	: VexExprUnop(in_parent, expr) {}	\
-	virtual ~VexExprUnop##x() {}	\
-	virtual const char* getOpName(void) const { return #x; }	\
-private:	\
-}
-
-UNOP_CLASS(32Uto64);
-UNOP_CLASS(64to32);
+#include "vexop.h"
 
 class VexExprLoad : public VexExpr
 {
@@ -210,6 +136,7 @@ public:	\
 	: VexExprConst(in_parent, expr),	\
 	x(expr->Iex.Const.con->Ico.x) {}	\
 	void print(std::ostream& os) const { os << x << ":" #x; } \
+	llvm::Value* emit(void) const;		\
 private:					\
 	y	x;				\
 }
@@ -221,7 +148,7 @@ CONST_CLASS(U32, uint32_t);
 CONST_CLASS(U64, uint64_t);
 CONST_CLASS(F64, double);
 CONST_CLASS(F64i, uint64_t);
-CONST_CLASS(V128, uint16_t);
+//CONST_CLASS(V128, uint16_t); // TODO
 CONST_CLASS(F32, float);
 CONST_CLASS(F32i, uint32_t);
 

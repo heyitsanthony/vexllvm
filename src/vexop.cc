@@ -1,6 +1,9 @@
 #include <stdio.h>
 
+#include "genllvm.h"
 #include "vexop.h"
+
+using namespace llvm;
 
 #define CASE_OP(x)	case Iop_##x: return "Iop_"#x;
 
@@ -192,3 +195,41 @@ CASE_OP(1Sto64)	/* :: Ity_Bit -> Ity_I64, signed widen */
 	}
 	return "???Op???";
 }
+
+Value* VexExprBinopAdd64::emit(void) const
+{
+	Value	*v1, *v2;
+	v1 = args[0]->emit();
+	v2 = args[1]->emit();
+	return (theGenLLVM->getBuilder())->CreateAdd(v1, v2);
+}
+
+Value* VexExprBinopSub64::emit(void) const
+{
+	Value	*v1, *v2;
+	v1 = args[0]->emit();
+	v2 = args[1]->emit();
+	return (theGenLLVM->getBuilder())->CreateSub(v1, v2);
+}
+
+
+Value* VexExprUnop32Uto64::emit(void) const
+{
+	Value		*v1;
+	IRBuilder<>	*builder;
+
+	v1 = args[0]->emit();
+	builder = theGenLLVM->getBuilder();
+	return builder->CreateBitCast(v1, builder->getInt64Ty());
+}
+
+Value* VexExprUnop64to32::emit(void) const
+{
+	Value		*v1;
+	IRBuilder<>	*builder;
+
+	v1 = args[0]->emit();
+	builder = theGenLLVM->getBuilder();
+	return builder->CreateBitCast(v1, builder->getInt32Ty());
+}
+

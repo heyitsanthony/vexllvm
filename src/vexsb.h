@@ -27,7 +27,7 @@ public:
 	unsigned int getNumRegs(void) const { return reg_c; }
 	unsigned int getNumStmts(void) const { return stmt_c; }
 	void setRegValue(unsigned int reg_idx, llvm::Value* v);
-	const llvm::Value* getRegValue(unsigned int reg_idx) const;
+	llvm::Value* getRegValue(unsigned int reg_idx) const;
 	void emit(void);
 	void print(std::ostream& os) const;
 	void printRegisters(std::ostream& os) const;

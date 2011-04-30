@@ -36,10 +36,17 @@ public:
 	
 	llvm::Value* readCtx(unsigned int byteOff);
 	llvm::Value* writeCtx(unsigned int byteOff, llvm::Value* v);
+	void store(llvm::Value* addr, llvm::Value* data);
+	void beginBB(const char* name);
+	llvm::Function* endBB(void);
 private:
 	GuestState		*guestState;
 	llvm::IRBuilder<>*	builder;
 	llvm::Module*		mod;
+	llvm::GlobalVariable*	ctxData;
+	llvm::Function*		cur_f;
+	llvm::BasicBlock*	cur_bb;
+	const llvm::FunctionType*	funcTy;
 };
 
 extern class GenLLVM* theGenLLVM;

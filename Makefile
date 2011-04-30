@@ -30,6 +30,10 @@ bin/vex_test: $(OBJDIRDEPS)
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<
 
+obj/%.o: src/%.cc src/%.h
+	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
+
 obj/%.o: src/%.cc
 	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
+
 	

@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <llvm/DerivedTypes.h>
-#include <llvm/Support/IRBuilder.h>
+#include "genllvm.h"
 
 #include "Sugar.h"
 
@@ -102,12 +101,14 @@ void VexSB::printRegisters(std::ostream& os) const
 
 void VexSB::emit(void)
 {
-	foreach (it, stmts.begin(), stmts.end()) {
-		std::cout << "Emitting: ";
-		(*it)->print(std::cout);
-		std::cout << "\n";
+	llvm::Function* cur_f;
+
+	std::cout << "Emitting VEXSB BB" << std::endl;
+	theGenLLVM->beginBB("vexsb_f");
+	foreach (it, stmts.begin(), stmts.end())
 		(*it)->emit();
-	}
+	cur_f = theGenLLVM->endBB();
+	cur_f->dump();
 }
 
 unsigned int VexSB::getRegBitWidth(unsigned int reg_idx) const
@@ -153,11 +154,10 @@ void VexSB::loadInstructions(const IRSB* irsb)
 void VexSB::setRegValue(unsigned int reg_idx, Value* v)
 {
 	assert (values[reg_idx] == NULL);
-	v->dump();
 	values[reg_idx] = v;
 }
 
-const Value* VexSB::getRegValue(unsigned int reg_idx) const
+Value* VexSB::getRegValue(unsigned int reg_idx) const
 {
 	assert (values[reg_idx] != NULL);
 	return values[reg_idx];

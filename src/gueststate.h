@@ -19,8 +19,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 
 	GuestState();
 	virtual ~GuestState();
-	llvm::Type* getTy(void) const { return guestCtxTy; }
-	llvm::Value* getLValue(void) const { assert (0 == 1 && "STUB"); }
+	const llvm::Type* getTy(void) const { return guestCtxTy; }
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 protected:
 	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);

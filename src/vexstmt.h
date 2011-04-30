@@ -16,8 +16,9 @@ class VexStmt
 {
 public:
 	virtual ~VexStmt(void) {}
-	virtual void emit(void) const = 0;
+	virtual void emit(void) const { assert (0 == 1 && "STUB"); }
 	virtual void print(std::ostream& os) const = 0;
+	const VexSB* getParent(void) const { return parent; }
 protected:
 	VexStmt(VexSB* in_parent, const IRStmt* in_stmt)
 		: parent(in_parent) {}
@@ -30,7 +31,7 @@ public:
 	VexStmtNoOp(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtNoOp() {}
-	virtual void emit(void) const {}
+	virtual void emit(void) const { /* ignore */ }
 	virtual void print(std::ostream& os) const;
 private:
 };
@@ -40,7 +41,7 @@ class VexStmtIMark : public VexStmt
 public:
 	VexStmtIMark(VexSB* in_parent, const IRStmt* in_stmt);
 	virtual ~VexStmtIMark() {}
-	virtual void emit(void) const {}
+	virtual void emit(void) const { /* ignore */ }
 	virtual void print(std::ostream& os) const;
 private:
 	uint64_t	guest_addr;
@@ -53,7 +54,7 @@ public:
 	VexStmtAbiHint(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtAbiHint() {}
-	virtual void emit(void) const {}
+	virtual void emit(void) const { /* ignore */ }
 	virtual void print(std::ostream& os) const; 
 private:
 };
@@ -63,7 +64,7 @@ class VexStmtPut : public VexStmt
 public:
 	VexStmtPut(VexSB* in_parent, const IRStmt* in_stmt);
 	virtual ~VexStmtPut();
-	virtual void emit(void) const {}
+	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
 	int	offset; /* Offset into the guest state */
@@ -80,7 +81,6 @@ public:
 	VexStmtPutI(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtPutI() {}
-	virtual void emit(void) const {}
 	virtual void print(std::ostream& os) const;
 private:
 #if 0
@@ -108,7 +108,7 @@ class VexStmtStore : public VexStmt
 public:
 	VexStmtStore(VexSB* in_parent, const IRStmt* in_stmt);
 	virtual ~VexStmtStore();
-	virtual void emit(void) const {}
+	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
 	bool	isLE;
@@ -122,7 +122,6 @@ public:
 	VexStmtCAS(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtCAS() {}
-	virtual void emit(void) const {}
 	virtual void print(std::ostream& os) const;
 private:
 };
@@ -133,7 +132,6 @@ public:
 	VexStmtLLSC(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtLLSC() {}
-	virtual void emit(void) const {}
 	virtual void print(std::ostream& os) const;
 private:
 };
@@ -144,7 +142,6 @@ public:
 	VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtDirty() {}
-	virtual void emit(void) const {}
 	virtual void print(std::ostream& os) const;
 private:
 };
@@ -154,7 +151,6 @@ public:
 	VexStmtMBE(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtMBE() {}
-	virtual void emit(void) const {}
 	virtual void print(std::ostream& os) const;
 private:
 };
@@ -165,7 +161,6 @@ public:
 	VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtExit() {}
-	virtual void emit(void) const {}
 	virtual void print(std::ostream& os) const;
 private:
 };

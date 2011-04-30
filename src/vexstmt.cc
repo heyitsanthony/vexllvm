@@ -1,5 +1,7 @@
+#include "genllvm.h"
 #include "vexexpr.h"
 #include "vexsb.h"
+
 #include "vexstmt.h"
 
 void VexStmtNoOp::print(std::ostream& os) const { os << "NoOp"; }
@@ -25,11 +27,20 @@ VexStmtPut::VexStmtPut(VexSB* in_parent, const IRStmt* in_stmt)
 {}
 VexStmtPut::~VexStmtPut(void) { delete data_expr;}
 
+void VexStmtPut::emit(void) const
+{
+	llvm::Value	*out_v;
+	out_v = data_expr->emit();
+	theGenLLVM->writeCtx(offset, out_v);
+}
+
 void VexStmtPut::print(std::ostream& os) const
 {
 	os << "Put(" << offset << ") <- ";
 	data_expr->print(os);
 }
+
+
 void VexStmtPutI::print(std::ostream& os) const { os << "PutI"; }
 
 VexStmtWrTmp::VexStmtWrTmp(
@@ -42,7 +53,6 @@ VexStmtWrTmp::~VexStmtWrTmp(void) { delete expr; }
 
 void VexStmtWrTmp::emit(void) const
 {
-	std::cout << "HELLLLOOOOOO" << std::endl;
 	parent->setRegValue(tmp_reg, expr->emit());
 }
 
@@ -63,6 +73,15 @@ VexStmtStore::~VexStmtStore(void)
 {
 	delete addr_expr;
 	delete data_expr;
+}
+
+void VexStmtStore::emit(void) const
+{
+	llvm::Value *addr_v, *data_v;
+
+	data_v = data_expr->emit();
+	addr_v = addr_expr->emit();
+	theGenLLVM->store(addr_v, data_v);
 }
 
 void VexStmtStore::print(std::ostream& os) const
