@@ -16,6 +16,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "elfimg.h"
+
 extern "C" {
 #include <valgrind/libvex.h>
 #include <valgrind/libvex_ir.h>
@@ -51,47 +54,12 @@ IRSB* vex_final_irsb(IRSB* irsb)
 	return irsb;
 }
 
-/*
- * Taken from /bin/ls.
- * dec    %rbx
- * cmp    %rbx,%rax
- * jae    4028d5 <wcstombs@plt+0xb5>
-*/
-uint8_t test_str[]= {"\x48\xff\xcb\x48\x39\xd8\x73\x24 aaaaaaaaaaaaaaaaaaa"};
-
-/*
-4033da:       4c 89 64 24 f0          mov    %r12,-0x10(%rsp)
-4033df:       4c 89 6c 24 f8          mov    %r13,-0x8(%rsp)
-4033e4:       48 89 f5                mov    %rsi,%rbp
-4033e7:       48 83 ec 28             sub    $0x28,%rsp
-4033eb:       48 89 fb                mov    %rdi,%rbx
-4033ee:       41 89 d5                mov    %edx,%r13d
-4033f1:       bf 20 00 00 00          mov    $0x20,%edi
-4033f6:       e8 65 d4 00 00          callq  410860 <wcstombs@plt+0xe040>
-*/
-uint8_t test_str2[] = {
-"\x4c\x89\x64\x24\xf0"
-"\x4c\x89\x6c\x24\xf8"
-"\x48\x89\xf5"
-"\x48\x83\xec\x28"
-"\x48\x89\xfb"
-"\x41\x89\xd5"
-"\xbf\x20\x00\x00\x00"
-"\xe8\x65\xd4\x00\x00"
-"\xe8\x65\xd4\x00\x00"
-"\xe8\x65\xd4\x00\x00"
-"\xe8\x65\xd4\x00\x00"
-
-};
-#define TEST_STR2_ADDR 0x40223a
-
-
 VexControl		vc;
 VexArchInfo		vai_amd64;
 VexAbiInfo		vbi;
 
 static void do_xlate(
-	const uint8_t* guest_bytes, uint64_t guest_addr)
+	const void* guest_bytes, uint64_t guest_addr)
 {
 	VexTranslateArgs	vta;
 	VexGuestExtents		vge;
@@ -110,7 +78,8 @@ static void do_xlate(
 
 	vta.callback_opaque = NULL;		/* no callback yet */
 
-	vta.guest_bytes = const_cast<uint8_t*>(guest_bytes);	/* so stupid */
+	vta.guest_bytes = static_cast<uint8_t*>(
+		const_cast<void*>(guest_bytes));	/* so stupid */
 	vta.guest_bytes_addr = guest_addr; /* where guest thinks it is */
 
 	vta.chase_into_ok = vex_chase_ok;	/* not OK */
@@ -131,6 +100,29 @@ static void do_xlate(
 
 int main(int argc, char* argv[])
 {
+	ElfImg		*img;
+	hostptr_t	hostentry_pt;
+	elfptr_t	elfentry_pt;
+
+	if (argc != 2) {
+		fprintf(stderr, "Usage: %s elf_path\n", argv[0]);
+		return -1;
+	}
+
+	img = ElfImg::create(argv[1]);
+	if (img == NULL) {
+		fprintf(stderr, "%s: Could not open ELF %s\n", 
+			argv[0], argv[1]);
+		return -2;
+	}
+
+
+	elfentry_pt = img->getEntryPoint();
+	hostentry_pt = img->xlateAddr(elfentry_pt);
+
+	std::cout << "ELFENT: " <<  elfentry_pt << std::endl;
+	std::cout << "XLATE: " << hostentry_pt << std::endl;
+
 	LibVEX_default_VexControl(&vc);
 	LibVEX_Init(vex_exit, vex_log, VEX_DEBUG_LEVEL, false, &vc);
 
@@ -140,7 +132,7 @@ int main(int argc, char* argv[])
 
 	theGenLLVM = new GenLLVM();
 
-	do_xlate(test_str2, TEST_STR2_ADDR);
+	do_xlate(hostentry_pt, (uint64_t)elfentry_pt);
 
 	printf("LLVEX.\n");
 
