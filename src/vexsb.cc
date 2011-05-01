@@ -104,12 +104,17 @@ void VexSB::printRegisters(std::ostream& os) const
 void VexSB::emit(void)
 {
 	llvm::Function* cur_f;
+	llvm::Value*	ret_v;
 
 	std::cout << "Emitting VEXSB BB" << std::endl;
 	theGenLLVM->beginBB("vexsb_f");
-	foreach (it, stmts.begin(), stmts.end())
-		(*it)->emit();
-	cur_f = theGenLLVM->endBB();
+	/* instructions */
+	foreach (it, stmts.begin(), stmts.end()) (*it)->emit();
+	/* compute goto */
+	ret_v = jump_expr->emit();
+	/* return goto */
+	cur_f = theGenLLVM->endBB(ret_v);
+
 	cur_f->dump();
 }
 

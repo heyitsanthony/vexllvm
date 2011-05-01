@@ -97,6 +97,8 @@ bool ElfImg::verifyHeader(void) const
 		return false;
 	}
 
+	/* Kind of slutty. Bad data will kill us.
+	 * Add validation tests or just don't care? */
 	return true;
 }
 

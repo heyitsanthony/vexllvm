@@ -39,7 +39,7 @@ public:
 	void store(llvm::Value* addr, llvm::Value* data);
 	llvm::Value* load(llvm::Value* addr_v, IRType vex_type);
 	void beginBB(const char* name);
-	llvm::Function* endBB(void);
+	llvm::Function* endBB(llvm::Value*);
 private:
 	void mkFuncTy(void);
 

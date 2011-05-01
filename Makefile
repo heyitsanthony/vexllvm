@@ -1,6 +1,7 @@
 CFLAGS=-g
 
-OBJDEPS=	vexstmt.o	\
+OBJDEPS=	vexxlate.o	\
+		vexstmt.o	\
 		vexsb.o		\
 		vexexpr.o	\
 		vexop.o		\

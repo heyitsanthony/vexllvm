@@ -57,14 +57,15 @@ void GenLLVM::beginBB(const char* name)
 	builder->SetInsertPoint(cur_bb);
 }
 
-Function* GenLLVM::endBB(void)
+Function* GenLLVM::endBB(Value* retVal)
 {
 	Function	*ret_f;
 
 	assert (cur_bb != NULL && "ending missing bb");
 
-	/* XXX */
-	builder->CreateRetVoid();
+	/* FIXME. Should return next addr to jump to */
+	builder->CreateRet(retVal);
+
 	ret_f = cur_f;
 	cur_f = NULL;
 	cur_bb = NULL;
@@ -134,9 +135,14 @@ Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
 	return builder->CreateLoad(addr_ptr);
 }
 
+/* llvm-ized VexSB functions take form of 
+ * guestaddr_t f(gueststate*) {  ...bullshit...; return ctrl_xfer_addr; } */
 void GenLLVM::mkFuncTy(void)
 {
 	std::vector<const llvm::Type*>	f_args;
-	f_args.push_back(guestState->getTy());
-	funcTy = FunctionType::get(builder->getVoidTy(), f_args, false);
+	f_args.push_back(llvm::PointerType::get(guestState->getTy(), 0));
+	funcTy = FunctionType::get(
+		builder->getInt64Ty(),
+		f_args,
+		false);
 }
