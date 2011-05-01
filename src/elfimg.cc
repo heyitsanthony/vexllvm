@@ -47,6 +47,7 @@ ElfImg::ElfImg(const char* fname)
 	if (!verifyHeader()) goto err_hdr;
 
 	setupSegments();
+	applyRelocs();
 
 	/* OK. */
 	return;
@@ -114,4 +115,33 @@ hostptr_t ElfImg::xlateAddr(elfptr_t elfptr) const
 
 	/* failed to xlate */
 	return 0;
+}
+
+
+/* cycle through, apply relocs */
+void ElfImg::applyRelocs(void)
+{
+	Elf64_Shdr	*shdr;
+
+	shdr = (Elf64_Shdr*)(((uintptr_t)img_mmap)+ hdr->e_shoff);
+	for (int i = 0; i < hdr->e_shnum; i++) {
+		if (shdr[i].sh_type == SHT_RELA) 
+			fprintf(stderr, "WARNING: Not relocating RELA '%s'\n",
+				getString(shdr[i].sh_name));
+		if (shdr[i].sh_type == SHT_REL)
+			fprintf(stderr, "WARNING: Not relocating REL '%s'\n",
+				getString(shdr[i].sh_name));
+	}
+}
+
+const char* ElfImg::getString(unsigned int stroff) const
+{
+	Elf64_Shdr	*shdr;
+	const char	*strtab;
+
+	shdr = (Elf64_Shdr*)(((uintptr_t)img_mmap)+ hdr->e_shoff);
+	assert (shdr[hdr->e_shstrndx].sh_type == SHT_STRTAB);
+	strtab = (const char*)((
+		(uintptr_t)img_mmap)+shdr[hdr->e_shstrndx].sh_offset); 
+	return &strtab[stroff];
 }

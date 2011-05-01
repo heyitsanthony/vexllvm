@@ -24,16 +24,6 @@ GenLLVM::GenLLVM(const char* name)
 	guestState = new GuestState();
 	mod->addTypeName("guestCtxTy", guestState->getTy());
 
-	ctxData = new GlobalVariable(
-		*mod,
-		guestState->getTy(),
-		false,	/* not constant */
-		GlobalVariable::InternalLinkage,
-		NULL,
-		"genllvm_ctxdata");
-	ctxData->dump();
-	std::cerr << "......." << std::endl;
-
 	mkFuncTy();
 }
 
@@ -55,6 +45,7 @@ void GenLLVM::beginBB(const char* name)
 			
 	cur_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
 	builder->SetInsertPoint(cur_bb);
+	cur_guest_ctx = cur_f->arg_begin();
 }
 
 Function* GenLLVM::endBB(Value* retVal)
@@ -69,6 +60,7 @@ Function* GenLLVM::endBB(Value* retVal)
 	ret_f = cur_f;
 	cur_f = NULL;
 	cur_bb = NULL;
+	cur_guest_ctx = NULL;
 	return ret_f;
 }
 
@@ -96,7 +88,7 @@ Value* GenLLVM::readCtx(unsigned int byteOff)
 	Value		*ret;
 	
 	idx = guestState->byteOffset2ElemIdx(byteOff);
-	ret = builder->CreateStructGEP(ctxData, idx, "readCtx");
+	ret = builder->CreateStructGEP(cur_guest_ctx, idx, "readCtx");
 	ret = builder->CreateLoad(ret);
 	
 	return ret;
@@ -108,11 +100,10 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 	Value		*ret;
 	
 	idx = guestState->byteOffset2ElemIdx(byteOff);
-	ret = builder->CreateStructGEP(ctxData, idx, "readCtx");
+	ret = builder->CreateStructGEP(cur_guest_ctx, idx, "readCtx");
 	ret = builder->CreateStore(v, ret);
 	
 	return ret;
-
 }
 
 void GenLLVM::store(llvm::Value* addr_v, llvm::Value* data_v)

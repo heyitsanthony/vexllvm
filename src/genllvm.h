@@ -46,10 +46,13 @@ private:
 	GuestState		*guestState;
 	llvm::IRBuilder<>*	builder;
 	llvm::Module*		mod;
-	llvm::GlobalVariable*	ctxData;
+	const llvm::FunctionType*	funcTy;
+
+	/* current state data */
+	llvm::Value*		cur_guest_ctx;
 	llvm::Function*		cur_f;
 	llvm::BasicBlock*	cur_bb;
-	const llvm::FunctionType*	funcTy;
+
 };
 
 extern class GenLLVM* theGenLLVM;

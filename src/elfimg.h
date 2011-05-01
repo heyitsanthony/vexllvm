@@ -23,6 +23,8 @@ private:
 	ElfImg(const char* fname);
 	bool verifyHeader(void) const;
 	void setupSegments(void);
+	void applyRelocs(void);
+	const char* getString(unsigned int stroff) const;
 
 	PtrList<ElfSegment>	segments;
 	void			*img_mmap;
