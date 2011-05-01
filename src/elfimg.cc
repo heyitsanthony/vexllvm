@@ -7,7 +7,9 @@
 #include <unistd.h>
 #include <stdint.h>
 
+#include "Sugar.h"
 #include "elfimg.h"
+#include "elfsegment.h"
 
 ElfImg* ElfImg::create(const char* fname)
 {
@@ -58,27 +60,18 @@ err_open:
 	return;
 }
 
+/* TODO: do mmapping here */
 void ElfImg::setupSegments(void)
 {
 	Elf64_Phdr	*phdr;
 
 	phdr = (Elf64_Phdr*)(((char*)hdr) + hdr->e_phoff);
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
-		struct elf_ptrmap	epm;
-
-		if (phdr[i].p_type != PT_LOAD) continue;
-
-		/* FIXME might cause trouble if expecting 0's */
-		if (phdr[i].p_memsz != phdr[i].p_filesz) {
-			fprintf(stderr, 
-				"WARNING: PHDR[%d] memsz != filesz\n",
-				i);
-		}
-
-		epm.epm_elfbase = (void*)phdr[i].p_vaddr;
-		epm.epm_hostbase = (void*)(((char*)img_mmap)+phdr[i].p_offset);
-		epm.epm_len = phdr[i].p_memsz;
-		segments.push_back(epm);
+		ElfSegment	*es;
+		
+		es = ElfSegment::load(fd, phdr[i]);
+		if (!es) continue;
+		segments.push_back(es);
 	}
 }
 
@@ -109,19 +102,12 @@ bool ElfImg::verifyHeader(void) const
 
 hostptr_t ElfImg::xlateAddr(elfptr_t elfptr) const
 {
-	uintptr_t	elfptr_i = (uintptr_t)elfptr;
+	foreach (it, segments.begin(), segments.end()) {
+		ElfSegment	*es = *it;
+		hostptr_t	ret;
 
-	for (unsigned int i = 0; i < segments.size(); i++) {
-		uintptr_t	seg_base = (uintptr_t)segments[i].epm_elfbase;
-		unsigned int	seg_len = segments[i].epm_len;
-		uintptr_t	off;
-
-		if ((seg_base > elfptr_i) || ((seg_base + seg_len) < elfptr_i))
-			continue;
-
-		assert (elfptr_i >= seg_base);
-		off = elfptr_i - seg_base;
-		return (void*)(off + (uintptr_t)segments[i].epm_hostbase);
+		ret = es->xlate(elfptr);
+		if (ret) return ret;
 	}
 
 	/* failed to xlate */

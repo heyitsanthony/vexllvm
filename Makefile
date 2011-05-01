@@ -9,6 +9,7 @@ OBJDEPS=	vexstmt.o	\
 		vex_dispatch.o
 
 ELFDEPS=	elfimg.o	\
+		elfsegment.o	\
 		elf_main.o
 
 

@@ -4,16 +4,12 @@
 #include <elf.h>
 #include <stdio.h>
 
-#include <vector>
+#include "collection.h"
 
 typedef void* hostptr_t;
 typedef void* elfptr_t;
 
-typedef struct elf_ptrmap {
-	elfptr_t	epm_elfbase;
-	hostptr_t	epm_hostbase;
-	unsigned int	epm_len;
-} elf_ptrmap;
+class ElfSegment;
 
 class ElfImg
 {
@@ -28,7 +24,7 @@ private:
 	bool verifyHeader(void) const;
 	void setupSegments(void);
 
-	std::vector<elf_ptrmap>	segments;
+	PtrList<ElfSegment>	segments;
 	void			*img_mmap;
 	unsigned int		img_bytes_c;
 	int			fd;

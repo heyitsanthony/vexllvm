@@ -34,9 +34,7 @@ GenLLVM::GenLLVM(const char* name)
 	ctxData->dump();
 	std::cerr << "......." << std::endl;
 
-	std::vector<const llvm::Type*>	f_args;
-	f_args.push_back(builder->getVoidTy());
-	funcTy = FunctionType::get(builder->getVoidTy(), f_args, false);
+	mkFuncTy();
 }
 
 GenLLVM::~GenLLVM(void)
@@ -134,4 +132,11 @@ Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
 	ptrTy = llvm::PointerType::get(vexTy2LLVM(vex_type), 0);
 	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "loadPtr");
 	return builder->CreateLoad(addr_ptr);
+}
+
+void GenLLVM::mkFuncTy(void)
+{
+	std::vector<const llvm::Type*>	f_args;
+	f_args.push_back(guestState->getTy());
+	funcTy = FunctionType::get(builder->getVoidTy(), f_args, false);
 }

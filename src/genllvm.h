@@ -41,6 +41,8 @@ public:
 	void beginBB(const char* name);
 	llvm::Function* endBB(void);
 private:
+	void mkFuncTy(void);
+
 	GuestState		*guestState;
 	llvm::IRBuilder<>*	builder;
 	llvm::Module*		mod;
