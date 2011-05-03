@@ -22,12 +22,6 @@ ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr)
 			(void*)phdr.p_vaddr);
 	}
 	
-	if (phdr.p_flags & PF_W) {
-		fprintf(stderr, 
-			"WARNING: PHDR@%p is writable.\n",
-			(void*)phdr.p_vaddr);
-	}
-
 	return new ElfSegment(fd, phdr);
 }
 
@@ -36,6 +30,7 @@ ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr)
 ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
 {
 	off_t	file_off_pgbase, file_off_pgoff;
+	int	prot, flags;
 
 	es_len = phdr.p_memsz;
 
@@ -43,12 +38,11 @@ ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
 	file_off_pgbase = page_base(phdr.p_offset);
 	file_off_pgoff = page_off(phdr.p_offset);
 
-	/* FIXME must support writable segments */
-	es_mmapbase = mmap(
-		NULL, es_len, PROT_READ, MAP_SHARED, fd, 
-		file_off_pgbase);
+	prot = PROT_READ;
+	if (phdr.p_flags & PF_W) prot |= PROT_WRITE;
+	flags = (prot & PROT_WRITE) ? MAP_PRIVATE : MAP_SHARED;
+	es_mmapbase = mmap(NULL, es_len, prot, flags, fd, file_off_pgbase);
 	assert (es_mmapbase != MAP_FAILED);
-
 	
 	/* declare guest-visible mapping */
 	es_elfbase = (void*)phdr.p_vaddr;

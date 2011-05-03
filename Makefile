@@ -10,6 +10,7 @@ OBJDEPS=	vexxlate.o	\
 		vex_dispatch.o
 
 ELFDEPS=	elfimg.o	\
+		dllib.o		\
 		elfsegment.o	\
 		elf_main.o
 
@@ -31,10 +32,10 @@ clean:
 	rm -f obj/* bin/*
 
 bin/vex_test: $(OBJDIRDEPS) obj/vex_test.o
-	g++ $(CFLAGS)  $^ $(VEXLIB) $(LLVMFLAGS) -o $@
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@
 
 bin/elf_test: $(OBJDIRDEPS) $(ELFDIRDEPS)
-	g++ $(CFLAGS)  $^ $(VEXLIB) $(LLVMFLAGS) -o $@
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<

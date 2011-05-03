@@ -8,8 +8,13 @@
 #include <stdint.h>
 
 #include "Sugar.h"
+#include "dllib.h"
 #include "elfimg.h"
 #include "elfsegment.h"
+
+#include <vector>
+
+#define WARNING(x)	fprintf(stderr, "WARNING: "x)
 
 ElfImg* ElfImg::create(const char* fname)
 {
@@ -43,14 +48,18 @@ ElfImg::ElfImg(const char* fname)
 	if (img_mmap == MAP_FAILED) goto err_mmap;
 
 	hdr = (Elf64_Ehdr*)img_mmap;
+	shdr_tab = (Elf64_Shdr*)(((uintptr_t)img_mmap)+ hdr->e_shoff);
 
 	if (!verifyHeader()) goto err_hdr;
 
 	setupSegments();
+	loadDyn();
+
 	applyRelocs();
 
 	/* OK. */
 	return;
+	/* ERR */
 err_hdr:
 	munmap(img_mmap, img_bytes_c);
 err_mmap:
@@ -117,31 +126,227 @@ hostptr_t ElfImg::xlateAddr(elfptr_t elfptr) const
 	return 0;
 }
 
+void ElfImg::applyRelaSection(const Elf64_Shdr& shdr)
+{
+	const Elf64_Rela	*rela;
+	unsigned int		rela_c;
+
+	rela_c = getSectElems(&shdr);
+	rela = (const Elf64_Rela*)getSectPtr(&shdr);
+
+	for (unsigned int i = 0; i < rela_c; i++)
+		applyRela(rela[i]);
+}
+
+void ElfImg::applyRela(const Elf64_Rela& rela)
+{
+	hostptr_t	hostptr;
+	int		r_sym;
+	int		r_type;
+	const Elf64_Sym	*dynsym;
+	const char	*symname;
+	Elf64_Xword	st_value;
+
+	hostptr = xlateAddr((elfptr_t)rela.r_offset);
+	if (hostptr == NULL) {
+		fprintf(stderr,
+			"BAD HOSTPTR. rela."
+			"r_offset=%lx r_info=%lx r_addend=%ld\n",
+			rela.r_offset, rela.r_info, rela.r_addend);
+		return;
+	}
+
+	assert (rela.r_addend == 0 && "NONZERO ADDEND??");
+	r_sym = ELF64_R_SYM(rela.r_info);
+	r_type = ELF64_R_TYPE(rela.r_info);
+	dynsym = getSym(r_sym);
+	symname = getDynStr(dynsym->st_name);
+
+	st_value = (Elf64_Addr)getLinkValue(symname);
+
+	switch (r_type) {
+	case R_X86_64_GLOB_DAT:
+		if (strcmp(symname, "__gmon_start__") == 0) {
+			WARNING("faking GLOB_DAT __gmon_start__");
+		}
+		*((Elf64_Addr*)hostptr) = st_value;
+		break;
+	case R_X86_64_COPY:
+		/* calculation: none */
+		break;
+	case R_X86_64_JUMP_SLOT:
+		if (st_value == 0) {
+			fprintf(stderr, 
+				"WARNING: JUMP_SLOT %s with st_value=0\n",
+				symname);
+		}
+		assert (st_value && "OOOPS");
+		*((Elf64_Addr*)hostptr) = st_value;
+		break;
+	default:
+		fprintf(stderr, "UNHANDLED RELA TYPE %d.\n", r_type);
+	}
+}
 
 /* cycle through, apply relocs */
 void ElfImg::applyRelocs(void)
 {
-	Elf64_Shdr	*shdr;
-
-	shdr = (Elf64_Shdr*)(((uintptr_t)img_mmap)+ hdr->e_shoff);
 	for (int i = 0; i < hdr->e_shnum; i++) {
-		if (shdr[i].sh_type == SHT_RELA) 
-			fprintf(stderr, "WARNING: Not relocating RELA '%s'\n",
-				getString(shdr[i].sh_name));
-		if (shdr[i].sh_type == SHT_REL)
+		switch(shdr_tab[i].sh_type) {
+		case SHT_RELA: applyRelaSection(shdr_tab[i]); break;
+		case SHT_REL:
 			fprintf(stderr, "WARNING: Not relocating REL '%s'\n",
-				getString(shdr[i].sh_name));
+				getStr(shdr_tab[i].sh_name));
+			break;
+		default: break;
+		}
 	}
 }
 
-const char* ElfImg::getString(unsigned int stroff) const
+const char* ElfImg::getStr(unsigned int stroff) const
 {
-	Elf64_Shdr	*shdr;
 	const char	*strtab;
 
-	shdr = (Elf64_Shdr*)(((uintptr_t)img_mmap)+ hdr->e_shoff);
-	assert (shdr[hdr->e_shstrndx].sh_type == SHT_STRTAB);
+	assert (shdr_tab[hdr->e_shstrndx].sh_type == SHT_STRTAB);
 	strtab = (const char*)((
-		(uintptr_t)img_mmap)+shdr[hdr->e_shstrndx].sh_offset); 
+		(uintptr_t)img_mmap)+shdr_tab[hdr->e_shstrndx].sh_offset); 
 	return &strtab[stroff];
+}
+
+const Elf64_Sym* ElfImg::getSym(unsigned int symidx) const
+{
+	assert (symidx < dynsym_c && "SYMIDX OUT OF BOUNDS");
+	return &dynsym_tab[symidx];
+}
+
+const Elf64_Shdr* ElfImg::getDynShdr(void) const
+{
+	for (unsigned int i = 0; i < hdr->e_shnum; i++) {
+		if (shdr_tab[i].sh_type == SHT_DYNAMIC)
+			return  &shdr_tab[i];
+	}
+
+	return NULL;
+}
+
+hostptr_t* ElfImg::getSectPtr(const Elf64_Shdr* shdr) const
+{
+	return (hostptr_t*)((uintptr_t)img_mmap + shdr->sh_offset);
+}
+
+void ElfImg::loadDyn(void)
+{
+	const Elf64_Shdr *dyn_shdr = NULL;
+	const Elf64_Dyn	*dyntab;
+	unsigned int	dyntab_c;
+
+	/* find matching shdr */
+	dyn_shdr = getDynShdr();
+	for (unsigned int i = 0; i < hdr->e_shnum; i++) {
+		if (shdr_tab[i].sh_type == SHT_DYNSYM) {
+			dynsym_shdr = &shdr_tab[i];
+			dynsym_tab = (const Elf64_Sym*)getSectPtr(dynsym_shdr);
+			dynsym_c = getSectElems(dynsym_shdr);
+		}
+	}
+
+	assert (dyn_shdr != NULL && "Expected dynanmic section");
+	dyntab = (const Elf64_Dyn*)(getSectPtr(dyn_shdr));
+	dyntab_c = getSectElems(dyn_shdr);
+
+	std::vector<std::string> needed;
+	for (unsigned int i = 0; i < dyntab_c; i++) {
+		if (dyntab[i].d_tag == DT_STRTAB) {
+			dynstr_tab = (const char*)
+				xlateAddr((elfptr_t)dyntab[i].d_un.d_ptr);
+			break;
+		}
+	}
+
+	for (unsigned int i = 0; i < dyntab_c; i++) {
+		switch (dyntab[i].d_tag) {
+		case DT_NEEDED:
+			needed.push_back(
+				std::string(getDynStr(dyntab[i].d_un.d_ptr)));
+		break;
+		default: break;
+		}
+	}
+	assert (dynstr_tab != NULL);
+	assert (dynsym_tab != NULL);
+	foreach (it, needed.begin(), needed.end())
+		fprintf(stderr, "NEEDED-STR: %s\n", 
+		(*it).c_str());
+
+	linkWithLibs(needed);
+}
+
+unsigned int ElfImg::getSectElems(const Elf64_Shdr* shdr) const
+{
+	return shdr->sh_size / shdr->sh_entsize;
+}
+
+/* converts dynamic sym in img_mmap to writable dyn segment */
+//Elf64_Sym* ElfImg::getSegmentDynSym(const Elf64_Sym* our_sym)
+//{
+//	assert (0 == 1 && "STUB");
+//}
+
+/* takes ownership of 'lib' from caller */
+void ElfImg::linkWith(DLLib* lib)
+{
+	unsigned int	link_c = 0;
+	for (unsigned int i = 0; i < dynsym_c; i++) {
+		const char	*fname;
+		void		*fptr;
+
+		if (ELF64_ST_BIND(dynsym_tab[i].st_info) != STB_GLOBAL) continue;
+
+		fname = getDynStr(dynsym_tab[i].st_name);
+		if (sym_map.count(fname)) continue;
+
+		fptr = lib->resolve(fname);
+		if (fptr == NULL) continue;
+
+		sym_map[std::string(fname)] = fptr;
+		link_c++;
+	}
+
+	if (!link_c) 
+		delete lib;
+	else
+		libs.push_back(lib);
+}
+
+void* ElfImg::getLinkValue(const char* symname) const
+{
+	symmap::const_iterator it;
+
+	it = sym_map.find(symname);
+	if (it == sym_map.end()) {
+		fprintf(stderr, 
+			"No link value on %s. Faking it with 0. Good luck.\n",
+			symname);
+		return NULL;
+	}
+
+	return (*it).second;
+}
+
+/* go through all needed entries */
+void ElfImg::linkWithLibs(std::vector<std::string>& needed)
+{
+	foreach (it, needed.begin(), needed.end()) {
+		DLLib	*lib = DLLib::load((*it).c_str());
+
+		if (!lib) {
+			fprintf(stderr, 
+				"WARNING: Could not dlopen '%s'."
+				"Don't expect things to work.\n",
+				(*it).c_str());
+			continue;
+		}
+
+		linkWith(lib);
+	}
 }

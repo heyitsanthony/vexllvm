@@ -45,6 +45,7 @@ static void processAddrs(VexXlate* vexlate, ElfImg* img)
 		jmp_addrs.pop();
 		elfptr = (elfptr_t)elfaddr;
 		hostptr = img->xlateAddr(elfptr);
+		std::cout << "Processing jump addr.." << std::endl;
 		std::cout << "ELFENT: " <<  elfaddr << std::endl;
 		std::cout << "XLATE: " << hostptr << std::endl;
 
@@ -55,8 +56,6 @@ static void processAddrs(VexXlate* vexlate, ElfImg* img)
 		vsb->emit();
 
 		new_jmpaddr = vsb->getJmp();
-		std::cout << "JUMP: " << (void*)new_jmpaddr <<"\n";
-		std::cout << "ENDADDR: " << (void*)vsb->getEndAddr() << "\n";
 
 		if (new_jmpaddr) jmp_addrs.push(new_jmpaddr);
 		if (vsb->fallsThrough()) jmp_addrs.push(vsb->getEndAddr());
