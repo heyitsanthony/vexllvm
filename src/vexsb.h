@@ -18,6 +18,7 @@ class VexExpr;
 namespace llvm
 {
 	class Value;
+	class Function;
 };
 
 class VexSB
@@ -30,7 +31,7 @@ public:
 	unsigned int getNumStmts(void) const { return stmt_c; }
 	void setRegValue(unsigned int reg_idx, llvm::Value* v);
 	llvm::Value* getRegValue(unsigned int reg_idx) const;
-	void emit(void);
+	llvm::Function* emit(const char* f_name = "vexsb_f");
 	void print(std::ostream& os) const;
 	void printRegisters(std::ostream& os) const;
 	static unsigned int getTypeBitWidth(IRType ty);

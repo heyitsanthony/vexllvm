@@ -30,6 +30,7 @@ ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr)
 ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
 {
 	off_t	file_off_pgbase, file_off_pgoff;
+	void	*desired_base;
 	int	prot, flags;
 
 	es_len = phdr.p_memsz;
@@ -41,8 +42,12 @@ ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
 	prot = PROT_READ;
 	if (phdr.p_flags & PF_W) prot |= PROT_WRITE;
 	flags = (prot & PROT_WRITE) ? MAP_PRIVATE : MAP_SHARED;
-	es_mmapbase = mmap(NULL, es_len, prot, flags, fd, file_off_pgbase);
+
+	desired_base = (void*)page_base(phdr.p_vaddr);
+	es_mmapbase = mmap(desired_base, es_len, prot, flags, fd, file_off_pgbase);
 	assert (es_mmapbase != MAP_FAILED);
+	direct_mapped = (desired_base == es_mmapbase);
+	fprintf(stderr, "DESIRED=%p. MAP=%p\n",desired_base, es_mmapbase);
 	
 	/* declare guest-visible mapping */
 	es_elfbase = (void*)phdr.p_vaddr;

@@ -82,6 +82,7 @@ public:
 	VexStmtPutI(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtPutI() {}
+	virtual void emit(void) const { assert (0 == 1); }
 	virtual void print(std::ostream& os) const;
 private:
 #if 0
@@ -159,11 +160,15 @@ private:
 class VexStmtExit : public VexStmt
 {
 public:
-	VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
-	 : VexStmt(in_parent, in_stmt) {}
-	virtual ~VexStmtExit() {}
+	VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt);
+	virtual ~VexStmtExit();
+	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
+/* IRStmt.Ist.Exit */
+	VexExpr		*guard;	/* Conditional expression-- always 1-bit */
+	IRJumpKind	jk;	/* Jump kind */
+	uint64_t	dst;	/* target constant */
 };
 
 #endif

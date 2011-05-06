@@ -10,6 +10,7 @@
 #include <iostream>
 
 #include "gueststate.h"
+#include "guestcpustate.h"
 
 #include "genllvm.h"
 
@@ -17,13 +18,16 @@ GenLLVM* theGenLLVM;
 
 using namespace llvm;
 
-GenLLVM::GenLLVM(const char* name)
+GenLLVM::GenLLVM(const GuestState* gs, const char* name)
+: guestState(gs), 
+  funcTy(NULL),
+  cur_guest_ctx(NULL),
+  cur_f(NULL),
+  cur_bb(NULL)
 {
 	builder = new IRBuilder<>(getGlobalContext());
 	mod = new Module(name, getGlobalContext());
-	guestState = new GuestState();
-	mod->addTypeName("guestCtxTy", guestState->getTy());
-
+	mod->addTypeName("guestCtxTy", guestState->getCPUState()->getTy());
 	mkFuncTy();
 }
 
@@ -87,7 +91,7 @@ Value* GenLLVM::readCtx(unsigned int byteOff)
 	unsigned int 	idx;
 	Value		*ret;
 	
-	idx = guestState->byteOffset2ElemIdx(byteOff);
+	idx = guestState->getCPUState()->byteOffset2ElemIdx(byteOff);
 	ret = builder->CreateStructGEP(cur_guest_ctx, idx, "readCtx");
 	ret = builder->CreateLoad(ret);
 	
@@ -99,7 +103,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 	unsigned int 	idx;
 	Value		*ret;
 	
-	idx = guestState->byteOffset2ElemIdx(byteOff);
+	idx = guestState->getCPUState()->byteOffset2ElemIdx(byteOff);
 	ret = builder->CreateStructGEP(cur_guest_ctx, idx, "readCtx");
 	ret = builder->CreateStore(v, ret);
 	
@@ -112,6 +116,7 @@ void GenLLVM::store(llvm::Value* addr_v, llvm::Value* data_v)
 	Value	*addr_ptr;
 
 	ptrTy = llvm::PointerType::get(data_v->getType(), 0);
+	addr_v = guestState->addr2Host(addr_v);
 	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "storePtr");
 	builder->CreateStore(data_v, addr_ptr);
 }
@@ -122,6 +127,7 @@ Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
 	Value	*addr_ptr;
 
 	ptrTy = llvm::PointerType::get(vexTy2LLVM(vex_type), 0);
+	addr_v = guestState->addr2Host(addr_v);
 	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "loadPtr");
 	return builder->CreateLoad(addr_ptr);
 }
@@ -131,7 +137,8 @@ Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
 void GenLLVM::mkFuncTy(void)
 {
 	std::vector<const llvm::Type*>	f_args;
-	f_args.push_back(llvm::PointerType::get(guestState->getTy(), 0));
+	f_args.push_back(llvm::PointerType::get(
+		guestState->getCPUState()->getTy(), 0));
 	funcTy = FunctionType::get(
 		builder->getInt64Ty(),
 		f_args,

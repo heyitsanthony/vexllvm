@@ -57,8 +57,6 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	Int			host_bytes_used;	/* WHY A PTR?? */
 	uint8_t			b[1024];
 
-	std::cout << "XLATING: " << (void*)guest_addr << std::endl;
-
 	memset(&vta, 0, sizeof(vta));
 	vta.arch_guest = VexArchAMD64;
 	vta.archinfo_guest = vai_amd64;
@@ -90,6 +88,5 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	res = LibVEX_Translate(&vta);
 	if (res == VexTransAccessFail) return NULL;
 
-	fprintf(stderr, "RETURNING %p", g_cb.cb_vexsb);
 	return g_cb.cb_vexsb;
 }

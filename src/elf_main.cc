@@ -5,8 +5,11 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Intrinsics.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include "llvm/Target/TargetSelect.h"
+#include "llvm/ExecutionEngine/JIT.h"
 
-#include <queue>
+#include <stack>
 
 
 #include <stdint.h>
@@ -26,39 +29,78 @@ extern "C" {
 };
 
 #include "vexsb.h"
+#include "gueststate.h"
+#include "guestcpustate.h"
 #include "genllvm.h"
 
 using namespace llvm;
 
+static ExecutionEngine		*theExeEngine;
 
-static std::queue<uint64_t>	jmp_addrs;
+typedef uint64_t(*vexfunc_t)(void* /* guest state */);
 
-static void processAddrs(VexXlate* vexlate, ElfImg* img)
+static VexSB* vexsb_from_elfaddr(
+	VexXlate* vexlate, ElfImg* img, elfptr_t elfptr)
 {
-	while (!jmp_addrs.empty()) {
-		uint64_t	elfaddr;
+	hostptr_t	hostptr;
+
+	hostptr = img->xlateAddr(elfptr);
+
+	std::cout << "GUEST ADDR=" << elfptr << std::endl;
+//	std::cout << "ELFENT= " <<  elfptr << "<--> "
+//		<< hostptr			
+//		<< " =HOSTENT" <<std::endl;
+	/* XXX recongnize library ranges */
+	if (hostptr == NULL) hostptr = elfptr;
+
+	return vexlate->xlate(hostptr, (uint64_t)elfptr);
+}
+
+uint64_t do_func(Function* f, void* guest_ctx)
+{
+	/* don't forget to run it! */
+	vexfunc_t func_ptr;
+	
+	fprintf(stderr, "EXECUTING: %s\n", (f->getName()).data());
+	func_ptr = (vexfunc_t)theExeEngine->getPointerToFunction(f);
+	assert (func_ptr != NULL && "Could not JIT");
+
+	return func_ptr(guest_ctx);
+}
+
+/* use the JITer to go through everything */
+static void processFuncs(VexXlate* vexlate, ElfImg* img, GuestState* gs)
+{
+	std::stack<elfptr_t>	addr_stack;	/* holds elf addresses */
+
+
+	addr_stack.push(img->getEntryPoint());
+	while (!addr_stack.empty()) {
 		elfptr_t	elfptr;
-		hostptr_t	hostptr;
-		uint64_t	new_jmpaddr;
+		llvm::Function	*f;
+		elfptr_t	new_jmpaddr;
+		VexSB		*vsb;
 
-		elfaddr = jmp_addrs.front();
-		jmp_addrs.pop();
-		elfptr = (elfptr_t)elfaddr;
-		hostptr = img->xlateAddr(elfptr);
-		std::cout << "Processing jump addr.." << std::endl;
-		std::cout << "ELFENT: " <<  elfaddr << std::endl;
-		std::cout << "XLATE: " << hostptr << std::endl;
+		elfptr = addr_stack.top();
+		addr_stack.pop();
 
-		VexSB* vsb;
-		vsb = vexlate->xlate(hostptr, elfaddr);
+		vsb = vexsb_from_elfaddr(vexlate, img, elfptr);
 		assert (vsb != NULL);
-		vsb->print(std::cout);
-		vsb->emit();
 
-		new_jmpaddr = vsb->getJmp();
+		char emitstr[1024];
+		sprintf(emitstr, "sb_%p", elfptr);
+		f = vsb->emit(emitstr);
+		assert (f && "FAILED TO EMIT FUNC??");
+		f->dump();
 
-		if (new_jmpaddr) jmp_addrs.push(new_jmpaddr);
-		if (vsb->fallsThrough()) jmp_addrs.push(vsb->getEndAddr());
+		new_jmpaddr = (elfptr_t)do_func(
+			f, gs->getCPUState()->getStateData());
+
+		if (vsb->fallsThrough())  {
+			fprintf(stderr, "falls through: %p\n", elfptr);
+			addr_stack.push((elfptr_t)vsb->getEndAddr());
+		}
+		if (new_jmpaddr) addr_stack.push(new_jmpaddr);
 
 		delete vsb;
 	}
@@ -67,8 +109,11 @@ static void processAddrs(VexXlate* vexlate, ElfImg* img)
 int main(int argc, char* argv[])
 {
 	VexXlate	vexlate;
+	GuestState	*gs;
 	ElfImg		*img;
-	elfptr_t	elfentry_pt;
+
+	/* for the JIT */
+	InitializeNativeTarget();
 
 	if (argc != 2) {
 		fprintf(stderr, "Usage: %s elf_path\n", argv[0]);
@@ -82,13 +127,22 @@ int main(int argc, char* argv[])
 		return -2;
 	}
 
+	/* XXX need to fix ownership of module--
+	 * exe engine deletes it now! */
+	gs = new GuestState(img);
+	theGenLLVM = new GenLLVM(gs);
 
-	elfentry_pt = img->getEntryPoint();
-	theGenLLVM = new GenLLVM();
-	jmp_addrs.push((uint64_t)elfentry_pt);
-	processAddrs(&vexlate, img);
+	EngineBuilder	eb(theGenLLVM->getModule());
+	std::string	err_str;
 
-	printf("LLVEX.\n");
+	eb.setErrorStr(&err_str);
+	theExeEngine = eb.create();
+	std::cout << err_str << std::endl;
+	assert (theExeEngine && "Could not make exe engine");
+
+	processFuncs(&vexlate, img, gs);
+
+	printf("\nLLVEX.\n");
 
 	return 0;
 }

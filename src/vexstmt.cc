@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "genllvm.h"
 #include "vexexpr.h"
 #include "vexsb.h"
@@ -96,4 +97,77 @@ void VexStmtCAS::print(std::ostream& os) const { os << "CAS"; }
 void VexStmtLLSC::print(std::ostream& os) const { os << "LLSC"; }
 void VexStmtDirty::print(std::ostream& os) const { os << "Dirty"; }
 void VexStmtMBE::print(std::ostream& os) const { os << "MBE"; }
-void VexStmtExit::print(std::ostream& os) const { os << "Exit"; }
+
+
+VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
+: VexStmt(in_parent, in_stmt),
+ guard(VexExpr::create(this, in_stmt->Ist.Exit.guard)),
+ jk(in_stmt->Ist.Exit.jk)
+{
+	if (jk != Ijk_Boring) {
+		ppIRJumpKind(jk);
+		assert (0 == 1 && "Expected Boring JumpKind");
+	}
+
+	switch(in_stmt->Ist.Exit.dst->tag) {
+	#define CONST_TAGOP(x) case Ico_##x :		\
+	dst = in_stmt->Ist.Exit.dst->Ico.x; return;	\
+
+	CONST_TAGOP(U1);
+	CONST_TAGOP(U8);
+	CONST_TAGOP(U16);
+	CONST_TAGOP(U32);
+	CONST_TAGOP(U64);
+	CONST_TAGOP(F32i);
+	CONST_TAGOP(F64i);
+//	CONST_TAGOP(V128); TODO
+	default: fprintf(stderr, "UNSUPPORTED CONSTANT TYPE\n");
+	}
+}
+
+VexStmtExit::~VexStmtExit()
+{
+	delete guard;
+}
+
+void VexStmtExit::emit(void) const
+{
+	llvm::IRBuilder<>	*builder;
+	llvm::Value		*cmp_val;
+	llvm::BasicBlock	*bb_then, *bb_else, *bb_origin;
+
+	/* XXX-- create return statement... */
+	if (jk != Ijk_Boring) assert (0 == 1 && "Expected JMP");
+
+	builder = theGenLLVM->getBuilder();
+	bb_origin = builder->GetInsertBlock();
+	bb_then = llvm::BasicBlock::Create(
+		llvm::getGlobalContext(), "exit_then",
+		bb_origin->getParent());
+	bb_else = llvm::BasicBlock::Create(
+		llvm::getGlobalContext(), "exit_else",
+		bb_origin->getParent());
+
+	/* evaluate guard condition */
+	builder->SetInsertPoint(bb_origin);
+	cmp_val = guard->emit();
+	builder->CreateCondBr(cmp_val, bb_then, bb_else);
+
+	/* guard condition return, leave this place */
+	/* XXX for calls we're going to need some more info */
+	builder->SetInsertPoint(bb_then);
+	builder->CreateRet(
+		llvm::ConstantInt::get(
+			llvm::getGlobalContext(),
+			llvm::APInt(64, dst)));
+
+	/* continue on */
+	builder->SetInsertPoint(bb_else);
+}
+
+void VexStmtExit::print(std::ostream& os) const
+{
+	os << "If (";
+	guard->print(os);
+	os << ") goto {...} " << dst;
+}

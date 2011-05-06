@@ -24,6 +24,7 @@ typedef std::map<std::string, void*> symmap;
 	bool isValid(void) const { return fd > 0; }
 	hostptr_t xlateAddr(elfptr_t addr) const;
 	elfptr_t getEntryPoint(void) const { return (void*)hdr->e_entry; }
+	bool isDirectMapped(void) const { return direct_mapped; } 
 private:
 	ElfImg(const char* fname);
 	bool verifyHeader(void) const;
@@ -56,6 +57,8 @@ private:
 	const char		*dynstr_tab;
 	symmap			sym_map;
 	PtrList<DLLib>		libs;	/* all libs linked in XXX make obj */
+
+	bool direct_mapped;
 };
 
 #endif

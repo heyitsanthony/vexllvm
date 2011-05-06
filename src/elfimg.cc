@@ -75,12 +75,15 @@ void ElfImg::setupSegments(void)
 {
 	Elf64_Phdr	*phdr;
 
+	direct_mapped = true;
 	phdr = (Elf64_Phdr*)(((char*)hdr) + hdr->e_phoff);
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
 		ElfSegment	*es;
 		
 		es = ElfSegment::load(fd, phdr[i]);
 		if (!es) continue;
+		if (!es->isDirectMapped()) direct_mapped = false;
+
 		segments.push_back(es);
 	}
 }

@@ -43,6 +43,7 @@ VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 return new VexExprBinop##x(in_parent, expr);
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
+	BINOP_TAGOP(CmpEQ64);
 	BINOP_TAGOP(And64);
 	BINOP_TAGOP(Add64);
 	BINOP_TAGOP(Sub64);
@@ -65,7 +66,6 @@ return new VexExprUnop##x(in_parent, expr)
 	}
 	return NULL;
 }
-
 
 VexExprConst* VexExprConst::createConst(
 	VexStmt* in_parent, const IRExpr* expr)
@@ -91,7 +91,7 @@ VexExprConst* VexExprConst::createConst(
 #define EMIT_CONST_INT(x,y)	\
 llvm::Value* VexExprConst##x::emit(void) const { 	\
 	return llvm::ConstantInt::get(			\
-		llvm::getGlobalContext(), llvm::APInt(y, x)); }		
+		llvm::getGlobalContext(), llvm::APInt(y, x)); }	
 EMIT_CONST_INT(U1, 1)
 EMIT_CONST_INT(U8, 8)
 EMIT_CONST_INT(U16, 16)

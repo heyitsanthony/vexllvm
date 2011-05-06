@@ -101,13 +101,13 @@ void VexSB::printRegisters(std::ostream& os) const
 	}
 }
 
-void VexSB::emit(void)
+llvm::Function* VexSB::emit(const char* fname)
 {
 	llvm::Function* cur_f;
 	llvm::Value*	ret_v;
 
 	std::cout << "Emitting VEXSB BB" << std::endl;
-	theGenLLVM->beginBB("vexsb_f");
+	theGenLLVM->beginBB(fname);
 	/* instructions */
 	foreach (it, stmts.begin(), stmts.end()) (*it)->emit();
 	/* compute goto */
@@ -115,7 +115,7 @@ void VexSB::emit(void)
 	/* return goto */
 	cur_f = theGenLLVM->endBB(ret_v);
 
-	cur_f->dump();
+	return cur_f;
 }
 
 unsigned int VexSB::getRegBitWidth(unsigned int reg_idx) const
@@ -153,6 +153,7 @@ VexStmt* VexSB::loadNextInstruction(const IRStmt* stmt)
 
 void VexSB::loadInstructions(const IRSB* irsb)
 {
+	ppIRSB((IRSB*)irsb);
 	for (unsigned int i = 0; i < getNumStmts(); i++) {
 		VexStmt		*stmt;
 		VexStmtIMark	*imark;
@@ -180,6 +181,10 @@ Value* VexSB::getRegValue(unsigned int reg_idx) const
 void VexSB::loadJump(const IRSB* irsb)
 {
 	jump_kind = irsb->jumpkind;
+
+	ppIRJumpKind (jump_kind);
+	printf("=JUMPKIND\n");
+
 	switch(irsb->jumpkind) {
 	case Ijk_Call:
 	case Ijk_Ret:

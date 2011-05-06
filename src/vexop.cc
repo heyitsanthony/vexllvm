@@ -240,3 +240,15 @@ Value* VexExprUnop64to32::emit(void) const
 	return builder->CreateBitCast(v1, builder->getInt32Ty());
 }
 
+
+Value* VexExprBinopCmpEQ64::emit(void) const
+{
+	Value		*v_1, *v_2;
+	IRBuilder<>	*builder;
+
+	v_1 = args[0]->emit();
+	v_2 = args[1]->emit();
+	builder = theGenLLVM->getBuilder();
+
+	return builder->CreateICmp(llvm::CmpInst::ICMP_EQ, v_1, v_2);
+}

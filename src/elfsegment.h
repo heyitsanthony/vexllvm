@@ -9,6 +9,7 @@ public:
 	virtual ~ElfSegment(void);
 	static ElfSegment* load(int fd, const Elf64_Phdr& phdr);
 	hostptr_t xlate(elfptr_t elfaddr) const;
+	bool isDirectMapped(void) const { return direct_mapped; }
 protected:
 	ElfSegment(int fd, const Elf64_Phdr& phdr);
 private:
@@ -16,6 +17,7 @@ private:
 	hostptr_t	es_hostbase;
 	void		*es_mmapbase;
 	unsigned int	es_len;
+	bool		direct_mapped;
 };
 
 #endif

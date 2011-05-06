@@ -1,4 +1,9 @@
-CFLAGS=-g
+BIN_BASE="0x8000000"
+CFLAGS=-g -DBIN_BASE="$(BIN_BASE)"
+# XXX, MAKES BINARY SIZE EXPLODE
+LDFLAGS="-Wl,-Ttext-segment=$(BIN_BASE)"
+#LDFLAGS=
+
 
 OBJDEPS=	vexxlate.o	\
 		vexstmt.o	\
@@ -6,6 +11,7 @@ OBJDEPS=	vexxlate.o	\
 		vexexpr.o	\
 		vexop.o		\
 		genllvm.o	\
+		guestcpustate.o	\
 		gueststate.o	\
 		vex_dispatch.o
 
@@ -23,19 +29,16 @@ ELFDIRDEPS=$(ELFDEPS:%=obj/%)
 #VEXLIB="/usr/lib64/valgrind/libvex-amd64-linux.a"
 VEXLIB="/usr/local/lib64/valgrind/libvex-amd64-linux.a"
 LLVMLDFLAGS=$(shell llvm-config --ldflags)
-LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs core)
-LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g") -Wall
+LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
+LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g") -Wall $(LDFLAGS)
 
-all: bin/vex_test bin/elf_test
+all: bin/elf_test
 
 clean:
 	rm -f obj/* bin/*
 
-bin/vex_test: $(OBJDIRDEPS) obj/vex_test.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@
-
 bin/elf_test: $(OBJDIRDEPS) $(ELFDIRDEPS)
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<

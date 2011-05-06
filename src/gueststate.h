@@ -1,32 +1,35 @@
 #ifndef GUESTSTATE_H
 #define GUESTSTATE_H
 
-#include <assert.h>
-#include <map>
+#include <stdint.h>
+
+class ElfImg;
+class GuestCPUState;
 
 namespace llvm
 {
-	class Type;
+	class Value;
 }
 
-struct guest_ctx_field;
-
-/* TODO: make this a base class when if we want to support other archs */
+/* TODO: make base class */
+/* ties together all state information for guest.
+ * 1. register state
+ * 2. memory mappings
+ * This might have to be hacked for KLEE
+ */
 class GuestState
 {
 public:
-typedef std::map<unsigned int, unsigned int> byte2elem_map;
-
-	GuestState();
-	virtual ~GuestState();
-	const llvm::Type* getTy(void) const { return guestCtxTy; }
-	unsigned int byteOffset2ElemIdx(unsigned int off) const;
-protected:
-	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);
-	void mkRegCtx(void);
+	GuestState(const ElfImg* img);
+	virtual ~GuestState(void);
+	llvm::Value* addr2Host(llvm::Value* addr_v) const;
+	uint64_t addr2Host(uintptr_t guestptr) const;
+	const GuestCPUState* getCPUState(void) const { return cpu_state; }
+	GuestCPUState* getCPUState(void) { return cpu_state; }
 private:
-	byte2elem_map	off2ElemMap;
-	llvm::Type	*guestCtxTy;
+	const ElfImg	*img;
+	GuestCPUState	*cpu_state;
+	uint8_t		*stack;
 };
 
 #endif
