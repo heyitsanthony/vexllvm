@@ -30,6 +30,7 @@ private:
 	byte2elem_map	off2ElemMap;
 	llvm::Type	*guestCtxTy;
 	uint8_t		*state_data;
+	uint8_t		*tls_data;	/* so %fs works */
 	unsigned int	state_byte_c;
 };
 

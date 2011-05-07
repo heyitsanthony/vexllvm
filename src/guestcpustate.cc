@@ -17,14 +17,26 @@ struct guest_ctx_field
 	const char*	f_name;
 };
 
+#define TLS_DATA_SIZE	4096	/* XXX. Good enough? */
+#define RSP_OFFSET	32
+#define FS_SEG_OFFSET	(24*8)
+
 GuestCPUState::GuestCPUState()
 {
 	mkRegCtx();
 	state_data = new uint8_t[state_byte_c];
 	memset(state_data, 0, state_byte_c);
+	tls_data = new uint8_t[TLS_DATA_SIZE];
+	memset(tls_data, 0, TLS_DATA_SIZE);
+	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) = 
+		(uintptr_t)tls_data;
 }
 
-GuestCPUState::~GuestCPUState() { delete state_data; }
+GuestCPUState::~GuestCPUState()
+{
+	delete [] state_data;
+	delete [] tls_data;
+}
 
 Type* GuestCPUState::mkFromFields(
 	struct guest_ctx_field* f, byte2elem_map& offmap)
@@ -75,18 +87,18 @@ Type* GuestCPUState::mkFromFields(
 /* ripped from libvex_guest_amd64 */
 static struct guest_ctx_field amd64_fields[] = 
 {
-	{64, 16, "GPR"},
-	{64, 1, "CC_OP"},
-	{64, 1, "CC_DEP1"},
-	{64, 1, "CC_DEP2"},
-	{64, 1, "CC_NDEP"},
+	{64, 16, "GPR"},	/* 0-15*/
+	{64, 1, "CC_OP"},	/* 16 */
+	{64, 1, "CC_DEP1"},	/* 17 */
+	{64, 1, "CC_DEP2"},	/* 18 */
+	{64, 1, "CC_NDEP"},	/* 19 */
 
-	{64, 1, "DFLAG"},
-	{64, 1, "RIP"},
-	{64, 1, "ACFLAG"},
-	{64, 1, "IDFLAG"},
+	{64, 1, "DFLAG"},	/* 20 */
+	{64, 1, "RIP"},		/* 21 */
+	{64, 1, "ACFLAG"},	/* 22 */
+	{64, 1, "IDFLAG"},	/* 23 */
 
-	{64, 1, "FS_ZERO"},
+	{64, 1, "FS_ZERO"},	/* 24 */
 
 	{64, 1, "SSEROUND"},
 	{128, 16, "XMM"},
@@ -135,5 +147,7 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 
 void GuestCPUState::setStackPtr(void* stack_ptr)
 {
-	*((uint64_t*)((uintptr_t)state_data + 32)) = (uint64_t)stack_ptr;
+	uint64_t*	rsp_ptr;
+	rsp_ptr = ((uint64_t*)((uintptr_t)state_data + RSP_OFFSET));
+	*rsp_ptr = (uint64_t)stack_ptr;
 }

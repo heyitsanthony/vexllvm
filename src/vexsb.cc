@@ -106,7 +106,6 @@ llvm::Function* VexSB::emit(const char* fname)
 	llvm::Function* cur_f;
 	llvm::Value*	ret_v;
 
-	std::cout << "Emitting VEXSB BB" << std::endl;
 	theGenLLVM->beginBB(fname);
 	/* instructions */
 	foreach (it, stmts.begin(), stmts.end()) (*it)->emit();
@@ -153,7 +152,8 @@ VexStmt* VexSB::loadNextInstruction(const IRStmt* stmt)
 
 void VexSB::loadInstructions(const IRSB* irsb)
 {
-	ppIRSB((IRSB*)irsb);
+	ppIRSB (const_cast<IRSB*>(irsb));
+
 	for (unsigned int i = 0; i < getNumStmts(); i++) {
 		VexStmt		*stmt;
 		VexStmtIMark	*imark;
@@ -182,8 +182,8 @@ void VexSB::loadJump(const IRSB* irsb)
 {
 	jump_kind = irsb->jumpkind;
 
-	ppIRJumpKind (jump_kind);
-	printf("=JUMPKIND\n");
+//	ppIRJumpKind (jump_kind);
+//	printf("=JUMPKIND\n");
 
 	switch(irsb->jumpkind) {
 	case Ijk_Call:

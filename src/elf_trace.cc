@@ -13,6 +13,7 @@
 #include <stack>
 
 
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -43,6 +44,15 @@ typedef uint64_t(*vexfunc_t)(void* /* guest state */);
 
 std::list<elfptr_t>	trace;
 
+void sigsegv_handler(int v)
+{
+	std::cerr << "SIGSEGV. TRACE:" << std::endl;
+	foreach(it, trace.begin(), trace.end()) {
+		std::cerr << *it << std::endl;
+	}
+	exit(-1);
+}
+
 static VexSB* vexsb_from_elfaddr(
 	VexXlate* vexlate, ElfImg* img, elfptr_t elfptr)
 {
@@ -50,23 +60,9 @@ static VexSB* vexsb_from_elfaddr(
 
 	hostptr = img->xlateAddr(elfptr);
 
-	std::cout << "GUEST ADDR=" << elfptr << std::endl;
-//	std::cout << "ELFENT= " <<  elfptr << "<--> "
-//		<< hostptr			
-//		<< " =HOSTENT" <<std::endl;
 	/* XXX recongnize library ranges */
 	if (hostptr == NULL) hostptr = elfptr;
-#if 0
-	if (((uintptr_t)hostptr & 0xfff) == 0x3f0) { 
-		std::cerr << "TRACE:" << std::endl;
-		foreach(it, trace.begin(), trace.end()) {
-			std::cerr << *it << std::endl;
-		}
-		exit(-1);
-		
-	}
-#endif
-	printf("xlating %p\n", hostptr);
+
 	return vexlate->xlate(hostptr, (uint64_t)elfptr);
 }
 
@@ -75,13 +71,9 @@ uint64_t do_func(Function* f, void* guest_ctx)
 	/* don't forget to run it! */
 	vexfunc_t func_ptr;
 	
-	fprintf(stderr, "JITing: %s\n", (f->getName()).data());
 	func_ptr = (vexfunc_t)theExeEngine->getPointerToFunction(f);
 	assert (func_ptr != NULL && "Could not JIT");
 
-	fprintf(stderr, "Calling: %s (JIT=%p)\n", 
-		(f->getName()).data(),
-		func_ptr);
 	return func_ptr(guest_ctx);
 }
 
@@ -107,19 +99,15 @@ static void processFuncs(VexXlate* vexlate, ElfImg* img, GuestState* gs)
 
 		char emitstr[1024];
 		sprintf(emitstr, "sb_%p", elfptr);
-		printf("emitting %s\n", emitstr);
 		f = vsb->emit(emitstr);
-		printf ("%s emitted.\n", emitstr);
 		assert (f && "FAILED TO EMIT FUNC??");
-		f->dump();
 
+		f->dump();
 		new_jmpaddr = (elfptr_t)do_func(
 			f, gs->getCPUState()->getStateData());
 
-		if (vsb->fallsThrough())  {
-			fprintf(stderr, "falls through: %p\n", elfptr);
+		if (vsb->fallsThrough())
 			addr_stack.push((elfptr_t)vsb->getEndAddr());
-		}
 		if (new_jmpaddr) addr_stack.push(new_jmpaddr);
 
 		delete vsb;
@@ -139,6 +127,8 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Usage: %s elf_path\n", argv[0]);
 		return -1;
 	}
+
+	signal(SIGSEGV, sigsegv_handler);
 
 	img = ElfImg::create(argv[1]);
 	if (img == NULL) {
@@ -164,7 +154,7 @@ int main(int argc, char* argv[])
 
 	processFuncs(&vexlate, img, gs);
 
-	printf("\nLLVEX.\n");
+	printf("\nTRACE COMPLETE.\n");
 
 	return 0;
 }

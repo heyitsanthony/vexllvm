@@ -62,7 +62,8 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	vta.archinfo_guest = vai_amd64;
 	vta.arch_host = VexArchAMD64;
 	vta.archinfo_host = vai_amd64;
-	vbi.guest_stack_redzone_size = 128;	/* I LOVE RED ZONE. BEST ABI BEST.*/
+	vbi.guest_stack_redzone_size = 128;		/* I LOVE RED ZONE. BEST ABI BEST.*/
+	vbi.guest_amd64_assume_fs_is_zero = true;	/* XXX LIBVEX FIXME */
 	vta.abiinfo_both = vbi;
 
 	g_cb.cb_guestaddr = guest_addr;

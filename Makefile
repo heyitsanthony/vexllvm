@@ -13,16 +13,23 @@ OBJDEPS=	vexxlate.o	\
 		genllvm.o	\
 		guestcpustate.o	\
 		gueststate.o	\
-		vex_dispatch.o
+		vex_dispatch.o	\
+		vexhelpers.o
 
 ELFDEPS=	elfimg.o	\
 		dllib.o		\
 		elfsegment.o	\
 		elf_main.o
 
+ELFTRACEDEPS=	elfimg.o	\
+		dllib.o		\
+		elfsegment.o	\
+		elf_trace.o
+
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFDIRDEPS=$(ELFDEPS:%=obj/%)
+ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
 
 #TODO: use better config options
 
@@ -30,12 +37,31 @@ ELFDIRDEPS=$(ELFDEPS:%=obj/%)
 VEXLIB="/usr/local/lib64/valgrind/libvex-amd64-linux.a"
 LLVMLDFLAGS=$(shell llvm-config --ldflags)
 LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
-LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g") -Wall $(LDFLAGS)
+LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall $(LDFLAGS)
 
-all: bin/elf_test
+all: bin/elf_test bin/elf_trace
 
 clean:
 	rm -f obj/* bin/*
+
+tests/traces-bin/% : tests/traces-obj/%.o
+	gcc $< -o $@
+
+tests/traces-obj/%.o: tests/traces-src/%.c
+	gcc -g -c -o $@ $<
+
+
+tests: test-traces
+tests-clean:
+	rm -f tests/*-bin/* tests/*-obj/*
+
+TRACEDEPS= nested_call
+TRACEDEPS_PATH=$(TRACEDEPS:%=tests/traces-bin/%)
+test-traces: $(TRACEDEPS_PATH)
+	tests/traces.sh
+
+bin/elf_trace: $(OBJDIRDEPS) $(ELFTRACEDIRDEPS)
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 bin/elf_test: $(OBJDIRDEPS) $(ELFDIRDEPS)
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)

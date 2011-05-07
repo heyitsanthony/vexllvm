@@ -1,9 +1,10 @@
 #include "genllvm.h"
-
+#include "Sugar.h"
 #include <stdio.h>
 #include "vexsb.h"
 #include "vexstmt.h"
 #include "vexop.h"
+#include "vexhelpers.h"
 
 #include "vexexpr.h"
 
@@ -44,10 +45,45 @@ return new VexExprBinop##x(in_parent, expr);
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpEQ64);
-	BINOP_TAGOP(And64);
+
+	BINOP_TAGOP(Add8);
+	BINOP_TAGOP(Add16);
+	BINOP_TAGOP(Add32);
 	BINOP_TAGOP(Add64);
+
+	BINOP_TAGOP(And8);
+	BINOP_TAGOP(And16);
+	BINOP_TAGOP(And32);
+	BINOP_TAGOP(And64);
+
+	BINOP_TAGOP(Or8);
+	BINOP_TAGOP(Or16);
+	BINOP_TAGOP(Or32);
+	BINOP_TAGOP(Or64);
+
+	BINOP_TAGOP(Shl8);
+	BINOP_TAGOP(Shl16);
+	BINOP_TAGOP(Shl32);
+	BINOP_TAGOP(Shl64);
+
+	BINOP_TAGOP(Shr8);
+	BINOP_TAGOP(Shr16);
+	BINOP_TAGOP(Shr32);
+	BINOP_TAGOP(Shr64);
+
+	BINOP_TAGOP(Sub8);
+	BINOP_TAGOP(Sub16);
+	BINOP_TAGOP(Sub32);
 	BINOP_TAGOP(Sub64);
+
+	BINOP_TAGOP(Xor8);
+	BINOP_TAGOP(Xor16);
+	BINOP_TAGOP(Xor32);
+	BINOP_TAGOP(Xor64);
+
+
 	UNOP_TAGOP(32Uto64);
+	UNOP_TAGOP(32Sto64);
 	UNOP_TAGOP(64to32);
 	default:
 		fprintf(stderr, "UNKNOWN OP %x\n", expr->Iex.Unop.op);
@@ -190,7 +226,44 @@ void VexExprLoad::print(std::ostream& os) const
 	addr->print(os);
 	os << "):" << VexSB::getTypeStr(ty); 
 }
-void VexExprCCall::print(std::ostream& os) const { os << "CCall"; }
+
+VexExprCCall::VexExprCCall(VexStmt* in_parent, const IRExpr* expr)
+: VexExpr(in_parent, expr) 
+{
+	const IRCallee*	callee = expr->Iex.CCall.cee;
+
+	for (int i = 0; expr->Iex.CCall.args[i]; i++) {
+		args.push_back(VexExpr::create(
+			in_parent,
+			expr->Iex.CCall.args[i]));
+	}
+
+	func = theVexHelpers->getHelper(callee->name);
+	assert (func != NULL && "No helper func for CCall. Ack.");
+}
+
+
+llvm::Value* VexExprCCall::emit(void) const
+{
+	std::vector<llvm::Value*>	args_v;
+
+	foreach (it, args.begin(), args.end())
+		args_v.push_back((*it)->emit());
+
+	return theGenLLVM->getBuilder()->CreateCall(
+		func, args_v.begin(), args_v.end());
+}
+
+void VexExprCCall::print(std::ostream& os) const
+{
+	os << "CCall(";
+	foreach (it, args.begin(), args.end()) {
+		if (it != args.begin()) os << ", ";
+		(*it)->print(os);
+	}
+	os << ")";
+}
+
 void VexExprMux0X::print(std::ostream& os) const { os << "Mux0X"; }
 
 

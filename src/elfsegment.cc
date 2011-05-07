@@ -9,6 +9,8 @@
 #define PAGE_SZ		4096
 #define page_base(x)	((uintptr_t)(x) & ~((uintptr_t)0xfff))
 #define page_off(x)	((uintptr_t)(x) & ((uintptr_t)0xfff))
+#define page_round_up(x) PAGE_SZ*(((uintptr_t)(x) + 0xfff)/PAGE_SZ)
+
 
 ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr)
 {
@@ -33,8 +35,6 @@ ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
 	void	*desired_base;
 	int	prot, flags;
 
-	es_len = phdr.p_memsz;
-
 	/* map in */
 	file_off_pgbase = page_base(phdr.p_offset);
 	file_off_pgoff = page_off(phdr.p_offset);
@@ -44,10 +44,15 @@ ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
 	flags = (prot & PROT_WRITE) ? MAP_PRIVATE : MAP_SHARED;
 
 	desired_base = (void*)page_base(phdr.p_vaddr);
+	es_len = page_round_up(phdr.p_vaddr + phdr.p_memsz);
+	es_len -= page_base(phdr.p_vaddr);
+
 	es_mmapbase = mmap(desired_base, es_len, prot, flags, fd, file_off_pgbase);
 	assert (es_mmapbase != MAP_FAILED);
 	direct_mapped = (desired_base == es_mmapbase);
-	fprintf(stderr, "DESIRED=%p. MAP=%p\n",desired_base, es_mmapbase);
+//	fprintf(stderr, "DESIRED=%p-%p. MAP=%p-%p\n", 
+//		phdr.p_vaddr, phdr.p_vaddr + phdr.p_memsz,
+//		es_mmapbase, es_mmapbase + es_len);
 	
 	/* declare guest-visible mapping */
 	es_elfbase = (void*)phdr.p_vaddr;

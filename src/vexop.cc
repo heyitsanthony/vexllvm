@@ -196,49 +196,65 @@ CASE_OP(1Sto64)	/* :: Ity_Bit -> Ity_I64, signed widen */
 	return "???Op???";
 }
 
-Value* VexExprBinopAdd64::emit(void) const
-{
-	Value	*v1, *v2;
-	v1 = args[0]->emit();
-	v2 = args[1]->emit();
-	return (theGenLLVM->getBuilder())->CreateAdd(v1, v2);
+#define X_TO_Y_EMIT(x,y,z)		\
+Value* VexExprUnop##x::emit(void) const	\
+{					\
+	Value		*v1;		\
+	IRBuilder<>	*builder;	\
+	v1 = args[0]->emit();		\
+	builder = theGenLLVM->getBuilder();	\
+	return builder->y(v1, builder->z());	\
 }
 
-Value* VexExprBinopSub64::emit(void) const
-{
-	Value	*v1, *v2;
-	v1 = args[0]->emit();
-	v2 = args[1]->emit();
-	return (theGenLLVM->getBuilder())->CreateSub(v1, v2);
+X_TO_Y_EMIT(64to32, CreateTrunc, getInt32Ty)
+X_TO_Y_EMIT(32Uto64,CreateZExt, getInt64Ty)
+X_TO_Y_EMIT(32Sto64,CreateSExt, getInt64Ty)
+
+#define BINOP_EMIT(x,y)				\
+Value* VexExprBinop##x::emit(void) const	\
+{						\
+	Value		*v1, *v2;		\
+	IRBuilder<>	*builder;		\
+	v1 = args[0]->emit();			\
+	v2 = args[1]->emit();			\
+	builder = theGenLLVM->getBuilder();	\
+	return builder->Create##y(v1, v2);	\
 }
 
-Value* VexExprBinopAnd64::emit(void) const
-{
-	Value	*v1, *v2;
-	v1 = args[0]->emit();
-	v2 = args[1]->emit();
-	return (theGenLLVM->getBuilder())->CreateAnd(v1, v2);
-}
+BINOP_EMIT(Add8, Add)
+BINOP_EMIT(Add16, Add)
+BINOP_EMIT(Add32, Add)
+BINOP_EMIT(Add64, Add)
 
-Value* VexExprUnop32Uto64::emit(void) const
-{
-	Value		*v1;
-	IRBuilder<>	*builder;
+BINOP_EMIT(And8, And)
+BINOP_EMIT(And16, And)
+BINOP_EMIT(And32, And)
+BINOP_EMIT(And64, And)
 
-	v1 = args[0]->emit();
-	builder = theGenLLVM->getBuilder();
-	return builder->CreateBitCast(v1, builder->getInt64Ty());
-}
+BINOP_EMIT(Or8, Or)
+BINOP_EMIT(Or16, Or)
+BINOP_EMIT(Or32, Or)
+BINOP_EMIT(Or64, Or)
 
-Value* VexExprUnop64to32::emit(void) const
-{
-	Value		*v1;
-	IRBuilder<>	*builder;
+BINOP_EMIT(Shl8, Shl)
+BINOP_EMIT(Shl16, Shl)
+BINOP_EMIT(Shl32, Shl)
+BINOP_EMIT(Shl64, Shl)
 
-	v1 = args[0]->emit();
-	builder = theGenLLVM->getBuilder();
-	return builder->CreateBitCast(v1, builder->getInt32Ty());
-}
+BINOP_EMIT(Shr8, AShr)
+BINOP_EMIT(Shr16, AShr)
+BINOP_EMIT(Shr32, AShr)
+BINOP_EMIT(Shr64, AShr)
+
+BINOP_EMIT(Sub8, Sub)
+BINOP_EMIT(Sub16, Sub)
+BINOP_EMIT(Sub32, Sub)
+BINOP_EMIT(Sub64, Sub)
+
+BINOP_EMIT(Xor8, Xor)
+BINOP_EMIT(Xor16, Xor)
+BINOP_EMIT(Xor32, Xor)
+BINOP_EMIT(Xor64, Xor)
 
 
 Value* VexExprBinopCmpEQ64::emit(void) const

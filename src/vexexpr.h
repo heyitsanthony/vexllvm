@@ -17,6 +17,7 @@ class VexStmt;
 namespace llvm
 {
 class Value;
+class Function;
 }
 
 class VexExpr
@@ -155,17 +156,24 @@ CONST_CLASS(F32i, uint32_t);
 class VexExprCCall : public VexExpr
 {
 public:
-	VexExprCCall(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent, expr) {}
+	VexExprCCall(VexStmt* in_parent, const IRExpr* expr);
 	virtual ~VexExprCCall(void) {}
+	virtual llvm::Value* emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
+	llvm::Function*		func;
+	PtrList<VexExpr>	args;
+
+/* FFffffffffff*/
+#if 0
+	IRType	retTy;
       /* A call to a pure (no side-effects) helper C function. */
       struct {
          IRCallee* cee;    /* Function to call. */
          IRType    retty;  /* Type of return value. */
          const IRExpr**  args;   /* Vector of argument expressions. */
       }  CCall;
+#endif 
 };
 
 class VexExprMux0X : public VexExpr
