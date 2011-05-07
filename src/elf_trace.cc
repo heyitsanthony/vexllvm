@@ -106,8 +106,11 @@ static void processFuncs(VexXlate* vexlate, ElfImg* img, GuestState* gs)
 		new_jmpaddr = (elfptr_t)do_func(
 			f, gs->getCPUState()->getStateData());
 
-		if (vsb->fallsThrough())
+		/* push fall through address if call */
+		if (vsb->isCall())
 			addr_stack.push((elfptr_t)vsb->getEndAddr());
+
+		/* next address to go to */
 		if (new_jmpaddr) addr_stack.push(new_jmpaddr);
 
 		delete vsb;

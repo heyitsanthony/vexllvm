@@ -18,7 +18,27 @@ struct guest_ctx_field
 };
 
 #define TLS_DATA_SIZE	4096	/* XXX. Good enough? */
-#define RSP_OFFSET	32
+/* indexes into GPR array */
+#define AMD64_GPR_RAX	0
+#define AMD64_GPR_RCX	1
+#define AMD64_GPR_RDX	2
+#define AMD64_GPR_RBX	3
+#define AMD64_GPR_RSP	4
+#define AMD64_GPR_RBP	5
+#define AMD64_GPR_RSI	6
+#define AMD64_GPR_RDI	7
+#define AMD64_GPR_R8	8
+#define AMD64_GPR_R9	9
+#define AMD64_GPR_R10	10
+#define AMD64_GPR_R11	11
+#define AMD64_GPR_R12	12
+#define AMD64_GPR_R13	13
+#define AMD64_GPR_R14	14
+#define AMD64_GPR_R15	15
+
+#define get_gpr(x, y)		((uint64_t*)x)[y]
+#define set_gpr(x, y, z)	((uint64_t*)x)[y] = z
+
 #define FS_SEG_OFFSET	(24*8)
 
 GuestCPUState::GuestCPUState()
@@ -147,7 +167,24 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 
 void GuestCPUState::setStackPtr(void* stack_ptr)
 {
-	uint64_t*	rsp_ptr;
-	rsp_ptr = ((uint64_t*)((uintptr_t)state_data + RSP_OFFSET));
-	*rsp_ptr = (uint64_t)stack_ptr;
+	set_gpr(state_data, AMD64_GPR_RSP, (uint64_t)stack_ptr);
+}
+
+/**
+ * %rax = syscall number
+ * rdi, rsi, rdx, r10, r8, r9
+ */
+SyscallParams GuestCPUState::getSyscallParams(void) const
+{
+	return SyscallParams(
+		get_gpr(state_data, AMD64_GPR_RAX),
+		get_gpr(state_data, AMD64_GPR_RDI),
+		get_gpr(state_data, AMD64_GPR_RSI),
+		get_gpr(state_data, AMD64_GPR_RDX)); /* XXX more params? */
+}
+
+
+void GuestCPUState::setSyscallResult(uint64_t ret)
+{
+	set_gpr(state_data, AMD64_GPR_RAX, ret);
 }

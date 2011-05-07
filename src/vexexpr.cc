@@ -45,6 +45,8 @@ return new VexExprBinop##x(in_parent, expr);
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpEQ64);
+	BINOP_TAGOP(CmpLE64S);
+	BINOP_TAGOP(CmpLE64U);
 
 	BINOP_TAGOP(Add8);
 	BINOP_TAGOP(Add16);
@@ -85,6 +87,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(32Uto64);
 	UNOP_TAGOP(32Sto64);
 	UNOP_TAGOP(64to32);
+	UNOP_TAGOP(64to1);
 	default:
 		fprintf(stderr, "UNKNOWN OP %x\n", expr->Iex.Unop.op);
 		break;

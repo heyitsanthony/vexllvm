@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "syscalls.h"
 #include "vexxlate.h"
 #include "elfimg.h"
 
@@ -89,7 +90,7 @@ uint64_t do_func(Function* f, void* guest_ctx)
 static void processFuncs(VexXlate* vexlate, ElfImg* img, GuestState* gs)
 {
 	std::stack<elfptr_t>	addr_stack;	/* holds elf addresses */
-
+	Syscalls		sc;
 
 	addr_stack.push(img->getEntryPoint());
 	while (!addr_stack.empty()) {
@@ -116,10 +117,18 @@ static void processFuncs(VexXlate* vexlate, ElfImg* img, GuestState* gs)
 		new_jmpaddr = (elfptr_t)do_func(
 			f, gs->getCPUState()->getStateData());
 
-		if (vsb->fallsThrough())  {
-			fprintf(stderr, "falls through: %p\n", elfptr);
+		/* push fall through address if call */
+		if (vsb->isCall())
 			addr_stack.push((elfptr_t)vsb->getEndAddr());
+
+		if (vsb->isSyscall()) {
+			SyscallParams	sp(gs->getSyscallParams());
+			uint64_t	sc_ret;
+			sc_ret = sc.apply(sp);
+			gs->setSyscallResult(sc_ret);
 		}
+
+		/* next address to go to */
 		if (new_jmpaddr) addr_stack.push(new_jmpaddr);
 
 		delete vsb;

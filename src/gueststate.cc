@@ -61,3 +61,13 @@ uintptr_t GuestState::addr2Host(uintptr_t guestptr) const
 {
 	return (uintptr_t)img->xlateAddr((elfptr_t)guestptr);
 }
+
+SyscallParams GuestState::getSyscallParams(void) const
+{
+	return cpu_state->getSyscallParams();
+}
+
+void GuestState::setSyscallResult(uint64_t ret)
+{
+	cpu_state->setSyscallResult(ret);
+}

@@ -208,7 +208,8 @@ Value* VexExprUnop##x::emit(void) const	\
 
 X_TO_Y_EMIT(64to32, CreateTrunc, getInt32Ty)
 X_TO_Y_EMIT(32Uto64,CreateZExt, getInt64Ty)
-X_TO_Y_EMIT(32Sto64,CreateSExt, getInt64Ty)
+X_TO_Y_EMIT(32Sto64, CreateSExt, getInt64Ty)
+X_TO_Y_EMIT(64to1, CreateTrunc, getInt1Ty)
 
 #define BINOP_EMIT(x,y)				\
 Value* VexExprBinop##x::emit(void) const	\
@@ -256,15 +257,6 @@ BINOP_EMIT(Xor16, Xor)
 BINOP_EMIT(Xor32, Xor)
 BINOP_EMIT(Xor64, Xor)
 
-
-Value* VexExprBinopCmpEQ64::emit(void) const
-{
-	Value		*v_1, *v_2;
-	IRBuilder<>	*builder;
-
-	v_1 = args[0]->emit();
-	v_2 = args[1]->emit();
-	builder = theGenLLVM->getBuilder();
-
-	return builder->CreateICmp(llvm::CmpInst::ICMP_EQ, v_1, v_2);
-}
+BINOP_EMIT(CmpEQ64, ICmpEQ)
+BINOP_EMIT(CmpLE64S, ICmpSLE)
+BINOP_EMIT(CmpLE64U, ICmpULE)

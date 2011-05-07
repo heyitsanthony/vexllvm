@@ -190,6 +190,7 @@ void VexSB::loadJump(const IRSB* irsb)
 	case Ijk_Ret:
 	case Ijk_Boring:
 	case Ijk_NoRedir:
+	case Ijk_Sys_syscall:
 		jump_expr = VexExpr::create(stmts.back(), irsb->next);
 		break;
 	default:
@@ -212,10 +213,4 @@ uint64_t VexSB::getEndAddr(void) const
 {
 	assert (last_imark != NULL);
 	return last_imark->getAddr() + last_imark->getLen();
-}
-
-bool VexSB::fallsThrough(void) const
-{
-	if (jump_kind == Ijk_Call) return true;
-	return false;
 }

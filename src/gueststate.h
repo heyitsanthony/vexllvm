@@ -2,6 +2,7 @@
 #define GUESTSTATE_H
 
 #include <stdint.h>
+#include "syscallparams.h"
 
 class ElfImg;
 class GuestCPUState;
@@ -26,6 +27,8 @@ public:
 	uint64_t addr2Host(uintptr_t guestptr) const;
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
 	GuestCPUState* getCPUState(void) { return cpu_state; }
+	SyscallParams getSyscallParams(void) const;
+	void setSyscallResult(uint64_t ret);
 private:
 	const ElfImg	*img;
 	GuestCPUState	*cpu_state;

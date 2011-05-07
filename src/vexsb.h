@@ -38,7 +38,8 @@ public:
 	static const char* getTypeStr(IRType ty);
 	uint64_t getJmp(void) const;
 	uint64_t getEndAddr(void) const;
-	bool fallsThrough(void) const;
+	bool isCall(void) const { return (jump_kind == Ijk_Call); }
+	bool isSyscall(void) const { return (jump_kind == Ijk_Sys_syscall); }
 private:
 	void loadBitWidths(const IRTypeEnv* tyenv);
 	void loadInstructions(const IRSB* irsb);

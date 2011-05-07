@@ -14,6 +14,7 @@ OBJDEPS=	vexxlate.o	\
 		guestcpustate.o	\
 		gueststate.o	\
 		vex_dispatch.o	\
+		syscalls.o	\
 		vexhelpers.o
 
 ELFDEPS=	elfimg.o	\
@@ -55,7 +56,7 @@ tests: test-traces
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/*
 
-TRACEDEPS= nested_call
+TRACEDEPS= nested_call print
 TRACEDEPS_PATH=$(TRACEDEPS:%=tests/traces-bin/%)
 test-traces: $(TRACEDEPS_PATH)
 	tests/traces.sh
