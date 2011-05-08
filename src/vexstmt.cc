@@ -25,7 +25,9 @@ VexStmtPut::VexStmtPut(VexSB* in_parent, const IRStmt* in_stmt)
 : VexStmt(in_parent, in_stmt),
   offset(in_stmt->Ist.Put.offset),
   data_expr(VexExpr::create(this, in_stmt->Ist.Put.data))
-{}
+{
+	assert (data_expr != NULL && "Bad data expr");
+}
 VexStmtPut::~VexStmtPut(void) { delete data_expr;}
 
 void VexStmtPut::emit(void) const

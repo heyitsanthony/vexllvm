@@ -78,23 +78,41 @@ const Type* GenLLVM::vexTy2LLVM(IRType ty) const
 	case Ity_I64:	return builder->getInt64Ty();
 	case Ity_F32:	return builder->getFloatTy();
 	case Ity_F64:	return builder->getDoubleTy();
-//	case Ity_I128:	return "I128";
-//	case Ity_V128:	return "V128";
+//	case Ity_I128:	 TODO
+	case Ity_V128:
+		return llvm::VectorType::get(
+			Type::getInt16Ty(getGlobalContext()), 8);
 	default:
 		std::cout << "COULDN'T HANDLE " << ty << std::endl;
 	}
 	return NULL;
 }
 
-Value* GenLLVM::readCtx(unsigned int byteOff)
+Value* GenLLVM::readCtx(unsigned int byteOff, IRType ty)
 {
-	unsigned int 	idx;
-	Value		*ret;
-	
-	idx = guestState->getCPUState()->byteOffset2ElemIdx(byteOff);
-	ret = builder->CreateStructGEP(cur_guest_ctx, idx, "readCtx");
+	const Type*	readTy, *ptrTy;
+	unsigned int	tyBits;
+	Value		*addr_ptr, *ret; /* XXX assuming access are aligned */
+
+	readTy = vexTy2LLVM(ty);
+	ptrTy = llvm::PointerType::get(readTy, 0);
+	tyBits = readTy->getPrimitiveSizeInBits();
+
+	if (!tyBits) std::cerr << "AAAAAAAAAAAAAAAAAAAAAAA" << std::endl;
+	assert (tyBits);
+
+	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "readCtxPtr");
+
+	ret = builder->CreateGEP(
+		addr_ptr, 
+		ConstantInt::get(
+			getGlobalContext(),
+			llvm::APInt(
+				32, 
+				(byteOff*8)/tyBits)),
+		"readCtx");
 	ret = builder->CreateLoad(ret);
-	
+
 	return ret;
 }
 
@@ -104,7 +122,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 	Value		*ret;
 	
 	idx = guestState->getCPUState()->byteOffset2ElemIdx(byteOff);
-	ret = builder->CreateStructGEP(cur_guest_ctx, idx, "readCtx");
+	ret = builder->CreateStructGEP(cur_guest_ctx, idx, "writeCtx");
 	ret = builder->CreateStore(v, ret);
 	
 	return ret;
@@ -123,13 +141,16 @@ void GenLLVM::store(llvm::Value* addr_v, llvm::Value* data_v)
 
 Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
 {
-	Type	*ptrTy;
-	Value	*addr_ptr;
+	Type		*ptrTy;
+	Value		*addr_ptr;
+	LoadInst	*loadInst;
 
 	ptrTy = llvm::PointerType::get(vexTy2LLVM(vex_type), 0);
 	addr_v = guestState->addr2Host(addr_v);
 	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "loadPtr");
-	return builder->CreateLoad(addr_ptr);
+	loadInst = builder->CreateLoad(addr_ptr);
+	loadInst->setAlignment(8);
+	return loadInst;
 }
 
 /* llvm-ized VexSB functions take form of 

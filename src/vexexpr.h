@@ -149,7 +149,7 @@ CONST_CLASS(U32, uint32_t);
 CONST_CLASS(U64, uint64_t);
 CONST_CLASS(F64, double);
 CONST_CLASS(F64i, uint64_t);
-//CONST_CLASS(V128, uint16_t); // TODO
+CONST_CLASS(V128, uint16_t);
 CONST_CLASS(F32, float);
 CONST_CLASS(F32i, uint32_t);
 
@@ -179,9 +179,9 @@ private:
 class VexExprMux0X : public VexExpr
 {
 public:
-	VexExprMux0X(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent, expr) {}
-	virtual ~VexExprMux0X(void) {}
+	VexExprMux0X(VexStmt* in_parent, const IRExpr* expr);
+	virtual ~VexExprMux0X(void);
+	virtual llvm::Value* emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
       /* A ternary if-then-else operator.  It returns expr0 if cond is

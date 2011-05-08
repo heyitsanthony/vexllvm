@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include "Sugar.h"
 
+#include <iostream>
 #include <llvm/Intrinsics.h>
 #include <llvm/DerivedTypes.h>
 #include <llvm/LLVMContext.h>
@@ -62,15 +64,16 @@ Type* GuestCPUState::mkFromFields(
 	struct guest_ctx_field* f, byte2elem_map& offmap)
 {
 	std::vector<const Type*>	types;
-	const Type		*i8ty, *i32ty, *i64ty, *i128ty;
+	const Type		*i8ty, *i16ty, *i32ty, *i64ty, *i128ty;
 	LLVMContext		&gctx(getGlobalContext());
 	int			i;
 	unsigned int		cur_byte_off, total_elems;
 
 	i8ty = Type::getInt8Ty(gctx);
+	i16ty = Type::getInt16Ty(gctx);
 	i32ty = Type::getInt32Ty(gctx);
 	i64ty = Type::getInt64Ty(gctx);
-	i128ty = IntegerType::get(gctx, 128);
+	i128ty = VectorType::get(i16ty, 8);
 
 	/* add all fields to types vector from structure */
 	i = 0;
@@ -107,15 +110,15 @@ Type* GuestCPUState::mkFromFields(
 /* ripped from libvex_guest_amd64 */
 static struct guest_ctx_field amd64_fields[] = 
 {
-	{64, 16, "GPR"},	/* 0-15*/
-	{64, 1, "CC_OP"},	/* 16 */
-	{64, 1, "CC_DEP1"},	/* 17 */
-	{64, 1, "CC_DEP2"},	/* 18 */
-	{64, 1, "CC_NDEP"},	/* 19 */
+	{64, 16, "GPR"},	/* 0-15, 8*16 = 128*/
+	{64, 1, "CC_OP"},	/* 16, 128 */
+	{64, 1, "CC_DEP1"},	/* 17, 136 */
+	{64, 1, "CC_DEP2"},	/* 18, 144 */
+	{64, 1, "CC_NDEP"},	/* 19, 152 */
 
-	{64, 1, "DFLAG"},	/* 20 */
-	{64, 1, "RIP"},		/* 21 */
-	{64, 1, "ACFLAG"},	/* 22 */
+	{64, 1, "DFLAG"},	/* 20, 160 */
+	{64, 1, "RIP"},		/* 21, 168 */
+	{64, 1, "ACFLAG"},	/* 22, 176 */
 	{64, 1, "IDFLAG"},	/* 23 */
 
 	{64, 1, "FS_ZERO"},	/* 24 */
@@ -161,7 +164,16 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 {
 	byte2elem_map::const_iterator it;
 	it = off2ElemMap.find(off);
-	assert (it != off2ElemMap.end() && "Could not resolve byte offset");
+	if (it == off2ElemMap.end()) {
+		unsigned int	c = 0;
+		fprintf(stderr, "WTF IS AT %d\n", off);
+		for (int i = 0; amd64_fields[i].f_len; i++) {
+			fprintf(stderr, "%s@%d\n", amd64_fields[i].f_name, c);
+			c += (amd64_fields[i].f_len/8)*
+				amd64_fields[i].f_count;
+		}
+		assert (0 == 1 && "Could not resolve byte offset");
+	}
 	return (*it).second;
 }
 
@@ -187,4 +199,26 @@ SyscallParams GuestCPUState::getSyscallParams(void) const
 void GuestCPUState::setSyscallResult(uint64_t ret)
 {
 	set_gpr(state_data, AMD64_GPR_RAX, ret);
+}
+
+
+uint64_t GuestCPUState::getExitCode(void) const
+{
+	return get_gpr(state_data, AMD64_GPR_RAX);
+}
+
+
+void GuestCPUState::print(std::ostream& os) const
+{
+	os << "RAX: " << get_gpr(state_data, AMD64_GPR_RAX) << "\n";
+	os << "RBX: " << get_gpr(state_data, AMD64_GPR_RBX) << "\n";
+	os << "RCX: " << get_gpr(state_data, AMD64_GPR_RCX) << "\n";
+	os << "RDX: " << get_gpr(state_data, AMD64_GPR_RDX) << "\n";
+	os << "RSP: " << get_gpr(state_data, AMD64_GPR_RSP) << "\n";
+	os << "RBP: " << get_gpr(state_data, AMD64_GPR_RBP) << "\n";
+	os << "RDI: " << get_gpr(state_data, AMD64_GPR_RDI) << "\n";
+	os << "RSI: " << get_gpr(state_data, AMD64_GPR_RSI) << "\n";
+	os << "R8: " << get_gpr(state_data, AMD64_GPR_R8) << "\n";
+	os << "R9: " << get_gpr(state_data, AMD64_GPR_R9) << "\n";
+	os << "R10: " << get_gpr(state_data, AMD64_GPR_R10) << "\n";
 }

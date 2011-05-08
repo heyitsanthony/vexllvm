@@ -40,6 +40,7 @@ public:
 	uint64_t getEndAddr(void) const;
 	bool isCall(void) const { return (jump_kind == Ijk_Call); }
 	bool isSyscall(void) const { return (jump_kind == Ijk_Sys_syscall); }
+	bool isReturn(void) const { return (jump_kind == Ijk_Ret); }
 private:
 	void loadBitWidths(const IRTypeEnv* tyenv);
 	void loadInstructions(const IRSB* irsb);

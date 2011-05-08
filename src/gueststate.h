@@ -1,6 +1,7 @@
 #ifndef GUESTSTATE_H
 #define GUESTSTATE_H
 
+#include <iostream>
 #include <stdint.h>
 #include "syscallparams.h"
 
@@ -11,6 +12,8 @@ namespace llvm
 {
 	class Value;
 }
+
+typedef uint64_t guestptr_t;
 
 /* TODO: make base class */
 /* ties together all state information for guest.
@@ -24,11 +27,15 @@ public:
 	GuestState(const ElfImg* img);
 	virtual ~GuestState(void);
 	llvm::Value* addr2Host(llvm::Value* addr_v) const;
-	uint64_t addr2Host(uintptr_t guestptr) const;
+	uint64_t addr2Host(guestptr_t guestptr) const;
+	guestptr_t name2guest(std::string& symname) const;
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
 	GuestCPUState* getCPUState(void) { return cpu_state; }
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
+	std::string getName(guestptr_t) const;
+	uint64_t getExitCode(void) const;
+	void print(std::ostream& os) const;
 private:
 	const ElfImg	*img;
 	GuestCPUState	*cpu_state;

@@ -9,6 +9,8 @@
 #include <map>
 #include "collection.h"
 
+#include "symbols.h"
+
 typedef void* hostptr_t;
 typedef void* elfptr_t;
 
@@ -18,13 +20,14 @@ class DLLib;
 class ElfImg
 {
 public:
-typedef std::map<std::string, void*> symmap;
+	typedef std::map<std::string, void*> symmap;
 	static ElfImg* create(const char* fname);
 	virtual ~ElfImg(void);
 	bool isValid(void) const { return fd > 0; }
 	hostptr_t xlateAddr(elfptr_t addr) const;
 	elfptr_t getEntryPoint(void) const { return (void*)hdr->e_entry; }
 	bool isDirectMapped(void) const { return direct_mapped; } 
+	elfptr_t getSymAddr(const std::string& symname) const;
 private:
 	ElfImg(const char* fname);
 	bool verifyHeader(void) const;
@@ -40,6 +43,7 @@ private:
 	const Elf64_Sym* getSym(unsigned int symidx) const;
 	const char* getDynStr(unsigned int i) const {return &dynstr_tab[i];}
 
+	void pullInstrumented(DLLib* lib);
 	void linkWithLibs(std::vector<std::string>& needed);
 	void linkWith(DLLib* lib);
 	void* getLinkValue(const char* symname) const;
@@ -55,7 +59,7 @@ private:
 	const Elf64_Sym*	dynsym_tab; 
 	unsigned int		dynsym_c;
 	const char		*dynstr_tab;
-	symmap			sym_map;
+	Symbols			syms;
 	PtrList<DLLib>		libs;	/* all libs linked in XXX make obj */
 
 	bool direct_mapped;

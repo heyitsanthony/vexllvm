@@ -128,6 +128,8 @@ static void processFuncs(VexXlate* vexlate, ElfImg* img, GuestState* gs)
 			gs->setSyscallResult(sc_ret);
 		}
 
+		if (vsb->isReturn()) addr_stack.pop();
+
 		/* next address to go to */
 		if (new_jmpaddr) addr_stack.push(new_jmpaddr);
 
@@ -167,7 +169,7 @@ int main(int argc, char* argv[])
 
 	eb.setErrorStr(&err_str);
 	theExeEngine = eb.create();
-	theExeEngine->addModule(theVexHelpers->getModule());
+	theVexHelpers->bindToExeEngine(theExeEngine);
 	std::cout << err_str << std::endl;
 	assert (theExeEngine && "Could not make exe engine");
 

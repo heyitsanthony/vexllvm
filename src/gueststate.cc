@@ -7,6 +7,7 @@
 
 #include <iostream>
 
+#include "util.h"
 #include "elfimg.h"
 #include "guestcpustate.h"
 #include "gueststate.h"
@@ -20,7 +21,8 @@ GuestState::GuestState(const ElfImg* in_img)
 {
 	cpu_state = new GuestCPUState();
 	stack = new uint8_t[STACK_BYTES];
-	cpu_state->setStackPtr(stack + STACK_BYTES-8);
+	memset(stack, 0x30, STACK_BYTES);
+	cpu_state->setStackPtr(stack + STACK_BYTES-256 /*redzone+gunk*/);
 }
 
 GuestState::~GuestState(void)
@@ -70,4 +72,22 @@ SyscallParams GuestState::getSyscallParams(void) const
 void GuestState::setSyscallResult(uint64_t ret)
 {
 	cpu_state->setSyscallResult(ret);
+}
+
+std::string GuestState::getName(guestptr_t x) const { return hex_to_string(x); }
+
+
+guestptr_t GuestState::name2guest(std::string& symname) const
+{
+	return (guestptr_t)img->getSymAddr(symname);
+}
+
+uint64_t GuestState::getExitCode(void) const
+{
+	return cpu_state->getExitCode();
+}
+
+void GuestState::print(std::ostream& os) const
+{
+	cpu_state->print(os);
 }

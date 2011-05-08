@@ -2,6 +2,7 @@
 
 #include "genllvm.h"
 #include "vexop.h"
+#include "vexhelpers.h"
 
 using namespace llvm;
 
@@ -210,6 +211,7 @@ X_TO_Y_EMIT(64to32, CreateTrunc, getInt32Ty)
 X_TO_Y_EMIT(32Uto64,CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(32Sto64, CreateSExt, getInt64Ty)
 X_TO_Y_EMIT(64to1, CreateTrunc, getInt1Ty)
+X_TO_Y_EMIT(1Uto8, CreateZExt, getInt8Ty);
 
 #define BINOP_EMIT(x,y)				\
 Value* VexExprBinop##x::emit(void) const	\
@@ -258,5 +260,39 @@ BINOP_EMIT(Xor32, Xor)
 BINOP_EMIT(Xor64, Xor)
 
 BINOP_EMIT(CmpEQ64, ICmpEQ)
+BINOP_EMIT(CmpNE64, ICmpNE)
+
+Value* VexExprBinopCmpEQ8x16::emit(void) const
+{
+	Value		*v1, *v2, *cmp_8x1;
+	IRBuilder<>	*builder;
+	v1 = args[0]->emit();
+	v2 = args[1]->emit();
+	builder = theGenLLVM->getBuilder();
+	cmp_8x1 = builder->CreateICmpEQ(v1, v2);
+	return builder->CreateSExt(
+		cmp_8x1, 
+		theGenLLVM->vexTy2LLVM(Ity_V128));
+}
+
 BINOP_EMIT(CmpLE64S, ICmpSLE)
 BINOP_EMIT(CmpLE64U, ICmpULE)
+
+/* count number of zeros (from bit0) leading up to first 1. */
+/* 0x0 -> undef */
+/* 0x1 -> 1 */
+/* 0x2 -> 2 */
+/* 0x3 -> 1 */
+/* 0x4 -> 3 */
+Value* VexExprUnopCtz64::emit(void) const
+{
+	IRBuilder<>     *builder = theGenLLVM->getBuilder();
+	llvm::Function	*f;
+	llvm::Value	*v;
+
+	v = args[0]->emit();
+	f = theVexHelpers->getHelper("vexop_ctz64");
+	assert (f != NULL);
+
+	return builder->CreateCall(f, v);
+}

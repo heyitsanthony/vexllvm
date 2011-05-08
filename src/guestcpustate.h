@@ -1,6 +1,8 @@
 #ifndef GUESTCPUSTATE_H
 #define GUESTCPUSTATE_H
 
+#include <iostream>
+#include <stdint.h>
 #include "syscallparams.h"
 
 #include <assert.h>
@@ -27,6 +29,8 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	void setStackPtr(void*);
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
+	uint64_t getExitCode(void) const;
+	void print(std::ostream& os) const;
 protected:
 	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);
 	void mkRegCtx(void);

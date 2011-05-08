@@ -45,6 +45,8 @@ return new VexExprBinop##x(in_parent, expr);
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpEQ64);
+	BINOP_TAGOP(CmpNE64);
+	BINOP_TAGOP(CmpEQ8x16);
 	BINOP_TAGOP(CmpLE64S);
 	BINOP_TAGOP(CmpLE64U);
 
@@ -83,11 +85,13 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Xor32);
 	BINOP_TAGOP(Xor64);
 
-
+	UNOP_TAGOP(1Uto8);
 	UNOP_TAGOP(32Uto64);
 	UNOP_TAGOP(32Sto64);
 	UNOP_TAGOP(64to32);
 	UNOP_TAGOP(64to1);
+
+	UNOP_TAGOP(Ctz64);
 	default:
 		fprintf(stderr, "UNKNOWN OP %x\n", expr->Iex.Unop.op);
 		break;
@@ -121,7 +125,7 @@ VexExprConst* VexExprConst::createConst(
 	CONST_TAGOP(F32i);
 	CONST_TAGOP(F64);
 	CONST_TAGOP(F64i);
-//	CONST_TAGOP(V128); TODO
+	CONST_TAGOP(V128);
 	default: break;
 	}
 	return NULL;
@@ -138,6 +142,22 @@ EMIT_CONST_INT(U32, 32)
 EMIT_CONST_INT(U64, 64)
 EMIT_CONST_INT(F32i, 32)
 EMIT_CONST_INT(F64i, 64)
+
+llvm::Value* VexExprConstV128::emit(void) const
+{
+	llvm::VectorType* i128ty = llvm::VectorType::get(
+		llvm::Type::getInt16Ty(
+			llvm::getGlobalContext()),
+		8);
+	std::vector<llvm::Constant*> splat(
+		8,
+		llvm::ConstantInt::get(
+			llvm::getGlobalContext(),
+			llvm::APInt(16, V128)));
+
+	return llvm::ConstantVector::get(i128ty, splat);
+}
+
 
 llvm::Value* VexExprConstF32::emit(void) const {
 	return llvm::ConstantFP::get(
@@ -267,11 +287,76 @@ void VexExprCCall::print(std::ostream& os) const
 	os << ")";
 }
 
-void VexExprMux0X::print(std::ostream& os) const { os << "Mux0X"; }
+VexExprMux0X::VexExprMux0X(VexStmt* in_parent, const IRExpr* expr)
+: VexExpr(in_parent, expr),
+  cond(VexExpr::create(in_parent, expr->Iex.Mux0X.cond)),
+  expr0(VexExpr::create(in_parent, expr->Iex.Mux0X.expr0)),
+  exprX(VexExpr::create(in_parent, expr->Iex.Mux0X.exprX))
+{ }
+
+VexExprMux0X::~VexExprMux0X(void)
+{
+	delete cond;
+	delete expr0;
+	delete exprX;
+}
+
+llvm::Value* VexExprMux0X::emit(void) const
+{
+	llvm::IRBuilder<>	*builder;
+	llvm::Value		*cmp_val, *true_val, *false_val;
+	llvm::PHINode		*pn;
+	llvm::BasicBlock	*bb_then, *bb_else, *bb_merge, *bb_origin;
+
+	builder = theGenLLVM->getBuilder();
+	bb_origin = builder->GetInsertBlock();
+	bb_then = llvm::BasicBlock::Create(
+		llvm::getGlobalContext(), "mux0X_then",
+		bb_origin->getParent());
+	bb_else = llvm::BasicBlock::Create(
+		llvm::getGlobalContext(), "mux0X_else",
+		bb_origin->getParent());
+	bb_merge = llvm::BasicBlock::Create(
+		llvm::getGlobalContext(), "mux0X_merge",
+		bb_origin->getParent());
+
+
+	/* evaluate mux condition */
+	builder->SetInsertPoint(bb_origin);
+	cmp_val = cond->emit();
+	builder->CreateCondBr(cmp_val, bb_then, bb_else);
+
+	builder->SetInsertPoint(bb_then);
+	true_val = expr0->emit();
+	builder->CreateBr(bb_merge);
+
+	builder->SetInsertPoint(bb_else);
+	false_val = exprX->emit();
+	builder->CreateBr(bb_merge);
+
+
+	/* phi node on the mux */
+	builder->SetInsertPoint(bb_merge);
+	pn = builder->CreatePHI(true_val->getType(), "mux0x_phi");
+	pn->addIncoming(true_val, bb_then);
+	pn->addIncoming(false_val, bb_else);
+
+	return pn;
+}
+
+void VexExprMux0X::print(std::ostream& os) const
+{
+	os << "Mux0X(";
+	cond->print(os);
+	os << ", ";
+	expr0->print(os);
+	os << ", ";
+	exprX->print(os);
+	os << ")";
+}
 
 
 llvm::Value* VexExprGet::emit(void) const
 {
-	/* XXX should we worry about doing coercion here? */
-	return theGenLLVM->readCtx(offset);
+	return theGenLLVM->readCtx(offset, ty);	
 }

@@ -15,7 +15,8 @@ OBJDEPS=	vexxlate.o	\
 		gueststate.o	\
 		vex_dispatch.o	\
 		syscalls.o	\
-		vexhelpers.o
+		vexhelpers.o	\
+		symbols.o
 
 ELFDEPS=	elfimg.o	\
 		dllib.o		\
@@ -26,6 +27,9 @@ ELFTRACEDEPS=	elfimg.o	\
 		dllib.o		\
 		elfsegment.o	\
 		elf_trace.o
+
+BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
+		bitcode/vexops.bc
 
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
@@ -40,7 +44,9 @@ LLVMLDFLAGS=$(shell llvm-config --ldflags)
 LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall $(LDFLAGS)
 
-all: bin/elf_test bin/elf_trace
+all: bin/elf_test bin/elf_trace bitcode
+
+bitcode: $(BITCODE_FILES)
 
 clean:
 	rm -f obj/* bin/*
@@ -51,6 +57,8 @@ tests/traces-bin/% : tests/traces-obj/%.o
 tests/traces-obj/%.o: tests/traces-src/%.c
 	gcc -g -c -o $@ $<
 
+bitcode/%.bc: support/%.c
+	llvm-gcc -emit-llvm -O3 -c $< -o $@
 
 tests: test-traces
 tests-clean:

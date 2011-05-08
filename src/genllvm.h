@@ -34,7 +34,7 @@ public:
 
 	const llvm::Type* vexTy2LLVM(IRType ty) const;
 	
-	llvm::Value* readCtx(unsigned int byteOff);
+	llvm::Value* readCtx(unsigned int byteOff, IRType ty);
 	llvm::Value* writeCtx(unsigned int byteOff, llvm::Value* v);
 	virtual void store(llvm::Value* addr, llvm::Value* data);
 	virtual llvm::Value* load(llvm::Value* addr_v, IRType vex_type);
