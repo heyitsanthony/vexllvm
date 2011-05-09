@@ -36,6 +36,7 @@ public:
 	std::string getName(guestptr_t) const;
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
+	const ElfImg* getExeImage(void) const { return img; }
 private:
 	const ElfImg	*img;
 	GuestCPUState	*cpu_state;

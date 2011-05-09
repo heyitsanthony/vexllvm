@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <string>
+#include <list>
+
+#include "Sugar.h"
+
 #include "vexsb.h"
 #include "vexxlate.h"
 
@@ -14,6 +20,7 @@ struct vex_cb
 };
 
 static vex_cb g_cb;
+static std::list<std::string>	xlate_msg_log;
 
 /* built-in handlers */
 static __attribute__((noreturn)) void vex_exit(void)
@@ -33,7 +40,19 @@ static IRSB* vex_finaltidy(IRSB* irsb)
 	return irsb;
 }
 
-static void vex_log(HChar* hc, Int nbytes) { printf("%s", hc); }
+static void vex_log(HChar* hc, Int nbytes)
+#if 0
+{
+	/* TODO: limit output */
+	xlate_msg_log.push_back(std::string(hc));
+}
+#else
+{
+	/* TODO: limit output */
+	fprintf(stderr, "%s", hc);
+}
+#endif
+
 static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
 
 VexXlate::VexXlate()
@@ -47,6 +66,14 @@ VexXlate::VexXlate()
 }
 
 VexXlate::~VexXlate() { /* ??? */ }
+
+void VexXlate::dumpLog(std::ostream& os) const
+{
+	foreach (it, xlate_msg_log.begin(), xlate_msg_log.end()) {
+		os << (*it);
+	}
+	os << std::endl;
+}
 
 /* XXX eventually support other architectures */
 VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)

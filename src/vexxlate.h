@@ -1,6 +1,7 @@
 #ifndef VEXIFACE_H
 #define VEXIFACE_H
 
+#include <iostream>
 #include <stdint.h>
 
 extern "C" {
@@ -18,7 +19,7 @@ public:
 	VexXlate();
 	virtual ~VexXlate();
 	VexSB* xlate(const void* guest_bytes, uint64_t guest_addr);
-
+	void dumpLog(std::ostream& os) const;
 private:
 	VexControl		vc;
 	VexArchInfo		vai_amd64;

@@ -159,6 +159,8 @@ void GuestCPUState::mkRegCtx(void)
 	guestCtxTy = mkFromFields(amd64_fields, off2ElemMap);
 }
 
+extern void dumpIRSBs(void);
+
 /* gets the element number so we can do a GEP */
 unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 {
@@ -167,6 +169,7 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 	if (it == off2ElemMap.end()) {
 		unsigned int	c = 0;
 		fprintf(stderr, "WTF IS AT %d\n", off);
+		dumpIRSBs();
 		for (int i = 0; amd64_fields[i].f_len; i++) {
 			fprintf(stderr, "%s@%d\n", amd64_fields[i].f_name, c);
 			c += (amd64_fields[i].f_len/8)*
@@ -207,18 +210,35 @@ uint64_t GuestCPUState::getExitCode(void) const
 	return get_gpr(state_data, AMD64_GPR_RAX);
 }
 
+// 208 == XMM base
+#define get_xmm_lo(i)	((uint64_t*)(&(((uint8_t*)state_data)[208+16*i])))[0]
+#define get_xmm_hi(i)	((uint64_t*)(&(((uint8_t*)state_data)[208+16*i])))[1]
 
 void GuestCPUState::print(std::ostream& os) const
 {
-	os << "RAX: " << get_gpr(state_data, AMD64_GPR_RAX) << "\n";
-	os << "RBX: " << get_gpr(state_data, AMD64_GPR_RBX) << "\n";
-	os << "RCX: " << get_gpr(state_data, AMD64_GPR_RCX) << "\n";
-	os << "RDX: " << get_gpr(state_data, AMD64_GPR_RDX) << "\n";
-	os << "RSP: " << get_gpr(state_data, AMD64_GPR_RSP) << "\n";
-	os << "RBP: " << get_gpr(state_data, AMD64_GPR_RBP) << "\n";
-	os << "RDI: " << get_gpr(state_data, AMD64_GPR_RDI) << "\n";
-	os << "RSI: " << get_gpr(state_data, AMD64_GPR_RSI) << "\n";
-	os << "R8: " << get_gpr(state_data, AMD64_GPR_R8) << "\n";
-	os << "R9: " << get_gpr(state_data, AMD64_GPR_R9) << "\n";
-	os << "R10: " << get_gpr(state_data, AMD64_GPR_R10) << "\n";
+	os << "RIP: " << (void*)get_gpr(state_data, 21) << "\n";
+	os << "RAX: " << (void*)get_gpr(state_data, AMD64_GPR_RAX) << "\n";
+	os << "RAX: " << (void*)get_gpr(state_data, AMD64_GPR_RAX) << "\n";
+	os << "RBX: " << (void*)get_gpr(state_data, AMD64_GPR_RBX) << "\n";
+	os << "RCX: " << (void*)get_gpr(state_data, AMD64_GPR_RCX) << "\n";
+	os << "RDX: " << (void*)get_gpr(state_data, AMD64_GPR_RDX) << "\n";
+	os << "RSP: " << (void*)get_gpr(state_data, AMD64_GPR_RSP) << "\n";
+	os << "RBP: " << (void*)get_gpr(state_data, AMD64_GPR_RBP) << "\n";
+	os << "RDI: " << (void*)get_gpr(state_data, AMD64_GPR_RDI) << "\n";
+	os << "RSI: " << (void*)get_gpr(state_data, AMD64_GPR_RSI) << "\n";
+	os << "R8: " << (void*)get_gpr(state_data, AMD64_GPR_R8) << "\n";
+	os << "R9: " << (void*)get_gpr(state_data, AMD64_GPR_R9) << "\n";
+	os << "R10: " << (void*)get_gpr(state_data, AMD64_GPR_R10) << "\n";
+	os << "R11: " << (void*)get_gpr(state_data, AMD64_GPR_R11) << "\n";
+	os << "R12: " << (void*)get_gpr(state_data, AMD64_GPR_R12) << "\n";
+	os << "R13: " << (void*)get_gpr(state_data, AMD64_GPR_R13) << "\n";
+	os << "R14: " << (void*)get_gpr(state_data, AMD64_GPR_R14) << "\n";
+	os << "R15: " << (void*)get_gpr(state_data, AMD64_GPR_R15) << "\n";
+
+	for (int i = 0; i < 16; i++) {
+		os
+		<< "XMM" << i << ": "
+		<< (void*) get_xmm_hi(i) << "|"
+		<< (void*)get_xmm_lo(i) << std::endl;
+	}
 }

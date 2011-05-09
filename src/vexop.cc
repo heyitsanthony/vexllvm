@@ -212,6 +212,9 @@ X_TO_Y_EMIT(32Uto64,CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(32Sto64, CreateSExt, getInt64Ty)
 X_TO_Y_EMIT(64to1, CreateTrunc, getInt1Ty)
 X_TO_Y_EMIT(1Uto8, CreateZExt, getInt8Ty);
+X_TO_Y_EMIT(1Uto64, CreateZExt, getInt64Ty);
+X_TO_Y_EMIT(16Uto64, CreateZExt, getInt64Ty)
+X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
 
 #define BINOP_EMIT(x,y)				\
 Value* VexExprBinop##x::emit(void) const	\
@@ -277,6 +280,7 @@ Value* VexExprBinopCmpEQ8x16::emit(void) const
 
 BINOP_EMIT(CmpLE64S, ICmpSLE)
 BINOP_EMIT(CmpLE64U, ICmpULE)
+BINOP_EMIT(CmpLT64U, ICmpULT)
 
 /* count number of zeros (from bit0) leading up to first 1. */
 /* 0x0 -> undef */

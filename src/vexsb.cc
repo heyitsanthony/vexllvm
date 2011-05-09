@@ -29,6 +29,7 @@ VexSB::VexSB(uint64_t in_guest_addr, const IRSB* irsb)
 
 VexSB::~VexSB(void)
 {
+	
 	delete [] values;
 	delete [] reg_bitwidth;
 }
@@ -152,8 +153,7 @@ VexStmt* VexSB::loadNextInstruction(const IRStmt* stmt)
 
 void VexSB::loadInstructions(const IRSB* irsb)
 {
-	ppIRSB (const_cast<IRSB*>(irsb));
-
+	ppIRSB(const_cast<IRSB*>(irsb));
 	for (unsigned int i = 0; i < getNumStmts(); i++) {
 		VexStmt		*stmt;
 		VexStmtIMark	*imark;

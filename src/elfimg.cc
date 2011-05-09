@@ -170,7 +170,7 @@ void ElfImg::applyRela(const Elf64_Rela& rela)
 	switch (r_type) {
 	case R_X86_64_GLOB_DAT:
 		if (strcmp(symname, "__gmon_start__") == 0) {
-			WARNING("faking GLOB_DAT __gmon_start__");
+			WARNING("faking GLOB_DAT __gmon_start__\n");
 		}
 		*((Elf64_Addr*)hostptr) = st_value;
 		break;

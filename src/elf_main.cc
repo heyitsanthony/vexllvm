@@ -44,6 +44,9 @@ typedef uint64_t(*vexfunc_t)(void* /* guest state */);
 
 std::list<elfptr_t>	trace;
 
+/* XXX */
+void dumpIRSBs(void) {}
+
 static VexSB* vexsb_from_elfaddr(
 	VexXlate* vexlate, ElfImg* img, elfptr_t elfptr)
 {

@@ -49,6 +49,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpEQ8x16);
 	BINOP_TAGOP(CmpLE64S);
 	BINOP_TAGOP(CmpLE64U);
+	BINOP_TAGOP(CmpLT64U);
 
 	BINOP_TAGOP(Add8);
 	BINOP_TAGOP(Add16);
@@ -86,6 +87,9 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Xor64);
 
 	UNOP_TAGOP(1Uto8);
+	UNOP_TAGOP(1Uto64);
+	UNOP_TAGOP(8Uto64);
+	UNOP_TAGOP(16Uto64);
 	UNOP_TAGOP(32Uto64);
 	UNOP_TAGOP(32Sto64);
 	UNOP_TAGOP(64to32);
@@ -304,7 +308,7 @@ VexExprMux0X::~VexExprMux0X(void)
 llvm::Value* VexExprMux0X::emit(void) const
 {
 	llvm::IRBuilder<>	*builder;
-	llvm::Value		*cmp_val, *true_val, *false_val;
+	llvm::Value		*cmp_val, *zero_val, *nonzero_val;
 	llvm::PHINode		*pn;
 	llvm::BasicBlock	*bb_then, *bb_else, *bb_merge, *bb_origin;
 
@@ -327,19 +331,19 @@ llvm::Value* VexExprMux0X::emit(void) const
 	builder->CreateCondBr(cmp_val, bb_then, bb_else);
 
 	builder->SetInsertPoint(bb_then);
-	true_val = expr0->emit();
+	nonzero_val = exprX->emit();
 	builder->CreateBr(bb_merge);
 
 	builder->SetInsertPoint(bb_else);
-	false_val = exprX->emit();
+	zero_val = expr0->emit();
 	builder->CreateBr(bb_merge);
 
 
 	/* phi node on the mux */
 	builder->SetInsertPoint(bb_merge);
-	pn = builder->CreatePHI(true_val->getType(), "mux0x_phi");
-	pn->addIncoming(true_val, bb_then);
-	pn->addIncoming(false_val, bb_else);
+	pn = builder->CreatePHI(zero_val->getType(), "mux0x_phi");
+	pn->addIncoming(zero_val, bb_else);
+	pn->addIncoming(nonzero_val, bb_then);
 
 	return pn;
 }

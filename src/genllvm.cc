@@ -90,18 +90,26 @@ const Type* GenLLVM::vexTy2LLVM(IRType ty) const
 
 Value* GenLLVM::readCtx(unsigned int byteOff, IRType ty)
 {
-	const Type*	readTy, *ptrTy;
+	Value	*ret;
+
+	ret = getCtxGEP(byteOff, vexTy2LLVM(ty));
+	ret = builder->CreateLoad(ret);
+
+	return ret;
+}
+
+Value* GenLLVM::getCtxGEP(unsigned int byteOff, const Type* accessTy)
+{
+	const Type	*ptrTy;
 	unsigned int	tyBits;
 	Value		*addr_ptr, *ret; /* XXX assuming access are aligned */
 
-	readTy = vexTy2LLVM(ty);
-	ptrTy = llvm::PointerType::get(readTy, 0);
-	tyBits = readTy->getPrimitiveSizeInBits();
+	ptrTy = llvm::PointerType::get(accessTy, 0);
+	tyBits = accessTy->getPrimitiveSizeInBits();
 
-	if (!tyBits) std::cerr << "AAAAAAAAAAAAAAAAAAAAAAA" << std::endl;
-	assert (tyBits);
+	assert (tyBits && "Access type is 0 bits???");
 
-	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "readCtxPtr");
+	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "accessCtxPtr");
 
 	ret = builder->CreateGEP(
 		addr_ptr, 
@@ -110,21 +118,17 @@ Value* GenLLVM::readCtx(unsigned int byteOff, IRType ty)
 			llvm::APInt(
 				32, 
 				(byteOff*8)/tyBits)),
-		"readCtx");
-	ret = builder->CreateLoad(ret);
-
+		"accessCtx");
 	return ret;
 }
 
 Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 {
-	unsigned int 	idx;
-	Value		*ret;
-	
-	idx = guestState->getCPUState()->byteOffset2ElemIdx(byteOff);
-	ret = builder->CreateStructGEP(cur_guest_ctx, idx, "writeCtx");
-	ret = builder->CreateStore(v, ret);
-	
+	Value	*ret, *addr;
+
+	addr = getCtxGEP(byteOff, v->getType());
+	ret = builder->CreateStore(v, addr);
+
 	return ret;
 }
 
