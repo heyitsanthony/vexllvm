@@ -17,6 +17,10 @@ class VexExprNaryOp : public VexExpr
 public:
 	VexExprNaryOp(
 		VexStmt* in_parent, const IRExpr* expr, unsigned int n_ops);
+	VexExprNaryOp(
+		VexStmt* in_parent, VexExpr** in_args, unsigned int in_n_ops)
+	: 	VexExpr(in_parent),
+		op((IROp)~0), n_ops(in_n_ops), args(in_args) {}
 	virtual ~VexExprNaryOp(void);
 	virtual void print(std::ostream& os) const;
 	static VexExpr* createOp(VexStmt* p, const IRExpr* expr);
@@ -33,6 +37,8 @@ class VexExpr##x##op : public VexExprNaryOp			\
 public:								\
 	VexExpr##x##op(VexStmt* p, const IRExpr* expr)		\
 	: VexExprNaryOp(p, expr, y) {}				\
+	VexExpr##x##op(VexStmt* p, VexExpr** args)		\
+	: VexExprNaryOp(p, args, y) {}				\
 	virtual ~VexExpr##x##op(void) {}			\
 }
 
@@ -47,6 +53,8 @@ class VexExpr##x##y : public VexExpr##x		\
 public:						\
 	VexExpr##x##y(VexStmt* in_parent, const IRExpr* expr)	\
 	: VexExpr##x(in_parent, expr) {}	\
+	VexExpr##x##y(VexStmt* in_parent, VexExpr** args)	\
+	: VexExpr##x(in_parent, args) {}			\
 	virtual ~VexExpr##x##y() {}		\
 	virtual llvm::Value* emit(void) const;	\
 	virtual const char* getOpName(void) const { return #y; }	\
@@ -59,11 +67,18 @@ private:	\
 UNOP_CLASS(32Sto64);
 UNOP_CLASS(32Uto64);
 UNOP_CLASS(64to32);
+UNOP_CLASS(64to8);
 UNOP_CLASS(64to1);
+UNOP_CLASS(64to16);
 UNOP_CLASS(1Uto8);
 UNOP_CLASS(1Uto64);
 UNOP_CLASS(8Uto64);
 UNOP_CLASS(16Uto64);
+UNOP_CLASS(32UtoV128);
+UNOP_CLASS(V128to64); // lo half
+UNOP_CLASS(32HLto64);
+UNOP_CLASS(64HLtoV128);
+UNOP_CLASS(64HIto32);
 
 UNOP_CLASS(Ctz64);
 
@@ -76,6 +91,8 @@ BINOP_CLASS(And8);
 BINOP_CLASS(And16);
 BINOP_CLASS(And32);
 BINOP_CLASS(And64);
+
+BINOP_CLASS(InterleaveLO8x16);
 
 BINOP_CLASS(Or8);
 BINOP_CLASS(Or16);
@@ -102,6 +119,8 @@ BINOP_CLASS(Xor16);
 BINOP_CLASS(Xor32);
 BINOP_CLASS(Xor64);
 
+BINOP_CLASS(CmpEQ8);
+BINOP_CLASS(CmpEQ16);
 BINOP_CLASS(CmpEQ64);
 BINOP_CLASS(CmpNE64);
 BINOP_CLASS(CmpEQ8x16);

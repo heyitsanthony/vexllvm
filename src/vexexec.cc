@@ -75,6 +75,7 @@ VexSB* VexExec::doNextSB(void)
 	llvm::Function	*f;
 	elfptr_t	new_jmpaddr;
 	VexSB		*vsb;
+	GuestExitType	exit_type;
 
 	elfptr = addr_stack.top();
 	addr_stack.pop();
@@ -89,6 +90,16 @@ VexSB* VexExec::doNextSB(void)
 	assert (f && "FAILED TO EMIT FUNC??");
 
 	new_jmpaddr = (elfptr_t)doFunc(f);
+
+	/* check for special exits */
+	exit_type = gs->getCPUState()->getExitType();
+	if (exit_type != GE_IGNORE) {
+		if (exit_type == GE_EMWARN) {
+			std::cerr << "VEX Emulation warning!?" << std::endl;
+		} else
+			assert (0 == 1 && "SPECIAL EXIT TYPE");
+		gs->getCPUState()->setExitType(GE_IGNORE);
+	}
 
 	/* push fall through address if call */
 	if (vsb->isCall())
@@ -113,7 +124,7 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 {
 	hostptr_t	hostptr;
 
-	hostptr = gs->getExeImage()->xlateAddr(elfptr);
+	hostptr = (void*)(gs->addr2Host((uint64_t)elfptr));
 
 	/* XXX recongnize library ranges */
 	if (hostptr == NULL) hostptr = elfptr;
@@ -145,7 +156,7 @@ void VexExec::run(void)
 	assert (exit_ptr && "Could not find exit pointer. What is this?");
 
 	/* top of address stack is executed */
-	addr_stack.push(gs->getExeImage()->getEntryPoint());
+	addr_stack.push(gs->getEntryPoint());
 	while (!addr_stack.empty()) {
 		VexSB	*sb;
 

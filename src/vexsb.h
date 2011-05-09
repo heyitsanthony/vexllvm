@@ -25,8 +25,15 @@ class VexSB
 {
 public:
 	VexSB(uint64_t guess_addr, const IRSB* in_irsb);
+
+	VexSB(uint64_t guest_addr, unsigned int num_regs);
+
+	// takes ownership
+	void load(
+		std::vector<VexStmt*>& stmts, IRJumpKind irjk,
+		VexExpr* next);
+
 	virtual ~VexSB(void);
-	unsigned int getRegBitWidth(unsigned int reg_idx) const;
 	unsigned int getNumRegs(void) const { return reg_c; }
 	unsigned int getNumStmts(void) const { return stmt_c; }
 	void setRegValue(unsigned int reg_idx, llvm::Value* v);
@@ -42,9 +49,8 @@ public:
 	bool isSyscall(void) const { return (jump_kind == Ijk_Sys_syscall); }
 	bool isReturn(void) const { return (jump_kind == Ijk_Ret); }
 private:
-	void loadBitWidths(const IRTypeEnv* tyenv);
 	void loadInstructions(const IRSB* irsb);
-	void loadJump(const IRSB* irsb);
+	void loadJump(IRJumpKind, VexExpr*);
 
 	VexStmt* loadNextInstruction(const IRStmt* stmt);
 
@@ -52,7 +58,6 @@ private:
 	VexExpr			*jump_expr;
 	uint64_t		guest_addr;
 	unsigned int		reg_c;
-	unsigned int		*reg_bitwidth;
 	unsigned int		stmt_c;
 	VexStmtIMark		*last_imark;
 	PtrList<VexStmt>	stmts;

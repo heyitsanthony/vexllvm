@@ -15,6 +15,15 @@ namespace llvm
 
 struct guest_ctx_field;
 
+/* types of exit states we need to worry about on return */
+enum GuestExitType {
+	GE_IGNORE = 0, 	/* use regular control path */
+	GE_SIGTRAP = 1,
+	GE_SIGSEGV = 2,
+	GE_SIGBUS = 3,
+	GE_EMWARN = 4
+	/* XXX ADD MORE */ };
+
 /* TODO: make this a base class when if we want to support other archs */
 class GuestCPUState
 {
@@ -30,6 +39,12 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
 	uint64_t getExitCode(void) const;
+	/* byte offset into state data for exit type byte */
+	unsigned int getExitTypeOffset(void) const { return state_byte_c; }
+
+	void setExitType(GuestExitType et) { *exit_type = (uint8_t)et; }
+	GuestExitType getExitType(void) { return (GuestExitType)*exit_type; }
+
 	void print(std::ostream& os) const;
 protected:
 	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);
@@ -37,7 +52,9 @@ protected:
 private:
 	byte2elem_map	off2ElemMap;
 	llvm::Type	*guestCtxTy;
-	uint8_t		*state_data;
+	uint8_t		*state_data;	/* amd64 guest + exit_type */
+	uint8_t		*exit_type;	/* ptr into state data */
+
 	uint8_t		*tls_data;	/* so %fs works */
 	unsigned int	state_byte_c;
 };

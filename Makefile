@@ -17,24 +17,19 @@ OBJDEPS=	vexxlate.o	\
 		syscalls.o	\
 		vexhelpers.o	\
 		vexexec.o	\
-		symbols.o
-
-ELFDEPS=	elfimg.o	\
+		symbols.o	\
+		elfimg.o	\
 		dllib.o		\
-		elfsegment.o	\
-		elf_main.o
+		gueststateelf.o	\
+		elfsegment.o
 
-ELFTRACEDEPS=	elfimg.o	\
-		dllib.o		\
-		elfsegment.o	\
-		elf_trace.o
+ELFTRACEDEPS=	elf_trace.o
 
 BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/vexops.bc
 
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
-ELFDIRDEPS=$(ELFDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
 
 #TODO: use better config options
@@ -45,7 +40,7 @@ LLVMLDFLAGS=$(shell llvm-config --ldflags)
 LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall $(LDFLAGS)
 
-all: bin/elf_test bin/elf_trace bitcode
+all: bin/elf_trace bin/jit_test bitcode
 
 bitcode: $(BITCODE_FILES)
 
@@ -73,8 +68,9 @@ test-traces: $(TRACEDEPS_PATH)
 bin/elf_trace: $(OBJDIRDEPS) $(ELFTRACEDIRDEPS)
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
-bin/elf_test: $(OBJDIRDEPS) $(ELFDIRDEPS)
+bin/jit_test: $(OBJDIRDEPS) obj/jit_test.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<
@@ -85,4 +81,3 @@ obj/%.o: src/%.cc src/%.h
 obj/%.o: src/%.cc
 	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
 
-	

@@ -46,8 +46,11 @@ struct guest_ctx_field
 GuestCPUState::GuestCPUState()
 {
 	mkRegCtx();
-	state_data = new uint8_t[state_byte_c];
-	memset(state_data, 0, state_byte_c);
+	
+	state_data = new uint8_t[state_byte_c+1];
+	memset(state_data, 0, state_byte_c+1);
+	exit_type = &state_data[state_byte_c];
+
 	tls_data = new uint8_t[TLS_DATA_SIZE];
 	memset(tls_data, 0, TLS_DATA_SIZE);
 	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) = 
@@ -203,7 +206,6 @@ void GuestCPUState::setSyscallResult(uint64_t ret)
 {
 	set_gpr(state_data, AMD64_GPR_RAX, ret);
 }
-
 
 uint64_t GuestCPUState::getExitCode(void) const
 {

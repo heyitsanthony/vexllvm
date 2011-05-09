@@ -36,7 +36,7 @@ public:
 	static VexExpr* create(VexStmt* in_parent, const IRExpr* expr);
 	const VexStmt* getParent(void) const { return parent; }
 protected:
-	VexExpr(VexStmt* in_parent, const IRExpr* expr)
+	VexExpr(VexStmt* in_parent)
 	: parent(in_parent) {}
 private:
 	const VexStmt* parent;
@@ -47,7 +47,7 @@ class VexExprGet : public VexExpr
 {
 public:
 	VexExprGet(VexStmt* in_parent, const IRExpr* expr)
-	:VexExpr(in_parent, expr), 
+	:VexExpr(in_parent), 
 	 offset(expr->Iex.Get.offset),
 	 ty(expr->Iex.Get.ty) {}
 
@@ -64,7 +64,7 @@ class VexExprGetI : public VexExpr
 {
 public:
 	VexExprGetI(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent, expr) {}
+	: VexExpr(in_parent) {}
 	virtual ~VexExprGetI(void) {}
 	virtual void print(std::ostream& os) const;
 private:
@@ -80,7 +80,7 @@ class VexExprRdTmp : public VexExpr
 {
 public:
 	VexExprRdTmp(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent, expr), tmp_reg(expr->Iex.RdTmp.tmp) {}
+	: VexExpr(in_parent), tmp_reg(expr->Iex.RdTmp.tmp) {}
 	virtual ~VexExprRdTmp(void) {}
 	virtual void print(std::ostream& os) const;
 	virtual llvm::Value* emit(void) const;
@@ -121,8 +121,8 @@ public:
 		VexStmt* in_parent, const IRExpr* expr);
 	virtual uint64_t toValue(void) const = 0;
 protected:
-	VexExprConst(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent, expr) {}
+	VexExprConst(VexStmt* in_parent)
+	: VexExpr(in_parent) {}
 private:
       /* A constant-valued expression.
          ppconst IRExpr output: <con>, eg. 0x4:I32 */
@@ -133,8 +133,11 @@ class VexExprConst##x : public VexExprConst	\
 {	\
 public:	\
 	VexExprConst##x(VexStmt* in_parent, const IRExpr* expr)	\
-	: VexExprConst(in_parent, expr),	\
+	: VexExprConst(in_parent),		\
 	x(expr->Iex.Const.con->Ico.x) {}	\
+	VexExprConst##x(VexStmt* in_parent, y v)	\
+	: VexExprConst(in_parent), x(v) {}		\
+							\
 	void print(std::ostream& os) const { os << x << ":" #x; } \
 	llvm::Value* emit(void) const;		\
 	virtual uint64_t toValue(void) const { return x; }	\

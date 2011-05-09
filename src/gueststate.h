@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include "syscallparams.h"
 
-class ElfImg;
 class GuestCPUState;
 
 namespace llvm
@@ -24,11 +23,13 @@ typedef uint64_t guestptr_t;
 class GuestState
 {
 public:
-	GuestState(const ElfImg* img);
+	GuestState(void);
 	virtual ~GuestState(void);
-	llvm::Value* addr2Host(llvm::Value* addr_v) const;
-	uint64_t addr2Host(guestptr_t guestptr) const;
-	guestptr_t name2guest(std::string& symname) const;
+	virtual llvm::Value* addrVal2Host(llvm::Value* addr_v) const = 0;
+	virtual uint64_t addr2Host(guestptr_t guestptr) const = 0;
+	virtual guestptr_t name2guest(std::string& symname) const = 0;
+	virtual void* getEntryPoint(void) const = 0;
+
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
 	GuestCPUState* getCPUState(void) { return cpu_state; }
 	SyscallParams getSyscallParams(void) const;
@@ -36,9 +37,7 @@ public:
 	std::string getName(guestptr_t) const;
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
-	const ElfImg* getExeImage(void) const { return img; }
 private:
-	const ElfImg	*img;
 	GuestCPUState	*cpu_state;
 	uint8_t		*stack;
 };

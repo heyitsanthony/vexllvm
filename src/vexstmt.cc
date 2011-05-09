@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "guestcpustate.h"
 #include "genllvm.h"
 #include "vexexpr.h"
 #include "vexsb.h"
@@ -106,9 +107,13 @@ VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
  guard(VexExpr::create(this, in_stmt->Ist.Exit.guard)),
  jk(in_stmt->Ist.Exit.jk)
 {
-	if (jk != Ijk_Boring) {
+	switch (jk) {
+	case Ijk_Boring: exit_type = (uint8_t)GE_IGNORE; break;
+	case Ijk_SigSEGV: exit_type = (uint8_t)GE_SIGSEGV; break;
+	case Ijk_EmWarn: exit_type = (uint8_t)GE_EMWARN; break;
+	default:
 		ppIRJumpKind(jk);
-		assert (0 == 1 && "Expected Boring JumpKind");
+		assert (0 == 1 && "Unexpected Boring JumpKind");
 	}
 
 	switch(in_stmt->Ist.Exit.dst->tag) {
@@ -138,9 +143,6 @@ void VexStmtExit::emit(void) const
 	llvm::Value		*cmp_val;
 	llvm::BasicBlock	*bb_then, *bb_else, *bb_origin;
 
-	/* XXX-- create return statement... */
-	if (jk != Ijk_Boring) assert (0 == 1 && "Expected JMP");
-
 	builder = theGenLLVM->getBuilder();
 	bb_origin = builder->GetInsertBlock();
 	bb_then = llvm::BasicBlock::Create(
@@ -158,6 +160,11 @@ void VexStmtExit::emit(void) const
 	/* guard condition return, leave this place */
 	/* XXX for calls we're going to need some more info */
 	builder->SetInsertPoint(bb_then);
+
+	if (jk != Ijk_Boring) {	
+		/* special exits set exit type */
+		theGenLLVM->setExitType((GuestExitType)exit_type);
+	}
 	builder->CreateRet(
 		llvm::ConstantInt::get(
 			llvm::getGlobalContext(),

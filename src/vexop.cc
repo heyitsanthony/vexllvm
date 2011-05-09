@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include <iostream>
 #include "genllvm.h"
 #include "vexop.h"
 #include "vexhelpers.h"
@@ -150,7 +150,7 @@ CASE_OP(32Uto64)
 
 CASE_OP(8Sto16)
 CASE_OP(8Sto32)
- CASE_OP(8Sto64)
+CASE_OP(8Sto64)
 
 CASE_OP(16Sto32)
 CASE_OP(16Sto64)
@@ -189,6 +189,11 @@ CASE_OP(1Sto16)	/* :: Ity_Bit -> Ity_I16, signed widen */
 CASE_OP(1Sto32)	/* :: Ity_Bit -> Ity_I32, signed widen */
 CASE_OP(1Sto64)	/* :: Ity_Bit -> Ity_I64, signed widen */
 
+/* vector stuff */
+CASE_OP(32UtoV128)
+CASE_OP(64HLtoV128)	// :: (I64,I64) -> I128
+CASE_OP(V128to64)
+CASE_OP(InterleaveLO8x16)
 
 	case Iop_INVALID: return "Iop_INVALID";
 	default:
@@ -197,24 +202,98 @@ CASE_OP(1Sto64)	/* :: Ity_Bit -> Ity_I64, signed widen */
 	return "???Op???";
 }
 
-#define X_TO_Y_EMIT(x,y,z)		\
-Value* VexExprUnop##x::emit(void) const	\
-{					\
-	Value		*v1;		\
-	IRBuilder<>	*builder;	\
-	v1 = args[0]->emit();		\
+#define UNOP_SETUP				\
+	Value		*v1;			\
+	IRBuilder<>	*builder;		\
 	builder = theGenLLVM->getBuilder();	\
+	v1 = args[0]->emit();
+
+
+#define X_TO_Y_EMIT(x,y,z)			\
+Value* VexExprUnop##x::emit(void) const		\
+{						\
+	UNOP_SETUP				\
 	return builder->y(v1, builder->z());	\
 }
+
+#define XHI_TO_Y_EMIT(x,y,z)			\
+Value* VexExprUnop##x::emit(void) const		\
+{						\
+	UNOP_SETUP				\
+	return builder->CreateTrunc(		\
+		builder->CreateLShr(v1,		\
+			ConstantInt::get(	\
+				getGlobalContext(),	\
+				APInt(32, y)))		\
+			,			\
+		builder->z());			\
+}						\
+
+XHI_TO_Y_EMIT(64HIto32, 32, getInt32Ty)
 
 X_TO_Y_EMIT(64to32, CreateTrunc, getInt32Ty)
 X_TO_Y_EMIT(32Uto64,CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(32Sto64, CreateSExt, getInt64Ty)
 X_TO_Y_EMIT(64to1, CreateTrunc, getInt1Ty)
-X_TO_Y_EMIT(1Uto8, CreateZExt, getInt8Ty);
-X_TO_Y_EMIT(1Uto64, CreateZExt, getInt64Ty);
+X_TO_Y_EMIT(64to8, CreateTrunc, getInt8Ty)
+X_TO_Y_EMIT(64to16, CreateTrunc, getInt16Ty)
+X_TO_Y_EMIT(1Uto8, CreateZExt, getInt8Ty)
+X_TO_Y_EMIT(1Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(16Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
+X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
+
+#define get_vt_8x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 8)
+
+/* so stupid */
+Value* VexExprUnop32UtoV128::emit(void) const
+{
+	Value		*v_128i;
+
+	UNOP_SETUP
+
+	v_128i = builder->CreateZExt(
+		v1, IntegerType::get(getGlobalContext(), 128));
+	
+	return builder->CreateBitCast(v_128i, get_vt_8x16(), "32UtoV128");
+}
+
+Value* VexExprUnop64HLtoV128::emit(void) const
+{
+	Value		*v_128i, *v_128hl;
+
+	UNOP_SETUP
+
+	v_128i = builder->CreateZExt(
+		v1, IntegerType::get(getGlobalContext(), 128));
+	
+	v_128hl = builder->CreateOr(
+		v_128i,
+		builder->CreateShl(
+			v_128i, 
+			ConstantInt::get(
+				getGlobalContext(),
+				APInt(32, 64))));
+
+	return builder->CreateBitCast(v_128hl, get_vt_8x16(), "64HLtoV128");
+}
+
+/* (i32, i32) -> i64 */
+Value* VexExprUnop32HLto64::emit(void) const
+{
+	Value		*v_64;
+
+	UNOP_SETUP
+
+	v_64 = builder->CreateZExt(v1, builder->getInt64Ty());
+	return builder->CreateOr(
+		v_64,
+		builder->CreateShl(
+			v_64, 
+			ConstantInt::get(
+				getGlobalContext(),
+				APInt(32, 32))));
+}
 
 #define BINOP_EMIT(x,y)				\
 Value* VexExprBinop##x::emit(void) const	\
@@ -247,10 +326,10 @@ BINOP_EMIT(Shl16, Shl)
 BINOP_EMIT(Shl32, Shl)
 BINOP_EMIT(Shl64, Shl)
 
-BINOP_EMIT(Shr8, AShr)
-BINOP_EMIT(Shr16, AShr)
-BINOP_EMIT(Shr32, AShr)
-BINOP_EMIT(Shr64, AShr)
+BINOP_EMIT(Shr8, LShr)
+BINOP_EMIT(Shr16, LShr)
+BINOP_EMIT(Shr32, LShr)
+BINOP_EMIT(Shr64, LShr)
 
 BINOP_EMIT(Sub8, Sub)
 BINOP_EMIT(Sub16, Sub)
@@ -262,6 +341,8 @@ BINOP_EMIT(Xor16, Xor)
 BINOP_EMIT(Xor32, Xor)
 BINOP_EMIT(Xor64, Xor)
 
+BINOP_EMIT(CmpEQ8, ICmpEQ)
+BINOP_EMIT(CmpEQ16, ICmpEQ)
 BINOP_EMIT(CmpEQ64, ICmpEQ)
 BINOP_EMIT(CmpNE64, ICmpNE)
 
@@ -273,9 +354,7 @@ Value* VexExprBinopCmpEQ8x16::emit(void) const
 	v2 = args[1]->emit();
 	builder = theGenLLVM->getBuilder();
 	cmp_8x1 = builder->CreateICmpEQ(v1, v2);
-	return builder->CreateSExt(
-		cmp_8x1, 
-		theGenLLVM->vexTy2LLVM(Ity_V128));
+	return builder->CreateSExt(cmp_8x1, get_vt_8x16());
 }
 
 BINOP_EMIT(CmpLE64S, ICmpSLE)
@@ -299,4 +378,33 @@ Value* VexExprUnopCtz64::emit(void) const
 	assert (f != NULL);
 
 	return builder->CreateCall(f, v);
+}
+
+#define get_i32(x) ConstantInt::get(getGlobalContext(), APInt(32, x))
+
+
+Value* VexExprBinopInterleaveLO8x16::emit(void) const
+{
+	IRBuilder<>     *builder = theGenLLVM->getBuilder();
+	llvm::Value	*v1, *v2;
+	Constant	*shuffle_v[] = {
+		get_i32(0), get_i32(16),
+		get_i32(1), get_i32(17),
+		get_i32(2), get_i32(18),
+		get_i32(3), get_i32(19),
+		get_i32(4), get_i32(20),
+		get_i32(5), get_i32(21),
+		get_i32(6), get_i32(22),
+		get_i32(7), get_i32(23) };
+	Constant	*cv;
+
+	v1 = args[0]->emit();
+	v2 = args[1]->emit();
+
+	cv = ConstantVector::get(
+		std::vector<Constant*>(
+			shuffle_v,
+			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
+
+	return builder->CreateShuffleVector(v1, v2, cv, "ILO8x16");
 }

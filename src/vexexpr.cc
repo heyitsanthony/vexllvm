@@ -44,6 +44,8 @@ VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 return new VexExprBinop##x(in_parent, expr);
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
+	BINOP_TAGOP(CmpEQ8);
+	BINOP_TAGOP(CmpEQ16);
 	BINOP_TAGOP(CmpEQ64);
 	BINOP_TAGOP(CmpNE64);
 	BINOP_TAGOP(CmpEQ8x16);
@@ -60,6 +62,8 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(And16);
 	BINOP_TAGOP(And32);
 	BINOP_TAGOP(And64);
+
+	BINOP_TAGOP(InterleaveLO8x16)
 
 	BINOP_TAGOP(Or8);
 	BINOP_TAGOP(Or16);
@@ -94,6 +98,13 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(32Sto64);
 	UNOP_TAGOP(64to32);
 	UNOP_TAGOP(64to1);
+	UNOP_TAGOP(64to8);
+	UNOP_TAGOP(64to16);
+	UNOP_TAGOP(32UtoV128);
+	UNOP_TAGOP(V128to64);
+	UNOP_TAGOP(32HLto64);
+	UNOP_TAGOP(64HLtoV128);
+	UNOP_TAGOP(64HIto32);
 
 	UNOP_TAGOP(Ctz64);
 	default:
@@ -194,7 +205,7 @@ llvm::Value* VexExprRdTmp::emit(void) const
 
 VexExprNaryOp::VexExprNaryOp(
 	VexStmt* in_parent, const IRExpr* expr, unsigned int in_n_ops)
-: VexExpr(in_parent, expr),
+: VexExpr(in_parent),
   op(expr->Iex.Unop.op),
   n_ops(in_n_ops)
 {
@@ -226,7 +237,7 @@ void VexExprNaryOp::print(std::ostream& os) const
 }
 
 VexExprLoad::VexExprLoad(VexStmt* in_parent, const IRExpr* expr)
-: VexExpr(in_parent, expr)
+: VexExpr(in_parent)
 {
 	little_endian = expr->Iex.Load.end == Iend_LE;
 	assert (little_endian);
@@ -255,7 +266,7 @@ void VexExprLoad::print(std::ostream& os) const
 }
 
 VexExprCCall::VexExprCCall(VexStmt* in_parent, const IRExpr* expr)
-: VexExpr(in_parent, expr) 
+: VexExpr(in_parent) 
 {
 	const IRCallee*	callee = expr->Iex.CCall.cee;
 
@@ -292,7 +303,7 @@ void VexExprCCall::print(std::ostream& os) const
 }
 
 VexExprMux0X::VexExprMux0X(VexStmt* in_parent, const IRExpr* expr)
-: VexExpr(in_parent, expr),
+: VexExpr(in_parent),
   cond(VexExpr::create(in_parent, expr->Iex.Mux0X.cond)),
   expr0(VexExpr::create(in_parent, expr->Iex.Mux0X.expr0)),
   exprX(VexExpr::create(in_parent, expr->Iex.Mux0X.exprX))

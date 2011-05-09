@@ -42,6 +42,7 @@ public:
 	virtual llvm::Value* load(llvm::Value* addr_v, IRType vex_type);
 	void beginBB(const char* name);
 	llvm::Function* endBB(llvm::Value*);
+	void setExitType(uint8_t exit_type);
 private:
 	void mkFuncTy(void);
 

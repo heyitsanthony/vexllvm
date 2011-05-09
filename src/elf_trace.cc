@@ -1,17 +1,8 @@
-#include <llvm/Value.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#include <llvm/Analysis/Verifier.h>
-#include <llvm/Support/IRBuilder.h>
-#include <llvm/Intrinsics.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
 #include "Sugar.h"
-#include <stack>
-#include <map>
 
 #include <signal.h>
 #include <stdint.h>
@@ -22,15 +13,9 @@
 #include <string.h>
 
 
-extern "C" {
-#include <valgrind/libvex.h>
-#include <valgrind/libvex_ir.h>
-#include <valgrind/libvex_guest_amd64.h>
-};
-
 #include "elfimg.h"
 #include "vexexec.h"
-#include "gueststate.h"
+#include "gueststateelf.h"
 
 using namespace llvm;
 
@@ -96,7 +81,7 @@ int main(int argc, char* argv[])
 		return -2;
 	}
 
-	gs = new GuestState(img);
+	gs = new GuestStateELF(img);
 	vexexec = VexExec::create(gs);
 	assert (vexexec && "Could not create vexexec");
 	

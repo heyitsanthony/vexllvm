@@ -15,23 +15,55 @@ using namespace llvm;
 VexSB::VexSB(uint64_t in_guest_addr, const IRSB* irsb)
 :	guest_addr(in_guest_addr),
 	reg_c(irsb->tyenv->types_used),
-	stmt_c(irsb->stmts_used)
+	stmt_c(irsb->stmts_used),
+	last_imark(0)
 {
 	values = new Value*[reg_c];
 	memset(values, 0, sizeof(Value*)*getNumRegs());
-	reg_bitwidth = new unsigned int[reg_c];
-	memset(reg_bitwidth, 0, reg_c*sizeof(unsigned int));
 
-	loadBitWidths(irsb->tyenv);
 	loadInstructions(irsb);
-	loadJump(irsb);
+	loadJump(irsb->jumpkind, VexExpr::create(stmts.back(), irsb->next));
 }
 
 VexSB::~VexSB(void)
 {
-	
 	delete [] values;
-	delete [] reg_bitwidth;
+	delete jump_expr;
+}
+
+VexSB::VexSB(uint64_t in_guest_addr, unsigned int num_regs)
+: 	guest_addr(in_guest_addr),
+	reg_c(num_regs),
+	stmt_c(0),
+	last_imark(0)
+{
+	values = new Value*[reg_c];
+	memset(values, 0, sizeof(Value*)*getNumRegs());
+}
+
+void VexSB::load(
+	std::vector<VexStmt*>& in_stmts,
+	IRJumpKind irjk,
+	VexExpr* next_expr)
+{
+	assert (stmt_c == 0);
+
+	stmt_c = in_stmts.size();
+	foreach (it, in_stmts.begin(), in_stmts.end()) {
+		VexStmt		*stmt;
+		VexStmtIMark	*imark;
+
+		stmt = *it;
+		stmts.push_back(stmt);
+
+		imark = dynamic_cast<VexStmtIMark*>(stmt);
+		if (imark != NULL) last_imark = imark;
+	}
+
+	loadJump(irjk, next_expr);
+
+	/* take it all away */
+	in_stmts.clear();
 }
 
 unsigned int VexSB::getTypeBitWidth(IRType ty)
@@ -70,12 +102,6 @@ const char* VexSB::getTypeStr(IRType ty)
 	return 0;
 }
 
-void VexSB::loadBitWidths(const IRTypeEnv* tyenv)
-{
-	for (unsigned int i = 0; i < reg_c; i++)
-		reg_bitwidth[i] = getTypeBitWidth(tyenv->types[i]);
-}
-
 void VexSB::print(std::ostream& os) const
 {
 	unsigned int i = 0;
@@ -92,8 +118,7 @@ void VexSB::printRegisters(std::ostream& os) const
 	for (unsigned int i = 0; i < getNumRegs(); i++) {
 		const Value*	v;
 
-		os <<	"t" << i << ":I" << 
-			getRegBitWidth(i) << "\n";
+		os <<	"t" << i << "\n";
 
 		v = values[i];
 		if (v == NULL) continue;
@@ -116,12 +141,6 @@ llvm::Function* VexSB::emit(const char* fname)
 	cur_f = theGenLLVM->endBB(ret_v);
 
 	return cur_f;
-}
-
-unsigned int VexSB::getRegBitWidth(unsigned int reg_idx) const
-{
-	assert (reg_idx < getNumRegs());
-	return reg_bitwidth[reg_idx];
 }
 
 VexStmt* VexSB::loadNextInstruction(const IRStmt* stmt)
@@ -178,23 +197,23 @@ Value* VexSB::getRegValue(unsigned int reg_idx) const
 	return values[reg_idx];
 }
 
-void VexSB::loadJump(const IRSB* irsb)
+void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 {
-	jump_kind = irsb->jumpkind;
+	jump_kind = jk;
 
 //	ppIRJumpKind (jump_kind);
 //	printf("=JUMPKIND\n");
 
-	switch(irsb->jumpkind) {
+	switch(jk) {
 	case Ijk_Call:
 	case Ijk_Ret:
 	case Ijk_Boring:
 	case Ijk_NoRedir:
 	case Ijk_Sys_syscall:
-		jump_expr = VexExpr::create(stmts.back(), irsb->next);
+		jump_expr = blk_next;
 		break;
 	default:
-		fprintf(stderr, "UNKNOWN JUMP TYPE %x\n", irsb->jumpkind);
+		fprintf(stderr, "UNKNOWN JUMP TYPE %x\n", jk);
 		assert(0 == 1 && "BAD JUMP");
 	}
 }

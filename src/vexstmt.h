@@ -40,6 +40,8 @@ class VexStmtIMark : public VexStmt
 {
 public:
 	VexStmtIMark(VexSB* in_parent, const IRStmt* in_stmt);
+	VexStmtIMark(VexSB* in_parent, uint64_t in_ga, unsigned int in_len)
+	: VexStmt(in_parent, NULL), guest_addr(in_ga), guest_op_len(in_len) {}
 	virtual ~VexStmtIMark() {}
 	virtual void emit(void) const { /* ignore */ }
 	virtual void print(std::ostream& os) const;
@@ -65,6 +67,9 @@ class VexStmtPut : public VexStmt
 {
 public:
 	VexStmtPut(VexSB* in_parent, const IRStmt* in_stmt);
+	VexStmtPut(VexSB* in_parent, int in_offset, VexExpr* in_data_expr)
+	: VexStmt(in_parent, NULL), offset(in_offset), data_expr(in_data_expr)
+	{}
 	virtual ~VexStmtPut();
 	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
@@ -167,6 +172,7 @@ public:
 private:
 /* IRStmt.Ist.Exit */
 	VexExpr		*guard;	/* Conditional expression-- always 1-bit */
+	uint8_t		exit_type;
 	IRJumpKind	jk;	/* Jump kind */
 	uint64_t	dst;	/* target constant */
 };
