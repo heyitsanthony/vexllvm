@@ -167,7 +167,12 @@ void VexExec::run(void)
 			return;
 		}
 
+//		std::cerr << "================BEFORE STATE" << std::endl;
+//		gs->print(std::cerr);
 		sb = doNextSB();
+//		std::cerr << "================AFTER STATE" << std::endl;
+//		gs->print(std::cerr);
+
 		if (!sb) break;
 		delete sb;
 	}

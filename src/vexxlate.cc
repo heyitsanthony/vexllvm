@@ -46,11 +46,13 @@ static void vex_log(HChar* hc, Int nbytes)
 	/* TODO: limit output */
 	xlate_msg_log.push_back(std::string(hc));
 }
-#else
+#elif 1
 {
 	/* TODO: limit output */
 	fprintf(stderr, "%s", hc);
 }
+#else
+{}
 #endif
 
 static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }

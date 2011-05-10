@@ -35,6 +35,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	const llvm::Type* getTy(void) const { return guestCtxTy; }
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 	void* getStateData(void) { return state_data; }
+	unsigned int getStateSize(void) { return state_byte_c; }
 	void setStackPtr(void*);
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);

@@ -55,6 +55,13 @@ GuestCPUState::GuestCPUState()
 	memset(tls_data, 0, TLS_DATA_SIZE);
 	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) = 
 		(uintptr_t)tls_data;
+
+	/* XXX pointer guard. LD uses the same pointer guard as the host
+	 * process (luckily). We really need our own LD to get around this
+	 * for other hosts. Alternative: force env LD_POINTER_GUARD=0 */
+	uint64_t	ptr_guard;
+	__asm__("movq %%fs:0x30, %0" : "=r" (ptr_guard));
+	*((uint64_t*)(&tls_data[0x30])) = ptr_guard;
 }
 
 GuestCPUState::~GuestCPUState()
@@ -127,7 +134,7 @@ static struct guest_ctx_field amd64_fields[] =
 	{64, 1, "FS_ZERO"},	/* 24 */
 
 	{64, 1, "SSEROUND"},
-	{128, 16, "XMM"},
+	{128, 17, "XMM"},	/* there is an XMM16 for valgrind stuff */
 
 	{32, 1, "FTOP"},
 	{64, 8, "FPREG"},
@@ -242,5 +249,12 @@ void GuestCPUState::print(std::ostream& os) const
 		<< "XMM" << i << ": "
 		<< (void*) get_xmm_hi(i) << "|"
 		<< (void*)get_xmm_lo(i) << std::endl;
+	}
+
+	os << "&fs = " << (void*)(*((uint64_t*)(&state_data[192]))) << std::endl;
+	for (int i = 0; i < 8; i++) {
+		os	<< "fs+" << (void*)(i*8)  << ":" 
+			<< (void*)((uint64_t*)tls_data)[i]
+			<< std::endl;;
 	}
 }

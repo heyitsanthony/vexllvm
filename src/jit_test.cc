@@ -26,6 +26,11 @@
 #include "guestcpustate.h"
 #include "gueststate.h"
 
+extern "C"
+{
+#include "valgrind/libvex_guest_amd64.h"	/* for register offsets */
+}
+
 using namespace llvm;
 
 #define TEST_VSB_GUESTADDR	((void*)0x12345678)
@@ -62,41 +67,132 @@ public:
 	void* getEntryPoint(void) const { return NULL; }
 };
 
-Function* getTestFunction(const char* name)
+/* XXX use offsetof references to valgrind */
+#define GUEST_BYTEOFF_RDX	offsetof(VexGuestAMD64State, guest_RDX)
+#define GUEST_BYTEOFF_XMM0	offsetof(VexGuestAMD64State, guest_XMM0)
+#define GUEST_BYTEOFF_XMM1	offsetof(VexGuestAMD64State, guest_XMM1)
+#define GUEST_BYTEOFF_XMM2	offsetof(VexGuestAMD64State, guest_XMM2)
+#define GUEST_BYTEOFF_XMM3	offsetof(VexGuestAMD64State, guest_XMM3)
+
+class TestSB
 {
-	VexSB			*vsb;
-	Function		*f;
-	std::vector<VexStmt*>	stmts;
-	VexStmt*		stmt;
-	VexExpr**		args;
-	VexExpr*		next_expr;
+public:
+	TestSB() {}
+	virtual ~TestSB() {}
+	virtual VexSB* getSB(void) const
+	{
+		VexSB			*vsb;
+		std::vector<VexStmt*>	stmts;
+		VexExpr*		next_expr;
 
-	vsb = new VexSB((uint64_t)TEST_VSB_GUESTADDR, 10 /* whatever */);
+		vsb = new VexSB((uint64_t)TEST_VSB_GUESTADDR, 10 /* whatever */);
+		stmts.push_back(
+			new VexStmtIMark(vsb, (uint64_t)TEST_VSB_GUESTADDR, 4));
+		setupStmts(vsb, stmts);
+		next_expr = new VexExprConstU64(NULL, 0xdeadbeef);
 
-	stmts.push_back(
-		new VexStmtIMark(vsb, (uint64_t)TEST_VSB_GUESTADDR, 4));
+		/* feed statemenet vector into vexsb in lieu of proper irsb */
+		vsb->load(stmts, Ijk_Ret, next_expr);
 
-	args = new VexExpr*[1];
-	args[0] = new VexExprConstU32(NULL, 0xcafebabe);
-	stmts.push_back(
-		new VexStmtPut(vsb, 208, 
-			new VexExprUnop32UtoV128(NULL, args)));
+		return vsb;
+	}
 
-	next_expr = new VexExprConstU64(NULL, 0xdeadbeef);
-	vsb->load(stmts, Ijk_Ret, next_expr);
+	virtual void prepState(GuestState* gs) const
+	{
+		memset(	gs->getCPUState()->getStateData(),
+			0,
+			gs->getCPUState()->getStateSize());
+	}
 
-	f = vsb->emit(name);
+	virtual bool isGoodState(GuestState* gs) const = 0;
+protected:
+	
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>&) const = 0;
+private:
+};
+
+class TestV128to64 : public TestSB
+{
+public:
+	TestV128to64() {}
+	virtual ~TestV128to64() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st;
+		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		return st->guest_RDX == 0x1234123412341234;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[1];
+		args[0] = new VexExprConstV128(NULL, 0x1234);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_RDX, 
+				new VexExprUnopV128to64(NULL, args)));
+	}
+};
+
+class TestInterleaveLO8x16 : public TestSB
+{
+public:
+	TestInterleaveLO8x16 () {}
+	virtual ~TestInterleaveLO8x16() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st;
+		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		return *((uint64_t*)&st->guest_XMM1) == 0xab12cd34ab12cd34;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[2];
+		args[0] = new VexExprConstV128(NULL, 0x1234);
+		args[1] = new VexExprConstV128(NULL, 0xabcd);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_XMM1, 
+				new VexExprBinopInterleaveLO8x16(
+					NULL, args)));
+	}
+};
+
+void doTest(GuestState* gs, TestSB* tsb)
+{
+	Function*	f;
+	VexSB		*vsb;
+	void*		guest_ptr;
+	char		emitstr[1024];
+
+	guest_ptr = TEST_VSB_GUESTADDR;
+	sprintf(emitstr, "sb_%p", guest_ptr);
+
+	vsb = tsb->getSB();
+	f = vsb->emit(emitstr);
 	f->dump();
 	delete vsb;
 
-	return f;
+	assert (f && "FAILED TO EMIT FUNC??");
+
+	tsb->prepState(gs);
+	doFunc(gs, f);
+	if (!tsb->isGoodState(gs)) {
+		gs->print(std::cerr);
+		assert (tsb->isGoodState(gs));
+	}
+	delete tsb;
 }
 
 int main(int argc, char* argv[])
 {
 	GuestState*	gs;
-	Function*	f;
-	void*		guest_ptr;
+
 
 	/* for the JIT */
 	InitializeNativeTarget();
@@ -113,15 +209,10 @@ int main(int argc, char* argv[])
 	assert (exeEngine && "Could not make exe engine");
 
 	theVexHelpers->bindToExeEngine(exeEngine);
+	
+	doTest(gs, new TestV128to64());
+	doTest(gs, new TestInterleaveLO8x16());
 
-	char emitstr[1024];
-	guest_ptr = TEST_VSB_GUESTADDR;
-	sprintf(emitstr, "sb_%p", guest_ptr);
-	f = getTestFunction(emitstr);
-	assert (f && "FAILED TO EMIT FUNC??");
-
-	doFunc(gs, f);
-	gs->print(std::cerr);
 
 	delete theVexHelpers;
 	delete theGenLLVM;

@@ -160,7 +160,7 @@ EMIT_CONST_INT(F64i, 64)
 
 llvm::Value* VexExprConstV128::emit(void) const
 {
-	llvm::VectorType* i128ty = llvm::VectorType::get(
+	llvm::VectorType* v128ty = llvm::VectorType::get(
 		llvm::Type::getInt16Ty(
 			llvm::getGlobalContext()),
 		8);
@@ -170,7 +170,7 @@ llvm::Value* VexExprConstV128::emit(void) const
 			llvm::getGlobalContext(),
 			llvm::APInt(16, V128)));
 
-	return llvm::ConstantVector::get(i128ty, splat);
+	return llvm::ConstantVector::get(v128ty, splat);
 }
 
 

@@ -241,9 +241,21 @@ X_TO_Y_EMIT(1Uto8, CreateZExt, getInt8Ty)
 X_TO_Y_EMIT(1Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(16Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
-X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
+//X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
 
 #define get_vt_8x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 8)
+#define get_vt_8x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 8)
+#define get_vt_4x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 4)
+#define get_vt_16x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 16)
+
+Value* VexExprUnopV128to64::emit(void) const
+{
+	Value		*v_trunc;
+
+	UNOP_SETUP
+	v_trunc = builder->CreateTrunc(v1, get_vt_4x16());
+	return builder->CreateBitCast(v_trunc, builder->getInt64Ty(), "V128to64");
+}
 
 /* so stupid */
 Value* VexExprUnop32UtoV128::emit(void) const
@@ -382,7 +394,7 @@ Value* VexExprUnopCtz64::emit(void) const
 
 #define get_i32(x) ConstantInt::get(getGlobalContext(), APInt(32, x))
 
-
+/* interleave 16 elements of an 8-bit width */
 Value* VexExprBinopInterleaveLO8x16::emit(void) const
 {
 	IRBuilder<>     *builder = theGenLLVM->getBuilder();
@@ -395,11 +407,13 @@ Value* VexExprBinopInterleaveLO8x16::emit(void) const
 		get_i32(4), get_i32(20),
 		get_i32(5), get_i32(21),
 		get_i32(6), get_i32(22),
-		get_i32(7), get_i32(23) };
+		get_i32(7), get_i32(23)};
 	Constant	*cv;
 
 	v1 = args[0]->emit();
 	v2 = args[1]->emit();
+	v1 = builder->CreateBitCast(v1, get_vt_16x8(), "lo8x16_v1");
+	v2 = builder->CreateBitCast(v2, get_vt_16x8(), "lo8x16_v2");
 
 	cv = ConstantVector::get(
 		std::vector<Constant*>(
