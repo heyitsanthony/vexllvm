@@ -163,6 +163,33 @@ protected:
 	}
 };
 
+class TestSub8x16 : public TestSB
+{
+public:
+	TestSub8x16 () {}
+	virtual ~TestSub8x16() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st;
+		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		return *((uint64_t*)&st->guest_XMM1) == 0x4411441144114411;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[2];
+		args[0] = new VexExprConstV128(NULL, 0x5533);
+		args[1] = new VexExprConstV128(NULL, 0x1122);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_XMM1, 
+				new VexExprBinopSub8x16(NULL, args)));
+	}
+};
+
+
 void doTest(GuestState* gs, TestSB* tsb)
 {
 	Function*	f;
@@ -212,7 +239,7 @@ int main(int argc, char* argv[])
 	
 	doTest(gs, new TestV128to64());
 	doTest(gs, new TestInterleaveLO8x16());
-
+	doTest(gs, new TestSub8x16());
 
 	delete theVexHelpers;
 	delete theGenLLVM;

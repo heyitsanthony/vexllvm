@@ -126,11 +126,15 @@ private:
 class VexStmtCAS : public VexStmt
 {
 public:
-	VexStmtCAS(VexSB* in_parent, const IRStmt* in_stmt)
-	 : VexStmt(in_parent, in_stmt) {}
-	virtual ~VexStmtCAS() {}
+	VexStmtCAS(VexSB* in_parent, const IRStmt* in_stmt);
+	virtual ~VexStmtCAS();
+	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
+	unsigned int oldVal_tmp;
+	VexExpr	*addr;
+	VexExpr	*expected_val;
+	VexExpr	*new_val;
 };
 
 class VexStmtLLSC : public VexStmt
@@ -152,6 +156,7 @@ public:
 	virtual void print(std::ostream& os) const;
 private:
 };
+
 class VexStmtMBE : public VexStmt
 {
 public:

@@ -208,6 +208,13 @@ CASE_OP(InterleaveLO8x16)
 	builder = theGenLLVM->getBuilder();	\
 	v1 = args[0]->emit();
 
+#define UNOP_EMIT(x,y)				\
+Value* VexExprUnop##x::emit(void) const	\
+{						\
+	UNOP_SETUP				\
+	builder = theGenLLVM->getBuilder();	\
+	return builder->y(v1);			\
+}
 
 #define X_TO_Y_EMIT(x,y,z)			\
 Value* VexExprUnop##x::emit(void) const		\
@@ -240,8 +247,12 @@ X_TO_Y_EMIT(64to16, CreateTrunc, getInt16Ty)
 X_TO_Y_EMIT(1Uto8, CreateZExt, getInt8Ty)
 X_TO_Y_EMIT(1Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(16Uto64, CreateZExt, getInt64Ty)
+X_TO_Y_EMIT(8Uto32, CreateZExt, getInt32Ty)
 X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
 //X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
+//
+UNOP_EMIT(Not1, CreateNot)
+
 
 #define get_vt_8x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 8)
 #define get_vt_8x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 8)
@@ -347,7 +358,6 @@ BINOP_EMIT(Sub8, Sub)
 BINOP_EMIT(Sub16, Sub)
 BINOP_EMIT(Sub32, Sub)
 BINOP_EMIT(Sub64, Sub)
-
 BINOP_EMIT(Xor8, Xor)
 BINOP_EMIT(Xor16, Xor)
 BINOP_EMIT(Xor32, Xor)
@@ -355,8 +365,21 @@ BINOP_EMIT(Xor64, Xor)
 
 BINOP_EMIT(CmpEQ8, ICmpEQ)
 BINOP_EMIT(CmpEQ16, ICmpEQ)
+BINOP_EMIT(CmpEQ32, ICmpEQ)
 BINOP_EMIT(CmpEQ64, ICmpEQ)
+BINOP_EMIT(CmpNE8, ICmpNE)
+BINOP_EMIT(CmpNE16, ICmpNE)
+BINOP_EMIT(CmpNE32, ICmpNE)
 BINOP_EMIT(CmpNE64, ICmpNE)
+
+BINOP_EMIT(CasCmpEQ8, ICmpEQ)
+BINOP_EMIT(CasCmpEQ16, ICmpEQ)
+BINOP_EMIT(CasCmpEQ32, ICmpEQ)
+BINOP_EMIT(CasCmpEQ64, ICmpEQ)
+BINOP_EMIT(CasCmpNE8, ICmpNE)
+BINOP_EMIT(CasCmpNE16, ICmpNE)
+BINOP_EMIT(CasCmpNE32, ICmpNE)
+BINOP_EMIT(CasCmpNE64, ICmpNE)
 
 Value* VexExprBinopCmpEQ8x16::emit(void) const
 {
@@ -367,6 +390,17 @@ Value* VexExprBinopCmpEQ8x16::emit(void) const
 	builder = theGenLLVM->getBuilder();
 	cmp_8x1 = builder->CreateICmpEQ(v1, v2);
 	return builder->CreateSExt(cmp_8x1, get_vt_8x16());
+}
+
+Value* VexExprBinopSub8x16::emit(void) const
+{
+	Value		*v1, *v2;
+	IRBuilder<>	*builder;
+
+	builder = theGenLLVM->getBuilder();
+	v1 = builder->CreateBitCast(args[0]->emit(), get_vt_16x8());
+	v2 = builder->CreateBitCast(args[1]->emit(), get_vt_16x8());
+	return builder->CreateSub(v1, v2);
 }
 
 BINOP_EMIT(CmpLE64S, ICmpSLE)

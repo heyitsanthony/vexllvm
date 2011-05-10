@@ -143,18 +143,24 @@ void GenLLVM::store(llvm::Value* addr_v, llvm::Value* data_v)
 	builder->CreateStore(data_v, addr_ptr);
 }
 
-Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
+
+llvm::Value* GenLLVM::load(llvm::Value* addr_v, const llvm::Type* ty)
 {
 	Type		*ptrTy;
 	Value		*addr_ptr;
 	LoadInst	*loadInst;
 
-	ptrTy = llvm::PointerType::get(vexTy2LLVM(vex_type), 0);
+	ptrTy = llvm::PointerType::get(ty, 0);
 	addr_v = guestState->addrVal2Host(addr_v);
 	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "loadPtr");
 	loadInst = builder->CreateLoad(addr_ptr);
 	loadInst->setAlignment(8);
 	return loadInst;
+}
+
+Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
+{
+	return load(addr_v, vexTy2LLVM(vex_type));
 }
 
 void GenLLVM::setExitType(uint8_t exit_type)

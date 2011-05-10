@@ -6,6 +6,8 @@
 
 #include "vexstmt.h"
 
+using namespace llvm;
+
 void VexStmtNoOp::print(std::ostream& os) const { os << "NoOp"; }
 
 void VexStmtIMark::print(std::ostream& os) const
@@ -33,7 +35,7 @@ VexStmtPut::~VexStmtPut(void) { delete data_expr;}
 
 void VexStmtPut::emit(void) const
 {
-	llvm::Value	*out_v;
+	Value	*out_v;
 	out_v = data_expr->emit();
 	theGenLLVM->writeCtx(offset, out_v);
 }
@@ -81,7 +83,7 @@ VexStmtStore::~VexStmtStore(void)
 
 void VexStmtStore::emit(void) const
 {
-	llvm::Value *addr_v, *data_v;
+	Value *addr_v, *data_v;
 
 	data_v = data_expr->emit();
 	addr_v = addr_expr->emit();
@@ -96,7 +98,74 @@ void VexStmtStore::print(std::ostream& os) const
 	data_expr->print(os);
 }
 
-void VexStmtCAS::print(std::ostream& os) const { os << "CAS"; }
+VexStmtCAS::VexStmtCAS(VexSB* in_parent, const IRStmt* in_stmt)
+ :	VexStmt(in_parent, in_stmt),
+ 	oldVal_tmp(in_stmt->Ist.CAS.details->oldLo),
+ 	addr(VexExpr::create(this, in_stmt->Ist.CAS.details->addr)),
+	expected_val(VexExpr::create(this, in_stmt->Ist.CAS.details->expdLo)),
+	new_val(VexExpr::create(this, in_stmt->Ist.CAS.details->dataLo))
+{
+	assert (in_stmt->Ist.CAS.details->expdHi == NULL &&
+		"Only supporting single width CAS");
+}
+
+VexStmtCAS::~VexStmtCAS()
+{
+	delete addr;
+	delete expected_val;
+	delete new_val;
+}
+
+void VexStmtCAS::emit(void) const
+{
+	Value		*v_addr, *v_addr_load, *v_expected, *v_new, *v_cmp;
+	BasicBlock	*bb_then, *bb_merge, *bb_origin;
+	IRBuilder<>	*builder;
+
+// If addr contains the same value as expected_val, then new_val is
+// written there, else there is no write.  In both cases, the
+// original value at .addr is copied into .oldLo.
+ 	builder = theGenLLVM->getBuilder();
+	v_addr = addr->emit();
+	v_expected = expected_val->emit();
+	v_addr_load = theGenLLVM->load(v_addr, v_expected->getType());
+
+	bb_origin = builder->GetInsertBlock();
+	bb_then = BasicBlock::Create(
+		getGlobalContext(),
+		"cas_match_expect",
+		bb_origin->getParent());
+	bb_merge = BasicBlock::Create(
+		getGlobalContext(),
+		"cas_merge",
+		bb_origin->getParent());
+
+	/* compare value at address with expected value*/
+	builder->SetInsertPoint(bb_origin);
+	v_cmp = builder->CreateICmpEQ(v_expected, v_addr_load);
+	builder->CreateCondBr(v_cmp, bb_then, bb_merge);
+
+	builder->SetInsertPoint(bb_then);
+	/* match, write new value to address */
+	v_new = new_val->emit();
+	theGenLLVM->store(v_addr, v_new);
+	builder->CreateBr(bb_merge);
+
+	builder->SetInsertPoint(bb_merge);
+	parent->setRegValue(oldVal_tmp, v_expected);
+}
+
+void VexStmtCAS::print(std::ostream& os) const
+{
+	os << "CAS(*";
+	addr->print(os);
+	os << " == ";
+	expected_val->print(os);
+	os << " => ";
+	new_val->print(os);
+	os << ")";
+}
+
 void VexStmtLLSC::print(std::ostream& os) const { os << "LLSC"; }
 void VexStmtDirty::print(std::ostream& os) const { os << "Dirty"; }
 void VexStmtMBE::print(std::ostream& os) const { os << "MBE"; }
@@ -139,23 +208,23 @@ VexStmtExit::~VexStmtExit()
 
 void VexStmtExit::emit(void) const
 {
-	llvm::IRBuilder<>	*builder;
-	llvm::Value		*cmp_val;
-	llvm::BasicBlock	*bb_then, *bb_else, *bb_origin;
+	IRBuilder<>	*builder;
+	Value		*v_cmpal;
+	BasicBlock	*bb_then, *bb_else, *bb_origin;
 
 	builder = theGenLLVM->getBuilder();
 	bb_origin = builder->GetInsertBlock();
-	bb_then = llvm::BasicBlock::Create(
-		llvm::getGlobalContext(), "exit_then",
+	bb_then = BasicBlock::Create(
+		getGlobalContext(), "exit_then",
 		bb_origin->getParent());
-	bb_else = llvm::BasicBlock::Create(
-		llvm::getGlobalContext(), "exit_else",
+	bb_else = BasicBlock::Create(
+		getGlobalContext(), "exit_else",
 		bb_origin->getParent());
 
 	/* evaluate guard condition */
 	builder->SetInsertPoint(bb_origin);
-	cmp_val = guard->emit();
-	builder->CreateCondBr(cmp_val, bb_then, bb_else);
+	v_cmpal = guard->emit();
+	builder->CreateCondBr(v_cmpal, bb_then, bb_else);
 
 	/* guard condition return, leave this place */
 	/* XXX for calls we're going to need some more info */
@@ -166,9 +235,9 @@ void VexStmtExit::emit(void) const
 		theGenLLVM->setExitType((GuestExitType)exit_type);
 	}
 	builder->CreateRet(
-		llvm::ConstantInt::get(
-			llvm::getGlobalContext(),
-			llvm::APInt(64, dst)));
+		ConstantInt::get(
+			getGlobalContext(),
+			APInt(64, dst)));
 
 	/* continue on */
 	builder->SetInsertPoint(bb_else);
