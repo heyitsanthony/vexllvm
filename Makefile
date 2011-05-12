@@ -28,7 +28,7 @@ ELFTRACEDEPS=	elf_trace.o
 BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/vexops.bc
 
-TRACEDEPS= nested_call strlen strrchr print cmdline getenv fwrite malloc
+TRACEDEPS= nested_call strlen strrchr print cmdline getenv fwrite malloc memset
 
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)

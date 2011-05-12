@@ -125,6 +125,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(8Sto32);
 	UNOP_TAGOP(8Uto64);
 	UNOP_TAGOP(16Uto64);
+	UNOP_TAGOP(16Sto64);
 	UNOP_TAGOP(32Uto64);
 	UNOP_TAGOP(32Sto64);
 	UNOP_TAGOP(64to32);

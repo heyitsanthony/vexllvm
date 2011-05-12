@@ -29,7 +29,7 @@ DLLib::DLLib(const char* in_libname)
 			RTLD_NOW | RTLD_DEEPBIND |  RTLD_LOCAL);
 		assert (dl_h != NULL && "Failed to open lib with new lmid");
 		dlinfo(dl_h, RTLD_DI_LMID, &lmid);
-		assert (lmid != NULL);
+		assert (lmid != 0);
 		return;
 	}
 
