@@ -1,6 +1,8 @@
 #ifndef DLLIB_H
 #define DLLIB_H
 
+#include <dlfcn.h>
+
 class DLLib
 {
 public:
@@ -11,6 +13,7 @@ public:
 protected:
 	DLLib(const char* libname);
 private:
+	static Lmid_t	lmid;
 	const char	*libname;
 	void		*dl_h;	
 };

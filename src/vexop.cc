@@ -253,7 +253,10 @@ X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
 //X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
 //
 UNOP_EMIT(Not1, CreateNot)
-
+UNOP_EMIT(Not8, CreateNot)
+UNOP_EMIT(Not16, CreateNot)
+UNOP_EMIT(Not32, CreateNot)
+UNOP_EMIT(Not64, CreateNot)
 
 #define get_vt_8x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 8)
 #define get_vt_8x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 8)
@@ -369,6 +372,11 @@ BINOP_EMIT(And8, And)
 BINOP_EMIT(And16, And)
 BINOP_EMIT(And32, And)
 BINOP_EMIT(And64, And)
+
+BINOP_EMIT(Mul8, Mul)
+BINOP_EMIT(Mul16, Mul)
+BINOP_EMIT(Mul32, Mul)
+BINOP_EMIT(Mul64, Mul)
 
 BINOP_EMIT(Or8, Or)
 BINOP_EMIT(Or16, Or)

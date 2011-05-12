@@ -3,6 +3,8 @@
 #include <assert.h>
 #include "dllib.h"
 
+Lmid_t	DLLib::lmid = 0;
+
 DLLib* DLLib::load(const char* libname)
 {
 	DLLib* lib = new DLLib(libname);
@@ -18,9 +20,23 @@ DLLib* DLLib::load(const char* libname)
 DLLib::DLLib(const char* in_libname)
 : libname(in_libname)
 {
-	dl_h = dlopen(
+	if (lmid == 0) {
+		/* first time loading-- establish our very own 
+		 * namespace. */
+		dl_h = dlmopen(
+			LM_ID_NEWLM,
+			libname,
+			RTLD_NOW | RTLD_DEEPBIND |  RTLD_LOCAL);
+		assert (dl_h != NULL && "Failed to open lib with new lmid");
+		dlinfo(dl_h, RTLD_DI_LMID, &lmid);
+		assert (lmid != NULL);
+		return;
+	}
+
+	dl_h = dlmopen(
+		lmid,
 		libname, 
-		RTLD_NOW | RTLD_LOCAL
+		RTLD_NOW | RTLD_DEEPBIND |  RTLD_LOCAL
 		/* or can we hook into the lazy loader? */);
 }
 

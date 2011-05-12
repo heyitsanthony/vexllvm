@@ -14,7 +14,7 @@ public:
 	const ElfImg* getExeImage(void) const { return img; }
 	llvm::Value* addrVal2Host(llvm::Value* addr_v) const;
 	uint64_t addr2Host(guestptr_t guestptr) const;
-	guestptr_t name2guest(std::string& symname) const;
+	guestptr_t name2guest(const char* symname) const;
 	void* getEntryPoint(void) const;
 private:
 	const ElfImg	*img;

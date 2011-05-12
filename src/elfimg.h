@@ -27,7 +27,7 @@ public:
 	hostptr_t xlateAddr(elfptr_t addr) const;
 	elfptr_t getEntryPoint(void) const { return (void*)hdr->e_entry; }
 	bool isDirectMapped(void) const { return direct_mapped; } 
-	elfptr_t getSymAddr(const std::string& symname) const;
+	elfptr_t getSymAddr(const char* symname) const;
 private:
 	ElfImg(const char* fname);
 	bool verifyHeader(void) const;

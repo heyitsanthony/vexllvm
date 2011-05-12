@@ -43,7 +43,7 @@ uintptr_t GuestStateELF::addr2Host(uintptr_t guestptr) const
 	return (uintptr_t)img->xlateAddr((elfptr_t)guestptr);
 }
 
-guestptr_t GuestStateELF::name2guest(std::string& symname) const
+guestptr_t GuestStateELF::name2guest(const char* symname) const
 {
 	return (guestptr_t)img->getSymAddr(symname);
 }

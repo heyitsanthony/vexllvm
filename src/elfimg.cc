@@ -344,11 +344,13 @@ void ElfImg::pullInstrumented(DLLib* lib)
 {
 	const char* calls[] = {
 		"exit",
+		"abort",
+		"_exit",
 		"fork",
 		"kill"
-		/* XXX does this belong here? */
 		};
-	for (int i = 0; i < 3; i++) {
+	/* XXX does this belong here? */
+	for (int i = 0; i < sizeof(calls) / sizeof(const char*); i++) {
 		void	*fptr;
 		if (syms.findSym(std::string(calls[i]))) continue;
 		fptr = lib->resolve(calls[i]);
@@ -376,7 +378,7 @@ void ElfImg::linkWithLibs(std::vector<std::string>& needed)
 	}
 }
 
-elfptr_t ElfImg::getSymAddr(const std::string& symname) const
+elfptr_t ElfImg::getSymAddr(const char* symname) const
 {
 	const Symbol	*sym = syms.findSym(symname);
 	return (elfptr_t)((sym) ? sym->getBaseAddr() : NULL);

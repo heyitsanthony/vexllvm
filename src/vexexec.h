@@ -2,6 +2,7 @@
 #define VEXEXEC_H
 
 #include <stdint.h>
+#include <set>
 #include <map>
 #include <stack>
 #include <list>
@@ -24,6 +25,7 @@ typedef std::list<std::pair<void*, int /* depth */> > vexexec_traces;
 typedef std::stack<void*> vexexec_addrs;
 typedef std::map<void* /* guest addr */, VexSB*> vexsb_map;
 typedef std::map<VexSB*, vexfunc_t> jit_map;
+typedef std::set<void*> exit_func_set;
 
 class VexExec
 {
@@ -41,6 +43,7 @@ private:
 	VexSB* getSBFromGuestAddr(void* elfptr);
 	const VexSB* doNextSB(void);
 	uint64_t doVexSB(VexSB* vsb);
+	void loadExitFuncAddrs(void);
 
 	VexXlate		*vexlate;
 	llvm::ExecutionEngine	*exeEngine;
@@ -55,6 +58,11 @@ private:
 
 	vexsb_map	vexsb_cache;
 	jit_map		jit_cache;
+	exit_func_set	exit_addrs;
+
+	/* dump current state before executing BB */
+	/* defined by env var VEXLLVM_DUMP_STATES */
+	bool		dump_current_state;
 };
 
 #endif

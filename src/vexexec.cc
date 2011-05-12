@@ -11,6 +11,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <string>
 
@@ -73,6 +74,8 @@ VexExec::VexExec(GuestState* in_gs)
 
 	vexlate = new VexXlate();
 	sc = new Syscalls();
+
+	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 }
 
 const VexSB* VexExec::doNextSB(void)
@@ -168,14 +171,26 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	return func_ptr(gs->getCPUState()->getStateData());
 }
 
-void VexExec::run(void)
+void VexExec::loadExitFuncAddrs(void)
 {
-	std::string		exit_name("exit");
 	guestptr_t		exit_ptr;
 
 	/* libc hack. if we call the exit function, bail out */
-	exit_ptr = gs->name2guest(exit_name);
+	exit_ptr = gs->name2guest("exit");
 	assert (exit_ptr && "Could not find exit pointer. What is this?");
+	exit_addrs.insert((void*)exit_ptr);
+
+	exit_ptr = gs->name2guest("abort");
+	assert (exit_ptr && "Could not find abort pointer. What is this?");
+	exit_addrs.insert((void*)exit_ptr);
+
+	exit_ptr = gs->name2guest("_exit");
+	if (exit_ptr) exit_addrs.insert((void*)exit_ptr);
+}
+
+void VexExec::run(void)
+{
+	loadExitFuncAddrs();
 
 	/* top of address stack is executed */
 	addr_stack.push(gs->getEntryPoint());
@@ -184,16 +199,19 @@ void VexExec::run(void)
 		void		*top_addr;
 
 		top_addr = addr_stack.top();
-		if ((elfptr_t)top_addr == (elfptr_t)exit_ptr) {
+		if (exit_addrs.count((elfptr_t)top_addr)) {
 			std::cerr	<< "Exit call. Anthony fix this. "
 					<< "Exitcode=" << gs->getExitCode()
 					<< std::endl;
 			return;
 		}
 
-//		std::cerr << "================BEFORE DOING " << top_addr 
-//			<< std::endl;
-//		gs->print(std::cerr);
+		if (dump_current_state) {
+			std::cerr << "================BEFORE DOING "
+				<< top_addr 
+				<< std::endl;
+			gs->print(std::cerr);
+		}
 		sb = doNextSB();
 //		std::cerr << "================AFTER DOING " << top_addr 
 //			<< std::endl;
