@@ -41,7 +41,7 @@ VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 	/* known ops */
 	switch (op) {
 #define BINOP_TAGOP(x) case Iop_##x : \
-return new VexExprBinop##x(in_parent, expr);
+return new VexExprBinop##x(in_parent, expr)
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpEQ8);
@@ -64,11 +64,16 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CasCmpNE32);
 	BINOP_TAGOP(CasCmpNE64);
 
-
 	BINOP_TAGOP(CmpEQ8x16);
 	BINOP_TAGOP(CmpLE64S);
 	BINOP_TAGOP(CmpLE64U);
+	BINOP_TAGOP(CmpLT64S);
 	BINOP_TAGOP(CmpLT64U);
+
+	BINOP_TAGOP(CmpLE32S);
+	BINOP_TAGOP(CmpLE32U);
+	BINOP_TAGOP(CmpLT32S);
+	BINOP_TAGOP(CmpLT32U);
 
 	BINOP_TAGOP(Add8);
 	BINOP_TAGOP(Add16);
@@ -80,12 +85,22 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(And32);
 	BINOP_TAGOP(And64);
 
-	BINOP_TAGOP(InterleaveLO8x16)
+	BINOP_TAGOP(InterleaveLO8x16);
 
 	BINOP_TAGOP(Mul8);
 	BINOP_TAGOP(Mul16);
 	BINOP_TAGOP(Mul32);
 	BINOP_TAGOP(Mul64);
+
+	BINOP_TAGOP(MullS8);
+	BINOP_TAGOP(MullS16);
+	BINOP_TAGOP(MullS32);
+	BINOP_TAGOP(MullS64);
+
+	BINOP_TAGOP(MullU8);
+	BINOP_TAGOP(MullU16);
+	BINOP_TAGOP(MullU32);
+	BINOP_TAGOP(MullU64);
 
 	BINOP_TAGOP(Or8);
 	BINOP_TAGOP(Or16);
@@ -96,6 +111,11 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Shl16);
 	BINOP_TAGOP(Shl32);
 	BINOP_TAGOP(Shl64);
+
+	BINOP_TAGOP(Sar8);
+	BINOP_TAGOP(Sar16);
+	BINOP_TAGOP(Sar32);
+	BINOP_TAGOP(Sar64);
 
 	BINOP_TAGOP(Shr8);
 	BINOP_TAGOP(Shr16);
@@ -124,6 +144,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(8Uto32);
 	UNOP_TAGOP(8Sto32);
 	UNOP_TAGOP(8Uto64);
+	UNOP_TAGOP(8Sto64);
 	UNOP_TAGOP(16Uto64);
 	UNOP_TAGOP(16Sto64);
 	UNOP_TAGOP(32Uto64);
@@ -142,7 +163,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Ctz64);
 	UNOP_TAGOP(Clz64);
 	default:
-		fprintf(stderr, "UNKNOWN OP %x\n", expr->Iex.Unop.op);
+		fprintf(stderr, "UNKNOWN OP %s\n", getVexOpName(expr->Iex.Unop.op));
 		break;
 	}
 

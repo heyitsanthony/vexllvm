@@ -1,4 +1,4 @@
-BIN_BASE="0x8000000"
+BIN_BASE="0xa000000"
 CFLAGS=-g -DBIN_BASE="$(BIN_BASE)"
 # XXX, MAKES BINARY SIZE EXPLODE
 LDFLAGS="-Wl,-Ttext-segment=$(BIN_BASE)"
@@ -28,8 +28,11 @@ ELFTRACEDEPS=	elf_trace.o
 BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/vexops.bc
 
-TRACEDEPS= nested_call strlen strrchr print cmdline getenv fwrite malloc memset
-
+TRACEDEPS= nested_call strlen strrchr \
+	print cmdline getenv \
+	fwrite malloc memset \
+	primes memset-large atoi	\
+	strcpy qsort strstr
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
@@ -58,7 +61,7 @@ tests/traces-obj/%.o: tests/traces-src/%.c
 bitcode/%.bc: support/%.c
 	llvm-gcc -emit-llvm -O3 -c $< -o $@
 
-tests: test-traces
+tests: all test-traces
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/*
 

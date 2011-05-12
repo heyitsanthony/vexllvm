@@ -44,21 +44,8 @@ using namespace llvm;
       /* Variants of the above which produce a 64-bit result but which
          round their result to a IEEE float range first. */
       /* :: IRRoundingMode(I32) x F64 x F64 -> F64 */ 
-      Iop_AddF64r32, Iop_SubF64r32, Iop_MulF64r32, Iop_DivF64r32, 
 
-      /* Unary operations, without rounding. */
-      /* :: F64 -> F64 */
-      Iop_NegF64, Iop_AbsF64,
 
-      /* :: F32 -> F32 */
-      Iop_NegF32, Iop_AbsF32,
-
-      /* Unary operations, with rounding. */
-      /* :: IRRoundingMode(I32) x F64 -> F64 */
-      Iop_SqrtF64, Iop_SqrtF64r32,
-
-      /* :: IRRoundingMode(I32) x F32 -> F32 */
-      Iop_SqrtF32,
 
       /* Comparison, yielding GT/LT/EQ/UN(ordered), as per the following:
             0x45 Unordered
@@ -76,6 +63,17 @@ using namespace llvm;
 const char* getVexOpName(IROp op)
 {
 	switch(op) {
+	CASE_OP(SqrtF64r32)
+	OP_32_64(SqrtF)
+	OP_32_64(NegF)
+	OP_32_64(AbsF)
+
+	CASE_OP(AddF64r32)
+	CASE_OP(SubF64r32)
+	CASE_OP(MulF64r32)
+	CASE_OP(DivF64r32)
+
+
 	OP_FULLRANGE(Add)
 	OP_FULLRANGE(Sub)
 	OP_FULLRANGE(Mul)
@@ -92,11 +90,11 @@ const char* getVexOpName(IROp op)
 	OP_FULLRANGE(CasCmpNE)
 	OP_FULLRANGE(MullS)
 	OP_FULLRANGE(MullU)
-/* Wierdo integer stuff */
-CASE_OP(Clz64)
-CASE_OP(Clz32)	/* count leading zeroes */
-CASE_OP(Ctz64)
-CASE_OP(Ctz32)	/* count trailing zeros */
+	/* Wierdo integer stuff */
+	CASE_OP(Clz64)
+	CASE_OP(Clz32)	/* count leading zeroes */
+	CASE_OP(Ctz64)
+	CASE_OP(Ctz32)	/* count trailing zeros */
       /* Ctz64/Ctz32/Clz64/Clz32 are UNDEFINED when given arguments of
          zero.  You must ensure they are never given a zero argument.
       */
@@ -251,6 +249,7 @@ X_TO_Y_EMIT(16Sto64, CreateSExt, getInt64Ty)
 X_TO_Y_EMIT(8Uto32, CreateZExt, getInt32Ty)
 X_TO_Y_EMIT(8Sto32, CreateSExt, getInt32Ty)
 X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
+X_TO_Y_EMIT(8Sto64, CreateSExt, getInt64Ty)
 //X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
 //
 UNOP_EMIT(Not1, CreateNot)
@@ -379,6 +378,16 @@ BINOP_EMIT(Mul16, Mul)
 BINOP_EMIT(Mul32, Mul)
 BINOP_EMIT(Mul64, Mul)
 
+BINOP_EMIT(MullS8, NSWMul)
+BINOP_EMIT(MullS16, NSWMul)
+BINOP_EMIT(MullS32, NSWMul)
+BINOP_EMIT(MullS64, NSWMul)
+
+BINOP_EMIT(MullU8, NUWMul)
+BINOP_EMIT(MullU16, NUWMul)
+BINOP_EMIT(MullU32, NUWMul)
+BINOP_EMIT(MullU64, NUWMul)
+
 BINOP_EMIT(Or8, Or)
 BINOP_EMIT(Or16, Or)
 BINOP_EMIT(Or32, Or)
@@ -393,6 +402,11 @@ BINOP_EMIT(Shr8, LShr)
 BINOP_EMIT(Shr16, LShr)
 BINOP_EMIT(Shr32, LShr)
 BINOP_EMIT(Shr64, LShr)
+
+BINOP_EMIT(Sar8, AShr)
+BINOP_EMIT(Sar16, AShr)
+BINOP_EMIT(Sar32, AShr)
+BINOP_EMIT(Sar64, AShr)
 
 BINOP_EMIT(Sub8, Sub)
 BINOP_EMIT(Sub16, Sub)
@@ -445,7 +459,12 @@ Value* VexExprBinopSub8x16::emit(void) const
 
 BINOP_EMIT(CmpLE64S, ICmpSLE)
 BINOP_EMIT(CmpLE64U, ICmpULE)
+BINOP_EMIT(CmpLT64S, ICmpSLT)
 BINOP_EMIT(CmpLT64U, ICmpULT)
+BINOP_EMIT(CmpLE32S, ICmpSLE)
+BINOP_EMIT(CmpLE32U, ICmpULE)
+BINOP_EMIT(CmpLT32S, ICmpSLT)
+BINOP_EMIT(CmpLT32U, ICmpULT)
 
 #define EMIT_HELPER_UNOP(x,y)			\
 Value* VexExprUnop##x::emit(void) const	\

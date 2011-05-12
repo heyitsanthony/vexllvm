@@ -61,7 +61,16 @@ void sigsegv_handler(int v)
 
 	std::cerr << "SIGSEGV. TRACE:" << std::endl;
 	dump_data();
-	exit(-1);
+	exit(SIGSEGV);
+}
+
+void sigbus_handler(int v)
+{
+	vexexec->dumpLogs(std::cerr);
+
+	std::cerr << "SIGBUS. TRACE:" << std::endl;
+	dump_data();
+	exit(SIGBUS);
 }
 
 int main(int argc, char* argv[])
@@ -78,6 +87,7 @@ int main(int argc, char* argv[])
 	}
 
 	signal(SIGSEGV, sigsegv_handler);
+	signal(SIGBUS, sigbus_handler);
 
 	img = ElfImg::create(argv[1]);
 	if (img == NULL) {
