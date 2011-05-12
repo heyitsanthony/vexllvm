@@ -61,7 +61,7 @@ void sigsegv_handler(int v)
 
 	std::cerr << "SIGSEGV. TRACE:" << std::endl;
 	dump_data();
-	exit(SIGSEGV);
+	signal(SIGSEGV, SIG_DFL);
 }
 
 void sigbus_handler(int v)
@@ -70,7 +70,7 @@ void sigbus_handler(int v)
 
 	std::cerr << "SIGBUS. TRACE:" << std::endl;
 	dump_data();
-	exit(SIGBUS);
+	signal(SIGBUS, SIG_DFL);
 }
 
 int main(int argc, char* argv[])

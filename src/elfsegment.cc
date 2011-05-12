@@ -1,3 +1,6 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <assert.h>
 #include <inttypes.h>
 #include <sys/mman.h>
@@ -31,8 +34,27 @@ ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr)
  * TODO: Efficiently use the address space! */
 ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
 {
+	statFile(fd);
+	makeMapping(fd, phdr);
+}
+
+ElfSegment::~ElfSegment(void)
+{
+	munmap(es_mmapbase, es_len);
+}
+
+void ElfSegment::statFile(int fd)
+{
+	struct stat	s;
+	fstat(fd, &s);
+	elf_file_size = s.st_size;
+}
+
+void ElfSegment::makeMapping(int fd, const Elf64_Phdr& phdr)
+{
 	off_t	file_off_pgbase, file_off_pgoff;
-	void	*desired_base;
+	void	*desired_base, *spill_base;
+	size_t	end_off;
 	int	prot, flags;
 
 	/* map in */
@@ -41,27 +63,37 @@ ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
 
 	prot = PROT_READ;
 	if (phdr.p_flags & PF_W) prot |= PROT_WRITE;
-	flags = (prot & PROT_WRITE) ? MAP_PRIVATE : MAP_SHARED;
+	flags = (prot & PROT_WRITE) ? MAP_PRIVATE  : MAP_SHARED;
 
 	desired_base = (void*)page_base(phdr.p_vaddr);
 	es_len = page_round_up(phdr.p_vaddr + phdr.p_memsz);
 	es_len -= page_base(phdr.p_vaddr);
 
-	es_mmapbase = mmap(desired_base, es_len, prot, flags, fd, file_off_pgbase);
+	end_off = page_round_up(phdr.p_offset + phdr.p_memsz);
+	if (end_off > page_round_up(elf_file_size))
+		spill_pages  = end_off - page_round_up(elf_file_size);
+	else
+		spill_pages = 0;
+	file_pages = es_len - spill_pages;
+
+	es_mmapbase = mmap(
+		desired_base, file_pages, prot, flags, fd, file_off_pgbase);
 	assert (es_mmapbase != MAP_FAILED);
 	direct_mapped = (desired_base == es_mmapbase);
-//	fprintf(stderr, "DESIRED=%p-%p. MAP=%p-%p\n", 
-//		phdr.p_vaddr, phdr.p_vaddr + phdr.p_memsz,
-//		es_mmapbase, es_mmapbase + es_len);
-	
+
 	/* declare guest-visible mapping */
 	es_elfbase = (void*)phdr.p_vaddr;
 	es_hostbase = (void*)(((char*)es_mmapbase)+file_off_pgoff);
-}
 
-ElfSegment::~ElfSegment(void)
-{
-	munmap(es_mmapbase, es_len);
+	if (spill_pages == 0)
+		return;
+
+	desired_base = (void*)(((char*)desired_base) + file_pages);
+	spill_base = mmap(
+		desired_base, spill_pages, prot, 
+		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	assert (spill_base != MAP_FAILED);
+	direct_mapped = direct_mapped && (desired_base == spill_base);
 }
 
 hostptr_t ElfSegment::xlate(elfptr_t elfptr) const

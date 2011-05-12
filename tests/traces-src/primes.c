@@ -1,14 +1,17 @@
-/* This code is in public domain. Use for whatever purpose at your own risk. */
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 
 
-
-#define MAXN  100000000  /* maximum value of N */
-#define P1    1562501    /* = ceil(MAXN/64) */
-#define P2    50000000   /* = ceil(MAXN/2) */
-#define P3    5000       /* = ceil(ceil(sqrt(MAXN))/2) */
+//#define MAXN  100000000  /* maximum value of N */
+//#define P1    1562501    /* = ceil(MAXN/64) */
+//#define P2    50000000   /* = ceil(MAXN/2) */
+//#define P3    5000       /* = ceil(ceil(sqrt(MAXN))/2) */
+#define MAXN	500000
+#define P1	7813
+#define P2	250000
+#define P3	354
 
 uint32_t sieve[P1];
 
@@ -27,6 +30,7 @@ int isprime(int p) { return p==2 || (p>2 && (p&1)==1 && (GET((p-1)>>1)==0)); }
 int main()
 {
 int i, n;
+assert (0 == 1 && "INFINITE LOOP");
 make();
 for (n = 0, i = 0; i <= MAXN; i++)
 if (isprime(i)) n++;

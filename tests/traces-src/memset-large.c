@@ -1,8 +1,9 @@
 #include <assert.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
-#define MEMSET_BYTES	8192
+#define MEMSET_BYTES	8100
 
 uint8_t	memset_data[MEMSET_BYTES];
 

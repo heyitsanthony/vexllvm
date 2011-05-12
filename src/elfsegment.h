@@ -13,11 +13,19 @@ public:
 protected:
 	ElfSegment(int fd, const Elf64_Phdr& phdr);
 private:
+	void makeMapping(int fd, const Elf64_Phdr& phdr);
+	void statFile(int fd);
+
 	elfptr_t	es_elfbase;
 	hostptr_t	es_hostbase;
 	void		*es_mmapbase;
 	unsigned int	es_len;
+	unsigned int	file_pages;
+	unsigned int	spill_pages;
+
 	bool		direct_mapped;
+
+	size_t		elf_file_size;
 };
 
 #endif
