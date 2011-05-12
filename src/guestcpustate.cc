@@ -38,8 +38,8 @@ struct guest_ctx_field
 #define AMD64_GPR_R14	14
 #define AMD64_GPR_R15	15
 
-#define get_gpr(x, y)		((uint64_t*)x)[y]
-#define set_gpr(x, y, z)	((uint64_t*)x)[y] = z
+#define get_gpr(y)	((uint64_t*)state_data)[y]
+#define set_gpr(y, z)	((uint64_t*)state_data)[y] = z
 
 #define FS_SEG_OFFSET	(24*8)
 
@@ -192,7 +192,7 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 
 void GuestCPUState::setStackPtr(void* stack_ptr)
 {
-	set_gpr(state_data, AMD64_GPR_RSP, (uint64_t)stack_ptr);
+	set_gpr(AMD64_GPR_RSP, (uint64_t)stack_ptr);
 }
 
 /**
@@ -202,21 +202,21 @@ void GuestCPUState::setStackPtr(void* stack_ptr)
 SyscallParams GuestCPUState::getSyscallParams(void) const
 {
 	return SyscallParams(
-		get_gpr(state_data, AMD64_GPR_RAX),
-		get_gpr(state_data, AMD64_GPR_RDI),
-		get_gpr(state_data, AMD64_GPR_RSI),
-		get_gpr(state_data, AMD64_GPR_RDX)); /* XXX more params? */
+		get_gpr(AMD64_GPR_RAX),
+		get_gpr(AMD64_GPR_RDI),
+		get_gpr(AMD64_GPR_RSI),
+		get_gpr(AMD64_GPR_RDX)); /* XXX more params? */
 }
 
 
 void GuestCPUState::setSyscallResult(uint64_t ret)
 {
-	set_gpr(state_data, AMD64_GPR_RAX, ret);
+	set_gpr(AMD64_GPR_RAX, ret);
 }
 
 uint64_t GuestCPUState::getExitCode(void) const
 {
-	return get_gpr(state_data, AMD64_GPR_RAX);
+	return get_gpr(AMD64_GPR_RAX);
 }
 
 // 208 == XMM base
@@ -225,24 +225,24 @@ uint64_t GuestCPUState::getExitCode(void) const
 
 void GuestCPUState::print(std::ostream& os) const
 {
-	os << "RIP: " << (void*)get_gpr(state_data, 21) << "\n";
-	os << "RAX: " << (void*)get_gpr(state_data, AMD64_GPR_RAX) << "\n";
-	os << "RAX: " << (void*)get_gpr(state_data, AMD64_GPR_RAX) << "\n";
-	os << "RBX: " << (void*)get_gpr(state_data, AMD64_GPR_RBX) << "\n";
-	os << "RCX: " << (void*)get_gpr(state_data, AMD64_GPR_RCX) << "\n";
-	os << "RDX: " << (void*)get_gpr(state_data, AMD64_GPR_RDX) << "\n";
-	os << "RSP: " << (void*)get_gpr(state_data, AMD64_GPR_RSP) << "\n";
-	os << "RBP: " << (void*)get_gpr(state_data, AMD64_GPR_RBP) << "\n";
-	os << "RDI: " << (void*)get_gpr(state_data, AMD64_GPR_RDI) << "\n";
-	os << "RSI: " << (void*)get_gpr(state_data, AMD64_GPR_RSI) << "\n";
-	os << "R8: " << (void*)get_gpr(state_data, AMD64_GPR_R8) << "\n";
-	os << "R9: " << (void*)get_gpr(state_data, AMD64_GPR_R9) << "\n";
-	os << "R10: " << (void*)get_gpr(state_data, AMD64_GPR_R10) << "\n";
-	os << "R11: " << (void*)get_gpr(state_data, AMD64_GPR_R11) << "\n";
-	os << "R12: " << (void*)get_gpr(state_data, AMD64_GPR_R12) << "\n";
-	os << "R13: " << (void*)get_gpr(state_data, AMD64_GPR_R13) << "\n";
-	os << "R14: " << (void*)get_gpr(state_data, AMD64_GPR_R14) << "\n";
-	os << "R15: " << (void*)get_gpr(state_data, AMD64_GPR_R15) << "\n";
+	os << "RIP: " << (void*)get_gpr(21) << "\n";
+	os << "RAX: " << (void*)get_gpr(AMD64_GPR_RAX) << "\n";
+	os << "RAX: " << (void*)get_gpr(AMD64_GPR_RAX) << "\n";
+	os << "RBX: " << (void*)get_gpr(AMD64_GPR_RBX) << "\n";
+	os << "RCX: " << (void*)get_gpr(AMD64_GPR_RCX) << "\n";
+	os << "RDX: " << (void*)get_gpr(AMD64_GPR_RDX) << "\n";
+	os << "RSP: " << (void*)get_gpr(AMD64_GPR_RSP) << "\n";
+	os << "RBP: " << (void*)get_gpr(AMD64_GPR_RBP) << "\n";
+	os << "RDI: " << (void*)get_gpr(AMD64_GPR_RDI) << "\n";
+	os << "RSI: " << (void*)get_gpr(AMD64_GPR_RSI) << "\n";
+	os << "R8: " << (void*)get_gpr(AMD64_GPR_R8) << "\n";
+	os << "R9: " << (void*)get_gpr(AMD64_GPR_R9) << "\n";
+	os << "R10: " << (void*)get_gpr(AMD64_GPR_R10) << "\n";
+	os << "R11: " << (void*)get_gpr(AMD64_GPR_R11) << "\n";
+	os << "R12: " << (void*)get_gpr(AMD64_GPR_R12) << "\n";
+	os << "R13: " << (void*)get_gpr(AMD64_GPR_R13) << "\n";
+	os << "R14: " << (void*)get_gpr(AMD64_GPR_R14) << "\n";
+	os << "R15: " << (void*)get_gpr(AMD64_GPR_R15) << "\n";
 
 	for (int i = 0; i < 16; i++) {
 		os
@@ -257,4 +257,14 @@ void GuestCPUState::print(std::ostream& os) const
 			<< (void*)((uint64_t*)tls_data)[i]
 			<< std::endl;;
 	}
+}
+
+/* set a function argument */
+void GuestCPUState::setArg(uintptr_t arg_val, unsigned int arg_num)
+{
+	const int arg2reg[] = {
+		AMD64_GPR_RDI, AMD64_GPR_RSI, AMD64_GPR_RDX, AMD64_GPR_RCX};
+
+	assert (arg_num <= 3);
+	set_gpr(arg2reg[arg_num], arg_val);
 }

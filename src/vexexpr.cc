@@ -113,6 +113,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(1Uto8);
 	UNOP_TAGOP(1Uto64);
 	UNOP_TAGOP(8Uto32);
+	UNOP_TAGOP(8Sto32);
 	UNOP_TAGOP(8Uto64);
 	UNOP_TAGOP(16Uto64);
 	UNOP_TAGOP(32Uto64);
@@ -123,11 +124,13 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(64to16);
 	UNOP_TAGOP(32UtoV128);
 	UNOP_TAGOP(V128to64);
+	UNOP_TAGOP(V128HIto64);
 	UNOP_TAGOP(32HLto64);
 	UNOP_TAGOP(64HLtoV128);
 	UNOP_TAGOP(64HIto32);
 
 	UNOP_TAGOP(Ctz64);
+	UNOP_TAGOP(Clz64);
 	default:
 		fprintf(stderr, "UNKNOWN OP %x\n", expr->Iex.Unop.op);
 		break;
@@ -191,9 +194,8 @@ llvm::Value* VexExprConstV128::emit(void) const
 			llvm::getGlobalContext(),
 			llvm::APInt(16, V128)));
 
-	return llvm::ConstantVector::get(v128ty, splat);
+	return theGenLLVM->to16x8i(llvm::ConstantVector::get(v128ty, splat));
 }
-
 
 llvm::Value* VexExprConstF32::emit(void) const {
 	return llvm::ConstantFP::get(

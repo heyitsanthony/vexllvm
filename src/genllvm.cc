@@ -80,8 +80,8 @@ const Type* GenLLVM::vexTy2LLVM(IRType ty) const
 	case Ity_F64:	return builder->getDoubleTy();
 //	case Ity_I128:	 TODO
 	case Ity_V128:
-		return llvm::VectorType::get(
-			Type::getInt16Ty(getGlobalContext()), 8);
+		return VectorType::get(
+			Type::getInt8Ty(getGlobalContext()), 16);
 	default:
 		std::cout << "COULDN'T HANDLE " << ty << std::endl;
 	}
@@ -104,7 +104,7 @@ Value* GenLLVM::getCtxGEP(unsigned int byteOff, const Type* accessTy)
 	unsigned int	tyBits;
 	Value		*addr_ptr, *ret; /* XXX assuming access are aligned */
 
-	ptrTy = llvm::PointerType::get(accessTy, 0);
+	ptrTy = PointerType::get(accessTy, 0);
 	tyBits = accessTy->getPrimitiveSizeInBits();
 
 	assert (tyBits && "Access type is 0 bits???");
@@ -115,7 +115,7 @@ Value* GenLLVM::getCtxGEP(unsigned int byteOff, const Type* accessTy)
 		addr_ptr, 
 		ConstantInt::get(
 			getGlobalContext(),
-			llvm::APInt(
+			APInt(
 				32, 
 				(byteOff*8)/tyBits)),
 		"accessCtx");
@@ -124,33 +124,34 @@ Value* GenLLVM::getCtxGEP(unsigned int byteOff, const Type* accessTy)
 
 Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 {
-	Value	*ret, *addr;
+	Value		*ret, *addr;
+	StoreInst	*si;
 
 	addr = getCtxGEP(byteOff, v->getType());
-	ret = builder->CreateStore(v, addr);
-
+	si = builder->CreateStore(v, addr);
+	ret = si;
 	return ret;
 }
 
-void GenLLVM::store(llvm::Value* addr_v, llvm::Value* data_v)
+void GenLLVM::store(Value* addr_v, Value* data_v)
 {
-	Type	*ptrTy;
-	Value	*addr_ptr;
+	Type		*ptrTy;
+	Value		*addr_ptr;
+	StoreInst	*si;
 
-	ptrTy = llvm::PointerType::get(data_v->getType(), 0);
+	ptrTy = PointerType::get(data_v->getType(), 0);
 	addr_v = guestState->addrVal2Host(addr_v);
 	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "storePtr");
-	builder->CreateStore(data_v, addr_ptr);
+	si = builder->CreateStore(data_v, addr_ptr);
 }
 
-
-llvm::Value* GenLLVM::load(llvm::Value* addr_v, const llvm::Type* ty)
+Value* GenLLVM::load(Value* addr_v, const Type* ty)
 {
 	Type		*ptrTy;
 	Value		*addr_ptr;
 	LoadInst	*loadInst;
 
-	ptrTy = llvm::PointerType::get(ty, 0);
+	ptrTy = PointerType::get(ty, 0);
 	addr_v = guestState->addrVal2Host(addr_v);
 	addr_ptr = builder->CreateBitCast(addr_v, ptrTy, "loadPtr");
 	loadInst = builder->CreateLoad(addr_ptr);
@@ -158,9 +159,24 @@ llvm::Value* GenLLVM::load(llvm::Value* addr_v, const llvm::Type* ty)
 	return loadInst;
 }
 
-Value* GenLLVM::load(llvm::Value* addr_v, IRType vex_type)
+Value* GenLLVM::load(Value* addr_v, IRType vex_type)
 {
 	return load(addr_v, vexTy2LLVM(vex_type));
+}
+
+/* gets i8* of base ptr */
+Value* GenLLVM::getCtxBase(void)
+{
+	Value		*intptr_v;
+	const Type	*ptrty;
+
+	ptrty = PointerType::get(builder->getInt8Ty(), 0);
+	intptr_v = ConstantInt::get(
+		getGlobalContext(),
+		APInt(	sizeof(intptr_t),
+			(uintptr_t)guestState->getCPUState()->getStateData()));
+
+	return builder->CreateBitCast(intptr_v, ptrty, "ctxbaseptr");
 }
 
 void GenLLVM::setExitType(uint8_t exit_type)
@@ -169,18 +185,26 @@ void GenLLVM::setExitType(uint8_t exit_type)
 		guestState->getCPUState()->getExitTypeOffset(),
 		ConstantInt::get(
 			getGlobalContext(),
-			llvm::APInt(8, exit_type)));
+			APInt(8, exit_type)));
 }
 
 /* llvm-ized VexSB functions take form of 
  * guestaddr_t f(gueststate*) {  ...bullshit...; return ctrl_xfer_addr; } */
 void GenLLVM::mkFuncTy(void)
 {
-	std::vector<const llvm::Type*>	f_args;
-	f_args.push_back(llvm::PointerType::get(
+	std::vector<const Type*>	f_args;
+	f_args.push_back(PointerType::get(
 		guestState->getCPUState()->getTy(), 0));
 	funcTy = FunctionType::get(
 		builder->getInt64Ty(),
 		f_args,
 		false);
+}
+
+llvm::Value* GenLLVM::to16x8i(llvm::Value* v) const
+{
+	return builder->CreateBitCast(
+		v, 
+		VectorType::get(
+			Type::getInt8Ty(getGlobalContext()), 16));
 }

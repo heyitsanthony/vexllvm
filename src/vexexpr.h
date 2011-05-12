@@ -166,17 +166,6 @@ public:
 private:
 	llvm::Function*		func;
 	PtrList<VexExpr>	args;
-
-/* FFffffffffff*/
-#if 0
-	IRType	retTy;
-      /* A call to a pure (no side-effects) helper C function. */
-      struct {
-         IRCallee* cee;    /* Function to call. */
-         IRType    retty;  /* Type of return value. */
-         const IRExpr**  args;   /* Vector of argument expressions. */
-      }  CCall;
-#endif 
 };
 
 class VexExprMux0X : public VexExpr

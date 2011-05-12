@@ -48,6 +48,8 @@ public:
 	bool isCall(void) const { return (jump_kind == Ijk_Call); }
 	bool isSyscall(void) const { return (jump_kind == Ijk_Sys_syscall); }
 	bool isReturn(void) const { return (jump_kind == Ijk_Ret); }
+
+	uint64_t getGuestAddr(void) const { return guest_addr; }
 private:
 	void loadInstructions(const IRSB* irsb);
 	void loadJump(IRJumpKind, VexExpr*);

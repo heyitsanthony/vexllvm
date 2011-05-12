@@ -4,9 +4,16 @@
 #include <stdint.h>
 #include <iostream>
 
+#include "collection.h"
+
 extern "C" {
 #include <valgrind/libvex.h>
 #include <valgrind/libvex_ir.h>
+}
+
+namespace llvm
+{
+class Function;
 }
 
 class VexSB;
@@ -150,11 +157,17 @@ private:
 class VexStmtDirty : public VexStmt
 {
 public:
-	VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
-	 : VexStmt(in_parent, in_stmt) {}
-	virtual ~VexStmtDirty() {}
+	VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt);
+	virtual ~VexStmtDirty();
+	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
+	VexExpr			*guard;
+	llvm::Function*		func;
+	PtrList<VexExpr>	args;
+	bool			needs_state_ptr;
+	llvm::Value		*state_base_ptr;
+	unsigned int		tmp_reg;	/* where to store */
 };
 
 class VexStmtMBE : public VexStmt

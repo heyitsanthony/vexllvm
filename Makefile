@@ -28,6 +28,8 @@ ELFTRACEDEPS=	elf_trace.o
 BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/vexops.bc
 
+TRACEDEPS= nested_call ret_strlen ret_strrchr print cmdline
+
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
@@ -40,7 +42,7 @@ LLVMLDFLAGS=$(shell llvm-config --ldflags)
 LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall $(LDFLAGS)
 
-all: bin/elf_trace bin/jit_test bitcode
+all: bin/elf_trace bin/jit_test bitcode bin/elf_run
 
 bitcode: $(BITCODE_FILES)
 
@@ -60,13 +62,16 @@ tests: test-traces
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/*
 
-TRACEDEPS= nested_call ret_strlen print
 TRACEDEPS_PATH=$(TRACEDEPS:%=tests/traces-bin/%)
 test-traces: $(TRACEDEPS_PATH)
 	tests/traces.sh
 
 bin/elf_trace: $(OBJDIRDEPS) $(ELFTRACEDIRDEPS)
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+
+bin/elf_run: $(OBJDIRDEPS) obj/elf_run.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+
 
 bin/jit_test: $(OBJDIRDEPS) obj/jit_test.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)

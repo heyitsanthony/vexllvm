@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include "Sugar.h"
+
 #include "guestcpustate.h"
 #include "genllvm.h"
+#include "vexhelpers.h"
 #include "vexexpr.h"
 #include "vexsb.h"
 
@@ -45,7 +48,6 @@ void VexStmtPut::print(std::ostream& os) const
 	os << "Put(" << offset << ") <- ";
 	data_expr->print(os);
 }
-
 
 void VexStmtPutI::print(std::ostream& os) const { os << "PutI"; }
 
@@ -167,7 +169,85 @@ void VexStmtCAS::print(std::ostream& os) const
 }
 
 void VexStmtLLSC::print(std::ostream& os) const { os << "LLSC"; }
-void VexStmtDirty::print(std::ostream& os) const { os << "Dirty"; }
+
+VexStmtDirty::VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
+  :	VexStmt(in_parent, in_stmt),
+  	guard(VexExpr::create(this, in_stmt->Ist.Dirty.details->guard)),
+  	needs_state_ptr(in_stmt->Ist.Dirty.details->needsBBP),
+	state_base_ptr(NULL),
+	tmp_reg(in_stmt->Ist.Dirty.details->tmp)
+{
+	const char*	func_name;
+	IRExpr**	in_args;
+
+	/* load function */
+	func_name = in_stmt->Ist.Dirty.details->cee->name;
+	func = theVexHelpers->getHelper(func_name);
+	if (func == NULL) {
+		std::cerr << "Could not find dirty function \"" <<
+			func_name << "\". Bye" << std::endl;
+		assert (func != NULL && "Could not find dirty function");
+	}
+
+	/* put cpu state ptr on arg stack */
+	if (needs_state_ptr) {
+		const Type	*ptrty;	
+		state_base_ptr = theGenLLVM->getCtxBase();
+		/* result is an i8*, pull the correct ptr type func */
+		ptrty = ((func->arg_begin()))->getType();
+		state_base_ptr = theGenLLVM->getBuilder()->CreateBitCast(
+			state_base_ptr, ptrty);
+	}
+
+	in_args = in_stmt->Ist.Dirty.details->args;
+	for (unsigned int i = 0; in_args[i]; i++)
+		args.push_back(VexExpr::create(this, in_args[i]));
+}
+
+VexStmtDirty::~VexStmtDirty()
+{
+	delete guard;
+}
+
+void VexStmtDirty::emit(void) const
+{
+	IRBuilder<>		*builder;
+	Value			*v_cmp, *v_call;
+	BasicBlock		*bb_then, *bb_merge, *bb_origin;
+	std::vector<Value*>	args_v;
+
+	builder = theGenLLVM->getBuilder();
+	bb_origin = builder->GetInsertBlock();
+	bb_then = BasicBlock::Create(
+		getGlobalContext(), "dirty_then",
+		bb_origin->getParent());
+	bb_merge = BasicBlock::Create(
+		getGlobalContext(), "dirty_merge",
+		bb_origin->getParent());
+
+	/* evaluate guard condition */
+	builder->SetInsertPoint(bb_origin);
+	v_cmp = guard->emit();
+	builder->CreateCondBr(v_cmp, bb_then, bb_merge);
+
+	/* guard condition OK, make drty call */
+	builder->SetInsertPoint(bb_then);
+	if (needs_state_ptr) args_v.push_back(state_base_ptr);
+	foreach (it, args.begin(), args.end()) 
+		args_v.push_back((*it)->emit());
+	v_call = builder->CreateCall(func, args_v.begin(), args_v.end());
+	parent->setRegValue(tmp_reg, v_call);
+
+	builder->CreateBr(bb_merge);
+
+	builder->SetInsertPoint(bb_merge);
+}
+
+void VexStmtDirty::print(std::ostream& os) const
+{
+	os << "DirtyCall(" << func->getNameStr() << ")"; 
+}
+
 void VexStmtMBE::print(std::ostream& os) const { os << "MBE"; }
 
 
@@ -209,7 +289,7 @@ VexStmtExit::~VexStmtExit()
 void VexStmtExit::emit(void) const
 {
 	IRBuilder<>	*builder;
-	Value		*v_cmpal;
+	Value		*v_cmp;
 	BasicBlock	*bb_then, *bb_else, *bb_origin;
 
 	builder = theGenLLVM->getBuilder();
@@ -223,8 +303,8 @@ void VexStmtExit::emit(void) const
 
 	/* evaluate guard condition */
 	builder->SetInsertPoint(bb_origin);
-	v_cmpal = guard->emit();
-	builder->CreateCondBr(v_cmpal, bb_then, bb_else);
+	v_cmp = guard->emit();
+	builder->CreateCondBr(v_cmp, bb_then, bb_else);
 
 	/* guard condition return, leave this place */
 	/* XXX for calls we're going to need some more info */

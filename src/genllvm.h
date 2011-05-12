@@ -37,6 +37,7 @@ public:
 	llvm::Value* readCtx(unsigned int byteOff, IRType ty);
 	llvm::Value* writeCtx(unsigned int byteOff, llvm::Value* v);
 	llvm::Value* getCtxGEP(unsigned int byteOff, const llvm::Type* ty);
+	llvm::Value* getCtxBase(void);
 
 	void store(llvm::Value* addr, llvm::Value* data);
 	llvm::Value* load(llvm::Value* addr_v, IRType vex_type);
@@ -44,6 +45,7 @@ public:
 	void beginBB(const char* name);
 	llvm::Function* endBB(llvm::Value*);
 	void setExitType(uint8_t exit_type);
+	llvm::Value* to16x8i(llvm::Value*) const;
 private:
 	void mkFuncTy(void);
 

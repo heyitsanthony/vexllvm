@@ -132,6 +132,8 @@ llvm::Function* VexSB::emit(const char* fname)
 	llvm::Function* cur_f;
 	llvm::Value*	ret_v;
 
+	memset(values, 0, sizeof(Value*)*getNumRegs());
+
 	theGenLLVM->beginBB(fname);
 	/* instructions */
 	foreach (it, stmts.begin(), stmts.end()) (*it)->emit();

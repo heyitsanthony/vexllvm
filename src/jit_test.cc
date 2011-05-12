@@ -77,7 +77,7 @@ public:
 class TestSB
 {
 public:
-	TestSB() {}
+	TestSB(const std::string& s) : test_name(s) {}
 	virtual ~TestSB() {}
 	virtual VexSB* getSB(void) const
 	{
@@ -105,21 +105,26 @@ public:
 	}
 
 	virtual bool isGoodState(GuestState* gs) const = 0;
+	const std::string& getName(void) const { return test_name; }
 protected:
-	
+	VexGuestAMD64State* getVexState(GuestState* gs) const
+	{
+		return (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+	}
+
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>&) const = 0;
 private:
+	std::string	test_name;
 };
 
 class TestV128to64 : public TestSB
 {
 public:
-	TestV128to64() {}
+	TestV128to64() : TestSB("V128to64") {}
 	virtual ~TestV128to64() {}
 	virtual bool isGoodState(GuestState* gs) const
 	{
-		VexGuestAMD64State	*st;
-		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		VexGuestAMD64State	*st = getVexState(gs);
 		return st->guest_RDX == 0x1234123412341234;
 	}
 protected:
@@ -139,12 +144,11 @@ protected:
 class TestInterleaveLO8x16 : public TestSB
 {
 public:
-	TestInterleaveLO8x16 () {}
+	TestInterleaveLO8x16 () : TestSB("ILO8x16") {}
 	virtual ~TestInterleaveLO8x16() {}
 	virtual bool isGoodState(GuestState* gs) const
 	{
-		VexGuestAMD64State	*st;
-		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		VexGuestAMD64State	*st = getVexState(gs);
 		return *((uint64_t*)&st->guest_XMM1) == 0xab12cd34ab12cd34;
 	}
 protected:
@@ -166,12 +170,11 @@ protected:
 class TestSub8x16 : public TestSB
 {
 public:
-	TestSub8x16 () {}
+	TestSub8x16() : TestSB("sub8x16") {}
 	virtual ~TestSub8x16() {}
 	virtual bool isGoodState(GuestState* gs) const
 	{
-		VexGuestAMD64State	*st;
-		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		VexGuestAMD64State	*st = getVexState(gs);
 		return *((uint64_t*)&st->guest_XMM1) == 0x4411441144114411;
 	}
 protected:
@@ -189,6 +192,81 @@ protected:
 	}
 };
 
+class Test64HLtoV128 : public TestSB
+{
+public:
+	Test64HLtoV128() : TestSB("64HLtoV128") {}
+	virtual ~Test64HLtoV128() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st;
+		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		return ((uint64_t*)&st->guest_XMM1)[0] == 0x12345678abcdef01;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[1];
+		args[0] = new VexExprConstU64(NULL, 0x12345678abcdef01);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_XMM1, 
+				new VexExprUnop64HLtoV128(NULL, args)));
+	}
+};
+
+class Test32UtoV128 : public TestSB
+{
+public:
+	Test32UtoV128() : TestSB("32UtoV128") {}
+	virtual ~Test32UtoV128() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st;
+		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		return ((uint64_t*)&st->guest_XMM1)[0] == 0x12345678;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[1];
+		args[0] = new VexExprConstU32(NULL, 0x12345678);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_XMM1, 
+				new VexExprUnop32UtoV128(NULL, args)));
+	}
+};
+
+class Test32HLto64 : public TestSB
+{
+public:
+	Test32HLto64() : TestSB("32HLto64") {}
+	virtual ~Test32HLto64() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st;
+		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		return st->guest_RDX == 0x1234567812345678;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[1];
+		args[0] = new VexExprConstU32(NULL, 0x12345678);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_RDX, 
+				new VexExprUnop32HLto64(NULL, args)));
+	}
+};
+
 
 void doTest(GuestState* gs, TestSB* tsb)
 {
@@ -202,6 +280,7 @@ void doTest(GuestState* gs, TestSB* tsb)
 
 	vsb = tsb->getSB();
 	f = vsb->emit(emitstr);
+	std::cerr << "TESTING: " << tsb->getName() << std::endl;
 	f->dump();
 	delete vsb;
 
@@ -213,13 +292,13 @@ void doTest(GuestState* gs, TestSB* tsb)
 		gs->print(std::cerr);
 		assert (tsb->isGoodState(gs));
 	}
+	gs->print(std::cerr);
 	delete tsb;
 }
 
 int main(int argc, char* argv[])
 {
 	GuestState*	gs;
-
 
 	/* for the JIT */
 	InitializeNativeTarget();
@@ -240,9 +319,14 @@ int main(int argc, char* argv[])
 	doTest(gs, new TestV128to64());
 	doTest(gs, new TestInterleaveLO8x16());
 	doTest(gs, new TestSub8x16());
+	doTest(gs, new Test64HLtoV128());
+	doTest(gs, new Test32HLto64());
+	doTest(gs, new Test32UtoV128());
 
 	delete theVexHelpers;
 	delete theGenLLVM;
+
+	std::cout << "JIT OK." << std::endl;
 
 	return 0;
 }

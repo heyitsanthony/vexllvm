@@ -24,6 +24,7 @@ private:
 	VexControl		vc;
 	VexArchInfo		vai_amd64;
 	VexAbiInfo		vbi;
+
 };
 
 #endif

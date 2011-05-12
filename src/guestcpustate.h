@@ -35,6 +35,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	const llvm::Type* getTy(void) const { return guestCtxTy; }
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 	void* getStateData(void) { return state_data; }
+	const void* getStateData(void) const { return state_data; }
 	unsigned int getStateSize(void) { return state_byte_c; }
 	void setStackPtr(void*);
 	SyscallParams getSyscallParams(void) const;
@@ -45,6 +46,8 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 
 	void setExitType(GuestExitType et) { *exit_type = (uint8_t)et; }
 	GuestExitType getExitType(void) { return (GuestExitType)*exit_type; }
+
+	void setArg(uintptr_t arg_val, unsigned int arg_num);
 
 	void print(std::ostream& os) const;
 protected:

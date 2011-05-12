@@ -4,7 +4,6 @@
 
 #include "Sugar.h"
 
-#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -15,6 +14,7 @@
 
 #include "elfimg.h"
 #include "vexexec.h"
+#include "guestcpustate.h"
 #include "gueststateelf.h"
 
 using namespace llvm;
@@ -27,43 +27,6 @@ void dumpIRSBs(void)
 	vexexec->dumpLogs(std::cerr);
 }
 
-static void dump_data(void)
-{	
-	const GuestState*	gs;
-	vexexec_addrs		addr_stack;
-
-	gs = vexexec->getGuestState();
-
-	vexexec->dumpLogs(std::cerr);
-
-	foreach(it, vexexec->getTraces().begin(), vexexec->getTraces().end()) {
-		for (int i = (*it).second; i; i--) 
-			std::cerr << " ";
-		std::cerr << (*it).first <<std::endl;
-	}
-
-	std::cerr << "ADDR STACK:" << std::endl;
-	addr_stack = vexexec->getAddrStack();
-	while (!addr_stack.empty()) {
-		std::cerr
-			<< "ADDR:"
-			<< gs->getName((guestptr_t)addr_stack.top())
-			<< std::endl;
-		addr_stack.pop();
-	}
-
-	gs->print(std::cerr);
-}
-
-void sigsegv_handler(int v)
-{
-	vexexec->dumpLogs(std::cerr);
-
-	std::cerr << "SIGSEGV. TRACE:" << std::endl;
-	dump_data();
-	exit(-1);
-}
-
 int main(int argc, char* argv[])
 {
 	GuestState	*gs;
@@ -72,12 +35,10 @@ int main(int argc, char* argv[])
 	/* for the JIT */
 	InitializeNativeTarget();
 
-	if (argc != 2) {
-		fprintf(stderr, "Usage: %s elf_path\n", argv[0]);
+	if (argc < 2) {
+		fprintf(stderr, "Usage: %s elf_path <cmdline>\n", argv[0]);
 		return -1;
 	}
-
-	signal(SIGSEGV, sigsegv_handler);
 
 	img = ElfImg::create(argv[1]);
 	if (img == NULL) {
@@ -92,9 +53,6 @@ int main(int argc, char* argv[])
 	assert (vexexec && "Could not create vexexec");
 	
 	vexexec->run();
-
-	printf("\nTRACE COMPLETE. SBs=%d\n", vexexec->getSBExecutedCount());
-	dump_data();
 
 	delete vexexec;
 

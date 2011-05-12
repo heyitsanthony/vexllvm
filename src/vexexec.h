@@ -17,8 +17,13 @@ class ExecutionEngine;
 class Function;
 }
 
+
+typedef uint64_t(*vexfunc_t)(void* /* guest cpu state */);
+
 typedef std::list<std::pair<void*, int /* depth */> > vexexec_traces;
 typedef std::stack<void*> vexexec_addrs;
+typedef std::map<void* /* guest addr */, VexSB*> vexsb_map;
+typedef std::map<VexSB*, vexfunc_t> jit_map;
 
 class VexExec
 {
@@ -34,8 +39,8 @@ public:
 private:
 	VexExec(GuestState* gs);
 	VexSB* getSBFromGuestAddr(void* elfptr);
-	VexSB* doNextSB(void);
-	uint64_t doFunc(llvm::Function* f);
+	const VexSB* doNextSB(void);
+	uint64_t doVexSB(VexSB* vsb);
 
 	VexXlate		*vexlate;
 	llvm::ExecutionEngine	*exeEngine;
@@ -47,6 +52,9 @@ private:
 
 	/* stats */
 	unsigned int	sb_executed_c;
+
+	vexsb_map	vexsb_cache;
+	jit_map		jit_cache;
 };
 
 #endif
