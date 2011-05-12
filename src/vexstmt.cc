@@ -248,6 +248,13 @@ void VexStmtDirty::print(std::ostream& os) const
 	os << "DirtyCall(" << func->getNameStr() << ")"; 
 }
 
+
+void VexStmtMBE::emit(void) const
+{
+	/* only one type of memory bus event-- fence */
+	theGenLLVM->memFence();
+}
+
 void VexStmtMBE::print(std::ostream& os) const { os << "MBE"; }
 
 

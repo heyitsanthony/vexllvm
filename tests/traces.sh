@@ -18,7 +18,7 @@ for a in tests/traces-bin/*; do
 	retval=`grep "Exitcode" $FPREFIX.trace.err | cut -f2`
 	if [ -z "$retval" ]; then
 		TESTS_ERR=`expr $TESTS_ERR + 1`
-		echo "FAILED TO EXECUTE $a."
+		echo "FAILED (bin: $a)."
 	else
 		TESTS_OK=`expr $TESTS_OK + 1`
 		echo OK.

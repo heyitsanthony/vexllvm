@@ -32,7 +32,8 @@ TRACEDEPS= nested_call strlen strrchr \
 	print cmdline getenv \
 	fwrite malloc memset \
 	primes memset-large atoi	\
-	strcpy qsort strstr
+	strcpy qsort strstr	\
+	sscanf time gettimeofday
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)

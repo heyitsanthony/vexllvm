@@ -46,6 +46,7 @@ public:
 	llvm::Function* endBB(llvm::Value*);
 	void setExitType(uint8_t exit_type);
 	llvm::Value* to16x8i(llvm::Value*) const;
+	void memFence(void);
 private:
 	void mkFuncTy(void);
 

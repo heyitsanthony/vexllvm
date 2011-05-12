@@ -1995,7 +1995,8 @@ ULong amd64g_calculate_pclmul(ULong a, ULong b, ULong which)
 /* Horrible hack.  On non-amd64 platforms, return 1. */
 ULong amd64g_dirtyhelper_RDTSC ( void )
 {
-#  if defined(__x86_64__)
+#  if 0
+//defined(__x86_64__)
    UInt  eax, edx;
    __asm__ __volatile__("rdtsc" : "=a" (eax), "=d" (edx));
    return (((ULong)edx) << 32) | ((ULong)eax);

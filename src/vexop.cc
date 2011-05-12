@@ -250,6 +250,7 @@ X_TO_Y_EMIT(8Uto32, CreateZExt, getInt32Ty)
 X_TO_Y_EMIT(8Sto32, CreateSExt, getInt32Ty)
 X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(8Sto64, CreateSExt, getInt64Ty)
+X_TO_Y_EMIT(128to64, CreateTrunc, getInt64Ty)
 //X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
 //
 UNOP_EMIT(Not1, CreateNot)
@@ -300,6 +301,15 @@ Value* VexExprUnopV128HIto64::emit(void) const
 		v_trunc,
 		builder->getInt64Ty(), 
 		"V128Hito64");
+}
+
+
+Value* VexExprUnop128HIto64::emit(void) const
+{
+	UNOP_SETUP
+	return builder->CreateTrunc(
+		builder->CreateLShr(v1, get_i32(64)),
+		builder->getInt64Ty());
 }
 
 /* so stupid */

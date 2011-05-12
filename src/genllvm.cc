@@ -201,10 +201,23 @@ void GenLLVM::mkFuncTy(void)
 		false);
 }
 
-llvm::Value* GenLLVM::to16x8i(llvm::Value* v) const
+Value* GenLLVM::to16x8i(Value* v) const
 {
 	return builder->CreateBitCast(
 		v, 
 		VectorType::get(
 			Type::getInt8Ty(getGlobalContext()), 16));
+}
+
+void GenLLVM::memFence(void)
+{
+	Function  *fence_f;
+
+	/* fence everything! */
+	Value* args[5];
+	for (int i = 0; i < 5; i++)
+		args[i] = ConstantInt::get(builder->getInt1Ty(), 1),
+
+	fence_f = Intrinsic::getDeclaration(mod, Intrinsic::memory_barrier);
+	builder->CreateCall(fence_f, args, args+5);
 }

@@ -176,6 +176,7 @@ public:
 	VexStmtMBE(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
 	virtual ~VexStmtMBE() {}
+	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
 };
