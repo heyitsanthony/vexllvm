@@ -406,15 +406,24 @@ BINOP_EMIT(Mul16, Mul)
 BINOP_EMIT(Mul32, Mul)
 BINOP_EMIT(Mul64, Mul)
 
-BINOP_EMIT(MullS8, NSWMul)
-BINOP_EMIT(MullS16, NSWMul)
-BINOP_EMIT(MullS32, NSWMul)
-BINOP_EMIT(MullS64, NSWMul)
+#define BINOP_EXPAND_EMIT(x,y,z,w)				\
+Value* VexExprBinop##x::emit(void) const			\
+{								\
+	BINOP_SETUP						\
+	v1 = builder->Create##y(v1, z);				\
+	v2 = builder->Create##y(v2, z);				\
+	return builder->Create##w(v1, v2);			\
+}
 
-BINOP_EMIT(MullU8, NUWMul)
-BINOP_EMIT(MullU16, NUWMul)
-BINOP_EMIT(MullU32, NUWMul)
-BINOP_EMIT(MullU64, NUWMul)
+BINOP_EXPAND_EMIT(MullS8, SExt, builder->getInt16Ty(), Mul)
+BINOP_EXPAND_EMIT(MullS16, SExt, builder->getInt32Ty(), Mul)
+BINOP_EXPAND_EMIT(MullS32, SExt, builder->getInt64Ty(), Mul)
+BINOP_EXPAND_EMIT(MullS64, SExt, IntegerType::get(getGlobalContext(), 128),Mul)
+
+BINOP_EXPAND_EMIT(MullU8, ZExt, builder->getInt16Ty(), Mul)
+BINOP_EXPAND_EMIT(MullU16, ZExt, builder->getInt32Ty(), Mul)
+BINOP_EXPAND_EMIT(MullU32, ZExt, builder->getInt64Ty(), Mul)
+BINOP_EXPAND_EMIT(MullU64, ZExt, IntegerType::get(getGlobalContext(),128), Mul)
 
 BINOP_EMIT(Or8, Or)
 BINOP_EMIT(Or16, Or)
