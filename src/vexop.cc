@@ -303,6 +303,20 @@ Value* VexExprUnopV128HIto64::emit(void) const
 		"V128Hito64");
 }
 
+Value* VexExprUnop64HLto128::emit(void) const
+{
+	Value	*v_128i;
+
+	UNOP_SETUP
+
+	v_128i = builder->CreateZExt(
+		v1, IntegerType::get(getGlobalContext(), 128));
+
+	return builder->CreateOr(
+		v_128i,
+		builder->CreateShl(v_128i, get_i32(64)));
+		
+}
 
 Value* VexExprUnop128HIto64::emit(void) const
 {
@@ -362,14 +376,18 @@ Value* VexExprUnop32HLto64::emit(void) const
 				APInt(32, 32))));
 }
 
-#define BINOP_EMIT(x,y)				\
-Value* VexExprBinop##x::emit(void) const	\
-{						\
+#define BINOP_SETUP				\
 	Value		*v1, *v2;		\
 	IRBuilder<>	*builder;		\
 	v1 = args[0]->emit();			\
 	v2 = args[1]->emit();			\
-	builder = theGenLLVM->getBuilder();	\
+	builder = theGenLLVM->getBuilder();
+
+
+#define BINOP_EMIT(x,y)				\
+Value* VexExprBinop##x::emit(void) const	\
+{						\
+	BINOP_SETUP				\
 	return builder->Create##y(v1, v2);	\
 }
 
@@ -445,25 +463,38 @@ BINOP_EMIT(CasCmpNE16, ICmpNE)
 BINOP_EMIT(CasCmpNE32, ICmpNE)
 BINOP_EMIT(CasCmpNE64, ICmpNE)
 
+/* V128,I64 -> V128. lo = div, hi = mod */
+Value* VexExprBinopDivModU128to64::emit(void) const
+{
+	Value	*div, *mod;
+	BINOP_SETUP
+
+	div = builder->CreateZExt(
+		builder->CreateUDiv(v1, v2),
+		IntegerType::get(getGlobalContext(), 128));
+
+	mod = builder->CreateZExt(
+		builder->CreateURem(v1, v2),
+		IntegerType::get(getGlobalContext(), 128));
+
+	return builder->CreateOr(
+		div,
+		builder->CreateShl(mod, get_i32(64)));
+}
+
 Value* VexExprBinopCmpEQ8x16::emit(void) const
 {
-	Value		*v1, *v2, *cmp_8x1;
-	IRBuilder<>	*builder;
-	v1 = args[0]->emit();
-	v2 = args[1]->emit();
-	builder = theGenLLVM->getBuilder();
+	Value		*cmp_8x1;
+	BINOP_SETUP
 	cmp_8x1 = builder->CreateICmpEQ(v1, v2);
 	return builder->CreateSExt(cmp_8x1, get_vt_16x8());
 }
 
 Value* VexExprBinopSub8x16::emit(void) const
 {
-	Value		*v1, *v2;
-	IRBuilder<>	*builder;
-
-	builder = theGenLLVM->getBuilder();
-	v1 = builder->CreateBitCast(args[0]->emit(), get_vt_16x8());
-	v2 = builder->CreateBitCast(args[1]->emit(), get_vt_16x8());
+	BINOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vt_16x8());
+	v2 = builder->CreateBitCast(v2, get_vt_16x8());
 	return builder->CreateSub(v1, v2);
 }
 
@@ -500,8 +531,6 @@ EMIT_HELPER_UNOP(Clz64, "vexop_clz64")
 /* interleave 16 elements of an 8-bit width */
 Value* VexExprBinopInterleaveLO8x16::emit(void) const
 {
-	IRBuilder<>     *builder = theGenLLVM->getBuilder();
-	llvm::Value	*v1, *v2;
 	Constant	*shuffle_v[] = {
 		get_i32(0), get_i32(16),
 		get_i32(1), get_i32(17),
@@ -513,8 +542,8 @@ Value* VexExprBinopInterleaveLO8x16::emit(void) const
 		get_i32(7), get_i32(23)};
 	Constant	*cv;
 
-	v1 = args[0]->emit();
-	v2 = args[1]->emit();
+	BINOP_SETUP
+
 	v1 = builder->CreateBitCast(v1, get_vt_16x8(), "lo8x16_v1");
 	v2 = builder->CreateBitCast(v2, get_vt_16x8(), "lo8x16_v2");
 

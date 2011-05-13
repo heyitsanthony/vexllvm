@@ -85,6 +85,8 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(And32);
 	BINOP_TAGOP(And64);
 
+	BINOP_TAGOP(DivModU128to64);
+
 	BINOP_TAGOP(InterleaveLO8x16);
 
 	BINOP_TAGOP(Mul8);
@@ -160,6 +162,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(128HIto64);
 	UNOP_TAGOP(32HLto64);
 	UNOP_TAGOP(64HLtoV128);
+	UNOP_TAGOP(64HLto128);
 	UNOP_TAGOP(64HIto32);
 
 	UNOP_TAGOP(Ctz64);
