@@ -21,6 +21,7 @@ OBJDEPS=	vexxlate.o	\
 		elfimg.o	\
 		dllib.o		\
 		gueststateelf.o	\
+		guesttls.o	\
 		elfsegment.o
 
 ELFTRACEDEPS=	elf_trace.o
@@ -28,12 +29,13 @@ ELFTRACEDEPS=	elf_trace.o
 BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/vexops.bc
 
-TRACEDEPS= nested_call strlen strrchr \
-	print cmdline getenv \
-	fwrite malloc memset \
+TRACEDEPS= nested_call strlen strrchr 	\
+	print cmdline getenv 		\
+	fwrite malloc memset 		\
 	primes memset-large atoi	\
-	strcpy qsort strstr	\
-	sscanf time gettimeofday
+	strcpy qsort strstr		\
+	sscanf time gettimeofday	\
+	rand gettext uselocale
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)

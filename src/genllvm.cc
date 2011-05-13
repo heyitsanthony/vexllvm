@@ -122,6 +122,7 @@ Value* GenLLVM::getCtxGEP(unsigned int byteOff, const Type* accessTy)
 	return ret;
 }
 
+/* TODO: log these */
 Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 {
 	Value		*ret, *addr;

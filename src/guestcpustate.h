@@ -24,6 +24,8 @@ enum GuestExitType {
 	GE_EMWARN = 4
 	/* XXX ADD MORE */ };
 
+class GuestTLS;
+
 /* TODO: make this a base class when if we want to support other archs */
 class GuestCPUState
 {
@@ -47,9 +49,12 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	void setExitType(GuestExitType et) { *exit_type = (uint8_t)et; }
 	GuestExitType getExitType(void) { return (GuestExitType)*exit_type; }
 
-	void setArg(uintptr_t arg_val, unsigned int arg_num);
+	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
 
 	void print(std::ostream& os) const;
+
+	GuestTLS* getTLS(void) { return tls; }
+	const GuestTLS* getTLS(void) const { return tls; }
 protected:
 	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);
 	void mkRegCtx(void);
@@ -59,7 +64,7 @@ private:
 	uint8_t		*state_data;	/* amd64 guest + exit_type */
 	uint8_t		*exit_type;	/* ptr into state data */
 
-	uint8_t		*tls_data;	/* so %fs works */
+	GuestTLS	*tls;
 	unsigned int	state_byte_c;
 };
 

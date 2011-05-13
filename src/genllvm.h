@@ -57,6 +57,7 @@ private:
 
 	/* current state data */
 	llvm::Value*		cur_guest_ctx;
+
 	llvm::Function*		cur_f;
 	llvm::BasicBlock*	cur_bb;
 

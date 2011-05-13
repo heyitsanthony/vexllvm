@@ -8,6 +8,7 @@
 #include <cstring>
 #include <vector>
 
+#include "guesttls.h"
 #include "guestcpustate.h"
 
 using namespace llvm;
@@ -19,7 +20,6 @@ struct guest_ctx_field
 	const char*	f_name;
 };
 
-#define TLS_DATA_SIZE	4096	/* XXX. Good enough? */
 /* indexes into GPR array */
 #define AMD64_GPR_RAX	0
 #define AMD64_GPR_RCX	1
@@ -51,23 +51,15 @@ GuestCPUState::GuestCPUState()
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
 
-	tls_data = new uint8_t[TLS_DATA_SIZE];
-	memset(tls_data, 0, TLS_DATA_SIZE);
+	tls = new GuestTLS();
 	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) = 
-		(uintptr_t)tls_data;
-
-	/* XXX pointer guard. LD uses the same pointer guard as the host
-	 * process (luckily). We really need our own LD to get around this
-	 * for other hosts. Alternative: force env LD_POINTER_GUARD=0 */
-	uint64_t	ptr_guard;
-	__asm__("movq %%fs:0x30, %0" : "=r" (ptr_guard));
-	*((uint64_t*)(&tls_data[0x30])) = ptr_guard;
+		(uintptr_t)tls->getBase();
 }
 
 GuestCPUState::~GuestCPUState()
 {
 	delete [] state_data;
-	delete [] tls_data;
+	delete tls;
 }
 
 Type* GuestCPUState::mkFromFields(
@@ -205,7 +197,10 @@ SyscallParams GuestCPUState::getSyscallParams(void) const
 		get_gpr(AMD64_GPR_RAX),
 		get_gpr(AMD64_GPR_RDI),
 		get_gpr(AMD64_GPR_RSI),
-		get_gpr(AMD64_GPR_RDX)); /* XXX more params? */
+		get_gpr(AMD64_GPR_RDX),
+		get_gpr(AMD64_GPR_R10),
+		get_gpr(AMD64_GPR_R8),
+		get_gpr(AMD64_GPR_R9));
 }
 
 
@@ -226,7 +221,6 @@ uint64_t GuestCPUState::getExitCode(void) const
 void GuestCPUState::print(std::ostream& os) const
 {
 	os << "RIP: " << (void*)get_gpr(21) << "\n";
-	os << "RAX: " << (void*)get_gpr(AMD64_GPR_RAX) << "\n";
 	os << "RAX: " << (void*)get_gpr(AMD64_GPR_RAX) << "\n";
 	os << "RBX: " << (void*)get_gpr(AMD64_GPR_RBX) << "\n";
 	os << "RCX: " << (void*)get_gpr(AMD64_GPR_RCX) << "\n";
@@ -251,19 +245,24 @@ void GuestCPUState::print(std::ostream& os) const
 		<< (void*)get_xmm_lo(i) << std::endl;
 	}
 
+	const uint64_t*	tls_data = (const uint64_t*)tls->getBase();
+	unsigned int	tls_bytes = tls->getSize();
+
 	os << "&fs = " << (void*)(*((uint64_t*)(&state_data[192]))) << std::endl;
-	for (int i = 0; i < 8; i++) {
+	for (unsigned int i = 0; i < tls_bytes / sizeof(uint64_t); i++) {
+		if (!tls_data[i]) continue;
 		os	<< "fs+" << (void*)(i*8)  << ":" 
-			<< (void*)((uint64_t*)tls_data)[i]
-			<< std::endl;;
+			<< (void*)tls_data[i]
+			<< std::endl;
 	}
 }
 
 /* set a function argument */
-void GuestCPUState::setArg(uintptr_t arg_val, unsigned int arg_num)
+void GuestCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 {
 	const int arg2reg[] = {
-		AMD64_GPR_RDI, AMD64_GPR_RSI, AMD64_GPR_RDX, AMD64_GPR_RCX};
+		AMD64_GPR_RDI, AMD64_GPR_RSI, AMD64_GPR_RDX, AMD64_GPR_RCX,
+		};
 
 	assert (arg_num <= 3);
 	set_gpr(arg2reg[arg_num], arg_val);

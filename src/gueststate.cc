@@ -60,14 +60,16 @@ void GuestState::setArgv(unsigned int argc, const char* argv[])
 	char		*stack_base, *argv_data;
 	char		**argv_tab;
 
-	stack_base = (char*)stack;
+	stack_base = (char*)stack + STACK_BYTES;
 	stack_base -= REDZONE_BYTES;	/* make room for redzone */
 	assert (((uintptr_t)stack_base & 0x7) == 0 && 
 		"Stack not 8-aligned. Perf bug!");
 
+	/*  */
 	for (unsigned int i = 0; i < argc; i++)
 		argv_data_space += strlen(argv[i]) + 1 /* '\0' */;
 
+	/* number of bytes needed to store points to all argv */
 	argv_ptr_space = sizeof(const char*) * (argc + 1 /* NULL ptr */);
 
 	/* set s to room for argv strings */
@@ -85,6 +87,7 @@ void GuestState::setArgv(unsigned int argc, const char* argv[])
 		argv_data += strlen(argv[i]);
 		argv_data++;		/* skip '\0' */
 	}
+	argv_tab[argc] = NULL;
 
 	/* store argc */
 	stack_base -= sizeof(uintptr_t);

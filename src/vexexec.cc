@@ -86,8 +86,8 @@ const VexSB* VexExec::doNextSB(void)
 	GuestExitType	exit_type;
 
 	elfptr = addr_stack.top();
-	addr_stack.pop();
 	trace.push_back(std::pair<void*, int>(elfptr, addr_stack.size()));
+	addr_stack.pop();
 
 	vsb = getSBFromGuestAddr(elfptr);
 	assert (vsb != NULL);
@@ -224,4 +224,5 @@ void VexExec::run(void)
 void VexExec::dumpLogs(std::ostream& os) const
 {
 	vexlate->dumpLog(os);
+	sc->print(os);
 }
