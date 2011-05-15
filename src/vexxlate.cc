@@ -20,7 +20,9 @@ struct vex_cb
 };
 
 static vex_cb g_cb;
-static std::list<std::string>	xlate_msg_log;
+static std::list<std::string>		xlate_msg_log;
+static VexXlate::VexXlateLogType	log_type;
+
 
 /* built-in handlers */
 static __attribute__((noreturn)) void vex_exit(void)
@@ -41,19 +43,19 @@ static IRSB* vex_finaltidy(IRSB* irsb)
 }
 
 static void vex_log(HChar* hc, Int nbytes)
-#if 0
 {
-	/* TODO: limit output */
-	xlate_msg_log.push_back(std::string(hc));
+	switch (log_type) {
+	case VexXlate::VX_LOG_NONE:
+		break;
+	case VexXlate::VX_LOG_MEM:
+		/* TODO: limit output, merge strings.. */
+		xlate_msg_log.push_back(std::string(hc));
+		break;
+	case VexXlate::VX_LOG_STDERR:
+		fprintf(stderr, "%s", hc);
+		break;
+	}
 }
-#elif 0
-{
-	/* TODO: limit output */
-	fprintf(stderr, "%s", hc);
-}
-#else
-{}
-#endif
 
 static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
 
@@ -65,9 +67,22 @@ VexXlate::VexXlate()
 	LibVEX_default_VexArchInfo(&vai_amd64);
 	vai_amd64.hwcaps = 0;
 	LibVEX_default_VexAbiInfo(&vbi);
+
+	loadLogType();
 }
 
 VexXlate::~VexXlate() { /* ??? */ }
+
+void VexXlate::loadLogType(void)
+{
+	const char*	s;
+
+	s = getenv("VEXLLVM_SB_LOG");
+	if (s == NULL) log_type = VX_LOG_NONE;
+	else if (strcmp(s, "mem") == 0) log_type = VX_LOG_MEM;
+	else if (strcmp(s, "stderr") == 0) log_type = VX_LOG_MEM;
+	else assert (0 == 1 && "bad log type. expect from {mem,stderr}");
+}
 
 void VexXlate::dumpLog(std::ostream& os) const
 {
@@ -84,7 +99,7 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	VexGuestExtents		vge;
 	VexTranslateResult	res;
 	Int			host_bytes_used;	/* WHY A PTR?? */
-	uint8_t			b[1024];
+	uint8_t			b[1024 /* bogus buffer for VX->MC dump */];
 
 	memset(&vta, 0, sizeof(vta));
 	vta.arch_guest = VexArchAMD64;

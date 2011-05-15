@@ -64,13 +64,18 @@ tests/traces-obj/%.o: tests/traces-src/%.c
 bitcode/%.bc: support/%.c
 	llvm-gcc -emit-llvm -O3 -c $< -o $@
 
-tests: all test-traces
+tests: test-traces
+
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/*
 
 TRACEDEPS_PATH=$(TRACEDEPS:%=tests/traces-bin/%)
-test-traces: $(TRACEDEPS_PATH)
+test-traces: all $(TRACEDEPS_PATH)
 	tests/traces.sh
+
+tests-oprof: all
+	TRACES_OPROFILE=1 tests/traces.sh
+
 
 bin/elf_trace: $(OBJDIRDEPS) $(ELFTRACEDIRDEPS)
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
