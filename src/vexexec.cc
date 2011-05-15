@@ -88,15 +88,17 @@ const VexSB* VexExec::doNextSB(void)
 	GuestExitType	exit_type;
 
 	elfptr = addr_stack.top();
+	
 	if (trace_c > TRACE_MAX)
 		trace.pop_front();
 	else
 		trace_c++;
 	trace.push_back(std::pair<void*, int>(elfptr, addr_stack.size()));
+
 	addr_stack.pop();
 
 	vsb = getSBFromGuestAddr(elfptr);
-	assert (vsb != NULL);
+	if (vsb == NULL) return NULL;
 
 	new_jmpaddr = (void*)doVexSB(vsb);
 
@@ -140,12 +142,27 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	/* XXX recongnize library ranges */
 	if (hostptr == NULL) hostptr = elfptr;
 
+	vsb = vexsb_dc.get(elfptr);
+	if (vsb) return vsb;
+
 	it = vexsb_cache.find(elfptr);
-	if (it != vexsb_cache.end()) return (*it).second;
+	if (it != vexsb_cache.end()) {
+		vsb = (*it).second;
+		goto update_dc;
+	}
+
+	if (exit_addrs.count((elfptr_t)elfptr)) {
+		std::cerr	<< "Exit call. Anthony fix this. "
+				<< "Exitcode=" << gs->getExitCode()
+				<< std::endl;
+		return NULL;
+	}
 
 	vsb = vexlate->xlate(hostptr, (uint64_t)elfptr);
 	vexsb_cache[elfptr] = vsb;
 
+update_dc:
+	vexsb_dc.put(elfptr, vsb);
 	return vsb;
 }
 
@@ -154,25 +171,34 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	vexfunc_t 			func_ptr;
 	jit_map::const_iterator		it;
 
+	func_ptr = (vexfunc_t)jit_dc.get((void*)vsb);
+	if (func_ptr != NULL) goto hit_func;
+
 	it = jit_cache.find(vsb);
 	if (it != jit_cache.end()) {
 		func_ptr = ((*it).second);
-	} else {
-		Function	*f;
-		char		emitstr[1024];
-
-		sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
-		f = vsb->emit(emitstr);
-		assert (f && "FAILED TO EMIT FUNC??");
-//		f->dump();
+		goto miss_func;
+	}	
 	
-		func_ptr = (vexfunc_t)exeEngine->getPointerToFunction(f);
-		assert (func_ptr != NULL && "Could not JIT");
-		jit_cache[vsb] = func_ptr;
-	}
+	/* not in caches, generate */
+	Function	*f;
+	char		emitstr[1024];
+
+	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
+	f = vsb->emit(emitstr);
+	assert (f && "FAILED TO EMIT FUNC??");
+//		f->dump();
+
+	func_ptr = (vexfunc_t)exeEngine->getPointerToFunction(f);
+	assert (func_ptr != NULL && "Could not JIT");
+	jit_cache[vsb] = func_ptr;
 //	fprintf(stderr, "doing func host=%p guest=%p\n", 
 //		func_ptr, (void*)vsb->getGuestAddr());
 
+miss_func:
+	jit_dc.put((void*)vsb, (vexfunc_t*)func_ptr);
+	
+hit_func:
 	sb_executed_c++;
 	return func_ptr(gs->getCPUState()->getStateData());
 }
@@ -205,13 +231,6 @@ void VexExec::run(void)
 		void		*top_addr;
 
 		top_addr = addr_stack.top();
-		if (exit_addrs.count((elfptr_t)top_addr)) {
-			std::cerr	<< "Exit call. Anthony fix this. "
-					<< "Exitcode=" << gs->getExitCode()
-					<< std::endl;
-			return;
-		}
-
 		if (dump_current_state) {
 			std::cerr << "================BEFORE DOING "
 				<< top_addr 

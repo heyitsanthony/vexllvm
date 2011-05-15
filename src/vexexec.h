@@ -7,6 +7,7 @@
 #include <stack>
 #include <list>
 #include <vector>
+#include "directcache.h"
 
 class GuestState;
 class Syscalls;
@@ -57,9 +58,12 @@ private:
 	/* stats */
 	unsigned int	sb_executed_c;
 
-	vexsb_map	vexsb_cache;
-	jit_map		jit_cache;
-	exit_func_set	exit_addrs;
+	vexsb_map		vexsb_cache;
+	DirectCache<VexSB>	vexsb_dc;
+
+	jit_map			jit_cache;
+	DirectCache<vexfunc_t>	jit_dc;
+	exit_func_set		exit_addrs;
 
 	/* dump current state before executing BB */
 	/* defined by env var VEXLLVM_DUMP_STATES */
