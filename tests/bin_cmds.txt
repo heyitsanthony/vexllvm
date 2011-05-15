@@ -1,2 +1,14 @@
 /bin/true
 /bin/false
+/bin/awk
+/bin/pwd
+/bin/dmesg
+/bin/df
+/bin/du
+/bin/echo
+/bin/grep
+/bin/sed
+/bin/seq
+/bin/uname
+/bin/tr
+/bin/cut

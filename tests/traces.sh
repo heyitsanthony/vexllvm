@@ -88,6 +88,9 @@ do
 		continue
 	fi
 	a="$line"
+	if [ ! -x "$a" ]; then
+		continue
+	fi
 	do_trace 
 done < "tests/bin_cmds.txt"
 
