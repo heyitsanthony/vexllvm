@@ -6,6 +6,7 @@
 #include <map>
 #include <stack>
 #include <list>
+#include <vector>
 
 class GuestState;
 class Syscalls;
@@ -63,6 +64,8 @@ private:
 	/* dump current state before executing BB */
 	/* defined by env var VEXLLVM_DUMP_STATES */
 	bool		dump_current_state;
+
+	unsigned int	trace_c;
 };
 
 #endif

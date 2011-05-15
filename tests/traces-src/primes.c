@@ -30,7 +30,6 @@ int isprime(int p) { return p==2 || (p>2 && (p&1)==1 && (GET((p-1)>>1)==0)); }
 int main()
 {
 int i, n;
-assert (0 == 1 && "INFINITE LOOP");
 make();
 for (n = 0, i = 0; i <= MAXN; i++)
 if (isprime(i)) n++;

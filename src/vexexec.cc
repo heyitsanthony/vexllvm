@@ -29,6 +29,8 @@
 
 using namespace llvm;
 
+#define TRACE_MAX	500
+
 VexExec* VexExec::create(GuestState* in_gs)
 {
 	VexExec	*ve;
@@ -60,7 +62,7 @@ VexExec::~VexExec()
 }
 
 VexExec::VexExec(GuestState* in_gs)
-: gs(in_gs), sb_executed_c(0)
+: gs(in_gs), sb_executed_c(0), trace_c(0)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
 	std::string	err_str;
@@ -86,6 +88,10 @@ const VexSB* VexExec::doNextSB(void)
 	GuestExitType	exit_type;
 
 	elfptr = addr_stack.top();
+	if (trace_c > TRACE_MAX)
+		trace.pop_front();
+	else
+		trace_c++;
 	trace.push_back(std::pair<void*, int>(elfptr, addr_stack.size()));
 	addr_stack.pop();
 

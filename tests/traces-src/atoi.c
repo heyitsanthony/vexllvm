@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <locale.h>
 #include <stdlib.h>
 
 const char* s[] = {"1", "-1", "-100", "100", "999999999" };

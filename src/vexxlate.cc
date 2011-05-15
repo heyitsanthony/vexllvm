@@ -46,7 +46,7 @@ static void vex_log(HChar* hc, Int nbytes)
 	/* TODO: limit output */
 	xlate_msg_log.push_back(std::string(hc));
 }
-#elif 1
+#elif 0
 {
 	/* TODO: limit output */
 	fprintf(stderr, "%s", hc);

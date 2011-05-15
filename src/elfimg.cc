@@ -347,7 +347,8 @@ void ElfImg::pullInstrumented(DLLib* lib)
 		"abort",
 		"_exit",
 		"fork",
-		"kill"
+		"kill",
+		"uselocale"
 		};
 	/* XXX does this belong here? */
 	for (int i = 0; i < sizeof(calls) / sizeof(const char*); i++) {
