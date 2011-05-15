@@ -187,6 +187,11 @@ void GuestCPUState::setStackPtr(void* stack_ptr)
 	set_gpr(AMD64_GPR_RSP, (uint64_t)stack_ptr);
 }
 
+void* GuestCPUState::getStackPtr(void) const
+{
+	return (void*)get_gpr(AMD64_GPR_RSP);
+}
+
 /**
  * %rax = syscall number
  * rdi, rsi, rdx, r10, r8, r9

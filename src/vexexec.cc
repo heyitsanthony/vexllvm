@@ -123,10 +123,12 @@ const VexSB* VexExec::doNextSB(void)
 		gs->setSyscallResult(sc_ret);
 	}
 
-	if (vsb->isReturn()) addr_stack.pop();
+	if (vsb->isReturn() && !addr_stack.empty())
+		addr_stack.pop();
 
 	/* next address to go to */
-	if (new_jmpaddr) addr_stack.push(new_jmpaddr);
+	if (	!(vsb->isReturn() && addr_stack.empty()) &&
+		new_jmpaddr) addr_stack.push(new_jmpaddr);
 
 	return vsb;
 }
@@ -187,13 +189,10 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
 	f = vsb->emit(emitstr);
 	assert (f && "FAILED TO EMIT FUNC??");
-//		f->dump();
 
 	func_ptr = (vexfunc_t)exeEngine->getPointerToFunction(f);
 	assert (func_ptr != NULL && "Could not JIT");
 	jit_cache[vsb] = func_ptr;
-//	fprintf(stderr, "doing func host=%p guest=%p\n", 
-//		func_ptr, (void*)vsb->getGuestAddr());
 
 miss_func:
 	jit_dc.put((void*)vsb, (vexfunc_t*)func_ptr);
@@ -220,12 +219,40 @@ void VexExec::loadExitFuncAddrs(void)
 	if (exit_ptr) exit_addrs.insert((void*)exit_ptr);
 }
 
+/**
+ * glibc requires some gettext stuff set, but since we're not using the ELF's
+ * interp (because it'd be a lot of work!),  we're not getting some locale var
+ * set-- fix = call uselocale and hope everything works out
+ */
+void VexExec::glibcLocaleCheat(void)
+{
+	guestptr_t	uselocale_ptr;
+	void		*old_stack;
+
+	uselocale_ptr = gs->name2guest("uselocale");
+
+	gs->getCPUState()->setFuncArg(-1, 0);
+	old_stack = gs->getCPUState()->getStackPtr();
+
+	addr_stack.push((void*)uselocale_ptr);
+	runAddrStack();
+	addr_stack = vexexec_addrs();
+
+	gs->getCPUState()->setStackPtr(old_stack);
+}
+
 void VexExec::run(void)
 {
 	loadExitFuncAddrs();
+	glibcLocaleCheat();
 
 	/* top of address stack is executed */
 	addr_stack.push(gs->getEntryPoint());
+	runAddrStack();
+}
+
+void VexExec::runAddrStack(void)
+{
 	while (!addr_stack.empty()) {
 		const VexSB	*sb;
 		void		*top_addr;
@@ -237,11 +264,8 @@ void VexExec::run(void)
 				<< std::endl;
 			gs->print(std::cerr);
 		}
-		sb = doNextSB();
-//		std::cerr << "================AFTER DOING " << top_addr 
-//			<< std::endl;
-//		gs->print(std::cerr);
 
+		sb = doNextSB();
 		if (!sb) break;
 	}
 }

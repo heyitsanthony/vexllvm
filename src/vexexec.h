@@ -45,7 +45,10 @@ private:
 	VexSB* getSBFromGuestAddr(void* elfptr);
 	const VexSB* doNextSB(void);
 	uint64_t doVexSB(VexSB* vsb);
+	
+	void runAddrStack(void);
 	void loadExitFuncAddrs(void);
+	void glibcLocaleCheat(void);
 
 	VexXlate		*vexlate;
 	llvm::ExecutionEngine	*exeEngine;

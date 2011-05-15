@@ -351,7 +351,7 @@ void ElfImg::pullInstrumented(DLLib* lib)
 		"uselocale"
 		};
 	/* XXX does this belong here? */
-	for (int i = 0; i < sizeof(calls) / sizeof(const char*); i++) {
+	for (unsigned int i = 0; i < sizeof(calls) / sizeof(char*); i++) {
 		void	*fptr;
 		if (syms.findSym(std::string(calls[i]))) continue;
 		fptr = lib->resolve(calls[i]);

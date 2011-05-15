@@ -88,6 +88,9 @@ do
 		continue
 	fi
 	a="$line"
+	if [ ! -z `echo $a | grep "^#" ` ]; then
+		continue
+	fi
 	if [ ! -x "$a" ]; then
 		continue
 	fi
