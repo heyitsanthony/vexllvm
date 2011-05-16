@@ -1,5 +1,7 @@
 #!/bin/bash
 
+TRACE_ADDR_LINES=1000
+
 echo "Testing traces"
 
 if [ ! -x tests/traces.sh ]; then
@@ -39,43 +41,45 @@ function oprof_shutdown
 function run_trace_bin
 {
 	oprof_start
-	time bin/elf_trace $a 1>"$FPREFIX.trace.out" 2>"$FPREFIX.trace.err"
+	time bin/elf_trace $1 1>"$FPREFIX.trace.out" 2>"$FPREFIX.trace.err"
 	oprof_stop
 }
 
 function do_trace
 {
-	BINNAME=`echo $a | sed "s/\//\n/g" | tail -n1`
+	BINNAME=`echo $a | cut -f1 -d' ' | sed "s/\//\n/g" | tail -n1`
 	FPREFIX=$OUTPATH/$BINNAME
 	echo -n "Testing: $BINNAME ..."
 
-	run_trace_bin 2>"$FPREFIX.trace.time"
+	run_trace_bin "$a" 2>"$FPREFIX.trace.time"
 	retval=`grep "Exitcode" "$FPREFIX.trace.err" | cut -f2`
 
 	echo "$retval" >"${FPREFIX}.trace.ret"
 	if [ -z "$retval" ]; then
 		TESTS_ERR=`expr $TESTS_ERR + 1`
-		echo "FAILED (bin: $a)."
+		echo "FAILED (bin: $BINNAME)."
 		grep "^[ ]*0x" $OUTPATH/$BINNAME.trace.err >$FPREFIX.trace.addrs
-		for addr in `tail -n100 $FPREFIX.trace.addrs`; do
-			objdump -d $a | grep `echo $addr  | cut -f2 -d'x'` | grep "^0"
-		done
+		objdump -d `echo $a | cut -f1 -d' '` >"$FPREFIX".objdump
+		for addr in `tail -n$TRACE_ADDR_LINES $FPREFIX.trace.addrs`; do
+			cat "$FPREFIX".objdump | grep `echo $addr  | cut -f2 -d'x'` | grep "^0"
+		done >$FPREFIX.trace.funcs
+		cat $FPREFIX.trace.funcs
+
+		echo "$a">>$OUTPATH/tests.bad
 	else
 		TESTS_OK=`expr $TESTS_OK + 1`
 		t=`cat $FPREFIX.trace.time | grep -i real | awk '{ print $2 }' `
 		echo "OK.  $t"
+		echo "$a">>$OUTPATH/tests.ok
 	fi
-
-#	grep "^[ ]*0x" $OUTPATH/$BINNAME.trace.err >$FPREFIX.trace.addrs
-#	for addr in `cat $FPREFIX.trace.addrs`; do
-#		objdump -d $a | grep `echo $addr  | cut -f2 -d'x'` | grep "^0"
-#	done >$FPREFIX.trace.funcs
 
 }
 
 OUTPATH="tests/traces-out"
 TESTS_OK=0
 TESTS_ERR=0
+rm -f $OUTPATH/tests.ok $OUTPATH/tests.bad
+
 echo "Doing built-in tests"
 for a in tests/traces-bin/*; do
 	do_trace
@@ -91,9 +95,12 @@ do
 	if [ ! -z `echo $a | grep "^#" ` ]; then
 		continue
 	fi
-	if [ ! -x "$a" ]; then
+
+	binname=`echo "$a" | cut -f1 -d' '` 
+	if [ ! -x "$binname" ]; then
 		continue
 	fi
+
 	do_trace 
 done < "tests/bin_cmds.txt"
 
