@@ -108,6 +108,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Or16);
 	BINOP_TAGOP(Or32);
 	BINOP_TAGOP(Or64);
+	BINOP_TAGOP(OrV128);
 
 	BINOP_TAGOP(Shl8);
 	BINOP_TAGOP(Shl16);
