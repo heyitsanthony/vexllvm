@@ -63,7 +63,7 @@ function do_trace
 		for addr in `tail -n$TRACE_ADDR_LINES $FPREFIX.trace.addrs`; do
 			cat "$FPREFIX".objdump | grep `echo $addr  | cut -f2 -d'x'` | grep "^0"
 		done >$FPREFIX.trace.funcs
-		cat $FPREFIX.trace.funcs
+		tail $FPREFIX.trace.funcs
 
 		echo "$a">>$OUTPATH/tests.bad
 	else
