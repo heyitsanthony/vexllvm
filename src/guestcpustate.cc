@@ -10,6 +10,9 @@
 
 #include "guesttls.h"
 #include "guestcpustate.h"
+extern "C" {
+#include <valgrind/libvex_guest_amd64.h>
+}
 
 using namespace llvm;
 
@@ -20,26 +23,7 @@ struct guest_ctx_field
 	const char*	f_name;
 };
 
-/* indexes into GPR array */
-#define AMD64_GPR_RAX	0
-#define AMD64_GPR_RCX	1
-#define AMD64_GPR_RDX	2
-#define AMD64_GPR_RBX	3
-#define AMD64_GPR_RSP	4
-#define AMD64_GPR_RBP	5
-#define AMD64_GPR_RSI	6
-#define AMD64_GPR_RDI	7
-#define AMD64_GPR_R8	8
-#define AMD64_GPR_R9	9
-#define AMD64_GPR_R10	10
-#define AMD64_GPR_R11	11
-#define AMD64_GPR_R12	12
-#define AMD64_GPR_R13	13
-#define AMD64_GPR_R14	14
-#define AMD64_GPR_R15	15
-
-#define get_gpr(y)	((uint64_t*)state_data)[y]
-#define set_gpr(y, z)	((uint64_t*)state_data)[y] = z
+#define state2amd64()	((VexGuestAMD64State*)(state_data))
 
 #define FS_SEG_OFFSET	(24*8)
 
@@ -50,6 +34,7 @@ GuestCPUState::GuestCPUState()
 	state_data = new uint8_t[state_byte_c+1];
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
+	state2amd64()->guest_DFLAG = 1;
 
 	tls = new GuestTLS();
 	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) = 
@@ -184,12 +169,12 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 
 void GuestCPUState::setStackPtr(void* stack_ptr)
 {
-	set_gpr(AMD64_GPR_RSP, (uint64_t)stack_ptr);
+	state2amd64()->guest_RSP = (uint64_t)stack_ptr;
 }
 
 void* GuestCPUState::getStackPtr(void) const
 {
-	return (void*)get_gpr(AMD64_GPR_RSP);
+	return (void*)(state2amd64()->guest_RSP);
 }
 
 /**
@@ -199,24 +184,24 @@ void* GuestCPUState::getStackPtr(void) const
 SyscallParams GuestCPUState::getSyscallParams(void) const
 {
 	return SyscallParams(
-		get_gpr(AMD64_GPR_RAX),
-		get_gpr(AMD64_GPR_RDI),
-		get_gpr(AMD64_GPR_RSI),
-		get_gpr(AMD64_GPR_RDX),
-		get_gpr(AMD64_GPR_R10),
-		get_gpr(AMD64_GPR_R8),
-		get_gpr(AMD64_GPR_R9));
+		state2amd64()->guest_RAX,
+		state2amd64()->guest_RDI,
+		state2amd64()->guest_RSI,
+		state2amd64()->guest_RDX,
+		state2amd64()->guest_R10,
+		state2amd64()->guest_R8,
+		state2amd64()->guest_R9);
 }
 
 
 void GuestCPUState::setSyscallResult(uint64_t ret)
 {
-	set_gpr(AMD64_GPR_RAX, ret);
+	state2amd64()->guest_RAX = ret;
 }
 
 uint64_t GuestCPUState::getExitCode(void) const
 {
-	return get_gpr(AMD64_GPR_RAX);
+	return state2amd64()->guest_RAX;
 }
 
 // 208 == XMM base
@@ -225,23 +210,23 @@ uint64_t GuestCPUState::getExitCode(void) const
 
 void GuestCPUState::print(std::ostream& os) const
 {
-	os << "RIP: " << (void*)get_gpr(21) << "\n";
-	os << "RAX: " << (void*)get_gpr(AMD64_GPR_RAX) << "\n";
-	os << "RBX: " << (void*)get_gpr(AMD64_GPR_RBX) << "\n";
-	os << "RCX: " << (void*)get_gpr(AMD64_GPR_RCX) << "\n";
-	os << "RDX: " << (void*)get_gpr(AMD64_GPR_RDX) << "\n";
-	os << "RSP: " << (void*)get_gpr(AMD64_GPR_RSP) << "\n";
-	os << "RBP: " << (void*)get_gpr(AMD64_GPR_RBP) << "\n";
-	os << "RDI: " << (void*)get_gpr(AMD64_GPR_RDI) << "\n";
-	os << "RSI: " << (void*)get_gpr(AMD64_GPR_RSI) << "\n";
-	os << "R8: " << (void*)get_gpr(AMD64_GPR_R8) << "\n";
-	os << "R9: " << (void*)get_gpr(AMD64_GPR_R9) << "\n";
-	os << "R10: " << (void*)get_gpr(AMD64_GPR_R10) << "\n";
-	os << "R11: " << (void*)get_gpr(AMD64_GPR_R11) << "\n";
-	os << "R12: " << (void*)get_gpr(AMD64_GPR_R12) << "\n";
-	os << "R13: " << (void*)get_gpr(AMD64_GPR_R13) << "\n";
-	os << "R14: " << (void*)get_gpr(AMD64_GPR_R14) << "\n";
-	os << "R15: " << (void*)get_gpr(AMD64_GPR_R15) << "\n";
+	os << "RIP: " << (void*)state2amd64()->guest_RIP << "\n";
+	os << "RAX: " << (void*)state2amd64()->guest_RAX << "\n";
+	os << "RBX: " << (void*)state2amd64()->guest_RBX << "\n";
+	os << "RCX: " << (void*)state2amd64()->guest_RCX << "\n";
+	os << "RDX: " << (void*)state2amd64()->guest_RDX << "\n";
+	os << "RSP: " << (void*)state2amd64()->guest_RSP << "\n";
+	os << "RBP: " << (void*)state2amd64()->guest_RBP << "\n";
+	os << "RDI: " << (void*)state2amd64()->guest_RDI << "\n";
+	os << "RSI: " << (void*)state2amd64()->guest_RSI << "\n";
+	os << "R8: " << (void*)state2amd64()->guest_R8 << "\n";
+	os << "R9: " << (void*)state2amd64()->guest_R9 << "\n";
+	os << "R10: " << (void*)state2amd64()->guest_R10 << "\n";
+	os << "R11: " << (void*)state2amd64()->guest_R11 << "\n";
+	os << "R12: " << (void*)state2amd64()->guest_R12 << "\n";
+	os << "R13: " << (void*)state2amd64()->guest_R13 << "\n";
+	os << "R14: " << (void*)state2amd64()->guest_R14 << "\n";
+	os << "R15: " << (void*)state2amd64()->guest_R15 << "\n";
 
 	for (int i = 0; i < 16; i++) {
 		os
@@ -266,9 +251,12 @@ void GuestCPUState::print(std::ostream& os) const
 void GuestCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 {
 	const int arg2reg[] = {
-		AMD64_GPR_RDI, AMD64_GPR_RSI, AMD64_GPR_RDX, AMD64_GPR_RCX,
+		offsetof(VexGuestAMD64State, guest_RDI),
+		offsetof(VexGuestAMD64State, guest_RSI),
+		offsetof(VexGuestAMD64State, guest_RDX),
+		offsetof(VexGuestAMD64State, guest_RCX)
 		};
 
 	assert (arg_num <= 3);
-	set_gpr(arg2reg[arg_num], arg_val);
+	*((uint64_t*)((uintptr_t)state_data + arg2reg[arg_num])) = arg_val;
 }

@@ -15,6 +15,9 @@ GuestTLS::GuestTLS(void)
 	 * for other hosts. Alternative: force env LD_POINTER_GUARD=0 */
 	__asm__("movq %%fs:0x30, %0" : "=r" (ptr_guard));
 	*((uint64_t*)(&tls_data[0x30])) = ptr_guard;
+
+	/* and a fake pthreads structure?? */
+	*((uint64_t*)(&tls_data[0])) = (uint64_t)tls_data;
 }
 
 GuestTLS::~GuestTLS(void)

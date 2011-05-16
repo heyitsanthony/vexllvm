@@ -174,7 +174,7 @@ Value* GenLLVM::getCtxBase(void)
 	ptrty = PointerType::get(builder->getInt8Ty(), 0);
 	intptr_v = ConstantInt::get(
 		getGlobalContext(),
-		APInt(	sizeof(intptr_t),
+		APInt(	sizeof(intptr_t)*8,
 			(uintptr_t)guestState->getCPUState()->getStateData()));
 
 	return builder->CreateBitCast(intptr_v, ptrty, "ctxbaseptr");

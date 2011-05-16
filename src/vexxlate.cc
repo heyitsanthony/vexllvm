@@ -80,7 +80,7 @@ void VexXlate::loadLogType(void)
 	s = getenv("VEXLLVM_SB_LOG");
 	if (s == NULL) log_type = VX_LOG_NONE;
 	else if (strcmp(s, "mem") == 0) log_type = VX_LOG_MEM;
-	else if (strcmp(s, "stderr") == 0) log_type = VX_LOG_MEM;
+	else if (strcmp(s, "stderr") == 0) log_type = VX_LOG_STDERR;
 	else assert (0 == 1 && "bad log type. expect from {mem,stderr}");
 }
 

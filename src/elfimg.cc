@@ -176,6 +176,9 @@ void ElfImg::applyRela(const Elf64_Rela& rela)
 		break;
 	case R_X86_64_COPY:
 		/* calculation: none */
+//		*((uintptr_t*)st_value) = (uintptr_t)st_value;
+//		*((Elf64_Addr*)hostptr) = st_value;
+		*((Elf64_Addr*)hostptr) = (Elf64_Addr)hostptr;
 		break;
 	case R_X86_64_JUMP_SLOT:
 		if (st_value == 0) {

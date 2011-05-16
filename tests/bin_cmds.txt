@@ -8,7 +8,8 @@
 /bin/echo
 /bin/grep
 /bin/sed
-#/bin/seq
+/bin/seq
 /bin/uname
 /bin/tr
-#/bin/cut
+/bin/cut
+/bin/env

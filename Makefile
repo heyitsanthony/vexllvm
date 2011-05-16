@@ -35,7 +35,8 @@ TRACEDEPS= nested_call strlen strrchr 	\
 	primes memset-large atoi	\
 	strcpy qsort strstr		\
 	sscanf time gettimeofday	\
-	rand gettext uselocale
+	rand gettext uselocale		\
+	getopt errno strerror strchrnul
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
