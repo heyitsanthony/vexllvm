@@ -53,6 +53,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpNE16);
 	BINOP_TAGOP(CmpNE32);
 	BINOP_TAGOP(CmpNE64);
+	BINOP_TAGOP(CmpF64);
 
 	BINOP_TAGOP(CasCmpEQ8);
 	BINOP_TAGOP(CasCmpEQ16);
@@ -65,6 +66,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CasCmpNE64);
 
 	BINOP_TAGOP(CmpEQ8x16);
+	BINOP_TAGOP(CmpGT8Sx16);
 	BINOP_TAGOP(CmpLE64S);
 	BINOP_TAGOP(CmpLE64U);
 	BINOP_TAGOP(CmpLT64S);
@@ -84,8 +86,12 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(And16);
 	BINOP_TAGOP(And32);
 	BINOP_TAGOP(And64);
+	BINOP_TAGOP(AndV128);
 
 	BINOP_TAGOP(DivModU128to64);
+	BINOP_TAGOP(DivModS128to64);
+	BINOP_TAGOP(Div32F0x4);
+	BINOP_TAGOP(Mul64F0x2);
 
 	BINOP_TAGOP(InterleaveLO8x16);
 
@@ -157,6 +163,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(64to8);
 	UNOP_TAGOP(64to16);
 	UNOP_TAGOP(32UtoV128);
+	UNOP_TAGOP(64UtoV128);
 	UNOP_TAGOP(V128to64);
 	UNOP_TAGOP(V128HIto64);
 	UNOP_TAGOP(128to64);
@@ -165,6 +172,11 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(64HLtoV128);
 	UNOP_TAGOP(64HLto128);
 	UNOP_TAGOP(64HIto32);
+	UNOP_TAGOP(F32toF64);
+	UNOP_TAGOP(F64toF32);
+	UNOP_TAGOP(F64toI64S);
+	UNOP_TAGOP(I64StoF64);
+	UNOP_TAGOP(I32StoF64);
 
 	UNOP_TAGOP(Ctz64);
 	UNOP_TAGOP(Clz64);

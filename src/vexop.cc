@@ -251,8 +251,15 @@ X_TO_Y_EMIT(8Sto32, CreateSExt, getInt32Ty)
 X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(8Sto64, CreateSExt, getInt64Ty)
 X_TO_Y_EMIT(128to64, CreateTrunc, getInt64Ty)
+X_TO_Y_EMIT(F32toF64, CreateFPExt, getDoubleTy)
+X_TO_Y_EMIT(F64toF32, CreateFPTrunc, getFloatTy)
+X_TO_Y_EMIT(F64toI64S, CreateFPToSI, getInt64Ty)
+X_TO_Y_EMIT(I64StoF64, CreateSIToFP, getDoubleTy)
+X_TO_Y_EMIT(I32StoF64, CreateSIToFP, getDoubleTy)
 //X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
 //
+//
+
 UNOP_EMIT(Not1, CreateNot)
 UNOP_EMIT(Not8, CreateNot)
 UNOP_EMIT(Not16, CreateNot)
@@ -263,6 +270,9 @@ UNOP_EMIT(Not64, CreateNot)
 #define get_vt_8x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 8)
 #define get_vt_4x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 4)
 #define get_vt_16x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 16)
+#define get_vt_4xf32() VectorType::get(Type::getFloatTy(getGlobalContext()), 4)
+#define get_vt_2xf64() VectorType::get(Type::getDoubleTy(getGlobalContext()), 2)
+
 
 Value* VexExprUnopV128to64::emit(void) const
 {
@@ -338,6 +348,19 @@ Value* VexExprUnop32UtoV128::emit(void) const
 	
 	return builder->CreateBitCast(v_128i, get_vt_16x8(), "32UtoV128");
 }
+
+Value* VexExprUnop64UtoV128::emit(void) const
+{
+	Value		*v_128i;
+
+	UNOP_SETUP
+
+	v_128i = builder->CreateZExt(
+		v1, IntegerType::get(getGlobalContext(), 128));
+	
+	return builder->CreateBitCast(v_128i, get_vt_16x8(), "64UtoV128");
+}
+
 
 Value* VexExprUnop64HLtoV128::emit(void) const
 {
@@ -430,6 +453,7 @@ BINOP_EMIT(Or16, Or)
 BINOP_EMIT(Or32, Or)
 BINOP_EMIT(Or64, Or)
 BINOP_EMIT(OrV128, Or)
+BINOP_EMIT(AndV128, And)
 
 BINOP_EMIT(Shl8, Shl)
 BINOP_EMIT(Shl16, Shl)
@@ -492,11 +516,72 @@ Value* VexExprBinopDivModU128to64::emit(void) const
 		builder->CreateShl(mod, get_i32(64)));
 }
 
+Value* VexExprBinopDivModS128to64::emit(void) const
+{
+	Value	*div, *mod;
+	BINOP_SETUP
+
+	div = builder->CreateSExt(
+		builder->CreateSDiv(v1, v2),
+		IntegerType::get(getGlobalContext(), 128));
+
+	mod = builder->CreateSExt(
+		builder->CreateSRem(v1, v2),
+		IntegerType::get(getGlobalContext(), 128));
+
+	return builder->CreateOr(
+		div,
+		builder->CreateShl(mod, get_i32(64)));
+}
+
+Value* VexExprBinopDiv32F0x4::emit(void) const
+{
+	Value	*lo_num, *lo_denom, *div;
+
+	BINOP_SETUP
+
+	v1 = builder->CreateBitCast(v1, get_vt_4xf32());
+	v2 = builder->CreateBitCast(v2, get_vt_4xf32());
+
+	lo_num = builder->CreateExtractElement(v1, get_i32(0));
+	lo_denom = builder->CreateExtractElement(v2, get_i32(0));
+
+	div = builder->CreateFDiv(lo_num, lo_denom);
+
+	return builder->CreateInsertElement(v1, div, get_i32(0));
+}
+
+Value* VexExprBinopMul64F0x2::emit(void) const
+{
+	Value	*lo_v1, *lo_v2, *mul;
+
+	BINOP_SETUP
+
+	v1 = builder->CreateBitCast(v1, get_vt_2xf64());
+	v2 = builder->CreateBitCast(v2, get_vt_2xf64());
+
+	lo_v1 = builder->CreateExtractElement(v1, get_i32(0));
+	lo_v2 = builder->CreateExtractElement(v2, get_i32(0));
+
+	mul = builder->CreateFMul(lo_v1, lo_v2);
+
+	return builder->CreateInsertElement(v1, mul, get_i32(0));
+}
+
+
 Value* VexExprBinopCmpEQ8x16::emit(void) const
 {
 	Value		*cmp_8x1;
 	BINOP_SETUP
 	cmp_8x1 = builder->CreateICmpEQ(v1, v2);
+	return builder->CreateSExt(cmp_8x1, get_vt_16x8());
+}
+
+Value* VexExprBinopCmpGT8Sx16::emit(void) const
+{
+	Value		*cmp_8x1;
+	BINOP_SETUP
+	cmp_8x1 = builder->CreateICmpSGT(v1, v2);
 	return builder->CreateSExt(cmp_8x1, get_vt_16x8());
 }
 
@@ -507,6 +592,18 @@ Value* VexExprBinopSub8x16::emit(void) const
 	v2 = builder->CreateBitCast(v2, get_vt_16x8());
 	return builder->CreateSub(v1, v2);
 }
+
+#define EMIT_HELPER_BINOP(x,y)			\
+Value* VexExprBinop##x::emit(void) const	\
+{						\
+	llvm::Function	*f;			\
+	BINOP_SETUP				\
+	f = theVexHelpers->getHelper(y);	\
+	assert (f != NULL);	\
+	return builder->CreateCall2(f, v1, v2);	\
+}
+
+EMIT_HELPER_BINOP(CmpF64, "vexop_cmpf64")
 
 BINOP_EMIT(CmpLE64S, ICmpSLE)
 BINOP_EMIT(CmpLE64U, ICmpULE)
