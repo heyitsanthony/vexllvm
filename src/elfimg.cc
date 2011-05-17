@@ -130,7 +130,7 @@ hostptr_t ElfImg::xlateAddr(elfptr_t elfptr) const
 }
 
 void ElfImg::applyRelaSection(const Elf64_Shdr& shdr)
-{
+
 	const Elf64_Rela	*rela;
 	unsigned int		rela_c;
 
@@ -172,13 +172,13 @@ void ElfImg::applyRela(const Elf64_Rela& rela)
 		if (strcmp(symname, "__gmon_start__") == 0) {
 			WARNING("faking GLOB_DAT __gmon_start__\n");
 		}
-		*((Elf64_Addr*)hostptr) = st_value;
+		*((Elf64_Addr*)hostptr) = st_value + rela.r_addend;
 		break;
 	case R_X86_64_COPY:
 		/* calculation: none */
 //		*((uintptr_t*)st_value) = (uintptr_t)st_value;
-//		*((Elf64_Addr*)hostptr) = st_value;
-		*((Elf64_Addr*)hostptr) = (Elf64_Addr)hostptr;
+//		*((uintptr_t*)st_value) = (uintptr_t)hostptr;
+		memcpy((void*)hostptr, (void*)st_value, dynsym->st_size);
 		break;
 	case R_X86_64_JUMP_SLOT:
 		if (st_value == 0) {
@@ -187,7 +187,7 @@ void ElfImg::applyRela(const Elf64_Rela& rela)
 				symname);
 		}
 		assert (st_value && "OOOPS");
-		*((Elf64_Addr*)hostptr) = st_value;
+		*((Elf64_Addr*)hostptr) = st_value + rela.r_addend;
 		break;
 	default:
 		fprintf(stderr, "UNHANDLED RELA TYPE %d.\n", r_type);

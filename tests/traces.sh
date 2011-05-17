@@ -53,9 +53,10 @@ function do_trace
 
 	run_trace_bin "$a" 2>"$FPREFIX.trace.time"
 	retval=`grep "Exitcode" "$FPREFIX.trace.err" | cut -f2`
+	assertval=`grep "Assertion"  "$FPREFIX.trace.err" | grep "failed"`
 
 	echo "$retval" >"${FPREFIX}.trace.ret"
-	if [ -z "$retval" ]; then
+	if [ -z "$retval" ] || [ ! -z "$assertval" ]; then
 		TESTS_ERR=`expr $TESTS_ERR + 1`
 		echo "FAILED (bin: $BINNAME)."
 		grep "^[ ]*0x" $OUTPATH/$BINNAME.trace.err >$FPREFIX.trace.addrs

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <assert.h>
 
 int
 main (int argc, char **argv)
@@ -44,6 +45,8 @@ while ((c = getopt (argc, argv, "abc:")) != -1)
 printf ("aflag = %d, bflag = %d, cvalue = %s\n",
        aflag, bflag, cvalue);
 
+printf ("optind=%p. &optind=%p\n", optind, &optind);
+assert (optind <= argc && "BAD OPT INDEX");
 for (index = optind; index < argc; index++)
  printf ("Non-option argument %s\n", argv[index]);
 return 0;
