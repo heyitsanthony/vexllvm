@@ -201,7 +201,9 @@ void GuestCPUState::setSyscallResult(uint64_t ret)
 
 uint64_t GuestCPUState::getExitCode(void) const
 {
-	return state2amd64()->guest_RAX;
+	/* exit code is from call to exit(), which passes the exit
+	 * code through the first argument */
+	return state2amd64()->guest_RDI;
 }
 
 // 208 == XMM base
