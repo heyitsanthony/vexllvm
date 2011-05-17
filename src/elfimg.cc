@@ -130,7 +130,7 @@ hostptr_t ElfImg::xlateAddr(elfptr_t elfptr) const
 }
 
 void ElfImg::applyRelaSection(const Elf64_Shdr& shdr)
-
+{
 	const Elf64_Rela	*rela;
 	unsigned int		rela_c;
 
@@ -351,7 +351,8 @@ void ElfImg::pullInstrumented(DLLib* lib)
 		"_exit",
 		"fork",
 		"kill",
-		"uselocale"
+		"uselocale",
+		"exit_group"
 		};
 	/* XXX does this belong here? */
 	for (unsigned int i = 0; i < sizeof(calls) / sizeof(char*); i++) {

@@ -36,7 +36,8 @@ TRACEDEPS= nested_call strlen strrchr 	\
 	strcpy qsort strstr		\
 	sscanf time gettimeofday	\
 	rand gettext uselocale		\
-	getopt errno strerror strchrnul
+	getopt errno strerror strchrnul	\
+	cmdline-many
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)

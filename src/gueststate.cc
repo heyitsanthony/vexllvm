@@ -80,8 +80,7 @@ void GuestState::setArgv(unsigned int argc, const char* argv[])
 	stack_base -= argv_ptr_space;
 	argv_tab = (char**)stack_base;
 	for (unsigned int i = 0; i < argc; i++) {
-		*argv_tab = argv_data;	/* set argv[i] ptr to stack argv[i] */
-		argv_tab++;	
+		argv_tab[i] = argv_data; /* set argv[i] ptr to stack argv[i] */
 		/* copy argv[i] into stack */
 		strcpy(argv_data, argv[i]);
 		argv_data += strlen(argv[i]);

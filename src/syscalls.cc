@@ -12,9 +12,25 @@ Syscalls::~Syscalls() {}
 /* pass through */
 uint64_t Syscalls::apply(const SyscallParams& args)
 {
-	call_trace.push_back(args.getSyscall());
+	uint64_t	sys_nr;
+
+	sys_nr = args.getSyscall();
+	switch (sys_nr) {
+#define BAD_SYSCALL(x)	\
+	case x: 	\
+		fprintf(stderr, "UNHANDLED SYSCALL: %s\n", #x); \
+		assert (0 == 1 && "TRICKY SYSCALL");
+
+	BAD_SYSCALL(SYS_clone)
+	BAD_SYSCALL(SYS_fork)
+	BAD_SYSCALL(SYS_exit)
+	BAD_SYSCALL(SYS_execve)
+	default:
+		call_trace.push_back(sys_nr);
+	}
+
 	return syscall(
-		args.getSyscall(), 
+		sys_nr, 
 		args.getArg(0),
 		args.getArg(1),
 		args.getArg(2),

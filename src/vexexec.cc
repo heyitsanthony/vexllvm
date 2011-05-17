@@ -217,6 +217,9 @@ void VexExec::loadExitFuncAddrs(void)
 
 	exit_ptr = gs->name2guest("_exit");
 	if (exit_ptr) exit_addrs.insert((void*)exit_ptr);
+
+	exit_ptr = gs->name2guest("exit_group");
+	if (exit_ptr) exit_addrs.insert((void*)exit_ptr);
 }
 
 /**
