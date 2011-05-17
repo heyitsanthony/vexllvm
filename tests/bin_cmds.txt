@@ -3,7 +3,10 @@
 #
 #/usr/bin/bzz
 #
-#/usr/bin/git
+/usr/bin/arch
+/usr/bin/llvm-dis
+/usr/bin/git
+/usr/bin/gcc
 /usr/bin/cal
 /usr/bin/fortune
 /usr/bin/svn
@@ -11,7 +14,6 @@
 /usr/bin/free
 /usr/bin/stat
 /usr/bin/flac
-/usr/bin/fre
 /usr/bin/nm
 /usr/bin/nasm
 /usr/bin/unzip
@@ -24,7 +26,6 @@
 /usr/bin/convert
 /usr/bin/yasm
 #/usr/bin/gcc
-/usr/bin/gas
 /usr/bin/ld
 /usr/bin/w
 /usr/bin/curl
@@ -45,6 +46,15 @@
 #/usr/bin/madplay
 /usr/bin/mpg123
 /usr/bin/make
+/usr/bin/mp2enc
+/usr/bin/printf
+#/usr/bin/tac
+/usr/bin/truncate
+/usr/bin/pwdx
+/usr/bin/cvs
+/usr/bin/rpcgen
+/usr/bin/jpegicc
+/usr/bin/xvinfo
 #
 #sbin
 #
@@ -61,6 +71,7 @@
 /bin/awk
 /bin/pwd
 /bin/dmesg
+/bin/hostname
 /bin/df
 /bin/du
 /bin/echo
@@ -71,4 +82,8 @@
 /bin/tr
 /bin/cut
 /bin/env
-#/bin/groups
+/bin/groups
+/bin/ln
+/bin/mkdir
+/bin/mknod
+

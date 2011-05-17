@@ -1,6 +1,7 @@
 #!/bin/bash
 
 TRACE_ADDR_LINES=1000
+OUTPATH="tests/traces-out"
 
 echo "Testing traces"
 
@@ -57,7 +58,6 @@ function do_trace
 
 	echo "$retval" >"${FPREFIX}.trace.ret"
 	if [ -z "$retval" ] || [ ! -z "$assertval" ]; then
-		TESTS_ERR=`expr $TESTS_ERR + 1`
 		echo "FAILED (bin: $BINNAME)."
 		grep "^[ ]*0x" $OUTPATH/$BINNAME.trace.err >$FPREFIX.trace.addrs
 		objdump -d `echo $a | cut -f1 -d' '` >"$FPREFIX".objdump
@@ -68,17 +68,12 @@ function do_trace
 
 		echo "$a">>$OUTPATH/tests.bad
 	else
-		TESTS_OK=`expr $TESTS_OK + 1`
 		t=`cat $FPREFIX.trace.time | grep -i real | awk '{ print $2 }' `
 		echo "OK.  $t"
 		echo "$a">>$OUTPATH/tests.ok
 	fi
-
 }
 
-OUTPATH="tests/traces-out"
-TESTS_OK=0
-TESTS_ERR=0
 rm -f $OUTPATH/tests.ok $OUTPATH/tests.bad
 
 echo "Doing built-in tests"
@@ -87,7 +82,7 @@ for a in tests/traces-bin/*; do
 done
 
 echo "Now testing apps"
-while read line
+cat "tests/bin_cmds.txt" | while read line
 do
 	if [ -z "$line" ]; then
 		continue
@@ -103,8 +98,8 @@ do
 	fi
 
 	do_trace 
-done < "tests/bin_cmds.txt"
+done
 
-echo "Trace tests done. OK=$TESTS_OK. BAD=$TESTS_ERR"
+echo "Trace tests done. OK="`wc -l $OUTPATH/tests.ok | cut -f1`". BAD="`wc -l $OUTPATH/tests.bad | cut -f1`
 
 oprof_shutdown

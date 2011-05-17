@@ -105,11 +105,13 @@ const VexSB* VexExec::doNextSB(void)
 	/* check for special exits */
 	exit_type = gs->getCPUState()->getExitType();
 	if (exit_type != GE_IGNORE) {
+		gs->getCPUState()->setExitType(GE_IGNORE);
 		if (exit_type == GE_EMWARN) {
 			std::cerr << "VEX Emulation warning!?" << std::endl;
+			addr_stack.push(new_jmpaddr);
+			return vsb;
 		} else
 			assert (0 == 1 && "SPECIAL EXIT TYPE");
-		gs->getCPUState()->setExitType(GE_IGNORE);
 	}
 
 	/* push fall through address if call */

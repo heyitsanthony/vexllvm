@@ -206,6 +206,13 @@ CASE_OP(InterleaveLO8x16)
 	builder = theGenLLVM->getBuilder();	\
 	v1 = args[0]->emit();
 
+#define BINOP_SETUP				\
+	Value		*v1, *v2;		\
+	IRBuilder<>	*builder;		\
+	v1 = args[0]->emit();			\
+	v2 = args[1]->emit();			\
+	builder = theGenLLVM->getBuilder();
+
 #define UNOP_EMIT(x,y)				\
 Value* VexExprUnop##x::emit(void) const	\
 {						\
@@ -219,6 +226,14 @@ Value* VexExprUnop##x::emit(void) const		\
 {						\
 	UNOP_SETUP				\
 	return builder->y(v1, builder->z());	\
+}
+
+/* XXX probably wrong to discard rounding info, but who cares */
+#define X_TO_Y_EMIT_ROUND(x,y,z)		\
+Value* VexExprBinop##x::emit(void) const	\
+{						\
+	BINOP_SETUP				\
+	return builder->y(v2, builder->z());	\
 }
 
 #define XHI_TO_Y_EMIT(x,y,z)			\
@@ -246,6 +261,8 @@ X_TO_Y_EMIT(1Uto8, CreateZExt, getInt8Ty)
 X_TO_Y_EMIT(1Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(16Uto64, CreateZExt, getInt64Ty)
 X_TO_Y_EMIT(16Sto64, CreateSExt, getInt64Ty)
+X_TO_Y_EMIT(16Uto32, CreateZExt, getInt32Ty)
+X_TO_Y_EMIT(16Sto32, CreateSExt, getInt32Ty)
 X_TO_Y_EMIT(8Uto32, CreateZExt, getInt32Ty)
 X_TO_Y_EMIT(8Sto32, CreateSExt, getInt32Ty)
 X_TO_Y_EMIT(8Uto64, CreateZExt, getInt64Ty)
@@ -253,9 +270,14 @@ X_TO_Y_EMIT(8Sto64, CreateSExt, getInt64Ty)
 X_TO_Y_EMIT(128to64, CreateTrunc, getInt64Ty)
 X_TO_Y_EMIT(F32toF64, CreateFPExt, getDoubleTy)
 X_TO_Y_EMIT(F64toF32, CreateFPTrunc, getFloatTy)
-X_TO_Y_EMIT(F64toI64S, CreateFPToSI, getInt64Ty)
-X_TO_Y_EMIT(I64StoF64, CreateSIToFP, getDoubleTy)
+
 X_TO_Y_EMIT(I32StoF64, CreateSIToFP, getDoubleTy)
+
+X_TO_Y_EMIT_ROUND(I64StoF64, CreateSIToFP, getDoubleTy)
+X_TO_Y_EMIT_ROUND(I64UtoF64, CreateSIToFP, getDoubleTy)
+X_TO_Y_EMIT_ROUND(F64toI32S, CreateFPToSI, getInt32Ty)
+X_TO_Y_EMIT_ROUND(F64toI32U, CreateFPToSI, getInt32Ty)
+X_TO_Y_EMIT_ROUND(F64toI64S, CreateFPToSI, getInt64Ty)
 //X_TO_Y_EMIT(V128to64, CreateTrunc, getInt64Ty)
 //
 //
@@ -399,14 +421,6 @@ Value* VexExprUnop32HLto64::emit(void) const
 				APInt(32, 32))));
 }
 
-#define BINOP_SETUP				\
-	Value		*v1, *v2;		\
-	IRBuilder<>	*builder;		\
-	v1 = args[0]->emit();			\
-	v2 = args[1]->emit();			\
-	builder = theGenLLVM->getBuilder();
-
-
 #define BINOP_EMIT(x,y)				\
 Value* VexExprBinop##x::emit(void) const	\
 {						\
@@ -497,42 +511,26 @@ BINOP_EMIT(CasCmpNE16, ICmpNE)
 BINOP_EMIT(CasCmpNE32, ICmpNE)
 BINOP_EMIT(CasCmpNE64, ICmpNE)
 
-/* V128,I64 -> V128. lo = div, hi = mod */
-Value* VexExprBinopDivModU128to64::emit(void) const
-{
-	Value	*div, *mod;
-	BINOP_SETUP
-
-	div = builder->CreateZExt(
-		builder->CreateUDiv(v1, v2),
-		IntegerType::get(getGlobalContext(), 128));
-
-	mod = builder->CreateZExt(
-		builder->CreateURem(v1, v2),
-		IntegerType::get(getGlobalContext(), 128));
-
-	return builder->CreateOr(
-		div,
-		builder->CreateShl(mod, get_i32(64)));
+#define DIVMOD_EMIT(x,y,z,w)			\
+Value* VexExprBinop##x::emit(void) const	\
+{	\
+	Value	*div, *mod;	\
+	BINOP_SETUP	\
+	div = builder->Create##z##Ext(				\
+		builder->Create##y##Div(v1, v2),		\
+		IntegerType::get(getGlobalContext(), w));	\
+	mod = builder->Create##z##Ext(				\
+		builder->Create##y##Rem(v1, v2),		\
+		IntegerType::get(getGlobalContext(), w));	\
+	return builder->CreateOr(	\
+		div,			\
+		builder->CreateShl(mod, get_i32(w/2)));		\
 }
 
-Value* VexExprBinopDivModS128to64::emit(void) const
-{
-	Value	*div, *mod;
-	BINOP_SETUP
-
-	div = builder->CreateSExt(
-		builder->CreateSDiv(v1, v2),
-		IntegerType::get(getGlobalContext(), 128));
-
-	mod = builder->CreateSExt(
-		builder->CreateSRem(v1, v2),
-		IntegerType::get(getGlobalContext(), 128));
-
-	return builder->CreateOr(
-		div,
-		builder->CreateShl(mod, get_i32(64)));
-}
+DIVMOD_EMIT(DivModU128to64, U, Z, 128)
+DIVMOD_EMIT(DivModS128to64, S, S, 128)
+DIVMOD_EMIT(DivModU64to32, U, Z, 64)
+DIVMOD_EMIT(DivModS64to32, S, S, 64)
 
 Value* VexExprBinopDiv32F0x4::emit(void) const
 {
