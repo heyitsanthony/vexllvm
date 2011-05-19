@@ -73,6 +73,8 @@ private:
 	bool		dump_current_state;
 
 	unsigned int	trace_c;
+	bool		exited;
+	int		exit_code;
 };
 
 #endif

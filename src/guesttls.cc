@@ -3,7 +3,8 @@
 
 #define TLS_DATA_SIZE	(64*1024) /* XXX. Good enough? */
 
-GuestTLS::GuestTLS(void)
+GuestTLS::GuestTLS(bool in_delete_data)
+: delete_data(in_delete_data)
 {
 	uint64_t	ptr_guard;
 
@@ -22,7 +23,7 @@ GuestTLS::GuestTLS(void)
 
 GuestTLS::~GuestTLS(void)
 {
-	delete [] tls_data;
+	if (delete_data) delete [] tls_data;
 }
 
 unsigned int GuestTLS::getSize(void) const { return TLS_DATA_SIZE; }

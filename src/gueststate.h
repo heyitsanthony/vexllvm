@@ -32,17 +32,15 @@ public:
 
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
 	GuestCPUState* getCPUState(void) { return cpu_state; }
+
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
 	std::string getName(guestptr_t) const;
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
 
-	/* copy command line state into state */
-	void setArgv(unsigned int argc, const char* argv[]);
-private:
+protected:
 	GuestCPUState	*cpu_state;
-	uint8_t		*stack;
 };
 
 #endif

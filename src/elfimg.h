@@ -22,6 +22,7 @@ class ElfImg
 public:
 	typedef std::map<std::string, void*> symmap;
 	static ElfImg* create(const char* fname);
+	static ElfImg* createUnlinked(const char* fname);
 	virtual ~ElfImg(void);
 	bool isValid(void) const { return fd > 0; }
 	hostptr_t xlateAddr(elfptr_t addr) const;
@@ -29,7 +30,7 @@ public:
 	bool isDirectMapped(void) const { return direct_mapped; } 
 	elfptr_t getSymAddr(const char* symname) const;
 private:
-	ElfImg(const char* fname);
+	ElfImg(const char* fname, bool linked);
 	bool verifyHeader(void) const;
 	void setupSegments(void);
 	void applyRelocs(void);

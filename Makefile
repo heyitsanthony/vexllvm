@@ -5,23 +5,24 @@ LDFLAGS="-Wl,-Ttext-segment=$(BIN_BASE)"
 #LDFLAGS=
 
 
-OBJDEPS=	vexxlate.o	\
-		vexstmt.o	\
-		vexsb.o		\
-		vexexpr.o	\
-		vexop.o		\
-		genllvm.o	\
-		guestcpustate.o	\
-		gueststate.o	\
-		vex_dispatch.o	\
-		syscalls.o	\
-		vexhelpers.o	\
-		vexexec.o	\
-		symbols.o	\
-		elfimg.o	\
-		dllib.o		\
-		gueststateelf.o	\
-		guesttls.o	\
+OBJDEPS=	vexxlate.o		\
+		vexstmt.o		\
+		vexsb.o			\
+		vexexpr.o		\
+		vexop.o			\
+		genllvm.o		\
+		guestcpustate.o		\
+		gueststate.o		\
+		vex_dispatch.o		\
+		syscalls.o		\
+		vexhelpers.o		\
+		vexexec.o		\
+		symbols.o		\
+		elfimg.o		\
+		dllib.o			\
+		gueststateelf.o		\
+		gueststateptimg.o	\
+		guesttls.o		\
 		elfsegment.o
 
 ELFTRACEDEPS=	elf_trace.o
@@ -37,7 +38,7 @@ TRACEDEPS= nested_call strlen strrchr 	\
 	sscanf time gettimeofday	\
 	rand gettext uselocale		\
 	getopt errno strerror strchrnul	\
-	cmdline-many
+	cmdline-many dlsym
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
@@ -50,12 +51,15 @@ LLVMLDFLAGS=$(shell llvm-config --ldflags)
 LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall $(LDFLAGS)
 
-all: bin/elf_trace bin/jit_test bitcode bin/elf_run
+all: bin/elf_trace bin/jit_test bitcode bin/elf_run bin/pt_run bin/pt_trace
 
 bitcode: $(BITCODE_FILES)
 
 clean:
 	rm -f obj/* bin/*
+
+tests/traces-bin/dlsym : tests/traces-obj/dlsym.o
+	gcc -ldl $< -o $@
 
 tests/traces-bin/% : tests/traces-obj/%.o
 	gcc $< -o $@
@@ -83,6 +87,12 @@ bin/elf_trace: $(OBJDIRDEPS) $(ELFTRACEDIRDEPS)
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 bin/elf_run: $(OBJDIRDEPS) obj/elf_run.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+
+bin/pt_run: $(OBJDIRDEPS) obj/pt_run.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+
+bin/pt_trace: $(OBJDIRDEPS) obj/pt_trace.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 

@@ -13,8 +13,10 @@ public:
 	virtual ~Syscalls();
 	uint64_t apply(const SyscallParams& args);
 	void print(std::ostream& os) const;
+	bool isExit(void) const { return exited; }
 private:
 	std::list<uint64_t>	call_trace;
+	bool			exited;
 };
 
 #endif

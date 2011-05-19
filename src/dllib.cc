@@ -43,6 +43,7 @@ DLLib::DLLib(const char* in_libname)
 DLLib::~DLLib(void)
 {
 	if (dl_h) dlclose(dl_h);
+	dl_h = NULL;
 }
 
 void* DLLib::resolve(const char* symname)

@@ -20,13 +20,6 @@ ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr)
 	/* in the future we might care about non-loadable segments */
 	if (phdr.p_type != PT_LOAD) return NULL;
 
-	/* FIXME might cause trouble if expecting 0's */
-	if (phdr.p_memsz != phdr.p_filesz) {
-		fprintf(stderr, 
-			"WARNING: PHDR@%p memsz != filesz.\n",
-			(void*)phdr.p_vaddr);
-	}
-	
 	return new ElfSegment(fd, phdr);
 }
 

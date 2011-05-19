@@ -6,7 +6,7 @@
 
 #include "Sugar.h"
 
-Syscalls::Syscalls() {}
+Syscalls::Syscalls() : exited(false) {}
 Syscalls::~Syscalls() {}
 
 /* pass through */
@@ -29,14 +29,26 @@ uint64_t Syscalls::apply(const SyscallParams& args)
 		call_trace.push_back(sys_nr);
 	}
 
+	if (sys_nr == SYS_exit_group) {
+		exited = true;
+		return args.getArg(0);
+	} else if (sys_nr == SYS_close) {
+		/* do not close stdin, stdout, stderr! */
+		if (args.getArg(0) < 3)
+			return 0;
+	} else if (sys_nr == SYS_brk) {
+		/* don't let the app pull the rug from under us */
+		return -1;
+	}
+
 	return syscall(
-		sys_nr, 
-		args.getArg(0),
-		args.getArg(1),
-		args.getArg(2),
-		args.getArg(3),
-		args.getArg(4),
-		args.getArg(5));
+			sys_nr, 
+			args.getArg(0),
+			args.getArg(1),
+			args.getArg(2),
+			args.getArg(3),
+			args.getArg(4),
+			args.getArg(5));
 }
 
 void Syscalls::print(std::ostream& os) const

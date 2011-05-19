@@ -276,9 +276,9 @@ public:
 	virtual ~Test64HLtoV128() {}
 	virtual bool isGoodState(GuestState* gs) const
 	{
-		VexGuestAMD64State	*st;
-		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-		return ((uint64_t*)&st->guest_XMM1)[0] == 0x12345678abcdef01;
+		VexGuestAMD64State	*st = getVexState(gs);
+		return (((uint64_t*)&st->guest_XMM1)[1] == 0x12345678abcdef01) && 
+			(((uint64_t*)&st->guest_XMM1)[0] == 0x11);
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -286,11 +286,12 @@ protected:
 		VexExpr**		args;
 		args = new VexExpr*[1];
 		args[0] = new VexExprConstU64(NULL, 0x12345678abcdef01);
+		args[1] = new VexExprConstU64(NULL, 0x11);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
 				GUEST_BYTEOFF_XMM1, 
-				new VexExprUnop64HLtoV128(NULL, args)));
+				new VexExprBinop64HLtoV128(NULL, args)));
 	}
 };
 
@@ -301,8 +302,7 @@ public:
 	virtual ~Test32UtoV128() {}
 	virtual bool isGoodState(GuestState* gs) const
 	{
-		VexGuestAMD64State	*st;
-		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		VexGuestAMD64State	*st = getVexState(gs);
 		return ((uint64_t*)&st->guest_XMM1)[0] == 0x12345678;
 	}
 protected:
@@ -326,8 +326,7 @@ public:
 	virtual ~Test32HLto64() {}
 	virtual bool isGoodState(GuestState* gs) const
 	{
-		VexGuestAMD64State	*st;
-		st = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		VexGuestAMD64State	*st = getVexState(gs);
 		return st->guest_RDX == 0x1234567812345678;
 	}
 protected:
@@ -336,11 +335,111 @@ protected:
 		VexExpr**		args;
 		args = new VexExpr*[1];
 		args[0] = new VexExprConstU32(NULL, 0x12345678);
+		args[1] = new VexExprConstU32(NULL, 0x12345678);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
 				GUEST_BYTEOFF_RDX, 
-				new VexExprUnop32HLto64(NULL, args)));
+				new VexExprBinop32HLto64(NULL, args)));
+	}
+};
+
+class Test64HIto32 : public TestSB
+{
+public:
+	Test64HIto32() : TestSB("64HIto32") {}
+	virtual ~Test64HIto32() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st = getVexState(gs);
+		return st->guest_RDX == 0xffeeddcc;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[1];
+		args[0] = new VexExprConstU64(NULL, 0xffeeddcc12345678);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_RDX, 
+				new VexExprUnop64HIto32(NULL, args)));
+	}
+};
+
+class Test128HIto64 : public TestSB
+{
+public:
+	Test128HIto64() : TestSB("128HIto64") {}
+	virtual ~Test128HIto64() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st = getVexState(gs);
+		return st->guest_RDX == 0x1234123412341234;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[1];
+		args[0] = new VexExprConstV128(NULL, 0x1234);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_RDX, 
+				new VexExprUnop128HIto64(NULL, args)));
+	}
+};
+
+class TestDivModU64to32 : public TestSB
+{
+public:
+	TestDivModU64to32() : TestSB("DivModU64to32") {}
+	virtual ~TestDivModU64to32() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st = getVexState(gs);
+		return (st->guest_RDX >> 32) == 0x3b9;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[2];
+		args[0] = new VexExprConstU64(NULL, 0xf63d4e2e);
+		args[1] = new VexExprConstU32(NULL, 1011);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_RDX, 
+				new VexExprBinopDivModU64to32(NULL, args)));
+	}
+};
+
+class TestDivModU128to64 : public TestSB
+{
+public:
+	TestDivModU128to64() : TestSB("DivModU128to64") {}
+	virtual ~TestDivModU128to64() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st = getVexState(gs);
+		uint64_t		*xmm = (uint64_t*)&st->guest_XMM0;
+		return xmm[0] == 0x2000200020002 && xmm[1] == 0x1000100010001;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[2];
+		args[0] = new VexExprConstV128(NULL, 0x01);
+		args[1] = new VexExprConstU64(NULL, 0x8000000000000000);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_XMM0, 
+				new VexExprBinopDivModU128to64(NULL, args)));
 	}
 };
 
@@ -392,7 +491,7 @@ int main(int argc, char* argv[])
 	assert (exeEngine && "Could not make exe engine");
 
 	theVexHelpers->bindToExeEngine(exeEngine);
-	
+	doTest(gs, new TestDivModU128to64 ());
 	doTest(gs, new TestCmpGT8Sx16());
 	doTest(gs, new TestAndV128());
 	doTest(gs, new TestOrV128());
@@ -401,7 +500,10 @@ int main(int argc, char* argv[])
 	doTest(gs, new TestSub8x16());
 	doTest(gs, new Test64HLtoV128());
 	doTest(gs, new Test32HLto64());
+	doTest(gs, new Test64HIto32());
+	doTest(gs, new Test128HIto64());
 	doTest(gs, new Test32UtoV128());
+	doTest(gs, new TestDivModU64to32());
 
 	delete theVexHelpers;
 	delete theGenLLVM;

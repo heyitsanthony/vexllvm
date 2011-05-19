@@ -62,7 +62,7 @@ VexExec::~VexExec()
 }
 
 VexExec::VexExec(GuestState* in_gs)
-: gs(in_gs), sb_executed_c(0), trace_c(0)
+: gs(in_gs), sb_executed_c(0), trace_c(0), exited(false)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
 	std::string	err_str;
@@ -122,6 +122,11 @@ const VexSB* VexExec::doNextSB(void)
 		SyscallParams	sp(gs->getSyscallParams());
 		uint64_t	sc_ret;
 		sc_ret = sc->apply(sp);
+		if (sc->isExit()) {
+			exited = true;
+			exit_code = sc_ret;
+			return NULL;
+		}
 		gs->setSyscallResult(sc_ret);
 	}
 
@@ -156,9 +161,8 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	}
 
 	if (exit_addrs.count((elfptr_t)elfptr)) {
-		std::cerr	<< "Exit call. Anthony fix this. "
-				<< "Exitcode=" << gs->getExitCode()
-				<< std::endl;
+		exited = true;
+		exit_code = gs->getExitCode();
 		return NULL;
 	}
 
@@ -210,11 +214,11 @@ void VexExec::loadExitFuncAddrs(void)
 
 	/* libc hack. if we call the exit function, bail out */
 	exit_ptr = gs->name2guest("exit");
-	assert (exit_ptr && "Could not find exit pointer. What is this?");
+//	assert (exit_ptr && "Could not find exit pointer. What is this?");
 	exit_addrs.insert((void*)exit_ptr);
 
 	exit_ptr = gs->name2guest("abort");
-	assert (exit_ptr && "Could not find abort pointer. What is this?");
+//	assert (exit_ptr && "Could not find abort pointer. What is this?");
 	exit_addrs.insert((void*)exit_ptr);
 
 	exit_ptr = gs->name2guest("_exit");
@@ -235,6 +239,7 @@ void VexExec::glibcLocaleCheat(void)
 	void		*old_stack;
 
 	uselocale_ptr = gs->name2guest("uselocale");
+	if (!uselocale_ptr) return;
 
 	gs->getCPUState()->setFuncArg(-1, 0);
 	old_stack = gs->getCPUState()->getStackPtr();
@@ -272,6 +277,12 @@ void VexExec::runAddrStack(void)
 
 		sb = doNextSB();
 		if (!sb) break;
+	}
+
+	if (exited) {
+		std::cerr 	<< "Exit call. Anthony fix this. "
+				<< "Exitcode=" << exit_code
+				<< std::endl;
 	}
 }
 

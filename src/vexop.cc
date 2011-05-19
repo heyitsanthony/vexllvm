@@ -241,11 +241,7 @@ Value* VexExprUnop##x::emit(void) const		\
 {						\
 	UNOP_SETUP				\
 	return builder->CreateTrunc(		\
-		builder->CreateLShr(v1,		\
-			ConstantInt::get(	\
-				getGlobalContext(),	\
-				APInt(32, y)))		\
-			,			\
+		builder->CreateLShr(v1, y),	\
 		builder->z());			\
 }						\
 
@@ -335,26 +331,29 @@ Value* VexExprUnopV128HIto64::emit(void) const
 		"V128Hito64");
 }
 
-Value* VexExprUnop64HLto128::emit(void) const
+Value* VexExprBinop64HLto128::emit(void) const
 {
-	Value	*v_128i;
+	Value	*v_hi, *v_lo;
 
-	UNOP_SETUP
+	BINOP_SETUP
 
-	v_128i = builder->CreateZExt(
+	v_hi = builder->CreateZExt(
 		v1, IntegerType::get(getGlobalContext(), 128));
+	v_lo =  builder->CreateZExt(
+		v2, IntegerType::get(getGlobalContext(), 128));
 
-	return builder->CreateOr(
-		v_128i,
-		builder->CreateShl(v_128i, get_i32(64)));
-		
+	return builder->CreateOr(v_lo, builder->CreateShl(v_hi, 64));
 }
 
 Value* VexExprUnop128HIto64::emit(void) const
 {
 	UNOP_SETUP
 	return builder->CreateTrunc(
-		builder->CreateLShr(v1, get_i32(64)),
+		builder->CreateLShr(
+			builder->CreateBitCast(
+				v1, 
+				IntegerType::get(getGlobalContext(), 128)),
+			64),
 		builder->getInt64Ty());
 }
 
@@ -384,41 +383,37 @@ Value* VexExprUnop64UtoV128::emit(void) const
 }
 
 
-Value* VexExprUnop64HLtoV128::emit(void) const
+Value* VexExprBinop64HLtoV128::emit(void) const
 {
-	Value		*v_128i, *v_128hl;
+	Value		*v_hi, *v_lo, *v_128hl;
 
-	UNOP_SETUP
+	BINOP_SETUP
 
-	v_128i = builder->CreateZExt(
+	v_hi = builder->CreateZExt(
 		v1, IntegerType::get(getGlobalContext(), 128));
+	v_lo = builder->CreateZExt(
+		v2, IntegerType::get(getGlobalContext(), 128));
 	
 	v_128hl = builder->CreateOr(
-		v_128i,
-		builder->CreateShl(
-			v_128i, 
-			ConstantInt::get(
-				getGlobalContext(),
-				APInt(32, 64))));
+		v_lo,
+		builder->CreateShl(v_hi, 64));
 
 	return builder->CreateBitCast(v_128hl, get_vt_16x8(), "64HLtoV128");
 }
 
 /* (i32, i32) -> i64 */
-Value* VexExprUnop32HLto64::emit(void) const
+Value* VexExprBinop32HLto64::emit(void) const
 {
-	Value		*v_64;
+	Value		*v_hi, *v_lo;
 
-	UNOP_SETUP
+	BINOP_SETUP
 
-	v_64 = builder->CreateZExt(v1, builder->getInt64Ty());
+	v_hi = builder->CreateZExt(v1, builder->getInt64Ty());
+	v_lo = builder->CreateZExt(v2, builder->getInt64Ty());
+
 	return builder->CreateOr(
-		v_64,
-		builder->CreateShl(
-			v_64, 
-			ConstantInt::get(
-				getGlobalContext(),
-				APInt(32, 32))));
+		v_lo,
+		builder->CreateShl(v_hi, 32));
 }
 
 #define BINOP_EMIT(x,y)				\
@@ -516,6 +511,10 @@ Value* VexExprBinop##x::emit(void) const	\
 {	\
 	Value	*div, *mod;	\
 	BINOP_SETUP	\
+	v1 = builder->CreateBitCast(v1, 			\
+		IntegerType::get(getGlobalContext(), w));	\
+	v2 = builder->Create##z##Ext(v2, 			\
+		IntegerType::get(getGlobalContext(), w));	\
 	div = builder->Create##z##Ext(				\
 		builder->Create##y##Div(v1, v2),		\
 		IntegerType::get(getGlobalContext(), w));	\
@@ -524,7 +523,7 @@ Value* VexExprBinop##x::emit(void) const	\
 		IntegerType::get(getGlobalContext(), w));	\
 	return builder->CreateOr(	\
 		div,			\
-		builder->CreateShl(mod, get_i32(w/2)));		\
+		builder->CreateShl(mod, w/2));		\
 }
 
 DIVMOD_EMIT(DivModU128to64, U, Z, 128)

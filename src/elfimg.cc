@@ -18,13 +18,22 @@
 
 ElfImg* ElfImg::create(const char* fname)
 {
-	ElfImg	*e = new ElfImg(fname);
+	ElfImg	*e = new ElfImg(fname, true);
 
 	if (e->isValid()) return e;
-
 	delete e;
 	return NULL;
 }
+
+ElfImg* ElfImg::createUnlinked(const char* fname)
+{
+	ElfImg	*e = new ElfImg(fname, false);
+
+	if (e->isValid()) return e;
+	delete e;
+	return NULL;
+}
+
 
 ElfImg::~ElfImg(void)
 {
@@ -34,7 +43,7 @@ ElfImg::~ElfImg(void)
 	close(fd);
 }
 
-ElfImg::ElfImg(const char* fname)
+ElfImg::ElfImg(const char* fname, bool linked)
 {
 	struct stat	st;
 
@@ -53,9 +62,11 @@ ElfImg::ElfImg(const char* fname)
 	if (!verifyHeader()) goto err_hdr;
 
 	setupSegments();
-	loadDyn();
 
-	applyRelocs();
+	if (linked) {
+		loadDyn();
+		applyRelocs();
+	}
 
 	/* OK. */
 	return;
@@ -342,22 +353,26 @@ void* ElfImg::getLinkValue(const char* symname) const
 	return (void*)sym->getBaseAddr();
 }
 
+#include <iostream>
 /* pull the symbols we want to instrument into the symbol table */
+#define INST_CALL_NUM	6
 void ElfImg::pullInstrumented(DLLib* lib)
 {
-	const char* calls[] = {
+	const char* calls[INST_CALL_NUM] = {
 		"exit",
 		"abort",
 		"_exit",
 		"fork",
 		"kill",
-		"uselocale",
-		"exit_group"
+		"uselocale"
+//		,
+//		"exit_group"
 		};
 	/* XXX does this belong here? */
-	for (unsigned int i = 0; i < sizeof(calls) / sizeof(char*); i++) {
+	for (unsigned int i = 0; i < INST_CALL_NUM; i++) {
 		void	*fptr;
 		if (syms.findSym(std::string(calls[i]))) continue;
+//		std::cerr << "RESOLVING " << calls[i] << std::endl;
 		fptr = lib->resolve(calls[i]);
 		if (!fptr) continue;
 		syms.addSym(calls[i], (symaddr_t)fptr, 1);

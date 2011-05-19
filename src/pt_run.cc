@@ -15,7 +15,7 @@
 #include "elfimg.h"
 #include "vexexec.h"
 #include "guestcpustate.h"
-#include "gueststateelf.h"
+#include "gueststateptimg.h"
 
 using namespace llvm;
 
@@ -27,28 +27,19 @@ void dumpIRSBs(void)
 	vexexec->dumpLogs(std::cerr);
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char* argv[], char* envp[])
 {
-	GuestStateELF	*gs;
-	ElfImg		*img;
+	GuestStatePTImg	*gs;
 
 	/* for the JIT */
 	InitializeNativeTarget();
 
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s elf_path <cmdline>\n", argv[0]);
+		fprintf(stderr, "Usage: %s program_path <args>\n", argv[0]);
 		return -1;
 	}
 
-	img = ElfImg::create(argv[1]);
-	if (img == NULL) {
-		fprintf(stderr, "%s: Could not open ELF %s\n", 
-			argv[0], argv[1]);
-		return -2;
-	}
-
-	gs = new GuestStateELF(img);
-	gs->setArgv(argc-1, const_cast<const char**>(argv+1));
+	gs = new GuestStatePTImg(argc - 1, argv + 1, envp);
 	vexexec = VexExec::create(gs);
 	assert (vexexec && "Could not create vexexec");
 	

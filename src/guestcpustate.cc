@@ -47,6 +47,14 @@ GuestCPUState::~GuestCPUState()
 	delete tls;
 }
 
+void GuestCPUState::setTLS(GuestTLS* in_tls)
+{
+	delete tls;
+	tls = in_tls;
+	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) = 
+		(uintptr_t)tls->getBase();
+}
+
 Type* GuestCPUState::mkFromFields(
 	struct guest_ctx_field* f, byte2elem_map& offmap)
 {
@@ -241,12 +249,14 @@ void GuestCPUState::print(std::ostream& os) const
 	unsigned int	tls_bytes = tls->getSize();
 
 	os << "&fs = " << (void*)(*((uint64_t*)(&state_data[192]))) << std::endl;
+#if 0
 	for (unsigned int i = 0; i < tls_bytes / sizeof(uint64_t); i++) {
 		if (!tls_data[i]) continue;
 		os	<< "fs+" << (void*)(i*8)  << ":" 
 			<< (void*)tls_data[i]
 			<< std::endl;
 	}
+#endif
 }
 
 /* set a function argument */
