@@ -10,9 +10,13 @@
 
 VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 {
+	VexExpr	*ret = NULL;
+
 	switch (expr->tag) {
-#define EXPR_TAGOP(x) case Iex_##x : \
-	return new VexExpr##x(in_parent, expr)
+#define EXPR_TAGOP(x) case Iex_##x :		\
+	ret = new VexExpr##x(in_parent, expr);	\
+	break;
+
 	EXPR_TAGOP(Get);
 	EXPR_TAGOP(GetI);
 	EXPR_TAGOP(RdTmp);
@@ -20,10 +24,13 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 	case Iex_Triop:
 	case Iex_Binop:
 	case Iex_Unop: 
-	return VexExprNaryOp::createOp(in_parent, expr);
+		ret = VexExprNaryOp::createOp(in_parent, expr);
+		break;
+
 	EXPR_TAGOP(Load);
 	case Iex_Const:
-		return VexExprConst::createConst(in_parent, expr);
+		ret = VexExprConst::createConst(in_parent, expr);
+		break;
 
 	EXPR_TAGOP(Mux0X);
 	EXPR_TAGOP(CCall);
@@ -31,7 +38,8 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 	default:
 		fprintf(stderr, "Expr: ??? %x\n", expr->tag);
 	}
-	return NULL;
+
+	return ret;
 }
 
 VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
@@ -42,8 +50,10 @@ VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 	switch (op) {
 #define BINOP_TAGOP(x) case Iop_##x : \
 return new VexExprBinop##x(in_parent, expr)
+
 #define UNOP_TAGOP(x) case Iop_##x : \
 return new VexExprUnop##x(in_parent, expr)
+
 	BINOP_TAGOP(CmpEQ8);
 	BINOP_TAGOP(CmpEQ16);
 	BINOP_TAGOP(CmpEQ32);
@@ -95,6 +105,7 @@ return new VexExprUnop##x(in_parent, expr)
 
 	BINOP_TAGOP(Div32F0x4);
 	BINOP_TAGOP(Mul64F0x2);
+	BINOP_TAGOP(Div64F0x2);
 
 	BINOP_TAGOP(InterleaveLO8x16);
 
@@ -173,6 +184,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(V128HIto64);
 	UNOP_TAGOP(128to64);
 	UNOP_TAGOP(128HIto64);
+	BINOP_TAGOP(16HLto32);
 	BINOP_TAGOP(32HLto64);
 	BINOP_TAGOP(64HLtoV128);
 	BINOP_TAGOP(64HLto128);
@@ -182,7 +194,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(I32StoF64);
 
 	BINOP_TAGOP(I64StoF64);
-	BINOP_TAGOP(I64UtoF64);
+//	BINOP_TAGOP(I64UtoF64); 3.7.0
 	BINOP_TAGOP(F64toI32S);
 	BINOP_TAGOP(F64toI32U);
 	BINOP_TAGOP(F64toI64S);
@@ -191,7 +203,9 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Ctz64);
 	UNOP_TAGOP(Clz64);
 	default:
-		fprintf(stderr, "UNKNOWN OP %s\n", getVexOpName(expr->Iex.Unop.op));
+		fprintf(stderr, "UNKNOWN OP %s (%x)\n", getVexOpName(op), op);
+//		ppIROp(op);
+//		fprintf(stderr, "\n");
 		break;
 	}
 
@@ -219,8 +233,8 @@ VexExprConst* VexExprConst::createConst(
 	CONST_TAGOP(U16);
 	CONST_TAGOP(U32);
 	CONST_TAGOP(U64);
-	CONST_TAGOP(F32);
-	CONST_TAGOP(F32i);
+//	CONST_TAGOP(F32);
+//	CONST_TAGOP(F32i); 3.7.0
 	CONST_TAGOP(F64);
 	CONST_TAGOP(F64i);
 	CONST_TAGOP(V128);
@@ -238,7 +252,7 @@ EMIT_CONST_INT(U8, 8)
 EMIT_CONST_INT(U16, 16)
 EMIT_CONST_INT(U32, 32)
 EMIT_CONST_INT(U64, 64)
-EMIT_CONST_INT(F32i, 32)
+//EMIT_CONST_INT(F32i, 32) 3.7.0
 EMIT_CONST_INT(F64i, 64)
 
 llvm::Value* VexExprConstV128::emit(void) const
@@ -256,10 +270,13 @@ llvm::Value* VexExprConstV128::emit(void) const
 	return theGenLLVM->to16x8i(llvm::ConstantVector::get(v128ty, splat));
 }
 
+// 3.7.0
+#if 0
 llvm::Value* VexExprConstF32::emit(void) const {
 	return llvm::ConstantFP::get(
 		llvm::getGlobalContext(),
 		llvm::APFloat(F32)); }
+#endif
 
 llvm::Value* VexExprConstF64::emit(void) const {
 	return llvm::ConstantFP::get(

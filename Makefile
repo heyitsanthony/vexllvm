@@ -45,8 +45,7 @@ ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
 
 #TODO: use better config options
 
-#VEXLIB="/usr/lib64/valgrind/libvex-amd64-linux.a"
-VEXLIB="/usr/local/lib64/valgrind/libvex-amd64-linux.a"
+VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
 LLVMLDFLAGS=$(shell llvm-config --ldflags)
 LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall $(LDFLAGS)

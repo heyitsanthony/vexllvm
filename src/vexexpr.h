@@ -153,8 +153,9 @@ CONST_CLASS(U64, uint64_t);
 CONST_CLASS(F64, double);
 CONST_CLASS(F64i, uint64_t);
 CONST_CLASS(V128, uint16_t);
-CONST_CLASS(F32, float);
-CONST_CLASS(F32i, uint32_t);
+/* wait for 3.7.0 */
+//CONST_CLASS(F32, float);
+//CONST_CLASS(F32i, uint32_t);
 
 class VexExprCCall : public VexExpr
 {

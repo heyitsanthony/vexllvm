@@ -281,9 +281,7 @@ VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 	CONST_TAGOP(U16);
 	CONST_TAGOP(U32);
 	CONST_TAGOP(U64);
-	CONST_TAGOP(F32i);
 	CONST_TAGOP(F64i);
-//	CONST_TAGOP(V128); TODO
 	default: fprintf(stderr, "UNSUPPORTED CONSTANT TYPE\n");
 	}
 }

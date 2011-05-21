@@ -56,7 +56,7 @@ public:
 	guestptr_t name2guest(const char* symname) const { return 0; }
 	void* getEntryPoint(void) const { return entry_pt; }
 private:
-
+	void dumpSelfMap(void) const;
 	void			slurpBrains(pid_t pid);
 	void			slurpMappings(pid_t pid);
 	void			slurpRegisters(pid_t pid);

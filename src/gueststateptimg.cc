@@ -208,6 +208,18 @@ PTImgMapEntry::~PTImgMapEntry(void)
 	if (mmap_base) munmap(mmap_base, getByteCount());
 }
 
+void GuestStatePTImg::dumpSelfMap(void) const
+{
+	FILE	*f_self;
+	char	buf[256];
+
+	f_self = fopen("/proc/self/maps", "r");
+	while (!feof(f_self)) {
+		fgets(buf, 256, f_self);
+		fprintf(stderr, "[ME] %s", buf);
+	}
+	fclose(f_self);
+}
 
 void GuestStatePTImg::slurpMappings(pid_t pid)
 {

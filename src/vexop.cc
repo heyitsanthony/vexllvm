@@ -24,42 +24,6 @@ using namespace llvm;
 	case Iop_##x##64 : 	\
 	return "Iop_" #x "64";	\
 
-/* fuck this)
- I'm tired */
-#if 0
-      /* ------ Floating point.  We try to be IEEE754 compliant. ------ */
-
-      /* --- Simple stuff as mandated by 754. --- */
-
-      /* Binary operations)
- with rounding. */
-      /* :: IRRoundingMode(I32) x F64 x F64 -> F64 */ 
-      Iop_AddF64)
- Iop_SubF64, Iop_MulF64, Iop_DivF64,
-
-      /* :: IRRoundingMode(I32) x F32 x F32 -> F32 */ 
-      Iop_AddF32)
- Iop_SubF32, Iop_MulF32, Iop_DivF32,
-
-      /* Variants of the above which produce a 64-bit result but which
-         round their result to a IEEE float range first. */
-      /* :: IRRoundingMode(I32) x F64 x F64 -> F64 */ 
-
-
-
-      /* Comparison, yielding GT/LT/EQ/UN(ordered), as per the following:
-            0x45 Unordered
-            0x01 LT
-            0x00 GT
-            0x40 EQ
-         This just happens to be the Intel encoding.  The values
-         are recorded in the type IRCmpF64Result.
-      */
-      /* :: F64 x F64 -> IRCmpF64Result(I32) */
-      Iop_CmpF64,
-#endif
-
-
 const char* getVexOpName(IROp op)
 {
 	switch(op) {
@@ -187,11 +151,46 @@ CASE_OP(1Sto16)	/* :: Ity_Bit -> Ity_I16, signed widen */
 CASE_OP(1Sto32)	/* :: Ity_Bit -> Ity_I32, signed widen */
 CASE_OP(1Sto64)	/* :: Ity_Bit -> Ity_I64, signed widen */
 
-/* vector stuff */
 CASE_OP(32UtoV128)
 CASE_OP(64HLtoV128)	// :: (I64,I64) -> I128
 CASE_OP(V128to64)
 CASE_OP(InterleaveLO8x16)
+CASE_OP(AddF64)
+CASE_OP(SubF64)
+CASE_OP(MulF64)
+CASE_OP(DivF64)
+CASE_OP(AddF32)
+CASE_OP(SubF32)
+CASE_OP(MulF32)
+CASE_OP(DivF32)
+CASE_OP(CmpF64)
+
+CASE_OP(Add64Fx2)
+CASE_OP(Sub64Fx2)
+CASE_OP(Mul64Fx2)
+CASE_OP(Div64Fx2)
+CASE_OP(Max64Fx2)
+CASE_OP(Min64Fx2)
+CASE_OP(CmpEQ64Fx2)
+CASE_OP(CmpLT64Fx2)
+CASE_OP(CmpLE64Fx2)
+CASE_OP(CmpUN64Fx2)
+CASE_OP(Recip64Fx2)
+CASE_OP(Sqrt64Fx2)
+CASE_OP(RSqrt64Fx2)
+CASE_OP(Add64F0x2)
+CASE_OP(Sub64F0x2)
+CASE_OP(Mul64F0x2)
+CASE_OP(Div64F0x2)
+CASE_OP(Max64F0x2)
+CASE_OP(Min64F0x2)
+CASE_OP(CmpEQ64F0x2)
+CASE_OP(CmpLT64F0x2)
+CASE_OP(CmpLE64F0x2)
+CASE_OP(CmpUN64F0x2)
+CASE_OP(Recip64F0x2)
+CASE_OP(Sqrt64F0x2)
+CASE_OP(RSqrt64F0x2)
 
 	case Iop_INVALID: return "Iop_INVALID";
 	default:
@@ -416,6 +415,20 @@ Value* VexExprBinop32HLto64::emit(void) const
 		builder->CreateShl(v_hi, 32));
 }
 
+Value* VexExprBinop16HLto32::emit(void) const
+{
+	Value		*v_hi, *v_lo;
+
+	BINOP_SETUP
+
+	v_hi = builder->CreateZExt(v1, builder->getInt32Ty());
+	v_lo = builder->CreateZExt(v2, builder->getInt32Ty());
+
+	return builder->CreateOr(
+		v_lo,
+		builder->CreateShl(v_hi, 16));
+}
+
 #define BINOP_EMIT(x,y)				\
 Value* VexExprBinop##x::emit(void) const	\
 {						\
@@ -565,6 +578,22 @@ Value* VexExprBinopMul64F0x2::emit(void) const
 	return builder->CreateInsertElement(v1, mul, get_i32(0));
 }
 
+Value* VexExprBinopDiv64F0x2::emit(void) const
+{
+	Value	*lo_v1, *lo_v2, *div;
+
+	BINOP_SETUP
+
+	v1 = builder->CreateBitCast(v1, get_vt_2xf64());
+	v2 = builder->CreateBitCast(v2, get_vt_2xf64());
+
+	lo_v1 = builder->CreateExtractElement(v1, get_i32(0));
+	lo_v2 = builder->CreateExtractElement(v2, get_i32(0));
+
+	div = builder->CreateFDiv(lo_v1, lo_v2);
+
+	return builder->CreateInsertElement(v1, div, get_i32(0));
+}
 
 Value* VexExprBinopCmpEQ8x16::emit(void) const
 {

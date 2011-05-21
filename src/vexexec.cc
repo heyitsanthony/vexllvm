@@ -107,7 +107,7 @@ const VexSB* VexExec::doNextSB(void)
 	if (exit_type != GE_IGNORE) {
 		gs->getCPUState()->setExitType(GE_IGNORE);
 		if (exit_type == GE_EMWARN) {
-			std::cerr << "VEX Emulation warning!?" << std::endl;
+			std::cerr << "[VEXLLVM] VEX Emulation warning!?" << std::endl;
 			addr_stack.push(new_jmpaddr);
 			return vsb;
 		} else
@@ -280,7 +280,7 @@ void VexExec::runAddrStack(void)
 	}
 
 	if (exited) {
-		std::cerr 	<< "Exit call. Anthony fix this. "
+		std::cerr 	<< "[VEXLLVM] Exit call. Anthony fix this. "
 				<< "Exitcode=" << exit_code
 				<< std::endl;
 	}
