@@ -236,7 +236,10 @@ void VexStmtDirty::emit(void) const
 	foreach (it, args.begin(), args.end()) 
 		args_v.push_back((*it)->emit());
 	v_call = builder->CreateCall(func, args_v.begin(), args_v.end());
-	parent->setRegValue(tmp_reg, v_call);
+
+	/* sometimes dirty calls don't set temporaries */
+	if (tmp_reg != -1)
+		parent->setRegValue(tmp_reg, v_call);
 
 	builder->CreateBr(bb_merge);
 
