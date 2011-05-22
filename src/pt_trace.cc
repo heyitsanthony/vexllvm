@@ -24,7 +24,7 @@ static VexExec *vexexec;
 
 void dumpIRSBs(void)
 {
-	std::cerr << "DUMPING LOGS" << std::cerr;
+	std::cerr << "[VEXLLVM] DUMPING LOGS" << std::cerr;
 	vexexec->dumpLogs(std::cerr);
 }
 static void dump_data(void)
@@ -37,16 +37,17 @@ static void dump_data(void)
 	vexexec->dumpLogs(std::cerr);
 
 	foreach(it, vexexec->getTraces().begin(), vexexec->getTraces().end()) {
+		std::cerr << "[VEXLLVM] ";
 		for (int i = (*it).second; i; i--) 
 			std::cerr << " ";
 		std::cerr << (*it).first <<std::endl;
 	}
 
-	std::cerr << "ADDR STACK:" << std::endl;
+	std::cerr << "[VEXLLVM] ADDR STACK:" << std::endl;
 	addr_stack = vexexec->getAddrStack();
 	while (!addr_stack.empty()) {
 		std::cerr
-			<< "ADDR:"
+			<< "[VEXLLVM] ADDR:"
 			<< gs->getName((guestptr_t)addr_stack.top())
 			<< std::endl;
 		addr_stack.pop();
@@ -94,7 +95,7 @@ int main(int argc, char* argv[], char* envp[])
 	
 	vexexec->run();
 
-	printf("\nTRACE COMPLETE. SBs=%d\n", vexexec->getSBExecutedCount());
+	printf("\n[VEXLLVM] TRACE COMPLETE. SBs=%d\n", vexexec->getSBExecutedCount());
 	dump_data();
 
 	delete vexexec;

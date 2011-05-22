@@ -31,6 +31,11 @@ function run_trace_bin
 	oprof_stop
 }
 
+function run_real_bin
+{
+	"$1" >"$FPREFIX.real.out" 2>"$FPREFIX.real.err"
+}
+
 function do_trace
 {
 	BINNAME=`echo $a | cut -f1 -d' ' | sed "s/\//\n/g" | tail -n1`
@@ -38,8 +43,13 @@ function do_trace
 	echo -n "Testing: $BINNAME ..."
 
 	run_trace_bin "$a" 2>"$FPREFIX.trace.time"
+	run_real_bin "$a"
+
+	grep -v "VEXLLVM" $FPREFIX.trace.out >$FPREFIX.trace.stripped.out
+
 	retval=`grep "Exitcode" "$FPREFIX.trace.err" | cut -f2`
 	assertval=`grep "Assertion"  "$FPREFIX.trace.err" | grep "failed"`
+	mismatch=`diff -q -w -B  $FPREFIX.trace.stripped.out $FPREFIX.real.out`
 
 	echo "$retval" >"${FPREFIX}.trace.ret"
 	if [ -z "$retval" ] || [ ! -z "$assertval" ]; then
@@ -54,8 +64,15 @@ function do_trace
 		echo "$a">>$OUTPATH/tests.bad
 	else
 		t=`cat $FPREFIX.trace.time | grep -i real | awk '{ print $2 }' `
-		echo "OK.  $t"
+		echo -n  "OK.  $t"
 		echo "$a">>$OUTPATH/tests.ok
+
+		if [ ! -z "$mismatch" ]; then
+			echo " (mismatched)"
+			echo "$a">>$OUTPATH/tests.mismatch
+		else
+			echo ""
+		fi
 	fi
 }
 

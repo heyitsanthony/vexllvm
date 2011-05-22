@@ -5,11 +5,14 @@
 int main(int argc, char* argv[])
 {
 	void	*h, *sym;
+	void (*puts_f)(const char*);
+
 	h = dlopen("/lib/libc.so.6", RTLD_LOCAL | RTLD_LAZY);
 	assert (h != NULL);
-	sym = dlsym(h, "printf");
+	sym = dlsym(h, "puts");
 	assert (sym != NULL);
-	printf("printf=%p\n", sym);
+	puts_f = sym;
+	puts_f("hello\n");
 	dlclose(h);
 	return 0;
 }

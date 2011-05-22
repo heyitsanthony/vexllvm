@@ -15,8 +15,8 @@ function oprof_shutdown
 if [ ! -x tests/traces.sh ]; then
 	echo "Should run from gitroot."
 fi
-rm -f $OUTPATH/tests.ok $OUTPATH/tests.bad
-touch $OUTPATH/tests.ok $OUTPATH/tests.bad
+rm -f $OUTPATH/tests.ok $OUTPATH/tests.bad $OUTPATH/tests.mismatch
+touch $OUTPATH/tests.ok $OUTPATH/tests.bad $OUTPATH/tests.mismatch
 
 
 echo "Doing built-in tests"
