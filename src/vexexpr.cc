@@ -103,11 +103,12 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(DivModU64to32);
 	BINOP_TAGOP(DivModS64to32);
 
-	BINOP_TAGOP(Div32F0x4);
 	BINOP_TAGOP(Mul64F0x2);
 	BINOP_TAGOP(Div64F0x2);
 	BINOP_TAGOP(Add64F0x2);
 	BINOP_TAGOP(Sub64F0x2);
+	BINOP_TAGOP(Mul32F0x4);
+	BINOP_TAGOP(Div32F0x4);
 	BINOP_TAGOP(Add32F0x4);
 	BINOP_TAGOP(Sub32F0x4);
 
@@ -160,6 +161,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Xor16);
 	BINOP_TAGOP(Xor32);
 	BINOP_TAGOP(Xor64);
+	BINOP_TAGOP(XorV128);
 
 	UNOP_TAGOP(Not1);
 	UNOP_TAGOP(Not8);
@@ -169,6 +171,8 @@ return new VexExprUnop##x(in_parent, expr)
 
 	UNOP_TAGOP(1Uto8);
 	UNOP_TAGOP(1Uto64);
+	UNOP_TAGOP(8Uto16);
+	UNOP_TAGOP(8Sto16);
 	UNOP_TAGOP(8Uto32);
 	UNOP_TAGOP(8Sto32);
 	UNOP_TAGOP(8Uto64);
@@ -179,6 +183,8 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(16Sto32);
 	UNOP_TAGOP(32Uto64);
 	UNOP_TAGOP(32Sto64);
+	UNOP_TAGOP(32to8);
+	UNOP_TAGOP(32to16);
 	UNOP_TAGOP(64to32);
 	UNOP_TAGOP(64to1);
 	UNOP_TAGOP(64to8);
@@ -195,7 +201,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(64HLto128);
 	UNOP_TAGOP(64HIto32);
 	UNOP_TAGOP(F32toF64);
-	UNOP_TAGOP(F64toF32);
+	BINOP_TAGOP(F64toF32);
 	UNOP_TAGOP(I32StoF64);
 
 	BINOP_TAGOP(I64StoF64);
@@ -426,6 +432,7 @@ llvm::Value* VexExprMux0X::emit(void) const
 	llvm::Value		*cmp_val, *zero_val, *nonzero_val;
 	llvm::PHINode		*pn;
 	llvm::BasicBlock	*bb_then, *bb_else, *bb_merge, *bb_origin;
+	llvm::BasicBlock	*bb_nz, *bb_z;	/* BB in case of nested MuX */
 
 	builder = theGenLLVM->getBuilder();
 	bb_origin = builder->GetInsertBlock();
@@ -450,18 +457,20 @@ llvm::Value* VexExprMux0X::emit(void) const
 
 	builder->SetInsertPoint(bb_then);
 	nonzero_val = exprX->emit();
+	bb_nz = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 
 	builder->SetInsertPoint(bb_else);
 	zero_val = expr0->emit();
+	bb_z = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 
 
 	/* phi node on the mux */
 	builder->SetInsertPoint(bb_merge);
 	pn = builder->CreatePHI(zero_val->getType(), "mux0x_phi");
-	pn->addIncoming(zero_val, bb_else);
-	pn->addIncoming(nonzero_val, bb_then);
+	pn->addIncoming(zero_val, bb_z);
+	pn->addIncoming(nonzero_val, bb_nz);
 
 	return pn;
 }

@@ -212,6 +212,7 @@ void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 	case Ijk_Boring:
 	case Ijk_NoRedir:
 	case Ijk_Sys_syscall:
+	case Ijk_ClientReq:
 		jump_expr = blk_next;
 		break;
 	default:

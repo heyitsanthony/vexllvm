@@ -144,6 +144,7 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 	addr_v = guestState->addrVal2Host(addr_v);
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "storePtr");
 	si = builder->CreateStore(data_v, addr_ptr);
+	si->setAlignment(8);
 }
 
 Value* GenLLVM::load(Value* addr_v, const Type* ty)
