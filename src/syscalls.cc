@@ -26,7 +26,7 @@ uint64_t Syscalls::apply(const SyscallParams& args)
 	BAD_SYSCALL(SYS_exit)
 	BAD_SYSCALL(SYS_execve)
 	default:
-		call_trace.push_back(sys_nr);
+		call_trace.push_back(args);
 	}
 
 	if (sys_nr == SYS_exit_group) {
@@ -54,6 +54,14 @@ uint64_t Syscalls::apply(const SyscallParams& args)
 void Syscalls::print(std::ostream& os) const
 {
 	foreach(it, call_trace.begin(), call_trace.end()) {
-		os << "Syscall: Num=" << (*it) << std::endl;
+		SyscallParams	sp = *it;
+		os << "Syscall: NR=" << sp.getSyscall();
+		os << " {"
+			<< (void*)sp.getArg(0) << ", "
+			<< (void*)sp.getArg(1) << ", "
+			<< (void*)sp.getArg(2) << ", "
+			<< (void*)sp.getArg(3) << ", "
+			<< (void*)sp.getArg(4) << ", "
+			<< (void*)sp.getArg(5) << "}" << std::endl;
 	}
 }

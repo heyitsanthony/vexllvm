@@ -15,8 +15,8 @@ public:
 	void print(std::ostream& os) const;
 	bool isExit(void) const { return exited; }
 private:
-	std::list<uint64_t>	call_trace;
-	bool			exited;
+	std::list<SyscallParams>	call_trace;
+	bool				exited;
 };
 
 #endif

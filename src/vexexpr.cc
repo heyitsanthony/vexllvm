@@ -438,7 +438,10 @@ llvm::Value* VexExprMux0X::emit(void) const
 	/* evaluate mux condition */
 	builder->SetInsertPoint(bb_origin);
 	cmp_val = cond->emit();
-	builder->CreateCondBr(cmp_val, bb_then, bb_else);
+	builder->CreateCondBr(
+		builder->CreateTrunc(
+			cmp_val, builder->getInt1Ty()),
+		bb_then, bb_else);
 
 	builder->SetInsertPoint(bb_then);
 	nonzero_val = exprX->emit();

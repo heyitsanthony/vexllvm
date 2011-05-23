@@ -443,7 +443,8 @@ Value* VexExprBinop16HLto32::emit(void) const
 Value* VexExprBinop##x::emit(void) const	\
 {						\
 	BINOP_SETUP				\
-	return builder->Create##y(v1, v2);	\
+	return builder->Create##y(v1,		\
+		builder->CreateZExt(v2, v1->getType()));	\
 }
 
 BINOP_EMIT(Add8, Add)
