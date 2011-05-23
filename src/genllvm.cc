@@ -177,7 +177,7 @@ Value* GenLLVM::getCtxBase(void)
 		APInt(	sizeof(intptr_t)*8,
 			(uintptr_t)guestState->getCPUState()->getStateData()));
 
-	return builder->CreateBitCast(intptr_v, ptrty, "ctxbaseptr");
+	return builder->CreateIntToPtr(intptr_v, ptrty, "ctxbaseptr");
 }
 
 void GenLLVM::setExitType(uint8_t exit_type)
