@@ -555,56 +555,26 @@ DIVMOD_EMIT(DivModS128to64, S, S, 128)
 DIVMOD_EMIT(DivModU64to32, U, Z, 64)
 DIVMOD_EMIT(DivModS64to32, S, S, 64)
 
-Value* VexExprBinopDiv32F0x4::emit(void) const
-{
-	Value	*lo_num, *lo_denom, *div;
-
-	BINOP_SETUP
-
-	v1 = builder->CreateBitCast(v1, get_vt_4xf32());
-	v2 = builder->CreateBitCast(v2, get_vt_4xf32());
-
-	lo_num = builder->CreateExtractElement(v1, get_i32(0));
-	lo_denom = builder->CreateExtractElement(v2, get_i32(0));
-
-	div = builder->CreateFDiv(lo_num, lo_denom);
-
-	return builder->CreateInsertElement(v1, div, get_i32(0));
+#define OPF0X_EMIT(x, y, z)			\
+Value* VexExprBinop##x::emit(void) const	\
+{	\
+	Value	*lo_op_lhs, *lo_op_rhs, *result;	\
+	BINOP_SETUP					\
+	v1 = builder->CreateBitCast(v1, y);		\
+	v2 = builder->CreateBitCast(v2, y);		\
+	lo_op_lhs = builder->CreateExtractElement(v1, get_i32(0));	\
+	lo_op_rhs = builder->CreateExtractElement(v2, get_i32(0));	\
+	result = builder->Create##z(lo_op_lhs, lo_op_rhs);		\
+	return builder->CreateInsertElement(v1, result, get_i32(0));	\
 }
 
-Value* VexExprBinopMul64F0x2::emit(void) const
-{
-	Value	*lo_v1, *lo_v2, *mul;
-
-	BINOP_SETUP
-
-	v1 = builder->CreateBitCast(v1, get_vt_2xf64());
-	v2 = builder->CreateBitCast(v2, get_vt_2xf64());
-
-	lo_v1 = builder->CreateExtractElement(v1, get_i32(0));
-	lo_v2 = builder->CreateExtractElement(v2, get_i32(0));
-
-	mul = builder->CreateFMul(lo_v1, lo_v2);
-
-	return builder->CreateInsertElement(v1, mul, get_i32(0));
-}
-
-Value* VexExprBinopDiv64F0x2::emit(void) const
-{
-	Value	*lo_v1, *lo_v2, *div;
-
-	BINOP_SETUP
-
-	v1 = builder->CreateBitCast(v1, get_vt_2xf64());
-	v2 = builder->CreateBitCast(v2, get_vt_2xf64());
-
-	lo_v1 = builder->CreateExtractElement(v1, get_i32(0));
-	lo_v2 = builder->CreateExtractElement(v2, get_i32(0));
-
-	div = builder->CreateFDiv(lo_v1, lo_v2);
-
-	return builder->CreateInsertElement(v1, div, get_i32(0));
-}
+OPF0X_EMIT(Div32F0x4, get_vt_4xf32(), FDiv)
+OPF0X_EMIT(Mul64F0x2, get_vt_2xf64(), FMul)
+OPF0X_EMIT(Div64F0x2, get_vt_2xf64(), FDiv)
+OPF0X_EMIT(Add64F0x2, get_vt_2xf64(), FAdd)
+OPF0X_EMIT(Sub64F0x2, get_vt_2xf64(), FSub)
+OPF0X_EMIT(Add32F0x4, get_vt_4xf32(), FAdd)
+OPF0X_EMIT(Sub32F0x4, get_vt_4xf32(), FSub)
 
 Value* VexExprBinopCmpEQ8x16::emit(void) const
 {
