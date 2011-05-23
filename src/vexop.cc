@@ -295,7 +295,7 @@ UNOP_EMIT(Not64, CreateNot)
 
 Value* VexExprUnopV128to64::emit(void) const
 {
-	Value		*v_trunc, *v_hilo;
+	Value		*v_hilo;
 	Constant	*shuffle_v[] = {
 		get_i32(0), get_i32(1),
 		get_i32(2), get_i32(3),
@@ -318,28 +318,24 @@ Value* VexExprUnopV128to64::emit(void) const
 }
 Value* VexExprUnopV128HIto64::emit(void) const
 {
-	Value		*v_trunc, *v_hilo;
+	Value		*v_hilo;
 	Constant	*shuffle_v[] = {
 		get_i32(8), get_i32(9),
 		get_i32(10), get_i32(11),
 		get_i32(12), get_i32(13),
 		get_i32(14), get_i32(15),
-		get_i32(8), get_i32(9),
-		get_i32(10), get_i32(11),
-		get_i32(12), get_i32(13),
-		get_i32(14), get_i32(15)};
+	};
 	Constant	*cv;
 
 	UNOP_SETUP
-	v_trunc = builder->CreateTrunc(v1, get_vt_8x8());
 	cv = ConstantVector::get(
 		std::vector<Constant*>(
 			shuffle_v,
 			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
-	v_hilo = builder->CreateShuffleVector(v1, v1, cv, "v128hi_shuffle");
+	v_hilo = builder->CreateShuffleVector(v1, v1, cv, "v128extracthi_shuffle");
 
 	return builder->CreateBitCast(
-		v_trunc,
+		v_hilo,
 		builder->getInt64Ty(), 
 		"V128Hito64");
 }
