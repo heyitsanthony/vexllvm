@@ -283,12 +283,14 @@ UNOP_EMIT(Not8, CreateNot)
 UNOP_EMIT(Not16, CreateNot)
 UNOP_EMIT(Not32, CreateNot)
 UNOP_EMIT(Not64, CreateNot)
+UNOP_EMIT(NotV128, CreateNot)
 
 #define get_vt_8x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 8)
 #define get_vt_8x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 8)
 #define get_vt_4x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 4)
 #define get_vt_16x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 16)
 #define get_vt_4xf32() VectorType::get(Type::getFloatTy(getGlobalContext()), 4)
+#define get_vt_4x32() VectorType::get(Type::getInt32Ty(getGlobalContext()), 4)
 #define get_vt_2xf64() VectorType::get(Type::getDoubleTy(getGlobalContext()), 2)
 
 
@@ -579,6 +581,39 @@ OPF0X_EMIT(Mul32F0x4, get_vt_4xf32(), FMul)
 OPF0X_EMIT(Div32F0x4, get_vt_4xf32(), FDiv)
 OPF0X_EMIT(Add32F0x4, get_vt_4xf32(), FAdd)
 OPF0X_EMIT(Sub32F0x4, get_vt_4xf32(), FSub)
+
+Value* VexExprBinopCmpLT32F0x4::emit(void) const
+{
+	Value	*lo_op_lhs, *lo_op_rhs, *result;
+	BINOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vt_4xf32());
+	v2 = builder->CreateBitCast(v2, get_vt_4xf32());
+	lo_op_lhs = builder->CreateExtractElement(v1, get_i32(0));
+	lo_op_rhs = builder->CreateExtractElement(v2, get_i32(0));
+	result = builder->CreateFCmpOLT(lo_op_lhs, lo_op_rhs);
+	result = builder->CreateSExt(result, builder->getInt32Ty());
+	result = builder->CreateBitCast(result, builder->getFloatTy());
+
+	return builder->CreateInsertElement(
+		builder->CreateBitCast(v1, get_vt_4x32()),
+		result,
+		get_i32(0));
+}
+
+Value* VexExprBinopMax32F0x4::emit(void) const
+{
+	Value	*lo_op_lhs, *lo_op_rhs, *result;
+	Function	*f;
+	BINOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vt_4xf32());
+	v2 = builder->CreateBitCast(v2, get_vt_4xf32());
+	lo_op_lhs = builder->CreateExtractElement(v1, get_i32(0));
+	lo_op_rhs = builder->CreateExtractElement(v2, get_i32(0));
+	f = theVexHelpers->getHelper("vexop_maxf32");
+	assert (f != NULL);
+	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);
+	return builder->CreateInsertElement(v1, result, get_i32(0));
+}
 
 Value* VexExprBinopCmpEQ8x16::emit(void) const
 {
