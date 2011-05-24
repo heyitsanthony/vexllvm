@@ -71,6 +71,7 @@ private:
 	/* dump current state before executing BB */
 	/* defined by env var VEXLLVM_DUMP_STATES */
 	bool		dump_current_state;
+	bool		dump_llvm;
 
 	unsigned int	trace_c;
 	bool		exited;

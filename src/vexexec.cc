@@ -78,6 +78,7 @@ VexExec::VexExec(GuestState* in_gs)
 	sc = new Syscalls();
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
+	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
 }
 
 const VexSB* VexExec::doNextSB(void)
@@ -195,6 +196,9 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
 	f = vsb->emit(emitstr);
 	assert (f && "FAILED TO EMIT FUNC??");
+
+	if(dump_llvm)
+		f->dump();
 
 	func_ptr = (vexfunc_t)exeEngine->getPointerToFunction(f);
 	assert (func_ptr != NULL && "Could not JIT");
