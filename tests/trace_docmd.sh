@@ -27,20 +27,29 @@ function oprof_stop
 function run_trace_bin
 {
 	oprof_start
-	time "$RUNCMD" "$1" >"$FPREFIX.trace.out" 2>"$FPREFIX.trace.err"
+	time "$RUNCMD" $1 >"$FPREFIX.trace.out" 2>"$FPREFIX.trace.err"
 	oprof_stop
 }
 
 function run_real_bin
 {
-	"$1" >"$FPREFIX.real.out" 2>"$FPREFIX.real.err"
+	$1 >"$FPREFIX.real.out" 2>"$FPREFIX.real.err"
 }
 
 function do_trace
 {
 	BINNAME=`echo $a | cut -f1 -d' ' | sed "s/\//\n/g" | tail -n1`
-	FPREFIX=$OUTPATH/$BINNAME
-	echo -n "Testing: $BINNAME ..."
+	BINPATH=`echo $a | cut -f1 -d' '`
+	CMDHASH=`echo "$a" | md5sum | cut -f1 -d' '`
+	FPREFIX=$OUTPATH/$BINNAME.$CMDHASH
+
+	if [ ! -x $BINPATH ]; then
+		echo "Skipping: $BINNAME"
+		echo "$a">>$OUTPATH/tests.skipped
+		return
+	fi
+
+	echo -n "Testing: $a..."
 
 	run_trace_bin "$a" 2>"$FPREFIX.trace.time"
 	run_real_bin "$a"
@@ -60,7 +69,6 @@ function do_trace
 			cat "$FPREFIX".objdump | grep `echo $addr  | cut -f2 -d'x'` | grep "^0"
 		done >$FPREFIX.trace.funcs
 		tail $FPREFIX.trace.funcs
-
 		echo "$a">>$OUTPATH/tests.bad
 	else
 		t=`cat $FPREFIX.trace.time | grep -i real | awk '{ print $2 }' `

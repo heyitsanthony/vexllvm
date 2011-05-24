@@ -25,7 +25,10 @@
 /usr/bin/nasm
 /usr/bin/unzip
 /usr/bin/size
-/usr/bin/python <<< "print 'hello'"
+/usr/bin/python2.7 <<< "print 1+1"
+/usr/bin/python3 <<< "print(1+1)"
+/usr/bin/perl <<< "print 1+1"
+/usr/bin/bc -l <<< "s(10)+c(10)-e(1)*l(5)"
 /usr/bin/ar
 /usr/bin/unrar
 /usr/bin/bison
@@ -75,6 +78,11 @@
 /usr/bin/diff
 /usr/bin/perf
 /usr/bin/rsaperf
+/usr/bin/oggdec
+/usr/bin/oggenc
+/usr/bin/ogginfo
+/usr/bin/sha256sum /usr/bin/sha256sum
+/usr/bin/md5sum /usr/bin/md5sum
 #
 #sbin
 #
@@ -87,7 +95,7 @@
 #
 /bin/true
 /bin/false
-#/bin/tar
+/bin/tar --help
 /bin/awk
 /bin/pwd
 /bin/dmesg
@@ -107,3 +115,5 @@
 /bin/mkdir
 /bin/mknod
 /bin/basename
+/bin/ls
+/bin/ls -lah
