@@ -112,6 +112,8 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Add32F0x4);
 	BINOP_TAGOP(Sub32F0x4);
 
+	BINOP_TAGOP(Max32F0x4);
+	BINOP_TAGOP(CmpLT32F0x4);
 
 	BINOP_TAGOP(InterleaveLO8x16);
 
@@ -168,6 +170,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Not16);
 	UNOP_TAGOP(Not32);
 	UNOP_TAGOP(Not64);
+	UNOP_TAGOP(NotV128);
 
 	UNOP_TAGOP(1Uto8);
 	UNOP_TAGOP(1Uto64);

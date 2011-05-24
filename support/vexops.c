@@ -31,3 +31,17 @@ uint32_t vexop_cmpf64(double f1, double f2)
 	if (f1 > f2) return Ircr_GT;
 	return Ircr_UN;
 }
+
+uint32_t vexop_cmpf32(float f1, float f2)
+{
+	if (f1 == f2) return Ircr_EQ;
+	if (f1 < f2) return Ircr_LT;
+	if (f1 > f2) return Ircr_GT;
+	return Ircr_UN;
+}
+
+float vexop_maxf32(float f1, float f2)
+{
+	if (f1 > f2) return f1;
+	return f2;
+}
