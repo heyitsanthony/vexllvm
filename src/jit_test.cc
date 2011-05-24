@@ -217,6 +217,32 @@ protected:
 				new VexExprBinopCmpGT8Sx16(NULL, args)));
 	}
 };
+class TestInterleaveLO64x2 : public TestSB
+{
+public:
+	TestInterleaveLO64x2 () : TestSB("ILO64x2") {}
+	virtual ~TestInterleaveLO64x2() {}
+	virtual bool isGoodState(GuestState* gs) const
+	{
+		VexGuestAMD64State	*st = getVexState(gs);
+		return *((uint64_t*)&st->guest_XMM1) == 0xaaaaaaaaaaaaaaaa && *((uint64_t*)&st->guest_XMM1 + 1) == 0xbbbbbbbbbbbbbbbb;
+	}
+protected:
+	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
+	{
+		VexExpr**		args;
+		args = new VexExpr*[2];
+		args[0] = new VexExprConstV128(NULL, 0xaaaa);
+		args[1] = new VexExprConstV128(NULL, 0xbbbb);
+		stmts.push_back(
+			new VexStmtPut(
+				vsb,
+				GUEST_BYTEOFF_XMM1, 
+				new VexExprBinopInterleaveLO64x2(
+					NULL, args)));
+	}
+};
+
 
 class TestInterleaveLO8x16 : public TestSB
 {
@@ -497,6 +523,7 @@ int main(int argc, char* argv[])
 	doTest(gs, new TestOrV128());
 	doTest(gs, new TestV128to64());
 	doTest(gs, new TestInterleaveLO8x16());
+	doTest(gs, new TestInterleaveLO64x2());
 	doTest(gs, new TestSub8x16());
 	doTest(gs, new Test64HLtoV128());
 	doTest(gs, new Test32HLto64());

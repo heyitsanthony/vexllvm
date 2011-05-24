@@ -216,6 +216,8 @@ return new VexExprUnop##x(in_parent, expr)
 
 	UNOP_TAGOP(Ctz64);
 	UNOP_TAGOP(Clz64);
+
+	BINOP_TAGOP(InterleaveLO64x2);
 	default:
 		fprintf(stderr, "UNKNOWN OP %s (%x)\n", getVexOpName(op), op);
 //		ppIROp(op);

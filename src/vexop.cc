@@ -191,6 +191,7 @@ CASE_OP(CmpUN64F0x2)
 CASE_OP(Recip64F0x2)
 CASE_OP(Sqrt64F0x2)
 CASE_OP(RSqrt64F0x2)
+CASE_OP(InterleaveLO64x2)
 
 case Iop_F64toI16S: fprintf(stderr, "unimplemented Iop_F64toI16S (%x)\n", op); return "Iop_F64toI16S";
 case Iop_F64toI32S: fprintf(stderr, "unimplemented Iop_F64toI32S (%x)\n", op); return "Iop_F64toI32S";
@@ -690,7 +691,6 @@ case Iop_InterleaveHI32x4: fprintf(stderr, "unimplemented Iop_InterleaveHI32x4 (
 case Iop_InterleaveHI64x2: fprintf(stderr, "unimplemented Iop_InterleaveHI64x2 (%x)\n", op); return "Iop_InterleaveHI64x2";
 case Iop_InterleaveLO16x8: fprintf(stderr, "unimplemented Iop_InterleaveLO16x8 (%x)\n", op); return "Iop_InterleaveLO16x8";
 case Iop_InterleaveLO32x4: fprintf(stderr, "unimplemented Iop_InterleaveLO32x4 (%x)\n", op); return "Iop_InterleaveLO32x4";
-case Iop_InterleaveLO64x2: fprintf(stderr, "unimplemented Iop_InterleaveLO64x2 (%x)\n", op); return "Iop_InterleaveLO64x2";
 case Iop_InterleaveOddLanes8x16: fprintf(stderr, "unimplemented Iop_InterleaveOddLanes8x16 (%x)\n", op); return "Iop_InterleaveOddLanes8x16";
 case Iop_InterleaveEvenLanes8x16: fprintf(stderr, "unimplemented Iop_InterleaveEvenLanes8x16 (%x)\n", op); return "Iop_InterleaveEvenLanes8x16";
 case Iop_InterleaveOddLanes16x8: fprintf(stderr, "unimplemented Iop_InterleaveOddLanes16x8 (%x)\n", op); return "Iop_InterleaveOddLanes16x8";
@@ -725,7 +725,7 @@ case Iop_Rsqrte32x4: fprintf(stderr, "unimplemented Iop_Rsqrte32x4 (%x)\n", op);
 
 	case Iop_INVALID: return "Iop_INVALID";
 	default:
-	fprintf(stderr, "Unknown opcode %x, %x\n", op, Iop_InterleaveLO64x2);
+	fprintf(stderr, "Unknown opcode %x\n", op);
 	}
 	return "???Op???";
 }
@@ -820,6 +820,8 @@ UNOP_EMIT(NotV128, CreateNot)
 #define get_vt_8x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 8)
 #define get_vt_4x16() VectorType::get(Type::getInt16Ty(getGlobalContext()), 4)
 #define get_vt_16x8() VectorType::get(Type::getInt8Ty(getGlobalContext()), 16)
+#define get_vt_32x4() VectorType::get(Type::getInt32Ty(getGlobalContext()), 4)
+#define get_vt_64x2() VectorType::get(Type::getInt64Ty(getGlobalContext()), 2)
 #define get_vt_4xf32() VectorType::get(Type::getFloatTy(getGlobalContext()), 4)
 #define get_vt_4x32() VectorType::get(Type::getInt32Ty(getGlobalContext()), 4)
 #define get_vt_2xf64() VectorType::get(Type::getDoubleTy(getGlobalContext()), 2)
@@ -1237,4 +1239,23 @@ Value* VexExprBinopInterleaveLO8x16::emit(void) const
 			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
 
 	return builder->CreateShuffleVector(v1, v2, cv, "ILO8x16");
+}
+
+Value* VexExprBinopInterleaveLO64x2::emit(void) const
+{
+	Value		*v1_64, *v2_64;
+	Value		*v_lo;
+	Value		*v_res;
+	Constant	*c_lo = get_i32(0);
+	Constant	*c_hi = get_i32(1);
+
+	BINOP_SETUP
+
+	v1_64 = builder->CreateBitCast(v1, get_vt_64x2(), "InterleaveLO64x2_cast_arg1");
+	v2_64 = builder->CreateBitCast(v2, get_vt_64x2(), "InterleaveLO64x2_cast_arg2");
+
+	v_lo = builder->CreateExtractElement(v2_64, c_lo, "InterleaveLO64x2_extract_low");
+	v_res = builder->CreateInsertElement(v1_64, v_lo, c_hi, "InterleaveLO64x2_insert_upper");
+
+	return builder->CreateBitCast(v_res, get_vt_16x8(), "InterleaveLO64x2_convert_back_to_16x8i");
 }
