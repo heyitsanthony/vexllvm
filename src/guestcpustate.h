@@ -4,7 +4,7 @@
 #include <iostream>
 #include <stdint.h>
 #include "syscallparams.h"
-
+#include <sys/user.h>
 #include <assert.h>
 #include <map>
 
@@ -51,6 +51,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	GuestExitType getExitType(void) { return (GuestExitType)*exit_type; }
 
 	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
+	void setRegs(const user_regs_struct& regs, const user_fpregs_struct& fpregs);
 
 	void print(std::ostream& os) const;
 

@@ -245,10 +245,16 @@ void GuestCPUState::print(std::ostream& os) const
 		<< (void*)get_xmm_lo(i) << std::endl;
 	}
 
+	for (int i = 0; i < 8; i++) {
+		os
+		<< "ST" << i << ": "
+		<< (void*)state2amd64()->guest_FPREG[i] << std::endl;
+	}
+
 	const uint64_t*	tls_data = (const uint64_t*)tls->getBase();
 	unsigned int	tls_bytes = tls->getSize();
 
-	os << "&fs = " << (void*)(*((uint64_t*)(&state_data[192]))) << std::endl;
+	os << "fs_base = " << (void*)state2amd64()->guest_FS_ZERO << std::endl;
 #if 0
 	for (unsigned int i = 0; i < tls_bytes / sizeof(uint64_t); i++) {
 		if (!tls_data[i]) continue;
@@ -271,4 +277,70 @@ void GuestCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 
 	assert (arg_num <= 3);
 	*((uint64_t*)((uintptr_t)state_data + arg2reg[arg_num])) = arg_val;
+}
+void GuestCPUState::setRegs(const user_regs_struct& regs, const user_fpregs_struct& fpregs) {
+	state2amd64()->guest_RAX = regs.rax;
+	state2amd64()->guest_RCX = regs.rcx;
+	state2amd64()->guest_RDX = regs.rdx;
+	state2amd64()->guest_RBX = regs.rbx;
+	state2amd64()->guest_RSP = regs.rsp;
+	state2amd64()->guest_RBP = regs.rbp;
+	state2amd64()->guest_RSI = regs.rsi;
+	state2amd64()->guest_RDI = regs.rdi;
+	state2amd64()->guest_R8  = regs.r8;
+	state2amd64()->guest_R9  = regs.r9;
+	state2amd64()->guest_R10 = regs.r10;
+	state2amd64()->guest_R11 = regs.r11;
+	state2amd64()->guest_R12 = regs.r12;
+	state2amd64()->guest_R13 = regs.r13;
+	state2amd64()->guest_R14 = regs.r14;
+	state2amd64()->guest_R15 = regs.r15;
+	state2amd64()->guest_RIP = regs.rip;
+
+	//TODO: some kind of eflags, checking but i don't yet understand this
+	//mess of broken apart state.
+	//
+	// /* 4-word thunk used to calculate O S Z A C P flags. */
+	// /* 128 */ ULong  guest_CC_OP;
+	// /* 136 */ ULong  guest_CC_DEP1;
+	// /* 144 */ ULong  guest_CC_DEP2;
+	// /* 152 */ ULong  guest_CC_NDEP;
+	// /* The D flag is stored here, encoded as either -1 or +1 */
+	// /* 160 */ ULong  guest_DFLAG;
+	// /* 168 */ ULong  guest_RIP;
+	// /* Bit 18 (AC) of eflags stored here, as either 0 or 1. */
+	// /* ... */ ULong  guest_ACFLAG;
+	// /* Bit 21 (ID) of eflags stored here, as either 0 or 1. */
+	
+	//TODO: segments? but valgrind/vex seems to not really fully handle them, how sneaky
+	state2amd64()->guest_FS_ZERO = regs.fs_base;
+
+	//TODO: what is this for? well besides the obvious
+	// /* 192 */ULong guest_SSEROUND;
+
+	memcpy(&state2amd64()->guest_XMM0, &fpregs.xmm_space[0], sizeof(fpregs.xmm_space));
+
+	//TODO: check the top pointer of the floating point stack..
+	// /* FPU */
+	// /* 456 */UInt  guest_FTOP;
+	//FPTAG?
+	
+	//TODO: this is surely wrong, the sizes don't even match...
+	memcpy(&state2amd64()->guest_FPREG[0], &fpregs.st_space[0], sizeof(state2amd64()->guest_FPREG));
+
+
+	//TODO: what are these?
+	// /* 536 */ ULong guest_FPROUND;
+	// /* 544 */ ULong guest_FC3210;
+
+	//probably not TODO: more stuff that is likely unneeded
+	// /* 552 */ UInt  guest_EMWARN;
+	// ULong guest_TISTART;
+	// ULong guest_TILEN;
+	// ULong guest_NRADDR;
+	// ULong guest_SC_CLASS;
+	// ULong guest_GS_0x60;
+	// ULong guest_IP_AT_SYSCALL;
+	// ULong padding;
+	
 }

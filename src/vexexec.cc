@@ -26,6 +26,7 @@
 #include "vexxlate.h"
 #include "vexexec.h"
 #include "vexhelpers.h"
+#include "gueststateptimg.h"
 
 using namespace llvm;
 
@@ -62,7 +63,7 @@ VexExec::~VexExec()
 }
 
 VexExec::VexExec(GuestState* in_gs)
-: gs(in_gs), sb_executed_c(0), trace_c(0), exited(false)
+: gs(in_gs), sb_executed_c(0), cross_check(NULL), trace_c(0), exited(false)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
 	std::string	err_str;
@@ -79,6 +80,9 @@ VexExec::VexExec(GuestState* in_gs)
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
+	if(getenv("VEXLLVM_CROSS_CHECK")) {
+		cross_check = dynamic_cast<GuestStatePTImg*>(in_gs);
+	}
 }
 
 const VexSB* VexExec::doNextSB(void)
@@ -209,9 +213,36 @@ miss_func:
 	
 hit_func:
 	sb_executed_c++;
-	return func_ptr(gs->getCPUState()->getStateData());
+	VexGuestAMD64State* state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+	uint64_t r = func_ptr(state);
+	state->guest_RIP = r;
+	if(cross_check) {
+		if(r < vsb->getGuestAddr() || r >= vsb->getEndAddr()) {
+			compareWithSubservient(vsb);
+		}
+	}
+	return r;
 }
-
+void VexExec::compareWithSubservient(VexSB* vsb) {
+	const VexGuestAMD64State& state = *(VexGuestAMD64State*)gs->getCPUState()->getStateData();
+	bool matched = cross_check->continueWithBounds(
+		vsb->getGuestAddr(), vsb->getEndAddr(), state);
+	if(!matched) {
+		std::cerr << "found divergence running block @ " << (void*)vsb->getGuestAddr() << std::endl;
+		std::cerr << "original block end was @ " << (void*)vsb->getEndAddr() << std::endl;
+		std::cerr << "PTRACE state" << std::endl;
+		cross_check->printSubservient(std::cerr, &state);
+		std::cerr << "VEXLLVM state" << std::endl;
+		gs->print(std::cerr);
+		std::cerr << "VEX IR" << std::endl;
+		vsb->print(std::cerr);
+		std::cerr << "PTRACE stack" << std::endl;
+		cross_check->stackTraceSubservient(std::cerr);
+		//if you want to keep going anyway, stop checking
+		cross_check = NULL;
+		exit(1);
+	}
+}
 void VexExec::loadExitFuncAddrs(void)
 {
 	guestptr_t		exit_ptr;

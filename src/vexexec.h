@@ -29,6 +29,7 @@ typedef std::map<void* /* guest addr */, VexSB*> vexsb_map;
 typedef std::map<VexSB*, vexfunc_t> jit_map;
 typedef std::set<void*> exit_func_set;
 
+class GuestStatePTImg;
 class VexExec
 {
 public:
@@ -45,6 +46,7 @@ private:
 	VexSB* getSBFromGuestAddr(void* elfptr);
 	const VexSB* doNextSB(void);
 	uint64_t doVexSB(VexSB* vsb);
+	void compareWithSubservient(VexSB* vsb);
 	
 	void runAddrStack(void);
 	void loadExitFuncAddrs(void);
@@ -72,6 +74,7 @@ private:
 	/* defined by env var VEXLLVM_DUMP_STATES */
 	bool		dump_current_state;
 	bool		dump_llvm;
+	GuestStatePTImg* cross_check;
 
 	unsigned int	trace_c;
 	bool		exited;

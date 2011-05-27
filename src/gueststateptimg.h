@@ -5,6 +5,9 @@
 #include "collection.h"
 #include "gueststate.h"
 #include "guesttls.h"
+extern "C" {
+#include <valgrind/libvex_guest_amd64.h>
+}
 
 class PTImgMapEntry
 {
@@ -55,6 +58,10 @@ public:
 	uint64_t addr2Host(guestptr_t guestptr) const { return guestptr; }
 	guestptr_t name2guest(const char* symname) const { return 0; }
 	void* getEntryPoint(void) const { return entry_pt; }
+	
+	bool continueWithBounds(uint64_t start, uint64_t end, const VexGuestAMD64State& state);
+	void printSubservient(std::ostream& os, const VexGuestAMD64State* ref = 0);
+	void stackTraceSubservient(std::ostream& os);
 private:
 	void dumpSelfMap(void) const;
 	void			slurpBrains(pid_t pid);
@@ -63,6 +70,8 @@ private:
 
 	void			*entry_pt;
 	PtrList<PTImgMapEntry>	mappings;
+	pid_t			child_pid;
+	std::string		binary;
 };
 
 #endif
