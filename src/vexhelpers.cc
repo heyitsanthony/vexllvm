@@ -11,13 +11,13 @@
 //#include <llvm/System/Signals.h>
 
 #include <iostream>
+#include <stdio.h>t 
 #include "genllvm.h"
 
 #include "vexhelpers.h"
 
-// XXX Make this suck less.
-#define HELPER_BC_PATH	"bitcode/libvex_amd64_helpers.bc"
-#define VEXOP_BC_PATH	"bitcode/vexops.bc"
+#define HELPER_BC_FILE "libvex_amd64_helpers.bc"
+#define VEXOP_BC_FILE "vexops.bc"
 
 using namespace llvm;
 
@@ -26,8 +26,18 @@ VexHelpers* theVexHelpers;
 VexHelpers::VexHelpers()
 : helper_mod(0), vexop_mod(0)
 {
-	helper_mod = loadMod(HELPER_BC_PATH);
-	vexop_mod = loadMod(VEXOP_BC_PATH);
+	char		path_buf[512];
+	const char	*bc_dirpath;
+	
+	/* env not set => assume running from git root */
+	bc_dirpath = getenv("VEXLLVM_HELPER_PATH");
+	if (bc_dirpath == NULL) bc_dirpath = "bitcode";
+
+	snprintf(path_buf, 512, "%s/%s", bc_dirpath, HELPER_BC_FILE);
+	helper_mod = loadMod(path_buf);
+	snprintf(path_buf, 512, "%s/%s", bc_dirpath, VEXOP_BC_FILE);
+	vexop_mod = loadMod(path_buf);
+
 	assert (helper_mod && vexop_mod);
 }
 
