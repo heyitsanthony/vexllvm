@@ -133,6 +133,23 @@ const VexSB* VexExec::doNextSB(void)
 			return NULL;
 		}
 		gs->setSyscallResult(sc_ret);
+		if(cross_check) {
+			VexGuestAMD64State* state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+			state->guest_RCX = 0;
+			state->guest_R11 = 0;
+		}
+	}
+
+	//must do the check after the sycall is executed
+	if(cross_check) {
+		VexGuestAMD64State* state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+		bool matched = cross_check->continueWithBounds(
+			vsb->getGuestAddr(), vsb->getEndAddr(), *state);
+			
+		if(!matched && ((uint64_t)new_jmpaddr < vsb->getGuestAddr() || 
+				(uint64_t)new_jmpaddr >= vsb->getEndAddr())) {
+			dumpSubservient(vsb);
+		}
 	}
 
 	if (vsb->isReturn() && !addr_stack.empty())
@@ -216,14 +233,6 @@ hit_func:
 	VexGuestAMD64State* state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	uint64_t r = func_ptr(state);
 	state->guest_RIP = r;
-	if(cross_check) {
-		bool matched = cross_check->continueWithBounds(
-			vsb->getGuestAddr(), vsb->getEndAddr(), *state);
-			
-		if(!matched && (r < vsb->getGuestAddr() || r >= vsb->getEndAddr())) {
-			dumpSubservient(vsb);
-		}
-	}
 	return r;
 }
 void VexExec::dumpSubservient(VexSB* vsb) {

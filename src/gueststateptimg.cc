@@ -14,6 +14,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sstream>
+#include <sys/syscall.h>
 
 #include "elfimg.h"
 
@@ -43,7 +44,7 @@ GuestStatePTImg::GuestStatePTImg(
 		/* child */
 		int     err;
 		ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-		err = execve(argv[0], argv, envp);
+		err = execvpe(argv[0], argv, envp);
 		assert (err != -1 && "EXECVE FAILED. NO PTIMG!");
 	}
 
@@ -294,6 +295,9 @@ void GuestStatePTImg::slurpBrains(pid_t pid)
 //are probably many other malloc, getpid, gettimeofday type calls that will cause divergence
 //early enough to cause the cross checking technique to fail before the speed of the mechanism really
 //made an impact in how far it can check.
+//
+//we should probably figure out if an instruction is a syscall and mash the regs up directly
+//but for now, just take the hint from the translated code
 bool GuestStatePTImg::continueWithBounds(uint64_t start, uint64_t end, const VexGuestAMD64State& state)
 {
 	assert(child_pid);
@@ -317,6 +321,50 @@ bool GuestStatePTImg::continueWithBounds(uint64_t start, uint64_t end, const Vex
 			if(log_steps) 
 				std::cerr << "STEPPING: " << (void*)regs.rip << std::endl;
 		}
+		long res = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+		bool is_syscall = (res & 0xffff) == 0x050f;
+		long old_rdi, old_r10;
+		bool syscall_restore_rdi_r10 = false;
+		if(is_syscall) {
+			if(regs.rax == SYS_brk) {
+				regs.rax = -1;
+				regs.rip += 2;
+				regs.rcx = regs.r11 = 0;
+				err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+				if(err < 0) {
+					perror("GuestStatePTImg::continueWithBounds "
+						"ptrace set registers pre-brk");
+					exit(1);
+				}
+				continue;
+			}
+			if(regs.rax == SYS_getpid) {
+				regs.rax = getpid();
+				regs.rip += 2;
+				regs.rcx = regs.r11 = 0;
+				err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+				if(err < 0) {
+					perror("GuestStatePTImg::continueWithBounds "
+						"ptrace set registers pre-getpid");
+					exit(1);
+				}
+				continue;
+			}
+			if(regs.rax == SYS_mmap) {
+				syscall_restore_rdi_r10 = true;
+				old_rdi = regs.rdi;
+				old_r10 = regs.r10;
+				regs.rdi = state.guest_RAX;
+				regs.r10 |= MAP_FIXED;
+				err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+				if(err < 0) {
+					perror("GuestStatePTImg::continueWithBounds "
+						"ptrace set registers pre-mmap");
+					exit(1);
+				}
+			}
+		}
+
 		++steps;
 		err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
 		if(err < 0) {
@@ -327,6 +375,24 @@ bool GuestStatePTImg::continueWithBounds(uint64_t start, uint64_t end, const Vex
 		//a syscall was the source of the trap (two traps are produced
 		//per syscall, pre+post).
 		wait(NULL);
+		if(is_syscall) {
+			err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+			if(err < 0) {
+				perror("GuestStatePTImg::continueWithBounds ptrace post syscall refresh registers");
+				exit(1);
+			}
+			if(syscall_restore_rdi_r10) {
+				regs.r10 = old_r10;
+				regs.rdi = old_rdi;
+			}
+			//kernel clobbers these, we are assuming that the generated code, causes
+			regs.rcx = regs.r11 = 0;
+			err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+			if(err < 0) {
+				perror("GuestStatePTImg::continueWithBounds ptrace set registers after syscall");
+				exit(1);
+			}
+		}
 	}
 	
 	++blocks;
