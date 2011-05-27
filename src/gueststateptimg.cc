@@ -497,6 +497,8 @@ void GuestStatePTImg::stackTraceSubservient(std::ostream& os)
 			"thread apply all bt",
 			"--eval-command",
 			"disass",
+			"--eval-command",
+			"kill",
 			NULL
 		);
 		exit(1);
