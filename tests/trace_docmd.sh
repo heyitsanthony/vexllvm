@@ -63,7 +63,7 @@ function do_trace
 	echo "$retval" >"${FPREFIX}.trace.ret"
 	if [ -z "$retval" ] || [ ! -z "$assertval" ]; then
 		echo "FAILED (bin: $BINNAME)."
-		grep "^[ ]*0x" $OUTPATH/$BINNAME.trace.err >$FPREFIX.trace.addrs
+		grep "^[ ]*0x" $FPREFIX.trace.err >$FPREFIX.trace.addrs
 		objdump -d `echo $a | cut -f1 -d' '` >"$FPREFIX".objdump
 		for addr in `tail -n$TRACE_ADDR_LINES $FPREFIX.trace.addrs`; do
 			cat "$FPREFIX".objdump | grep `echo $addr  | cut -f2 -d'x'` | grep "^0"

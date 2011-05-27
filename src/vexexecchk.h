@@ -1,9 +1,8 @@
 #ifndef VEXEXECCHK_H
 #define VEXEXECCHK_H
 
+#include "ptimgchk.h"
 #include "vexexec.h"
-
-class PTImgChk;
 
 class VexExecChk : public VexExec
 {

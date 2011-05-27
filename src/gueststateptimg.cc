@@ -96,6 +96,8 @@ pid_t GuestStatePTImg::createSlurpedChild(
 	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, (void*)old_v);
 	assert (err != -1);
 
+	dumpSelfMap();
+
 	slurpBrains(pid);
 	return pid;
 }
@@ -222,7 +224,7 @@ PTImgMapEntry::PTImgMapEntry(pid_t pid, const char* mapline)
 
 	assert (rc >= 0);
 
-//	fprintf(stderr, "MAPPING: %s", mapline);
+	fprintf(stderr, "MAPPING: %s", mapline);
 	/* now map it in */
 	if (strlen(libname) > 0)
 		mapLib(pid);
@@ -272,7 +274,6 @@ void GuestStatePTImg::slurpMappings(pid_t pid)
 
 void GuestStatePTImg::slurpRegisters(pid_t pid)
 {
-#if 0
 	int				err;
 	struct user_regs_struct		regs;
 	struct user_fpregs_struct	fpregs;
@@ -284,13 +285,6 @@ void GuestStatePTImg::slurpRegisters(pid_t pid)
 
 	cpu_state->setRegs(regs, fpregs);
 	cpu_state->setTLS(new PTImgTLS((void*)regs.fs_base));
-#endif
-	struct user_regs_struct regs;
-
-	ptrace(PTRACE_GETREGS, pid, NULL, &regs); 
-	cpu_state->setTLS(new PTImgTLS((void*)regs.fs_base));
-	cpu_state->setStackPtr((void*)regs.rsp);
-	cpu_state->setFuncArg(regs.rdx, 2);
 }
 
 void GuestStatePTImg::slurpBrains(pid_t pid)

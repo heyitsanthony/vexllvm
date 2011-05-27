@@ -29,7 +29,6 @@ typedef std::map<void* /* guest addr */, VexSB*> vexsb_map;
 typedef std::map<VexSB*, vexfunc_t> jit_map;
 typedef std::set<void*> exit_func_set;
 
-class GuestStatePTImg;
 class VexExec
 {
 public:
