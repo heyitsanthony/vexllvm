@@ -14,6 +14,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sstream>
+#include <sys/syscall.h>
 
 #include "elfimg.h"
 

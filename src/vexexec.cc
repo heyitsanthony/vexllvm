@@ -126,16 +126,11 @@ const VexSB* VexExec::doNextSB(void)
 		addr_stack.push((elfptr_t)vsb->getEndAddr());
 
 	if (vsb->isSyscall()) {
-		SyscallParams	sp(gs->getSyscallParams());
-		uint64_t	sc_ret;
-		sc_ret = sc->apply(sp);
-		if (sc->isExit()) {
-			exited = true;
-			exit_code = sc_ret;
-			return NULL;
-		}
-		gs->setSyscallResult(sc_ret);
+		doSysCall();
+		if (exited) return NULL;
 	}
+
+	handlePostSyscall(vsb, (uint64_t)new_jmpaddr);
 
 	if (vsb->isReturn() && !addr_stack.empty())
 		addr_stack.pop();
@@ -145,6 +140,18 @@ const VexSB* VexExec::doNextSB(void)
 		new_jmpaddr) addr_stack.push(new_jmpaddr);
 
 	return vsb;
+}
+
+void VexExec::doSysCall()
+{
+	SyscallParams	sp(gs->getSyscallParams());
+	uint64_t	sc_ret;
+	sc_ret = sc->apply(sp);
+	if (sc->isExit()) {
+		exited = true;
+		exit_code = sc_ret;
+	}
+	gs->setSyscallResult(sc_ret);
 }
 
 VexSB* VexExec::getSBFromGuestAddr(void* elfptr)

@@ -45,7 +45,8 @@ public:
 protected:
 	VexExec(GuestState* gs);
 	virtual uint64_t doVexSB(VexSB* vsb);
-
+	virtual void doSysCall(void);
+	virtual void handlePostSyscall(VexSB* vsb, uint64_t new_addr) {}
 	GuestState		*gs;
 private:
 	static void setupStatics(GuestState* in_gs);

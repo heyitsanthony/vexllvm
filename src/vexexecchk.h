@@ -18,9 +18,12 @@ protected:
 	}
 
 	virtual uint64_t doVexSB(VexSB* vsb);
-
+	virtual void doSysCall(void);
+	virtual void handlePostSyscall(VexSB* vsb, uint64_t);
 private:
 	void compareWithSubservient(VexSB* vsb);
+	void dumpSubservient(VexSB* vsb);
+
 
 	PTImgChk* cross_check;
 };

@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/syscall.h>
+#include <sys/mman.h>
 
 #include <sstream>
 
@@ -82,6 +84,7 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 : 	GuestStatePTImg(argc, argv, envp),
 	binary(argv[0]), steps(0), blocks(0)
 {
+	log_steps = (getenv("VEXLLVM_LOG_STEPS")) ? true : false;
 }
 
 
@@ -98,7 +101,14 @@ bool PTImgChk::continueWithBounds(
 	user_regs_struct	regs;
 	user_fpregs_struct	fpregs;
 
-	while (doStep(start, end, regs));
+	if (log_steps) {
+		std::cerr << "RANGE: " 
+			<< (void*)start << "-" << (void*)end
+			<< std::endl;
+	}
+
+
+	while (doStep(start, end, regs, state));
 	
 	blocks++;
 	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
@@ -190,8 +200,13 @@ bool PTImgChk::isGuestFailed(
 
 bool PTImgChk::doStep(
 	uint64_t start, uint64_t end,
-	user_regs_struct& regs)
+	user_regs_struct& regs,
+	const VexGuestAMD64State& state)
 {
+	long	old_rdi, old_r10;
+	long	cur_opcode;
+	bool	is_syscall;
+	bool	syscall_restore_rdi_r10;
 	int	err;
 
 	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
@@ -201,10 +216,28 @@ bool PTImgChk::doStep(
 	}
 
 	if (regs.rip < start || regs.rip >= end) {
-		// std::cerr << "STOPPING: " << (void*)regs.rip << std::endl;
+		if(log_steps) 
+			std::cerr << "STOPPING: " 
+				<< (void*)regs.rip << std::endl;
 		return false;
 	} else {
-		// std::cerr << "STEPPING: " << (void*)regs.rip << std::endl;
+		if(log_steps) 
+			std::cerr << "STEPPING: "
+				<< (void*)regs.rip << std::endl;
+	}
+
+ 	cur_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+	is_syscall = (cur_opcode & 0xffff) == 0x050f;
+	syscall_restore_rdi_r10 = false; 
+	if (is_syscall) {
+		old_rdi = regs.rdi;
+		old_r10 = regs.r10;
+
+		if (handleSysCall(state, regs))
+			return true;
+		
+		if (regs.rax == SYS_mmap)
+			syscall_restore_rdi_r10 = true;
 	}
 
 	steps++;
@@ -218,8 +251,79 @@ bool PTImgChk::doStep(
 	//a syscall was the source of the trap (two traps are produced
 	//per syscall, pre+post).
 	wait(NULL);
+
+	if (is_syscall) {
+		err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+		if (err < 0) {
+			perror("PTImgChk::continueWithBounds ptrace post syscall refresh registers");
+			exit(1);
+		}
+
+		if (syscall_restore_rdi_r10) {
+			regs.r10 = old_r10;
+			regs.rdi = old_rdi;
+		}
+
+		//kernel clobbers these, assuming that the generated code, causes
+		regs.rcx = regs.r11 = 0;
+		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+		if(err < 0) {
+			perror("PTImgChk::continueWithBounds ptrace set registers after syscall");
+			exit(1);
+		}
+	}
+
 	return true;
 }
+
+
+bool PTImgChk::handleSysCall(
+	const VexGuestAMD64State& state,
+	user_regs_struct& regs)
+{
+	int	err;
+
+	switch (regs.rax) {
+	case SYS_brk:
+		regs.rax = -1;
+		regs.rip += 2;
+		regs.rcx = regs.r11 = 0;
+		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+		if(err < 0) {
+			perror("PTImgChk::continueWithBounds "
+				"ptrace set registers pre-brk");
+			exit(1);
+		}
+		return true;
+
+	case SYS_getpid:
+		regs.rax = getpid();
+		regs.rip += 2;
+		regs.rcx = regs.r11 = 0;
+		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+		if(err < 0) {
+			perror("PTImgChk::continueWithBounds "
+				"ptrace set registers pre-getpid");
+			exit(1);
+		}
+		return true;
+
+	case SYS_mmap:
+		regs.rdi = state.guest_RAX;
+		regs.r10 |= MAP_FIXED;
+		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+		if(err < 0) {
+			perror("PTImgChk::continueWithBounds "
+				"ptrace set registers pre-mmap");
+			exit(1);
+		}
+
+		return false;
+	}
+
+	return false;
+}
+
 
 void PTImgChk::stackTraceSubservient(std::ostream& os) 
 {
@@ -252,6 +356,8 @@ void PTImgChk::stackTraceSubservient(std::ostream& os)
 			"thread apply all bt",
 			"--eval-command",
 			"disass",
+			"--eval-command",
+			"kill",
 			NULL
 		);
 		exit(1);
@@ -355,13 +461,13 @@ void PTImgChk::printSubservient(
 
 	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
 	if(err < 0) {
-		perror("GuestStatePTImg::printState ptrace get registers");
+		perror("PTImgChk::printState ptrace get registers");
 		exit(1);
 	}
 
 	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
 	if(err < 0) {
-		perror("GuestStatePTImg::printState ptrace get fp registers");
+		perror("PTImgChk::printState ptrace get fp registers");
 		exit(1);
 	}
 	

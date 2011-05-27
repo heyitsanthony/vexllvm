@@ -26,6 +26,11 @@ protected:
 private:
 	bool doStep(
 		uint64_t start, uint64_t end,
+		user_regs_struct& regs,
+		const VexGuestAMD64State& state);
+
+	bool handleSysCall(
+		const VexGuestAMD64State& state,
 		user_regs_struct& regs);
 
 	bool isGuestFailed(
@@ -52,6 +57,8 @@ private:
 	
 	uint64_t	steps;
 	uint64_t	blocks;
+
+	bool		log_steps;
 };
 
 #endif

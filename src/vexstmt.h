@@ -167,7 +167,7 @@ private:
 	PtrList<VexExpr>	args;
 	bool			needs_state_ptr;
 	llvm::Value		*state_base_ptr;
-	unsigned int		tmp_reg;	/* where to store */
+	int			tmp_reg;	/* where to store */
 };
 
 class VexStmtMBE : public VexStmt
