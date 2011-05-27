@@ -215,7 +215,6 @@ hit_func:
 	sb_executed_c++;
 	VexGuestAMD64State* state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	uint64_t r = func_ptr(state);
-	std::cerr << "yo: " << (void*)vsb->getGuestAddr() << "-"  << (void*)vsb->getEndAddr() << " => "<< (void*)r << std::endl;
 	state->guest_RIP = r;
 	if(cross_check) {
 		bool matched = cross_check->continueWithBounds(
