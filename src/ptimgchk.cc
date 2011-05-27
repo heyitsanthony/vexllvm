@@ -25,8 +25,8 @@ struct user_regs_desc
 	offsetof(VexGuestAMD64State, guest_##y) }
 
 
-#define REG_COUNT	19
-#define GPR_COUNT	17
+#define REG_COUNT	18
+#define GPR_COUNT	16
 const struct user_regs_desc user_regs_desc_tab[REG_COUNT] = 
 {
 	USERREG_ENTRY(rip, RIP),
@@ -36,7 +36,6 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 	USERREG_ENTRY(rdx, RDX),
 	USERREG_ENTRY(rsp, RSP),
 	USERREG_ENTRY(rbp, RBP),
-	USERREG_ENTRY(rax, RAX),
 	USERREG_ENTRY(rdi, RDI),
 	USERREG_ENTRY(rsi, RSI),
 	USERREG_ENTRY(r8, R8),
@@ -212,13 +211,17 @@ bool PTImgChk::doStep(
 	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
 	if (err < 0) {
 		perror("PTImgChk::doStep ptrace get registers");
+		assert (0 == 1 && "KABOOM");
 		exit(1);
 	}
 
 	if (regs.rip < start || regs.rip >= end) {
 		if(log_steps) 
 			std::cerr << "STOPPING: " 
-				<< (void*)regs.rip << std::endl;
+				<< (void*)regs.rip << " not in ["
+				<< (void*)start << ", "
+				<< (void*)end << "]"
+				<< std::endl;
 		return false;
 	} else {
 		if(log_steps) 
@@ -233,8 +236,9 @@ bool PTImgChk::doStep(
 		old_rdi = regs.rdi;
 		old_r10 = regs.r10;
 
-		if (handleSysCall(state, regs))
+		if (handleSysCall(state, regs)) {
 			return true;
+		}
 		
 		if (regs.rax == SYS_mmap)
 			syscall_restore_rdi_r10 = true;
@@ -264,6 +268,7 @@ bool PTImgChk::doStep(
 			regs.rdi = old_rdi;
 		}
 
+
 		//kernel clobbers these, assuming that the generated code, causes
 		regs.rcx = regs.r11 = 0;
 		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
@@ -287,7 +292,8 @@ bool PTImgChk::handleSysCall(
 	case SYS_brk:
 		regs.rax = -1;
 		regs.rip += 2;
-		regs.rcx = regs.r11 = 0;
+		regs.rcx = 0;
+		regs.r11 = 0;
 		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
 		if(err < 0) {
 			perror("PTImgChk::continueWithBounds "
@@ -324,50 +330,9 @@ bool PTImgChk::handleSysCall(
 	return false;
 }
 
-
 void PTImgChk::stackTraceSubservient(std::ostream& os) 
 {
-	char			buffer[1024];
-	int			bytes;
-	int			pipefd[2];
-	int			err;
-	std::ostringstream	pid_string;
-
-	pid_string << child_pid;
-	
-	err = pipe(pipefd);
-	assert (err != -1 && "Bad pipe for subservient trace");
-	
-	kill(child_pid, SIGSTOP);
-	ptrace(PTRACE_DETACH, child_pid, NULL, NULL);
-	
-	if (!fork()) {
-		close(pipefd[0]);    // close reading end in the child
-		dup2(pipefd[1], 1);  // send stdout to the pipe
-		dup2(pipefd[1], 2);  // send stderr to the pipe
-		close(pipefd[1]);    // this descriptor is no longer needed
-
-		execl("/usr/bin/gdb", 
-			"/usr/bin/gdb",
-			"--batch",
-			binary,
-			pid_string.str().c_str(),
-			"--eval-command",
-			"thread apply all bt",
-			"--eval-command",
-			"disass",
-			"--eval-command",
-			"kill",
-			NULL
-		);
-		exit(1);
-	}
-
-	  // close the write end of the pipe in the parent
-	close(pipefd[1]);
-
-	while ((bytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
-		os.write(buffer, bytes);
+	stackTrace(os, binary, child_pid);
 }
 
 

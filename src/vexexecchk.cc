@@ -1,5 +1,6 @@
 #include <iostream>
 #include <stdlib.h>
+#include <stdio.h>
 
 
 #include "vexxlate.h"
@@ -39,6 +40,7 @@ VexExec* VexExecChk::create(PTImgChk* gs)
 {
 	VexExecChk	*ve_chk;
 
+	setupStatics(gs);
 	ve_chk = new VexExecChk(gs);
 	if (ve_chk->cross_check == NULL) {
 		delete ve_chk;
@@ -58,7 +60,7 @@ void VexExecChk::handlePostSyscall(VexSB* vsb, uint64_t new_jmpaddr)
 	matched = cross_check->continueWithBounds(
 		vsb->getGuestAddr(), vsb->getEndAddr(), *state);
 	
-	if (!matched) return;
+	if (matched) return;
 
 	if (	((uint64_t)new_jmpaddr < vsb->getGuestAddr() || 
 		(uint64_t)new_jmpaddr >= vsb->getEndAddr()))

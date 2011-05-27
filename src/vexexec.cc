@@ -146,6 +146,7 @@ void VexExec::doSysCall()
 {
 	SyscallParams	sp(gs->getSyscallParams());
 	uint64_t	sc_ret;
+
 	sc_ret = sc->apply(sp);
 	if (sc->isExit()) {
 		exited = true;

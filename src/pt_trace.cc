@@ -89,7 +89,7 @@ int main(int argc, char* argv[], char* envp[])
 	signal(SIGSEGV, sigsegv_handler);
 	signal(SIGBUS, sigbus_handler);
 
-	gs = new GuestStatePTImg(argc - 1, argv + 1, envp);
+	gs = GuestStatePTImg::create<GuestStatePTImg>(argc - 1, argv + 1, envp);
 	vexexec = VexExec::create(gs);
 	assert (vexexec && "Could not create vexexec");
 	

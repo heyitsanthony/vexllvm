@@ -18,12 +18,13 @@
 
 #include "elfimg.h"
 
+#include "ptimgchk.h"
 #include "gueststateptimg.h"
 #include "guestcpustate.h"
 
 using namespace llvm;
 
-static char trap_opcode[] = { 0xcd, 0x80, 0xcc, 0x00 };
+static uint64_t trap_opcode = 0xcccccccccccccccc;
 static bool dump_maps;
 
 
@@ -31,18 +32,14 @@ GuestStatePTImg::GuestStatePTImg(
 	int argc, char *const argv[], char *const envp[])
 {
 	ElfImg		*img;
-	pid_t		slurped_pid;
 	
 	dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
 
 	img = ElfImg::createUnlinked(argv[0]);
 	assert (img != NULL && "DOES BINARY EXIST?");
 
-	entry_pt = img->getEntryPoint();	
+	entry_pt = img->getEntryPoint();
 	delete img;
-
-	slurped_pid = createSlurpedChild(argc, argv, envp);
-	handleChild(slurped_pid);
 }
 
 void GuestStatePTImg::handleChild(pid_t pid)
@@ -54,9 +51,10 @@ void GuestStatePTImg::handleChild(pid_t pid)
 pid_t GuestStatePTImg::createSlurpedChild(
 	int argc, char *const argv[], char *const envp[])
 {
-	int		err;
-	pid_t		pid;
-	uint64_t	old_v;
+	struct user_regs_struct	regs;
+	int			err, status;
+	pid_t			pid;
+	uint64_t		old_v;
 
 	pid = fork();
 	if (pid == 0) {
@@ -71,7 +69,8 @@ pid_t GuestStatePTImg::createSlurpedChild(
 	if (pid < 0) return pid;
 
 	/* wait for child to call execve and send us a trap signal */
-	wait(NULL);
+	wait(&status);
+	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
 
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
@@ -82,26 +81,26 @@ pid_t GuestStatePTImg::createSlurpedChild(
 	/* go until child hits entry point */
 	err = ptrace(PTRACE_CONT, pid, NULL, NULL);
 	assert (err != -1);
-	wait(NULL);
-	
-	//stop the process and reset the program counter before repatching
-#if 0
-	err = kill(pid, SIGSTOP);
-	assert (err != -1);
-	user_regs_struct regs;
+	wait(&status);
+
+	//stop the process and set program counter before trap; repatch
 	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
 	assert (err != -1);
+	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+
+	regs.rip--; /* backtrack before int3 opcode */
 	err = ptrace(PTRACE_SETREGS, pid, NULL, &regs);
-#endif
 
 	/* hit the entry point, everything should be linked now-- load it
 	 * into our context! */
 	/* cleanup bp */
-	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, (void*)old_v);
+	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, old_v);
 	assert (err != -1);
 
 	if (dump_maps) dumpSelfMap();
 
+	/* slurp brains after trap code is removed so that we don't 
+	 * copy the trap code into the parent process */
 	slurpBrains(pid);
 	return pid;
 }
@@ -297,3 +296,53 @@ void GuestStatePTImg::slurpBrains(pid_t pid)
 	slurpMappings(pid);
 	slurpRegisters(pid);
 }
+
+void GuestStatePTImg::stackTrace(
+	std::ostream& os, const char* binname, pid_t pid)
+{
+	char			buffer[1024];
+	int			bytes;
+	int			pipefd[2];
+	int			err;
+	std::ostringstream	pid_string;
+
+	pid_string << pid;
+	
+	err = pipe(pipefd);
+	assert (err != -1 && "Bad pipe for subservient trace");
+	
+	kill(pid, SIGSTOP);
+	ptrace(PTRACE_DETACH, pid, NULL, NULL);
+	
+	if (!fork()) {
+		close(pipefd[0]);    // close reading end in the child
+		dup2(pipefd[1], 1);  // send stdout to the pipe
+		dup2(pipefd[1], 2);  // send stderr to the pipe
+		close(pipefd[1]);    // this descriptor is no longer needed
+
+		execl("/usr/bin/gdb", 
+			"/usr/bin/gdb",
+			"--batch",
+			binname,
+			pid_string.str().c_str(),
+			"--eval-command",
+			"thread apply all bt",
+			"--eval-command",
+			"disass",
+			"--eval-command",
+			"info registers all",
+			"--eval-command",
+			"kill",
+			NULL
+		);
+		exit(1);
+	}
+
+	  // close the write end of the pipe in the parent
+	close(pipefd[1]);
+
+	while ((bytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
+		os.write(buffer, bytes);
+}
+
+

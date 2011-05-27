@@ -52,15 +52,39 @@ protected:
 class GuestStatePTImg : public GuestState
 {
 public:
-	GuestStatePTImg(int argc, char* const argv[], char* const envp[]);
 	virtual ~GuestStatePTImg(void) {}
 	llvm::Value* addrVal2Host(llvm::Value* addr_v) const { return addr_v; }
 	uint64_t addr2Host(guestptr_t guestptr) const { return guestptr; }
 	guestptr_t name2guest(const char* symname) const { return 0; }
 	void* getEntryPoint(void) const { return entry_pt; }
 	
+
+	template <class T>
+	static T* create(
+		int argc, char* const argv[], char* const envp[])
+	{
+		GuestStatePTImg		*pt_img;
+		T			*pt_t;
+		pid_t			slurped_pid;
+
+		pt_t = new T(argc, argv, envp);
+		pt_img = pt_t;
+		slurped_pid = pt_img->createSlurpedChild(argc, argv, envp);
+		if (slurped_pid <= 0) {
+			delete pt_img;
+			return NULL;
+		}
+
+		pt_img->handleChild(slurped_pid);
+		return pt_t;
+	}
+
+
 	void printTraceStats(std::ostream& os);
+	static void stackTrace(
+		std::ostream& os, const char* binname, pid_t pid);
 protected:
+	GuestStatePTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
 
 private:

@@ -23,7 +23,6 @@ private:
 	void compareWithSubservient(VexSB* vsb);
 	void dumpSubservient(VexSB* vsb);
 
-
 	PTImgChk* cross_check;
 };
 

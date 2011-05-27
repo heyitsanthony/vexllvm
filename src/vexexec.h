@@ -46,9 +46,10 @@ protected:
 	virtual uint64_t doVexSB(VexSB* vsb);
 	virtual void doSysCall(void);
 	virtual void handlePostSyscall(VexSB* vsb, uint64_t new_addr) {}
+	static void setupStatics(GuestState* in_gs);
+
 	GuestState		*gs;
 private:
-	static void setupStatics(GuestState* in_gs);
 	vexfunc_t getSBFuncPtr(VexSB* vsb);
 	VexSB* getSBFromGuestAddr(void* elfptr);
 	const VexSB* doNextSB(void);

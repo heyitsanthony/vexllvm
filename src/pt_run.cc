@@ -39,7 +39,7 @@ int main(int argc, char* argv[], char* envp[])
 		return -1;
 	}
 
-	gs = new GuestStatePTImg(argc - 1, argv + 1, envp);
+	gs = GuestStatePTImg::create<GuestStatePTImg>(argc - 1, argv + 1, envp);
 	vexexec = VexExec::create(gs);
 	assert (vexexec && "Could not create vexexec");
 	
