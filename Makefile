@@ -1,5 +1,5 @@
 BIN_BASE="0xa000000"
-CFLAGS=-g -DBIN_BASE="$(BIN_BASE)"
+CFLAGS=-g -O3 -DBIN_BASE="$(BIN_BASE)"
 # XXX, MAKES BINARY SIZE EXPLODE
 LDFLAGS="-Wl,-Ttext-segment=$(BIN_BASE)"
 #LDFLAGS=
@@ -17,12 +17,14 @@ OBJDEPS=	vexxlate.o		\
 		syscalls.o		\
 		vexhelpers.o		\
 		vexexec.o		\
+		vexexecchk.o		\
 		symbols.o		\
 		elfimg.o		\
 		dllib.o			\
 		gueststateelf.o		\
 		gueststateptimg.o	\
 		guesttls.o		\
+		ptimgchk.o		\
 		elfsegment.o
 
 ELFTRACEDEPS=	elf_trace.o
@@ -81,6 +83,8 @@ test-traces: all $(TRACEDEPS_PATH)
 tests-oprof: all
 	TRACES_OPROFILE=1 tests/traces.sh
 
+bin/pt_xchk: $(OBJDIRDEPS) obj/pt_xchk.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 bin/elf_trace: $(OBJDIRDEPS) $(ELFTRACEDIRDEPS)
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)

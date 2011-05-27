@@ -59,22 +59,21 @@ public:
 	guestptr_t name2guest(const char* symname) const { return 0; }
 	void* getEntryPoint(void) const { return entry_pt; }
 	
-	bool continueWithBounds(uint64_t start, uint64_t end, const VexGuestAMD64State& state);
-	void printSubservient(std::ostream& os, const VexGuestAMD64State* ref = 0);
-	void stackTraceSubservient(std::ostream& os);
 	void printTraceStats(std::ostream& os);
+protected:
+	virtual void handleChild(pid_t pid);
+
 private:
 	void dumpSelfMap(void) const;
-	void			slurpBrains(pid_t pid);
-	void			slurpMappings(pid_t pid);
-	void			slurpRegisters(pid_t pid);
+
+	pid_t createSlurpedChild(
+		int argc, char *const argv[], char *const envp[]);
+	void slurpBrains(pid_t pid);
+	void slurpMappings(pid_t pid);
+	void slurpRegisters(pid_t pid);
 
 	void			*entry_pt;
 	PtrList<PTImgMapEntry>	mappings;
-	pid_t			child_pid;
-	std::string		binary;
-	uint64_t		steps;
-	uint64_t		blocks;
 };
 
 #endif

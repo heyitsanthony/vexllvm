@@ -32,13 +32,17 @@ using namespace llvm;
 
 #define TRACE_MAX	500
 
+void VexExec::setupStatics(GuestState* in_gs)
+{
+	if (!theGenLLVM) theGenLLVM = new GenLLVM(in_gs);
+	if (!theVexHelpers) theVexHelpers = new VexHelpers();
+}
+
 VexExec* VexExec::create(GuestState* in_gs)
 {
 	VexExec	*ve;
 
-	if (!theGenLLVM) theGenLLVM = new GenLLVM(in_gs);
-	if (!theVexHelpers) theVexHelpers = new VexHelpers();
-
+	setupStatics(in_gs);
 	ve = new VexExec(in_gs);
 	if (ve->getGuestState() == NULL) {
 		delete ve;
@@ -63,7 +67,7 @@ VexExec::~VexExec()
 }
 
 VexExec::VexExec(GuestState* in_gs)
-: gs(in_gs), sb_executed_c(0), cross_check(NULL), trace_c(0), exited(false)
+: gs(in_gs), sb_executed_c(0), trace_c(0), exited(false)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
 	std::string	err_str;
@@ -80,9 +84,6 @@ VexExec::VexExec(GuestState* in_gs)
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
-	if(getenv("VEXLLVM_CROSS_CHECK")) {
-		cross_check = dynamic_cast<GuestStatePTImg*>(in_gs);
-	}
 }
 
 const VexSB* VexExec::doNextSB(void)
@@ -112,7 +113,8 @@ const VexSB* VexExec::doNextSB(void)
 	if (exit_type != GE_IGNORE) {
 		gs->getCPUState()->setExitType(GE_IGNORE);
 		if (exit_type == GE_EMWARN) {
-			std::cerr << "[VEXLLVM] VEX Emulation warning!?" << std::endl;
+			std::cerr << "[VEXLLVM] VEX Emulation warning!?" 
+				<< std::endl;
 			addr_stack.push(new_jmpaddr);
 			return vsb;
 		} else
@@ -179,7 +181,7 @@ update_dc:
 	return vsb;
 }
 
-uint64_t VexExec::doVexSB(VexSB* vsb)
+vexfunc_t VexExec::getSBFuncPtr(VexSB* vsb)
 {
 	vexfunc_t 			func_ptr;
 	jit_map::const_iterator		it;
@@ -212,38 +214,26 @@ miss_func:
 	jit_dc.put((void*)vsb, (vexfunc_t*)func_ptr);
 	
 hit_func:
+	return func_ptr;
+}
+
+uint64_t VexExec::doVexSB(VexSB* vsb)
+{
+	VexGuestAMD64State* state;
+	vexfunc_t	func_ptr;
+	uint64_t	new_ip;
+
+	func_ptr = getSBFuncPtr(vsb);
+
 	sb_executed_c++;
-	VexGuestAMD64State* state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	uint64_t r = func_ptr(state);
-	state->guest_RIP = r;
-	if(cross_check) {
-		if(r < vsb->getGuestAddr() || r >= vsb->getEndAddr()) {
-			compareWithSubservient(vsb);
-		}
-	}
-	return r;
+
+	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+	new_ip = func_ptr(state);
+	state->guest_RIP = new_ip;
+
+	return new_ip;
 }
-void VexExec::compareWithSubservient(VexSB* vsb) {
-	const VexGuestAMD64State& state = *(VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	bool matched = cross_check->continueWithBounds(
-		vsb->getGuestAddr(), vsb->getEndAddr(), state);
-	if(!matched) {
-		std::cerr << "found divergence running block @ " << (void*)vsb->getGuestAddr() << std::endl;
-		std::cerr << "original block end was @ " << (void*)vsb->getEndAddr() << std::endl;
-		cross_check->printTraceStats(std::cerr);
-		std::cerr << "PTRACE state" << std::endl;
-		cross_check->printSubservient(std::cerr, &state);
-		std::cerr << "VEXLLVM state" << std::endl;
-		gs->print(std::cerr);
-		std::cerr << "VEX IR" << std::endl;
-		vsb->print(std::cerr);
-		std::cerr << "PTRACE stack" << std::endl;
-		cross_check->stackTraceSubservient(std::cerr);
-		//if you want to keep going anyway, stop checking
-		cross_check = NULL;
-		exit(1);
-	}
-}
+
 void VexExec::loadExitFuncAddrs(void)
 {
 	guestptr_t		exit_ptr;

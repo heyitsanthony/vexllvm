@@ -41,12 +41,17 @@ public:
 	void run(void);
 	void dumpLogs(std::ostream& os) const;
 	unsigned int getSBExecutedCount(void) const { return sb_executed_c; }
-private:
+
+protected:
 	VexExec(GuestState* gs);
+	virtual uint64_t doVexSB(VexSB* vsb);
+
+	GuestState		*gs;
+private:
+	static void setupStatics(GuestState* in_gs);
+	vexfunc_t getSBFuncPtr(VexSB* vsb);
 	VexSB* getSBFromGuestAddr(void* elfptr);
 	const VexSB* doNextSB(void);
-	uint64_t doVexSB(VexSB* vsb);
-	void compareWithSubservient(VexSB* vsb);
 	
 	void runAddrStack(void);
 	void loadExitFuncAddrs(void);
@@ -54,7 +59,6 @@ private:
 
 	VexXlate		*vexlate;
 	llvm::ExecutionEngine	*exeEngine;
-	GuestState		*gs;
 	Syscalls		*sc;
 
 	vexexec_addrs	addr_stack;
@@ -74,7 +78,6 @@ private:
 	/* defined by env var VEXLLVM_DUMP_STATES */
 	bool		dump_current_state;
 	bool		dump_llvm;
-	GuestStatePTImg* cross_check;
 
 	unsigned int	trace_c;
 	bool		exited;

@@ -113,7 +113,7 @@ public:
 	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
-	unsigned int	tmp_reg;
+	int		tmp_reg;
 	VexExpr		*expr;
 };
 
