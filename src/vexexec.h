@@ -46,7 +46,7 @@ private:
 	VexSB* getSBFromGuestAddr(void* elfptr);
 	const VexSB* doNextSB(void);
 	uint64_t doVexSB(VexSB* vsb);
-	void compareWithSubservient(VexSB* vsb);
+	void dumpSubservient(VexSB* vsb);
 	
 	void runAddrStack(void);
 	void loadExitFuncAddrs(void);

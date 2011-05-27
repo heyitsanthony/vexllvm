@@ -215,34 +215,34 @@ hit_func:
 	sb_executed_c++;
 	VexGuestAMD64State* state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	uint64_t r = func_ptr(state);
+	std::cerr << "yo: " << (void*)vsb->getGuestAddr() << "-"  << (void*)vsb->getEndAddr() << " => "<< (void*)r << std::endl;
 	state->guest_RIP = r;
 	if(cross_check) {
-		if(r < vsb->getGuestAddr() || r >= vsb->getEndAddr()) {
-			compareWithSubservient(vsb);
+		bool matched = cross_check->continueWithBounds(
+			vsb->getGuestAddr(), vsb->getEndAddr(), *state);
+			
+		if(!matched && (r < vsb->getGuestAddr() || r >= vsb->getEndAddr())) {
+			dumpSubservient(vsb);
 		}
 	}
 	return r;
 }
-void VexExec::compareWithSubservient(VexSB* vsb) {
+void VexExec::dumpSubservient(VexSB* vsb) {
 	const VexGuestAMD64State& state = *(VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	bool matched = cross_check->continueWithBounds(
-		vsb->getGuestAddr(), vsb->getEndAddr(), state);
-	if(!matched) {
-		std::cerr << "found divergence running block @ " << (void*)vsb->getGuestAddr() << std::endl;
-		std::cerr << "original block end was @ " << (void*)vsb->getEndAddr() << std::endl;
-		cross_check->printTraceStats(std::cerr);
-		std::cerr << "PTRACE state" << std::endl;
-		cross_check->printSubservient(std::cerr, &state);
-		std::cerr << "VEXLLVM state" << std::endl;
-		gs->print(std::cerr);
-		std::cerr << "VEX IR" << std::endl;
-		vsb->print(std::cerr);
-		std::cerr << "PTRACE stack" << std::endl;
-		cross_check->stackTraceSubservient(std::cerr);
-		//if you want to keep going anyway, stop checking
-		cross_check = NULL;
-		exit(1);
-	}
+	std::cerr << "found divergence running block @ " << (void*)vsb->getGuestAddr() << std::endl;
+	std::cerr << "original block end was @ " << (void*)vsb->getEndAddr() << std::endl;
+	cross_check->printTraceStats(std::cerr);
+	std::cerr << "PTRACE state" << std::endl;
+	cross_check->printSubservient(std::cerr, &state);
+	std::cerr << "VEXLLVM state" << std::endl;
+	gs->print(std::cerr);
+	std::cerr << "VEX IR" << std::endl;
+	vsb->print(std::cerr);
+	std::cerr << "PTRACE stack" << std::endl;
+	cross_check->stackTraceSubservient(std::cerr);
+	//if you want to keep going anyway, stop checking
+	cross_check = NULL;
+	exit(1);
 }
 void VexExec::loadExitFuncAddrs(void)
 {

@@ -75,6 +75,7 @@ private:
 	std::string		binary;
 	uint64_t		steps;
 	uint64_t		blocks;
+	bool 			log_steps;
 };
 
 #endif

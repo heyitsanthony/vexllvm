@@ -26,7 +26,7 @@ static char trap_opcode[] = { 0xcd, 0x80, 0xcc, 0x00 };
 
 GuestStatePTImg::GuestStatePTImg(
 	int argc, char *const argv[], char *const envp[])
-	: child_pid(0), binary(argv[0]), steps(0), blocks(0)
+	: child_pid(0), binary(argv[0]), steps(0), blocks(0), log_steps(false)
 {
 	pid_t           pid;
 	int		err;
@@ -77,7 +77,8 @@ GuestStatePTImg::GuestStatePTImg(
 	assert (err != -1);
 
 	slurpBrains(pid);
-
+	
+	log_steps = getenv("VEXLLVM_LOG_STEPS") ? true : false;
 	if(getenv("VEXLLVM_CROSS_CHECK")) {
 		child_pid = pid;
 	} else {
@@ -297,6 +298,8 @@ bool GuestStatePTImg::continueWithBounds(uint64_t start, uint64_t end, const Vex
 {
 	assert(child_pid);
 
+	if(log_steps) 
+		std::cerr << "RANGE: " << (void*)start << "-" << (void*)end << std::endl;
 	int err;
 	user_regs_struct regs;
 	for(;;) {
@@ -306,11 +309,13 @@ bool GuestStatePTImg::continueWithBounds(uint64_t start, uint64_t end, const Vex
 			exit(1);
 		}
 		if(regs.rip < start || regs.rip >= end) {
-			// std::cerr << "STOPPING: " << (void*)regs.rip << std::endl;
+			if(log_steps) 
+				std::cerr << "STOPPING: " << (void*)regs.rip << std::endl;
 			break;
 		}
 		else {
-			// std::cerr << "STEPPING: " << (void*)regs.rip << std::endl;
+			if(log_steps) 
+				std::cerr << "STEPPING: " << (void*)regs.rip << std::endl;
 		}
 		++steps;
 		err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
