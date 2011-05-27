@@ -30,8 +30,9 @@ uint64_t VexExecChk::doVexSB(VexSB* vsb)
 	uint64_t	new_ip;
 
 	new_ip = VexExec::doVexSB(vsb);
-	if(new_ip < vsb->getGuestAddr() || new_ip >= vsb->getEndAddr())
+	if(new_ip < vsb->getGuestAddr() || new_ip >= vsb->getEndAddr()) {
 		compareWithSubservient(vsb);
+	}
 
 	return new_ip;
 }

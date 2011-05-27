@@ -106,7 +106,6 @@ bool PTImgChk::continueWithBounds(
 			<< std::endl;
 	}
 
-
 	while (doStep(start, end, regs, state));
 	
 	blocks++;
@@ -236,25 +235,14 @@ bool PTImgChk::doStep(
 		old_rdi = regs.rdi;
 		old_r10 = regs.r10;
 
-		if (handleSysCall(state, regs)) {
+		if (handleSysCall(state, regs))
 			return true;
-		}
 		
 		if (regs.rax == SYS_mmap)
 			syscall_restore_rdi_r10 = true;
 	}
 
-	steps++;
-	err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
-	if(err < 0) {
-		perror("PTImgChk::doStep ptrace single step");
-		exit(1);
-	}
-
-	//note that in this scenario we don't care whether or not
-	//a syscall was the source of the trap (two traps are produced
-	//per syscall, pre+post).
-	wait(NULL);
+	singleStep();
 
 	if (is_syscall) {
 		err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
@@ -268,7 +256,6 @@ bool PTImgChk::doStep(
 			regs.rdi = old_rdi;
 		}
 
-
 		//kernel clobbers these, assuming that the generated code, causes
 		regs.rcx = regs.r11 = 0;
 		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
@@ -281,6 +268,25 @@ bool PTImgChk::doStep(
 	return true;
 }
 
+void PTImgChk::singleStep(void)
+{
+	int status;
+
+	steps++;
+	err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
+	if(err < 0) {
+		perror("PTImgChk::doStep ptrace single step");
+		exit(1);
+	}
+
+	//note that in this scenario we don't care whether or not
+	//a syscall was the source of the trap (two traps are produced
+	//per syscall, pre+post).
+	wait(&status);
+
+	fprintf(stderr, "%d %d <<<<<<<<<<<<<<\n",
+		WIFSTOPPED(status), WSTOPSIG(status));
+}
 
 bool PTImgChk::handleSysCall(
 	const VexGuestAMD64State& state,
