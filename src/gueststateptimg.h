@@ -62,6 +62,7 @@ public:
 	bool continueWithBounds(uint64_t start, uint64_t end, const VexGuestAMD64State& state);
 	void printSubservient(std::ostream& os, const VexGuestAMD64State* ref = 0);
 	void stackTraceSubservient(std::ostream& os);
+	void printTraceStats(std::ostream& os);
 private:
 	void dumpSelfMap(void) const;
 	void			slurpBrains(pid_t pid);
@@ -72,6 +73,8 @@ private:
 	PtrList<PTImgMapEntry>	mappings;
 	pid_t			child_pid;
 	std::string		binary;
+	uint64_t		steps;
+	uint64_t		blocks;
 };
 
 #endif

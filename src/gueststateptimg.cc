@@ -26,7 +26,7 @@ static char trap_opcode[] = { 0xcd, 0x80, 0xcc, 0x00 };
 
 GuestStatePTImg::GuestStatePTImg(
 	int argc, char *const argv[], char *const envp[])
-	: child_pid(0), binary(argv[0])
+	: child_pid(0), binary(argv[0]), steps(0), blocks(0)
 {
 	pid_t           pid;
 	int		err;
@@ -312,6 +312,7 @@ bool GuestStatePTImg::continueWithBounds(uint64_t start, uint64_t end, const Vex
 		else {
 			// std::cerr << "STEPPING: " << (void*)regs.rip << std::endl;
 		}
+		++steps;
 		err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
 		if(err < 0) {
 			perror("GuestStatePTImg::continueWithBounds ptrace single step");
@@ -323,6 +324,7 @@ bool GuestStatePTImg::continueWithBounds(uint64_t start, uint64_t end, const Vex
 		wait(NULL);
 	}
 	
+	++blocks;
 	user_fpregs_struct fpregs;
 	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
 	if(err < 0) {
@@ -393,10 +395,11 @@ bool GuestStatePTImg::continueWithBounds(uint64_t start, uint64_t end, const Vex
 	// ULong guest_GS_0x60;
 	// ULong guest_IP_AT_SYSCALL;
 	// ULong padding;
-	
+
 	return !x86_fail && x87_ok & sse_ok && !seg_fail;
 }
-void GuestStatePTImg::stackTraceSubservient(std::ostream& os) {
+void GuestStatePTImg::stackTraceSubservient(std::ostream& os) 
+{
 	assert(child_pid);
 	
 	std::ostringstream pid_string;
@@ -438,7 +441,8 @@ void GuestStatePTImg::stackTraceSubservient(std::ostream& os) {
 	}
 }
 
-void GuestStatePTImg::printSubservient(std::ostream& os, const VexGuestAMD64State* ref) {
+void GuestStatePTImg::printSubservient(std::ostream& os, const VexGuestAMD64State* ref) 
+{
 	assert(child_pid);
 
 	int err;
@@ -535,3 +539,8 @@ void GuestStatePTImg::printSubservient(std::ostream& os, const VexGuestAMD64Stat
 			<< *(void**)&fpregs.st_space[i * 4 + 0] << std::endl;
 	}
 }
+void GuestStatePTImg::printTraceStats(std::ostream& os) 
+{
+	os << "Traced " << blocks << " blocks, stepped " << steps << " instructions" << std::endl;
+}
+

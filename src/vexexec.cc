@@ -230,6 +230,7 @@ void VexExec::compareWithSubservient(VexSB* vsb) {
 	if(!matched) {
 		std::cerr << "found divergence running block @ " << (void*)vsb->getGuestAddr() << std::endl;
 		std::cerr << "original block end was @ " << (void*)vsb->getEndAddr() << std::endl;
+		cross_check->printTraceStats(std::cerr);
 		std::cerr << "PTRACE state" << std::endl;
 		cross_check->printSubservient(std::cerr, &state);
 		std::cerr << "VEXLLVM state" << std::endl;
