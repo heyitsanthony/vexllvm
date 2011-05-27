@@ -52,7 +52,7 @@ LLVMLDFLAGS=$(shell llvm-config --ldflags)
 LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall $(LDFLAGS)
 
-all: bin/elf_trace bin/jit_test bitcode bin/elf_run bin/pt_run bin/pt_trace
+all: bin/elf_trace bin/jit_test bitcode bin/elf_run bin/pt_run bin/pt_trace bin/pt_xchk
 
 bitcode: $(BITCODE_FILES)
 

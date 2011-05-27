@@ -24,6 +24,8 @@
 using namespace llvm;
 
 static char trap_opcode[] = { 0xcd, 0x80, 0xcc, 0x00 };
+static bool dump_maps;
+
 
 GuestStatePTImg::GuestStatePTImg(
 	int argc, char *const argv[], char *const envp[])
@@ -31,6 +33,8 @@ GuestStatePTImg::GuestStatePTImg(
 	ElfImg		*img;
 	pid_t		slurped_pid;
 	
+	dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
+
 	img = ElfImg::createUnlinked(argv[0]);
 	assert (img != NULL && "DOES BINARY EXIST?");
 
@@ -96,7 +100,7 @@ pid_t GuestStatePTImg::createSlurpedChild(
 	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, (void*)old_v);
 	assert (err != -1);
 
-	dumpSelfMap();
+	if (dump_maps) dumpSelfMap();
 
 	slurpBrains(pid);
 	return pid;
@@ -224,7 +228,8 @@ PTImgMapEntry::PTImgMapEntry(pid_t pid, const char* mapline)
 
 	assert (rc >= 0);
 
-	fprintf(stderr, "MAPPING: %s", mapline);
+	if (dump_maps) fprintf(stderr, "MAPPING: %s", mapline);
+
 	/* now map it in */
 	if (strlen(libname) > 0)
 		mapLib(pid);
