@@ -23,8 +23,6 @@
 
 using namespace llvm;
 
-static char trap_opcode[] = { 0xcd, 0x80, 0xcc, 0x00 };
-
 GuestStatePTImg::GuestStatePTImg(
 	int argc, char *const argv[], char *const envp[])
 	: child_pid(0), binary(argv[0]), steps(0), blocks(0), log_steps(false)
@@ -32,7 +30,7 @@ GuestStatePTImg::GuestStatePTImg(
 	pid_t           pid;
 	int		err;
 	long		old_v;
-
+	
 	ElfImg	*img = ElfImg::createUnlinked(argv[0]);
 	assert (img != NULL && "DOES BINARY EXIST?");
 
@@ -54,18 +52,27 @@ GuestStatePTImg::GuestStatePTImg(
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
 	old_v = ptrace(PTRACE_PEEKTEXT, pid, entry_pt, NULL);
-	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, trap_opcode);
+	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, 0xfeeb);
 	assert (err != -1);
 
 	/* go until child hits entry point */
+	user_regs_struct regs;
 	err = ptrace(PTRACE_CONT, pid, NULL, NULL);
 	assert (err != -1);
-	wait(NULL);
+	for(;;) {
+		err = kill(pid, SIGSTOP);
+		wait(NULL);
+		err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
+		assert (err != -1);
+		if(regs.rip == (uint64_t)entry_pt)
+			break;
+		err = ptrace(PTRACE_CONT, pid, NULL, NULL);
+		assert (err != -1);
+		usleep(1000);
+	}
 	
 	//stop the process and reset the program counter before repatching
-	err = kill(pid, SIGSTOP);
 	assert (err != -1);
-	user_regs_struct regs;
 	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
 	assert (err != -1);
 	regs.rip = (uint64_t)entry_pt;
