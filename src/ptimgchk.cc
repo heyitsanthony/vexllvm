@@ -149,23 +149,8 @@ bool PTImgChk::isGuestFailed(
 	x86_fail = isRegMismatch(state, regs);
 	seg_fail = (regs.fs_base ^ state.guest_FS_ZERO);
 
-	//TODO: some kind of eflags, checking but i don't yet understand this
-	//mess of broken apart state.
-	//
-	// /* 4-word thunk used to calculate O S Z A C P flags. */
-	// /* 128 */ ULong  guest_CC_OP;
-	// /* 136 */ ULong  guest_CC_DEP1;
-	// /* 144 */ ULong  guest_CC_DEP2;
-	// /* 152 */ ULong  guest_CC_NDEP;
-	// /* The D flag is stored here, encoded as either -1 or +1 */
-	// /* 160 */ ULong  guest_DFLAG;
-	// /* 168 */ ULong  guest_RIP;
-	// /* Bit 18 (AC) of eflags stored here, as either 0 or 1. */
-	// /* ... */ ULong  guest_ACFLAG;
-	// /* Bit 21 (ID) of eflags stored here, as either 0 or 1. */
-	
+	//TODO: consider evaluating CC fields, ACFLAG, etc?
 	//TODO: segments? but valgrind/vex seems to not really fully handle them, how sneaky
-
 	//TODO: what is this for? well besides the obvious
 	// /* 192 */ULong guest_SSEROUND;
 
@@ -183,15 +168,8 @@ bool PTImgChk::isGuestFailed(
 	// /* 536 */ ULong guest_FPROUND;
 	// /* 544 */ ULong guest_FC3210;
 
-	//probably not TODO: more stuff that is likely unneeded
-	// /* 552 */ UInt  guest_EMWARN;
-	// ULong guest_TISTART;
-	// ULong guest_TILEN;
-	// ULong guest_NRADDR;
-	// ULong guest_SC_CLASS;
-	// ULong guest_GS_0x60;
-	// ULong guest_IP_AT_SYSCALL;
-	// ULong padding;
+	//TODO: more stuff that is likely unneeded
+	// other vex internal state (tistart, nraddr, etc)
 
 	return !x86_fail && x87_ok & sse_ok && !seg_fail;
 }
@@ -341,7 +319,6 @@ void PTImgChk::stackTraceSubservient(std::ostream& os)
 	stackTrace(os, binary, child_pid);
 }
 
-
 void PTImgChk::printUserRegs(
 	std::ostream& os, 
 	user_regs_struct& regs,
@@ -372,18 +349,6 @@ void PTImgChk::printFPRegs(
 {
 	//TODO: some kind of eflags, checking but i don't yet understand this
 	//mess of broken apart state.
-	//
-	// /* 4-word thunk used to calculate O S Z A C P flags. */
-	// /* 128 */ ULong  guest_CC_OP;
-	// /* 136 */ ULong  guest_CC_DEP1;
-	// /* 144 */ ULong  guest_CC_DEP2;
-	// /* 152 */ ULong  guest_CC_NDEP;
-	// /* The D flag is stored here, encoded as either -1 or +1 */
-	// /* 160 */ ULong  guest_DFLAG;
-	// /* 168 */ ULong  guest_RIP;
-	// /* Bit 18 (AC) of eflags stored here, as either 0 or 1. */
-	// /* ... */ ULong  guest_ACFLAG;
-	// /* Bit 21 (ID) of eflags stored here, as either 0 or 1. */
 	
 	//TODO: what is this for? well besides the obvious
 	// /* 192 */ULong guest_SSEROUND;
