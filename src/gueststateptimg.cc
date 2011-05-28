@@ -89,6 +89,10 @@ GuestStatePTImg::GuestStatePTImg(
 	log_steps = getenv("VEXLLVM_LOG_STEPS") ? true : false;
 	if(getenv("VEXLLVM_CROSS_CHECK")) {
 		child_pid = pid;
+		//we need the fds to line up.  child will have only 0-4
+		//TODO: actually check that
+		for(int i = 3; i < 1024; ++i)
+			close(i);
 	} else {
 		/* have already ripped out the process's brains, discard it */
 		ptrace(PTRACE_KILL, pid, NULL, NULL);
