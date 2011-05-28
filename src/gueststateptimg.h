@@ -22,6 +22,7 @@ private:
 	void ptraceCopy(pid_t pid, int prot);
 	void mapLib(pid_t pid);
 	void mapAnon(pid_t pid);
+	void mapStack(pid_t pid);
 	int getProt(void) const;
 
 	void		*mem_begin, *mem_end;
