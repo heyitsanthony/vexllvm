@@ -107,6 +107,36 @@ int PTImgMapEntry::getProt(void) const
 	return prot;
 }
 
+void PTImgMapEntry::mapStack(pid_t pid)
+{
+	int			prot, flags;
+
+	assert (mmap_fd == -1);
+
+	prot = getProt();
+	flags = MAP_GROWSDOWN | MAP_STACK | MAP_PRIVATE | MAP_ANONYMOUS;
+
+	//TODO: evil hack to make stack big enough because
+	//auto growing doesn't seem to work for the duplicated
+	//stack
+	mem_begin = (void*)((uint64_t)mem_begin - 0x100000);
+
+	mmap_base = mmap(
+		mem_begin,
+		getByteCount(), 
+		prot,
+		flags | MAP_FIXED,
+		mmap_fd,
+		off);
+	if (mmap_base != mem_begin) {
+		fprintf(stderr, "COLLISION: GOT=%p, EXPECTED=%p\n",
+			mmap_base, mem_begin);
+	}
+
+	assert (mmap_base == mem_begin && "Could not map to same address");
+	ptraceCopy(pid, prot);
+}
+
 void PTImgMapEntry::mapAnon(pid_t pid)
 {
 	int			prot, flags;
@@ -116,6 +146,10 @@ void PTImgMapEntry::mapAnon(pid_t pid)
 	prot = getProt();
 	flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
+	//TODO: evil hack to make stack big enough because
+	//auto growing doesn't seem to work for the duplicated
+	//stack
+	
 	mmap_base = mmap(
 		mem_begin,
 		getByteCount(), 
@@ -136,7 +170,11 @@ void PTImgMapEntry::mapLib(pid_t pid)
 {
 	int			prot, flags;
 
-	if (strcmp(libname, "[vsyscall]") == 0) return;
+
+	if (strcmp(libname, "[vsyscall]") == 0) 
+		return;
+	if (strcmp(libname, "[stack]") == 0)
+		mapStack(pid);
 
 	mmap_fd = open(libname, O_RDONLY);
 	if (mmap_fd == -1) {
@@ -147,13 +185,14 @@ void PTImgMapEntry::mapLib(pid_t pid)
 		assert (rc == -1);
 	
 		mapAnon(pid);
+			
 		return;
 	}
 
+	flags = MAP_PRIVATE;
 	prot = getProt();
 //	if (prot & PROT_EXEC) flags = MAP_SHARED;
 //	else flags = MAP_PRIVATE;
-	flags = MAP_PRIVATE;
 
 	assert (mmap_fd != -1);
 
