@@ -74,17 +74,16 @@ pid_t GuestStatePTImg::createSlurpedChild(
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
 	old_v = ptrace(PTRACE_PEEKTEXT, pid, entry_pt, NULL);
-	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, 0xfeeb);
+	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, trap_opcode);
 	assert (err != -1);
 
 	/* go until child hits entry point */
-	user_regs_struct regs;
 	err = ptrace(PTRACE_CONT, pid, NULL, NULL);
 	assert (err != -1);
 	wait(&status);
 
-	/* should be halted on our trapcode. need to set rip before 
-	 * trapcode, and remove breakpoint. */
+	/* should be halted on our trapcode. need to set rip prior to 
+	 * trapcode addr, and remove breakpoint. */
 	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
 	assert (err != -1);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
@@ -118,6 +117,8 @@ int PTImgMapEntry::getProt(void) const
 	return prot;
 }
 
+#define STACK_EXTEND_BYTES 0x100000
+
 void PTImgMapEntry::mapStack(pid_t pid)
 {
 	int			prot, flags;
@@ -127,25 +128,24 @@ void PTImgMapEntry::mapStack(pid_t pid)
 	prot = getProt();
 	flags = MAP_GROWSDOWN | MAP_STACK | MAP_PRIVATE | MAP_ANONYMOUS;
 
-	//TODO: evil hack to make stack big enough because
-	//auto growing doesn't seem to work for the duplicated
-	//stack
-	mem_begin = (void*)((uint64_t)mem_begin - 0x100000);
+	mem_begin = (void*)((uint64_t)mem_begin - STACK_EXTEND_BYTES);
 
 	mmap_base = mmap(
 		mem_begin,
 		getByteCount(), 
 		prot,
 		flags | MAP_FIXED,
-		mmap_fd,
-		off);
+		-1,
+		0);
 	if (mmap_base != mem_begin) {
 		fprintf(stderr, "COLLISION: GOT=%p, EXPECTED=%p\n",
 			mmap_base, mem_begin);
 	}
 
 	assert (mmap_base == mem_begin && "Could not map to same address");
-	ptraceCopy(pid, prot);
+	ptraceCopyRange(pid, prot, 
+		(void*)((uintptr_t)mem_begin + STACK_EXTEND_BYTES),
+		mem_end);
 }
 
 void PTImgMapEntry::mapAnon(pid_t pid)
@@ -157,10 +157,6 @@ void PTImgMapEntry::mapAnon(pid_t pid)
 	prot = getProt();
 	flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
-	//TODO: evil hack to make stack big enough because
-	//auto growing doesn't seem to work for the duplicated
-	//stack
-	
 	mmap_base = mmap(
 		mem_begin,
 		getByteCount(), 
@@ -224,18 +220,13 @@ void PTImgMapEntry::mapLib(pid_t pid)
 		ptraceCopy(pid, prot);
 }
 
-void PTImgMapEntry::ptraceCopy(pid_t pid, int prot)
+void PTImgMapEntry::ptraceCopyRange(pid_t pid, int prot, void* m_beg, void* m_end)
 {
 	long			*copy_addr;
 
-	if (!(prot & PROT_READ)) return;
-
-	if (!(prot & PROT_WRITE))
-		mprotect(mmap_base, getByteCount(), prot | PROT_WRITE);
-
-	copy_addr = (long*)mem_begin;
+	copy_addr = (long*)m_beg;
 	errno = 0;
-	while (copy_addr != mem_end) {
+	while (copy_addr != m_end) {
 		long	peek_data;
 		peek_data = ptrace(PTRACE_PEEKDATA, pid, copy_addr, NULL);
 		assert (peek_data != -1 || errno == 0);
@@ -245,6 +236,16 @@ void PTImgMapEntry::ptraceCopy(pid_t pid, int prot)
 
 		copy_addr++;
 	}
+}
+
+void PTImgMapEntry::ptraceCopy(pid_t pid, int prot)
+{
+	if (!(prot & PROT_READ)) return;
+
+	if (!(prot & PROT_WRITE))
+		mprotect(mmap_base, getByteCount(), prot | PROT_WRITE);
+
+	ptraceCopyRange(pid, prot, mem_begin, mem_end);
 
 	if (!(prot & PROT_WRITE))
 		mprotect(mmap_base, getByteCount(), prot);

@@ -20,6 +20,7 @@ public:
 	}
 private:
 	void ptraceCopy(pid_t pid, int prot);
+	void ptraceCopyRange(pid_t pid, int prot, void* m_beg, void* m_end);
 	void mapLib(pid_t pid);
 	void mapAnon(pid_t pid);
 	void mapStack(pid_t pid);
