@@ -147,6 +147,7 @@ void VexExec::doSysCall()
 	SyscallParams	sp(gs->getSyscallParams());
 	uint64_t	sc_ret;
 
+	fprintf(stderr, "VEXEXEC: DOING SYSCALL\n");
 	sc_ret = sc->apply(sp);
 	if (sc->isExit()) {
 		exited = true;
@@ -191,6 +192,8 @@ update_dc:
 
 vexfunc_t VexExec::getSBFuncPtr(VexSB* vsb)
 {
+	Function			*f;
+	char				emitstr[1024];
 	vexfunc_t 			func_ptr;
 	jit_map::const_iterator		it;
 
@@ -204,9 +207,6 @@ vexfunc_t VexExec::getSBFuncPtr(VexSB* vsb)
 	}	
 	
 	/* not in caches, generate */
-	Function	*f;
-	char		emitstr[1024];
-
 	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
 	f = vsb->emit(emitstr);
 	assert (f && "FAILED TO EMIT FUNC??");
@@ -235,6 +235,7 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 
 	sb_executed_c++;
 
+	/* TODO: pull out x86-ism */
 	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	new_ip = func_ptr(state);
 	state->guest_RIP = new_ip;

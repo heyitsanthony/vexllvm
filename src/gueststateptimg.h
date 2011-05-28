@@ -79,15 +79,16 @@ public:
 		return pt_t;
 	}
 
-
 	void printTraceStats(std::ostream& os);
 	static void stackTrace(
 		std::ostream& os, const char* binname, pid_t pid);
+
 protected:
 	GuestStatePTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
 
 private:
+
 	void dumpSelfMap(void) const;
 
 	pid_t createSlurpedChild(

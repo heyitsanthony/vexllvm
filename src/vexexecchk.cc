@@ -10,30 +10,83 @@
 #include "ptimgchk.h"
 #include "vexexecchk.h"
 
-void VexExecChk::compareWithSubservient(VexSB* vsb)
-{
-	const VexGuestAMD64State*	state;
-	bool matched;
-	
-	state = (const VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	matched = cross_check->continueWithBounds(
-		vsb->getGuestAddr(),
-		vsb->getEndAddr(),
-		*state);
-	if (matched) return;
-
-	dumpSubservient(vsb);
-}
-
+/* ensures that shadow process's state <= llvm process's state */
 uint64_t VexExecChk::doVexSB(VexSB* vsb)
 {
-	uint64_t	new_ip;
+	const VexGuestAMD64State*	state;
+	bool				new_ip_in_bounds;
+	uint64_t			new_ip;
 
-	new_ip = VexExec::doVexSB(vsb);
-	if(new_ip < vsb->getGuestAddr() || new_ip >= vsb->getEndAddr()) {
-		compareWithSubservient(vsb);
+	state = (const VexGuestAMD64State*)gs->getCPUState()->getStateData();
+
+	/* if we're not deferred we know we're synced up already.
+	 * this fact to be paranoid (make sure the states are ==)*/
+	if (!is_deferred) {
+		if (!cross_check->isMatch(*state)) {
+			fprintf(stderr, "MISMATCH PRIOR TO doVexSB. HOW??\n");
+			dumpSubservient(vsb);
+		}
 	}
 
+	new_ip = VexExec::doVexSB(vsb);
+
+	new_ip_in_bounds = 	new_ip >= vsb->getGuestAddr() &&
+				new_ip < vsb->getEndAddr();
+
+	if (is_deferred && new_ip_in_bounds) {
+		/* we defer until we know for sure we're out of the SB */
+		goto done;
+	} else if (!is_deferred && !new_ip_in_bounds) {
+		/* new ip is outside prev ip's vsb...
+		 * valgrind does some nasty hacks here where it loop
+		 * unrolls instructions so two IMarks can match.
+		 * However, if it jumps out of a basic block, you're safe
+		 * to step through the entire bounds.
+		 * */
+		cross_check->stepThroughBounds(
+			vsb->getGuestAddr(),
+			vsb->getEndAddr(),
+			*state);
+		is_deferred = false;
+		goto states_should_be_equal;
+	} else if (is_deferred && !new_ip_in_bounds) {
+		/* can step out of the block now we call this a "resume" */
+		cross_check->stepThroughBounds(
+			deferred_bound_start, deferred_bound_end, *state);
+		is_deferred = false;
+		deferred_bound_start = 0;
+		deferred_bound_end = 0;
+		goto states_should_be_equal;
+	} else if (new_ip_in_bounds) {
+		 /* Nasty VexIR trivia. A SB can:
+		  * 	0x123: stmt
+		  * 	0x124: stmt
+		  * 	0x125: if (whatever-is-false) goto whereever;
+		  * 	0x123: stmt
+		  * 	0x124: stmt
+		  * 	0x125: if (whatever-is-false) goto whereever;
+		  * 	0x126: goto 0x123
+		  *
+		  * 	So, a VexSB run will see 0x123 twice before terminating
+		  *	but the ptrace will only see it once with continueForward.
+		  *
+		  *	Instead analyzing the vsb for this stuff,
+		  *	record bounds and defer shadow execution until
+		  *	next IP jumps out of the bounds.
+		  */
+		is_deferred = true;
+		deferred_bound_start = vsb->getGuestAddr();
+		deferred_bound_end = vsb->getEndAddr();
+		goto done;
+	}
+	
+states_should_be_equal:
+	if (!cross_check->isMatch(*state)) {
+		fprintf(stderr, "MISMATCH: END OF BLOCK. FIND NEW EMU BUG.\n");
+		dumpSubservient(vsb);
+	}
+
+done:
 	return new_ip;
 }
 
@@ -54,9 +107,11 @@ VexExec* VexExecChk::create(PTImgChk* gs)
 // must do the check after the sycall is executed
 void VexExecChk::handlePostSyscall(VexSB* vsb, uint64_t new_jmpaddr)
 {
+#if 0
 	VexGuestAMD64State*	state;
 	bool			matched;
-	
+
+	fprintf(stderr, "HANDLING POSTSYSCALL\n");
 	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	matched = cross_check->continueWithBounds(
 		vsb->getGuestAddr(), vsb->getEndAddr(), *state);
@@ -68,6 +123,7 @@ void VexExecChk::handlePostSyscall(VexSB* vsb, uint64_t new_jmpaddr)
 	{
 		dumpSubservient(vsb);
 	}
+#endif
 }
 	
 void VexExecChk::doSysCall(void)

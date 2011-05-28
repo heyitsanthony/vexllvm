@@ -11,7 +11,10 @@ public:
 	PTImgChk(int argc, char* const argv[], char* const envp[]);
 	virtual ~PTImgChk() {}
 
-	bool continueWithBounds(
+	void stepThroughBounds(
+		uint64_t start, uint64_t end,
+		const VexGuestAMD64State& state);
+	uint64_t continueForwardWithBounds(
 		uint64_t start, uint64_t end,
 		const VexGuestAMD64State& state);
 	void printSubservient(
@@ -19,6 +22,8 @@ public:
 		const VexGuestAMD64State& ref) const;
 	void stackTraceSubservient(std::ostream& os);
 	void printTraceStats(std::ostream& os);
+
+	bool isMatch(const VexGuestAMD64State& state) const;
 
 protected:
 	virtual void handleChild(pid_t pid);
@@ -28,15 +33,14 @@ private:
 		uint64_t start, uint64_t end,
 		user_regs_struct& regs,
 		const VexGuestAMD64State& state);
+	void waitForSingleStep(void);
+	bool waitForSyscall(
+		user_regs_struct& regs,
+		const VexGuestAMD64State& state);
 
 	bool handleSysCall(
 		const VexGuestAMD64State& state,
 		user_regs_struct& regs);
-
-	bool isGuestFailed(
-		const VexGuestAMD64State& state,
-		user_regs_struct& regs,
-		user_fpregs_struct& fpregs) const;
 
 	bool isRegMismatch(
 		const VexGuestAMD64State& state,

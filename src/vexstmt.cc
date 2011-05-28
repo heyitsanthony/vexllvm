@@ -335,5 +335,5 @@ void VexStmtExit::print(std::ostream& os) const
 {
 	os << "If (";
 	guard->print(os);
-	os << ") goto {...} " << dst;
+	os << ") goto {...} " << (void*)dst;
 }

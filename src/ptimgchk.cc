@@ -86,19 +86,29 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 	log_steps = (getenv("VEXLLVM_LOG_STEPS")) ? true : false;
 }
 
-
 void PTImgChk::handleChild(pid_t pid)
 {
 	/* keep child around */
 	child_pid = pid;
 }
 
-bool PTImgChk::continueWithBounds(
-	uint64_t start, uint64_t end, const VexGuestAMD64State& state)
+void PTImgChk::stepThroughBounds(
+	uint64_t start, uint64_t end,
+	const VexGuestAMD64State& state)
 {
-	int			err;
+	uintptr_t	new_ip;
+
+	/* TODO: timeout? */
+	do {
+		new_ip = continueForwardWithBounds(start, end, state);
+	} while (new_ip >= start && new_ip < end);
+}
+
+uintptr_t PTImgChk::continueForwardWithBounds(
+	uint64_t start, uint64_t end,
+	const VexGuestAMD64State& state)
+{
 	user_regs_struct	regs;
-	user_fpregs_struct	fpregs;
 
 	if (log_steps) {
 		std::cerr << "RANGE: " 
@@ -106,16 +116,14 @@ bool PTImgChk::continueWithBounds(
 			<< std::endl;
 	}
 
-	while (doStep(start, end, regs, state));
-	
-	blocks++;
-	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
-	if(err < 0) {
-		perror("PTImgChk::continueWithBounds  ptrace get fp registers");
-		exit(1);
+	while (doStep(start, end, regs, state)) {
+		/* so we trap on backjumps */
+		if (regs.rip > start) 
+			start = regs.rip;
 	}
 	
-	return isGuestFailed(state, regs, fpregs);
+	blocks++;
+	return regs.rip;
 }
 
 bool PTImgChk::isRegMismatch(
@@ -139,22 +147,31 @@ bool PTImgChk::isRegMismatch(
 	return false;
 }
 
-bool PTImgChk::isGuestFailed(
-	const VexGuestAMD64State& state,
-	user_regs_struct& regs,
-	user_fpregs_struct& fpregs) const
+bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 {
-	bool x86_fail, sse_ok, seg_fail, x87_ok;
+	user_regs_struct	regs;
+	user_fpregs_struct	fpregs;
+	int			err;
+	bool			x86_fail, sse_ok, seg_fail, x87_ok;
+
+	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+	assert (err != -1 && "couldn't PTRACE_GETREGS");
+
+	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
+	assert (err != -1 && "couldn't PTRACE_GETFPREGS");
 
 	x86_fail = isRegMismatch(state, regs);
 	seg_fail = (regs.fs_base ^ state.guest_FS_ZERO);
 
 	//TODO: consider evaluating CC fields, ACFLAG, etc?
-	//TODO: segments? but valgrind/vex seems to not really fully handle them, how sneaky
+	//TODO: segments? shouldn't pop up on user progs..
 	//TODO: what is this for? well besides the obvious
 	// /* 192 */ULong guest_SSEROUND;
 
-	sse_ok = !memcmp(&state.guest_XMM0, &fpregs.xmm_space[0], sizeof(fpregs.xmm_space));
+	sse_ok = !memcmp(
+		&state.guest_XMM0,
+		&fpregs.xmm_space[0],
+		sizeof(fpregs.xmm_space));
 
 	//TODO: check the top pointer of the floating point stack..
 	// /* FPU */
@@ -162,7 +179,10 @@ bool PTImgChk::isGuestFailed(
 	//FPTAG?
 
 	//TODO: this is surely wrong, the sizes don't even match...
-	x87_ok = !memcmp(&state.guest_FPREG[0], &fpregs.st_space[0], sizeof(state.guest_FPREG));
+	x87_ok = !memcmp(
+		&state.guest_FPREG[0],
+		&fpregs.st_space[0],
+		sizeof(state.guest_FPREG));
 
 	//TODO: what are these?
 	// /* 536 */ ULong guest_FPROUND;
@@ -179,10 +199,6 @@ bool PTImgChk::doStep(
 	user_regs_struct& regs,
 	const VexGuestAMD64State& state)
 {
-	long	old_rdi, old_r10;
-	long	cur_opcode;
-	bool	is_syscall;
-	bool	syscall_restore_rdi_r10;
 	int	err;
 
 	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
@@ -192,63 +208,85 @@ bool PTImgChk::doStep(
 		exit(1);
 	}
 
+	/* check rip before executing possibly out of bounds instruction*/
 	if (regs.rip < start || regs.rip >= end) {
-		if(log_steps) 
+		if(log_steps) {
 			std::cerr << "STOPPING: " 
 				<< (void*)regs.rip << " not in ["
 				<< (void*)start << ", "
 				<< (void*)end << "]"
 				<< std::endl;
+		}
+		/* out of bounds, report back, no more stepping */
 		return false;
-	} else {
-		if(log_steps) 
-			std::cerr << "STEPPING: "
-				<< (void*)regs.rip << std::endl;
 	}
 
+	/* instruction is in-bounds, run it */
+	if (log_steps)
+		std::cerr << "STEPPING: " << (void*)regs.rip << std::endl;
+
+	if (waitForSyscall(regs, state)) return true;
+
+	waitForSingleStep();
+	return true;
+}
+
+bool PTImgChk::waitForSyscall(
+	user_regs_struct& regs,
+	const VexGuestAMD64State& state)
+{
+	long	old_rdi, old_r10;
+	long	cur_opcode;
+	bool	is_syscall;
+	bool	syscall_restore_rdi_r10;
+	int	err;
+
+	/* do special syscallhandling if we're on an opcode */
  	cur_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
 	is_syscall = (cur_opcode & 0xffff) == 0x050f;
-	syscall_restore_rdi_r10 = false; 
-	if (is_syscall) {
-		old_rdi = regs.rdi;
-		old_r10 = regs.r10;
+	if (!is_syscall) return false;
 
-		if (handleSysCall(state, regs))
-			return true;
-		
-		if (regs.rax == SYS_mmap)
-			syscall_restore_rdi_r10 = true;
+	fprintf(stderr, "hit syscall instruction %p\n", regs.rip);
+
+	syscall_restore_rdi_r10 = false; 
+	old_rdi = regs.rdi;
+	old_r10 = regs.r10;
+
+	if (handleSysCall(state, regs))
+		return true;
+	
+	if (regs.rax == SYS_mmap)
+		syscall_restore_rdi_r10 = true;
+
+	waitForSingleStep();
+
+	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+	if (err < 0) {
+		perror("PTImgChk::continueWithBounds getregsafter syscall");
+		exit(1);
 	}
 
-	singleStep();
+	fprintf(stderr, "done with syscall %p\n", regs.rip);
 
-	if (is_syscall) {
-		err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-		if (err < 0) {
-			perror("PTImgChk::continueWithBounds ptrace post syscall refresh registers");
-			exit(1);
-		}
+	if (syscall_restore_rdi_r10) {
+		regs.r10 = old_r10;
+		regs.rdi = old_rdi;
+	}
 
-		if (syscall_restore_rdi_r10) {
-			regs.r10 = old_r10;
-			regs.rdi = old_rdi;
-		}
-
-		//kernel clobbers these, assuming that the generated code, causes
-		regs.rcx = regs.r11 = 0;
-		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
-		if(err < 0) {
-			perror("PTImgChk::continueWithBounds ptrace set registers after syscall");
-			exit(1);
-		}
+	//kernel clobbers these, assuming that the generated code, causes
+	regs.rcx = regs.r11 = 0;
+	err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+	if(err < 0) {
+		perror("PTImgChk::waitForSyscall setregs after syscall");
+		exit(1);
 	}
 
 	return true;
 }
 
-void PTImgChk::singleStep(void)
+void PTImgChk::waitForSingleStep(void)
 {
-	int status;
+	int	err, status;
 
 	steps++;
 	err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
@@ -261,9 +299,6 @@ void PTImgChk::singleStep(void)
 	//a syscall was the source of the trap (two traps are produced
 	//per syscall, pre+post).
 	wait(&status);
-
-	fprintf(stderr, "%d %d <<<<<<<<<<<<<<\n",
-		WIFSTOPPED(status), WSTOPSIG(status));
 }
 
 bool PTImgChk::handleSysCall(
@@ -271,6 +306,8 @@ bool PTImgChk::handleSysCall(
 	user_regs_struct& regs)
 {
 	int	err;
+
+	fprintf(stderr, "just made syscall %d\n", regs.rax);
 
 	switch (regs.rax) {
 	case SYS_brk:

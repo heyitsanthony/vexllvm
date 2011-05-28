@@ -11,7 +11,7 @@ public:
 	static VexExec* create(PTImgChk* gs);
 protected:
 	VexExecChk(PTImgChk* gs)
-	: VexExec(gs)
+	: is_deferred(false), VexExec(gs)
 	{
 		cross_check = (getGuestState()) ? gs : NULL;
 	}
@@ -20,10 +20,13 @@ protected:
 	virtual void doSysCall(void);
 	virtual void handlePostSyscall(VexSB* vsb, uint64_t);
 private:
-	void compareWithSubservient(VexSB* vsb);
 	void dumpSubservient(VexSB* vsb);
 
-	PTImgChk* cross_check;
+	bool		is_deferred;
+	uintptr_t	deferred_bound_start;
+	uintptr_t	deferred_bound_end;
+
+	PTImgChk	*cross_check;
 };
 
 #endif

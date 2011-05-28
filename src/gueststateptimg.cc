@@ -27,7 +27,6 @@ using namespace llvm;
 static uint64_t trap_opcode = 0xcccccccccccccccc;
 static bool dump_maps;
 
-
 GuestStatePTImg::GuestStatePTImg(
 	int argc, char *const argv[], char *const envp[])
 {
@@ -87,6 +86,7 @@ pid_t GuestStatePTImg::createSlurpedChild(
 	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
 	assert (err != -1);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+	assert (regs.rip == (uintptr_t)entry_pt+1);
 
 	regs.rip--; /* backtrack before int3 opcode */
 	err = ptrace(PTRACE_SETREGS, pid, NULL, &regs);
@@ -344,5 +344,3 @@ void GuestStatePTImg::stackTrace(
 	while ((bytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
 		os.write(buffer, bytes);
 }
-
-
