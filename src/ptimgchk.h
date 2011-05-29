@@ -5,6 +5,8 @@
 #include <sys/user.h>
 #include "gueststateptimg.h"
 
+class SyscallsMarshalled;
+
 class PTImgChk : public GuestStatePTImg
 {
 public:
@@ -14,7 +16,7 @@ public:
 	void stepThroughBounds(
 		uint64_t start, uint64_t end,
 		const VexGuestAMD64State& state);
-	void stepSysCall(const VexGuestAMD64State& st);
+	void stepSysCall(SyscallsMarshalled* sc, const VexGuestAMD64State& st);
 	uint64_t continueForwardWithBounds(
 		uint64_t start, uint64_t end,
 		const VexGuestAMD64State& state);
@@ -55,6 +57,8 @@ private:
 		std::ostream& os,
 		user_fpregs_struct& fpregs,
 		const VexGuestAMD64State& ref) const;
+
+	void copyIn(void* dst, const void* src, unsigned int bytes);
 
 	const char	*binary;
 	pid_t		child_pid;

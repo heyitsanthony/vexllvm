@@ -15,6 +15,7 @@ OBJDEPS=	vexxlate.o		\
 		gueststate.o		\
 		vex_dispatch.o		\
 		syscalls.o		\
+		syscallsmarshalled.o	\
 		vexhelpers.o		\
 		vexexec.o		\
 		vexexecchk.o		\

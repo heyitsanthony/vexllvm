@@ -401,5 +401,5 @@ void ElfImg::linkWithLibs(std::vector<std::string>& needed)
 elfptr_t ElfImg::getSymAddr(const char* symname) const
 {
 	const Symbol	*sym = syms.findSym(symname);
-	return (elfptr_t)((sym) ? sym->getBaseAddr() : NULL);
+	return (elfptr_t)((sym) ? sym->getBaseAddr() : (symaddr_t)NULL);
 }

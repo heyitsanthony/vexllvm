@@ -8,7 +8,20 @@
 
 #include "guestcpustate.h"
 #include "ptimgchk.h"
+#include "syscallsmarshalled.h"
 #include "vexexecchk.h"
+
+VexExecChk::VexExecChk(PTImgChk* gs)
+: VexExec(gs),
+  hit_syscall(false), is_deferred(false)
+{
+	cross_check = (getGuestState()) ? gs : NULL;
+	if (!cross_check) return;
+
+	sc_marshall = new SyscallsMarshalled();
+	delete sc;
+	sc = sc_marshall;
+}
 
 /* ensures that shadow process's state <= llvm process's state */
 uint64_t VexExecChk::doVexSB(VexSB* vsb)
@@ -121,7 +134,7 @@ void VexExecChk::doSysCall(void)
 	VexExec::doSysCall();
 
 	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	cross_check->stepSysCall(*state);
+	cross_check->stepSysCall(sc_marshall, *state);
 
 	state->guest_RCX = 0;
 	state->guest_R11 = 0;

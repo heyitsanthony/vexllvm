@@ -48,6 +48,7 @@ protected:
 	static void setupStatics(GuestState* in_gs);
 
 	GuestState		*gs;
+	Syscalls		*sc;
 private:
 	vexfunc_t getSBFuncPtr(VexSB* vsb);
 	VexSB* getSBFromGuestAddr(void* elfptr);
@@ -59,7 +60,6 @@ private:
 
 	VexXlate		*vexlate;
 	llvm::ExecutionEngine	*exeEngine;
-	Syscalls		*sc;
 
 	vexexec_addrs	addr_stack;
 	vexexec_traces	trace;

@@ -11,7 +11,7 @@ class Syscalls
 public:
 	Syscalls();
 	virtual ~Syscalls();
-	uint64_t apply(const SyscallParams& args);
+	virtual uint64_t apply(const SyscallParams& args);
 	void print(std::ostream& os) const;
 	bool isExit(void) const { return exited; }
 private:

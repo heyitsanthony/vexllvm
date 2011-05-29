@@ -10,6 +10,7 @@
 
 #include <sstream>
 
+#include "syscallsmarshalled.h"
 #include "ptimgchk.h"
 
 struct user_regs_desc
@@ -322,11 +323,13 @@ bool PTImgChk::filterSysCall(
 	return false;
 }
 
-void PTImgChk::stepSysCall(const VexGuestAMD64State& state)
+void PTImgChk::stepSysCall(
+	SyscallsMarshalled* sc_m, const VexGuestAMD64State& state)
 {
 	user_regs_struct	regs;
 	long			old_rdi, old_r10;
 	bool			syscall_restore_rdi_r10;
+	int			sys_nr;
 	int			err;
 
 	ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
@@ -345,7 +348,8 @@ void PTImgChk::stepSysCall(const VexGuestAMD64State& state)
 		return;
 	}
 
-	if (regs.rax == SYS_mmap) syscall_restore_rdi_r10 = true;
+	sys_nr = regs.rax;
+	if (sys_nr == SYS_mmap) syscall_restore_rdi_r10 = true;
 
 	waitForSingleStep();
 
@@ -366,6 +370,32 @@ void PTImgChk::stepSysCall(const VexGuestAMD64State& state)
 	if(err < 0) {
 		perror("PTImgChk::stepSysCall setregs after syscall");
 		exit(1);
+	}
+
+	/* fixup any calls that affect memory */
+	if (sc_m->isSyscallMarshalled(sys_nr)) {
+		SyscallPtrBuf	*spb = sc_m->takePtrBuf();
+		copyIn(spb->getPtr(), spb->getData(), spb->getLength());
+		delete spb;
+	}
+}
+
+void PTImgChk::copyIn(void* dst, const void* src, unsigned int bytes)
+{
+	const char	*in_addr, *end_addr;
+	char		*out_addr;
+
+	assert ((bytes % sizeof(long)) == 0);
+
+	in_addr = (const char*)src;
+	out_addr = (char*)dst;
+	end_addr = out_addr + bytes;
+	
+	while (out_addr < end_addr) {
+		int	err;
+		err = ptrace(PTRACE_POKEDATA, child_pid, out_addr, in_addr);
+		in_addr += sizeof(long);
+		out_addr += sizeof(long);
 	}
 }
 
