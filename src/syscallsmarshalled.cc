@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <sys/syscall.h>
 #include <string.h>
+#include <sys/signal.h>
 
 #include "syscallsmarshalled.h"
 
@@ -49,7 +50,7 @@ uint64_t SyscallsMarshalled::apply(const SyscallParams& args)
 		break;
 	case SYS_rt_sigaction:
 		last_sc_ptrbuf = new SyscallPtrBuf(
-			sizeof(struct timeval), 
+			sizeof(struct sigaction), 
 			(void*)args.getArg(2));
 		break;
 	}

@@ -393,7 +393,7 @@ void PTImgChk::copyIn(void* dst, const void* src, unsigned int bytes)
 	
 	while (out_addr < end_addr) {
 		int	err;
-		err = ptrace(PTRACE_POKEDATA, child_pid, out_addr, in_addr);
+		err = ptrace(PTRACE_POKEDATA, child_pid, out_addr, *(long*)in_addr);
 		in_addr += sizeof(long);
 		out_addr += sizeof(long);
 	}
