@@ -80,6 +80,9 @@ TRACEDEPS_PATH=$(TRACEDEPS:%=tests/traces-bin/%)
 test-traces: all $(TRACEDEPS_PATH)
 	tests/traces.sh
 
+tests-pt_xchk: all $(TRACEDEPS_PATH)
+	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
+
 tests-oprof: all
 	TRACES_OPROFILE=1 tests/traces.sh
 
@@ -111,4 +114,3 @@ obj/%.o: src/%.cc src/%.h
 
 obj/%.o: src/%.cc
 	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
-

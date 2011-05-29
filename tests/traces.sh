@@ -1,6 +1,16 @@
 #!/bin/bash
 
-OUTPATH="tests/traces-out"
+if [ -z "$RUNCMD" ]; then
+	RUNCMD="bin/pt_trace"
+fi
+
+if [ -z "$OUTPATH" ]; then
+	OUTPATH="tests/traces-out"
+fi
+
+export OUTPATH
+export RUNCMD
+
 echo "Testing traces"
 
 function oprof_shutdown

@@ -1,9 +1,16 @@
 #!/bin/bash
 
-RUNCMD=bin/pt_trace
+if [ -z "$RUNCMD" ]; then
+	echo "RUNCMD not set. Try RUNCMD=bin/pt_trace"
+fi
+
+
+if [ -z "$OUTPATH" ]; then
+	echo "OUTPATH not set. Try OUTPATH=tests/traces-out"
+fi
+
 TRACE_ADDR_LINES=1000
 OPROF_SAMPLERATE=1000000
-OUTPATH="tests/traces-out"
 
 function oprof_start
 {
@@ -36,6 +43,16 @@ function run_real_bin
 	$1 >"$FPREFIX.real.out" 2>"$FPREFIX.real.err"
 }
 
+function dump_addrs
+{
+	grep "^[ ]*0x" $FPREFIX.trace.err >$FPREFIX.trace.addrs
+	objdump -d `echo $a | cut -f1 -d' '` >"$FPREFIX".objdump
+	for addr in `tail -n$TRACE_ADDR_LINES $FPREFIX.trace.addrs`; do
+		cat "$FPREFIX".objdump | grep `echo $addr  | cut -f2 -d'x'` | grep "^0"
+	done >$FPREFIX.trace.funcs
+	tail $FPREFIX.trace.funcs
+}
+
 function do_trace
 {
 	BINNAME=`echo $a | cut -f1 -d' ' | sed "s/\//\n/g" | tail -n1`
@@ -63,12 +80,7 @@ function do_trace
 	echo "$retval" >"${FPREFIX}.trace.ret"
 	if [ -z "$retval" ] || [ ! -z "$assertval" ]; then
 		echo "FAILED (bin: $BINNAME)."
-		grep "^[ ]*0x" $FPREFIX.trace.err >$FPREFIX.trace.addrs
-		objdump -d `echo $a | cut -f1 -d' '` >"$FPREFIX".objdump
-		for addr in `tail -n$TRACE_ADDR_LINES $FPREFIX.trace.addrs`; do
-			cat "$FPREFIX".objdump | grep `echo $addr  | cut -f2 -d'x'` | grep "^0"
-		done >$FPREFIX.trace.funcs
-		tail $FPREFIX.trace.funcs
+#		dump_addrs
 		echo "$a">>$OUTPATH/tests.bad
 	else
 		t=`cat $FPREFIX.trace.time | grep -i real | awk '{ print $2 }' `

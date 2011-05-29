@@ -14,6 +14,7 @@ public:
 	void stepThroughBounds(
 		uint64_t start, uint64_t end,
 		const VexGuestAMD64State& state);
+	void stepSysCall(const VexGuestAMD64State& st);
 	uint64_t continueForwardWithBounds(
 		uint64_t start, uint64_t end,
 		const VexGuestAMD64State& state);
@@ -27,6 +28,9 @@ public:
 
 protected:
 	virtual void handleChild(pid_t pid);
+	bool filterSysCall(
+		const VexGuestAMD64State& state,
+		user_regs_struct& regs);
 
 private:
 	bool doStep(
@@ -34,17 +38,11 @@ private:
 		user_regs_struct& regs,
 		const VexGuestAMD64State& state);
 	void waitForSingleStep(void);
-	bool waitForSyscall(
-		user_regs_struct& regs,
-		const VexGuestAMD64State& state);
-
-	bool handleSysCall(
-		const VexGuestAMD64State& state,
-		user_regs_struct& regs);
 
 	bool isRegMismatch(
 		const VexGuestAMD64State& state,
 		const user_regs_struct& regs) const;
+	bool isOnSysCall(const user_regs_struct& regs);
 
 	void printUserRegs(
 		std::ostream& os, 
@@ -63,6 +61,12 @@ private:
 	uint64_t	blocks;
 
 	bool		log_steps;
+
+	/* caches check for syscall opcodes */
+	uintptr_t	chk_addr_syscall;
+	bool		is_chk_addr_syscall;
+
+	bool		hit_syscall;
 };
 
 #endif

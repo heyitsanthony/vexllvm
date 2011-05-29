@@ -11,17 +11,18 @@ public:
 	static VexExec* create(PTImgChk* gs);
 protected:
 	VexExecChk(PTImgChk* gs)
-	: is_deferred(false), VexExec(gs)
+	: VexExec(gs),
+	  hit_syscall(false), is_deferred(false)
 	{
 		cross_check = (getGuestState()) ? gs : NULL;
 	}
 
 	virtual uint64_t doVexSB(VexSB* vsb);
 	virtual void doSysCall(void);
-	virtual void handlePostSyscall(VexSB* vsb, uint64_t);
 private:
 	void dumpSubservient(VexSB* vsb);
 
+	bool		hit_syscall;
 	bool		is_deferred;
 	uintptr_t	deferred_bound_start;
 	uintptr_t	deferred_bound_end;

@@ -130,8 +130,6 @@ const VexSB* VexExec::doNextSB(void)
 		if (exited) return NULL;
 	}
 
-	handlePostSyscall(vsb, (uint64_t)new_jmpaddr);
-
 	if (vsb->isReturn() && !addr_stack.empty())
 		addr_stack.pop();
 
@@ -147,7 +145,6 @@ void VexExec::doSysCall()
 	SyscallParams	sp(gs->getSyscallParams());
 	uint64_t	sc_ret;
 
-	fprintf(stderr, "VEXEXEC: DOING SYSCALL\n");
 	sc_ret = sc->apply(sp);
 	if (sc->isExit()) {
 		exited = true;

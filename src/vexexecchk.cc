@@ -48,6 +48,11 @@ uint64_t VexExecChk::doVexSB(VexSB* vsb)
 			vsb->getEndAddr(),
 			*state);
 		is_deferred = false;
+		if (vsb->isSyscall()) {
+			hit_syscall = true;
+			goto done;
+		}
+
 		goto states_should_be_equal;
 	} else if (is_deferred && !new_ip_in_bounds) {
 		/* can step out of the block now we call this a "resume" */
@@ -104,37 +109,31 @@ VexExec* VexExecChk::create(PTImgChk* gs)
 	return ve_chk;
 }
 
-// must do the check after the sycall is executed
-void VexExecChk::handlePostSyscall(VexSB* vsb, uint64_t new_jmpaddr)
-{
-#if 0
-	VexGuestAMD64State*	state;
-	bool			matched;
-
-	fprintf(stderr, "HANDLING POSTSYSCALL\n");
-	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	matched = cross_check->continueWithBounds(
-		vsb->getGuestAddr(), vsb->getEndAddr(), *state);
-	
-	if (matched) return;
-
-	if (	((uint64_t)new_jmpaddr < vsb->getGuestAddr() || 
-		(uint64_t)new_jmpaddr >= vsb->getEndAddr()))
-	{
-		dumpSubservient(vsb);
-	}
-#endif
-}
-	
 void VexExecChk::doSysCall(void)
 {
 	VexGuestAMD64State* state;
 
+	assert (hit_syscall && !is_deferred);
+
+	/* recall: shadow process <= vexllvm. hence, we must call the 
+	 * syscall for vexllvm prior to the syscall for the shadow process.
+	 * this lets us to fixups to match vexllvm's calls. */
 	VexExec::doSysCall();
 
 	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+	cross_check->stepSysCall(*state);
+
 	state->guest_RCX = 0;
 	state->guest_R11 = 0;
+
+	/* now both should be equal and at the instruction immediately following
+	 * the breaking syscall */
+	if (!cross_check->isMatch(*state)) {
+		fprintf(stderr, "MISMATCH: END OF SYSCALL. SYSEMU BUG.\n");
+		dumpSubservient(NULL);
+	}
+
+	hit_syscall = false;
 }
 
 void VexExecChk::dumpSubservient(VexSB* vsb)
@@ -142,15 +141,27 @@ void VexExecChk::dumpSubservient(VexSB* vsb)
 	const VexGuestAMD64State* state;
 	
 	state = (const VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	std::cerr << "found divergence running block @ " << (void*)vsb->getGuestAddr() << std::endl;
-	std::cerr << "original block end was @ " << (void*)vsb->getEndAddr() << std::endl;
+	if (vsb != NULL) {
+		std::cerr << 
+			"found divergence running block @ " <<
+			(void*)vsb->getGuestAddr() << std::endl;
+
+		std::cerr << 
+			"original block end was @ " <<
+			(void*)vsb->getEndAddr() << std::endl;
+	}
+
 	cross_check->printTraceStats(std::cerr);
 	std::cerr << "PTRACE state" << std::endl;
 	cross_check->printSubservient(std::cerr, *state);
 	std::cerr << "VEXLLVM state" << std::endl;
 	gs->print(std::cerr);
-	std::cerr << "VEX IR" << std::endl;
-	vsb->print(std::cerr);
+
+	if (vsb != NULL) {
+		std::cerr << "VEX IR" << std::endl;
+		vsb->print(std::cerr);
+	}
+
 	std::cerr << "PTRACE stack" << std::endl;
 	cross_check->stackTraceSubservient(std::cerr);
 	//if you want to keep going anyway, stop checking
