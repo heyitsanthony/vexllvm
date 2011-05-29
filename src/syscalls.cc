@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include "syscalls.h"
+#include <errno.h>
 
 #include "Sugar.h"
 
@@ -41,7 +42,7 @@ uint64_t Syscalls::apply(const SyscallParams& args)
 		return -1;
 	}
 
-	return syscall(
+	unsigned long ret = syscall(
 			sys_nr, 
 			args.getArg(0),
 			args.getArg(1),
@@ -49,6 +50,13 @@ uint64_t Syscalls::apply(const SyscallParams& args)
 			args.getArg(3),
 			args.getArg(4),
 			args.getArg(5));
+	//the low level sycall interface actually returns the error code
+	//so we have to extract it from errno
+	if(ret >= 0xfffffffffffff001ULL) {
+		return -errno;
+	} else {
+		return ret;
+	}
 }
 
 void Syscalls::print(std::ostream& os) const
