@@ -207,6 +207,11 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(F64toF32);
 	UNOP_TAGOP(I32StoF64);
 
+	UNOP_TAGOP(ReinterpF64asI64);
+	UNOP_TAGOP(ReinterpI64asF64);
+	UNOP_TAGOP(ReinterpF32asI32);
+	UNOP_TAGOP(ReinterpI32asF32);
+
 	BINOP_TAGOP(I64StoF64);
 //	BINOP_TAGOP(I64UtoF64); 3.7.0
 	BINOP_TAGOP(F64toI32S);
@@ -218,6 +223,37 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Clz64);
 
 	BINOP_TAGOP(InterleaveLO64x2);
+	
+	BINOP_TAGOP(Shl8x8);
+	BINOP_TAGOP(Shr8x8);
+	BINOP_TAGOP(Sar8x8);
+	BINOP_TAGOP(Sal8x8);
+
+	BINOP_TAGOP(Shl16x4);
+	BINOP_TAGOP(Shr16x4);
+	BINOP_TAGOP(Sar16x4);
+	BINOP_TAGOP(Sal16x4);
+
+	BINOP_TAGOP(Shl32x2);
+	BINOP_TAGOP(Shr32x2);
+	BINOP_TAGOP(Sar32x2);
+	BINOP_TAGOP(Sal32x2);
+
+	BINOP_TAGOP(SarN8x8);
+	BINOP_TAGOP(ShlN8x8);
+	BINOP_TAGOP(ShrN8x8);
+
+	BINOP_TAGOP(ShlN16x4);
+	BINOP_TAGOP(ShrN16x4);
+	BINOP_TAGOP(SarN16x4);
+
+	BINOP_TAGOP(ShlN32x2);
+	BINOP_TAGOP(ShrN32x2);
+	BINOP_TAGOP(SarN32x2);
+
+	BINOP_TAGOP(Perm8x8);
+	BINOP_TAGOP(Perm8x16);
+	
 	default:
 		fprintf(stderr, "UNKNOWN OP %s (%x)\n", getVexOpName(op), op);
 //		ppIROp(op);

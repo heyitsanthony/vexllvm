@@ -3,7 +3,7 @@
 #include <sys/syscall.h>
 #include <string.h>
 #include <sys/signal.h>
-
+#include <stdlib.h>
 #include "syscallsmarshalled.h"
 
 SyscallPtrBuf::SyscallPtrBuf(unsigned int in_len, void* in_ptr)
@@ -17,7 +17,10 @@ SyscallPtrBuf::SyscallPtrBuf(unsigned int in_len, void* in_ptr)
 		len = 0;
 	}
 }
-
+SyscallsMarshalled::SyscallsMarshalled()
+: last_sc_ptrbuf(NULL), log_syscalls(getenv("VEXLLVM_XCHK_SYSCALLS") ? true : false)
+{
+}
 bool SyscallsMarshalled::isSyscallMarshalled(int sys_nr) const
 {
 	return (sys_nr == SYS_clock_gettime || 
@@ -33,6 +36,15 @@ uint64_t SyscallsMarshalled::apply(const SyscallParams& args)
 	uint64_t		ret;
 
 	ret = Syscalls::apply(args);
+
+	if(log_syscalls) {
+		std::cerr << "syscall(" << sys_nr << ", " 
+			<< (void*)args.getArg(0) << ", " 
+			<< (void*)args.getArg(1) << ", " 
+			<< (void*)args.getArg(2) << ", " 
+			<< (void*)args.getArg(3) << ", " 
+			<< (void*)args.getArg(4) << ", ...) => " << (void*)ret << std::endl;
+	}
 
 	/* store write-out data from syscall */
 	assert (last_sc_ptrbuf == NULL && "Last PtrBuf not taken. Bad Sync");

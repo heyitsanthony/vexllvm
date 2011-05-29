@@ -20,7 +20,7 @@ private:
 class SyscallsMarshalled : public Syscalls
 {
 public:
-	SyscallsMarshalled() : last_sc_ptrbuf(NULL) {}
+	SyscallsMarshalled();
 	virtual ~SyscallsMarshalled()
 	{
 		if (last_sc_ptrbuf) delete last_sc_ptrbuf;
@@ -36,6 +36,7 @@ public:
 	bool isSyscallMarshalled(int sys_nr) const;
 private:
 	SyscallPtrBuf	*last_sc_ptrbuf;
+	bool		log_syscalls;
 };
 
 #endif
