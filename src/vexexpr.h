@@ -138,7 +138,9 @@ public:	\
 	VexExprConst##x(VexStmt* in_parent, y v)	\
 	: VexExprConst(in_parent), x(v) {}		\
 							\
-	void print(std::ostream& os) const { os << x << ":" #x; } \
+	void print(std::ostream& os) const { 		\
+		os << (void*)((intptr_t)x) << ":" #x; 	\
+	} \
 	llvm::Value* emit(void) const;		\
 	virtual uint64_t toValue(void) const { return x; }	\
 private:					\
