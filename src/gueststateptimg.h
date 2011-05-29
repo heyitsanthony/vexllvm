@@ -83,7 +83,8 @@ public:
 
 	void printTraceStats(std::ostream& os);
 	static void stackTrace(
-		std::ostream& os, const char* binname, pid_t pid);
+		std::ostream& os, const char* binname, pid_t pid,
+		void* range_begin = 0, void* range_end = 0);
 
 protected:
 	GuestStatePTImg(int argc, char* const argv[], char* const envp[]);

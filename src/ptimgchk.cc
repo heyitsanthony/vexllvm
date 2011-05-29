@@ -382,9 +382,9 @@ void PTImgChk::waitForSingleStep(void)
 	wait(&status);
 }
 
-void PTImgChk::stackTraceSubservient(std::ostream& os)
+void PTImgChk::stackTraceSubservient(std::ostream& os, void* begin, void* end)
 {
-	stackTrace(os, binary, child_pid);
+	stackTrace(os, binary, child_pid, begin, end);
 }
 
 void PTImgChk::printUserRegs(

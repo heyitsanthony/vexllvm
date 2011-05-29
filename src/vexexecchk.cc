@@ -163,7 +163,10 @@ void VexExecChk::dumpSubservient(VexSB* vsb)
 	}
 
 	std::cerr << "PTRACE stack" << std::endl;
-	cross_check->stackTraceSubservient(std::cerr);
+	cross_check->stackTraceSubservient(
+		std::cerr,
+		(void*)vsb->getGuestAddr(), 
+		(void*)vsb->getEndAddr());
 	//if you want to keep going anyway, stop checking
 	cross_check = NULL;
 	exit(1);

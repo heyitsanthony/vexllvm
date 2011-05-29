@@ -21,7 +21,7 @@ public:
 	void printSubservient(
 		std::ostream& os, 
 		const VexGuestAMD64State& ref) const;
-	void stackTraceSubservient(std::ostream& os);
+	void stackTraceSubservient(std::ostream& os, void* b = 0, void* e = 0);
 	void printTraceStats(std::ostream& os);
 
 	bool isMatch(const VexGuestAMD64State& state) const;

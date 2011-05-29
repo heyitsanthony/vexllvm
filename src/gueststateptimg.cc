@@ -340,15 +340,22 @@ void GuestStatePTImg::slurpBrains(pid_t pid)
 }
 
 void GuestStatePTImg::stackTrace(
-	std::ostream& os, const char* binname, pid_t pid)
+	std::ostream& os,
+	const char* binname, pid_t pid,
+	void* range_begin, void* range_end)
 {
 	char			buffer[1024];
 	int			bytes;
 	int			pipefd[2];
 	int			err;
-	std::ostringstream	pid_string;
+	std::ostringstream	pid_str, disasm_cmd;
 
-	pid_string << pid;
+	pid_str << pid;
+	if (range_begin && range_end) {
+		disasm_cmd << "disass " << range_begin << "," << range_end; 
+	} else {
+		disasm_cmd << "print \"???\"";
+	}
 	
 	err = pipe(pipefd);
 	assert (err != -1 && "Bad pipe for subservient trace");
@@ -366,11 +373,17 @@ void GuestStatePTImg::stackTrace(
 			"/usr/bin/gdb",
 			"--batch",
 			binname,
-			pid_string.str().c_str(),
+			pid_str.str().c_str(),
 			"--eval-command",
 			"thread apply all bt",
 			"--eval-command",
+			"print \"disasm of where guest ended (may fail)\"",
+			"--eval-command",
 			"disass",
+			 "--eval-command",
+			"print \"disasm of block with error (just finished)\"",
+			"--eval-command",
+			disasm_cmd.str().c_str(),
 			"--eval-command",
 			"info registers all",
 			"--eval-command",
