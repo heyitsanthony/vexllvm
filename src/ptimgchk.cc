@@ -239,18 +239,35 @@ bool PTImgChk::doStep(
 		return false;
 	}
 
+	if (isOnRDTSC(regs)) {
+		/* fake rdtsc to match vexhelpers.. */
+		regs.rip += 2;
+		regs.rax = 1;
+		regs.rdx = 0;
+		ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+		return true;
+	}
+
 	waitForSingleStep();
 	return true;
+}
+
+long PTImgChk::getInsOp(const user_regs_struct& regs)
+{
+	if (regs.rip == chk_addr) return chk_opcode;
+
+	chk_addr = regs.rip;
+	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+
+	return chk_opcode;
 }
 
 bool PTImgChk::isOnSysCall(const user_regs_struct& regs)
 {
 	long	cur_opcode;
-
-	if (regs.rip == chk_addr_syscall) return is_chk_addr_syscall;
-
-	chk_addr_syscall = regs.rip;
- 	cur_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+	bool	is_chk_addr_syscall;
+	
+	cur_opcode = getInsOp(regs);
 
 	is_chk_addr_syscall = ((cur_opcode & 0xffff) == 0x050f);
 	hit_syscall |= is_chk_addr_syscall;
@@ -258,6 +275,12 @@ bool PTImgChk::isOnSysCall(const user_regs_struct& regs)
 	return is_chk_addr_syscall;
 }
 
+bool PTImgChk::isOnRDTSC(const user_regs_struct& regs)
+{
+	long	cur_opcode;
+	cur_opcode = getInsOp(regs);
+	return (cur_opcode & 0xffff) == 0x310f;
+}
 
 bool PTImgChk::filterSysCall(
 	const VexGuestAMD64State& state,
@@ -273,7 +296,7 @@ bool PTImgChk::filterSysCall(
 		return true;
 
 	case SYS_exit_group:
-		regs.rax = 0;
+		regs.rax = state.guest_RAX;
 		regs.r11 = 0;
 		return true;
 

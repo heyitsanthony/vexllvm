@@ -42,7 +42,9 @@ private:
 	bool isRegMismatch(
 		const VexGuestAMD64State& state,
 		const user_regs_struct& regs) const;
+	long getInsOp(const user_regs_struct& regs);
 	bool isOnSysCall(const user_regs_struct& regs);
+	bool isOnRDTSC(const user_regs_struct& regs);
 
 	void printUserRegs(
 		std::ostream& os, 
@@ -62,9 +64,9 @@ private:
 
 	bool		log_steps;
 
-	/* caches check for syscall opcodes */
-	uintptr_t	chk_addr_syscall;
-	bool		is_chk_addr_syscall;
+	/* caches check for opcodes */
+	uintptr_t	chk_addr;
+	long		chk_opcode;
 
 	bool		hit_syscall;
 };
