@@ -434,18 +434,18 @@ VexExprMux0X::~VexExprMux0X(void)
 llvm::Value* VexExprMux0X::emit(void) const
 {
 	llvm::IRBuilder<>	*builder;
-	llvm::Value		*cmp_val, *zero_val, *nonzero_val;
+	llvm::Value		*cmp_val, *cmp_i8, *zero_val, *nonzero_val;
 	llvm::PHINode		*pn;
-	llvm::BasicBlock	*bb_then, *bb_else, *bb_merge, *bb_origin;
+	llvm::BasicBlock	*bb_zero, *bb_nonzero, *bb_merge, *bb_origin;
 	llvm::BasicBlock	*bb_nz, *bb_z;	/* BB in case of nested MuX */
 
 	builder = theGenLLVM->getBuilder();
 	bb_origin = builder->GetInsertBlock();
-	bb_then = llvm::BasicBlock::Create(
-		llvm::getGlobalContext(), "mux0X_then",
+	bb_zero = llvm::BasicBlock::Create(
+		llvm::getGlobalContext(), "mux0X_zero",
 		bb_origin->getParent());
-	bb_else = llvm::BasicBlock::Create(
-		llvm::getGlobalContext(), "mux0X_else",
+	bb_nonzero = llvm::BasicBlock::Create(
+		llvm::getGlobalContext(), "mux0X_nonzero",
 		bb_origin->getParent());
 	bb_merge = llvm::BasicBlock::Create(
 		llvm::getGlobalContext(), "mux0X_merge",
@@ -455,17 +455,21 @@ llvm::Value* VexExprMux0X::emit(void) const
 	/* evaluate mux condition */
 	builder->SetInsertPoint(bb_origin);
 	cmp_val = cond->emit();
-	builder->CreateCondBr(
-		builder->CreateTrunc(
-			cmp_val, builder->getInt1Ty()),
-		bb_then, bb_else);
+	cmp_i8 = builder->CreateICmpEQ(
+		cmp_val,
+		llvm::ConstantInt::get(
+			llvm::getGlobalContext(),
+			llvm::APInt(
+				cmp_val->getType()->getPrimitiveSizeInBits(),
+				0)));
+	builder->CreateCondBr(cmp_i8, bb_zero, bb_nonzero);
 
-	builder->SetInsertPoint(bb_then);
+	builder->SetInsertPoint(bb_nonzero);
 	nonzero_val = exprX->emit();
 	bb_nz = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 
-	builder->SetInsertPoint(bb_else);
+	builder->SetInsertPoint(bb_zero);
 	zero_val = expr0->emit();
 	bb_z = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
