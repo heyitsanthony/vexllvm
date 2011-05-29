@@ -90,6 +90,10 @@ void PTImgChk::handleChild(pid_t pid)
 {
 	/* keep child around */
 	child_pid = pid;
+	//we need the fds to line up.  child will have only 0-4
+	//TODO: actually check that
+	for(int i = 3; i < 1024; ++i)
+		close(i);
 }
 
 void PTImgChk::stepThroughBounds(
