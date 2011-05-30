@@ -3,6 +3,9 @@ CFLAGS=-g -O3 -DBIN_BASE="$(BIN_BASE)"
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
 endif
+ifndef TRACECC
+TRACECC=gcc
+endif
 
 # XXX, MAKES BINARY SIZE EXPLODE
 LDFLAGS="-Wl,-Ttext-segment=$(BIN_BASE)"
@@ -65,13 +68,13 @@ clean:
 	rm -f obj/* bin/*
 
 tests/traces-bin/dlsym : tests/traces-obj/dlsym.o
-	gcc $(TRACE_CFLAGS) -ldl $< -o $@
+	$(TRACECC) $(TRACE_CFLAGS) -ldl $< -o $@
 
 tests/traces-bin/% : tests/traces-obj/%.o
-	gcc $(TRACE_CFLAGS) $< -o $@
+	$(TRACECC) $(TRACE_CFLAGS) $< -o $@
 
 tests/traces-obj/%.o: tests/traces-src/%.c
-	gcc $(TRACE_CFLAGS) -c -o $@ $<
+	$(TRACECC) $(TRACE_CFLAGS) -c -o $@ $<
 
 bitcode/%.bc: support/%.c
 	llvm-gcc -emit-llvm -O3 -c $< -o $@
