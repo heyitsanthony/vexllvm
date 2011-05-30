@@ -47,6 +47,7 @@ private:
 	long getInsOp(const user_regs_struct& regs);
 	bool isOnSysCall(const user_regs_struct& regs);
 	bool isOnRDTSC(const user_regs_struct& regs);
+	bool isOnCPUID(const user_regs_struct& regs);
 
 	void printUserRegs(
 		std::ostream& os, 

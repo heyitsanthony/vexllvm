@@ -1,5 +1,6 @@
 BIN_BASE="0xa000000"
-CFLAGS=-g -O3 -DBIN_BASE="$(BIN_BASE)"
+BIN_BASE2="0xc000000"
+CFLAGS=-g -Os
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
 endif
@@ -8,7 +9,8 @@ TRACECC=gcc
 endif
 
 # XXX, MAKES BINARY SIZE EXPLODE
-LDFLAGS="-Wl,-Ttext-segment=$(BIN_BASE)"
+LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
+LDRELOC2="-Wl,-Ttext-segment=$(BIN_BASE2)"
 #LDFLAGS=
 
 
@@ -33,7 +35,8 @@ OBJDEPS=	vexxlate.o		\
 		gueststateptimg.o	\
 		guesttls.o		\
 		ptimgchk.o		\
-		elfsegment.o
+		elfsegment.o		\
+#		libvex_amd64_helpers.o	\
 
 ELFTRACEDEPS=	elf_trace.o
 
@@ -58,9 +61,9 @@ ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
 VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
 LLVMLDFLAGS=$(shell llvm-config --ldflags)
 LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
-LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall $(LDFLAGS)
+LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
 
-all: bin/elf_trace bin/jit_test bitcode bin/elf_run bin/pt_run bin/pt_trace bin/pt_xchk
+all: bin/elf_trace bin/jit_test bitcode bin/elf_run bin/pt_run bin/pt_trace bin/pt_xchk bin/pt_run_rebase bin/pt_xchk_rebase
 
 bitcode: $(BITCODE_FILES)
 
@@ -103,10 +106,16 @@ bin/pt_xchk: $(OBJDIRDEPS) obj/pt_xchk.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 bin/elf_trace: $(OBJDIRDEPS) $(ELFTRACEDIRDEPS)
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+	g++ -o $@ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) $(LDRELOC)
 
 bin/elf_run: $(OBJDIRDEPS) obj/elf_run.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+
+bin/pt_run_rebase: $(OBJDIRDEPS) obj/pt_run.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
+
+bin/pt_xchk_rebase: $(OBJDIRDEPS) obj/pt_xchk.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
 
 bin/pt_run: $(OBJDIRDEPS) obj/pt_run.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
@@ -118,6 +127,11 @@ bin/pt_trace: $(OBJDIRDEPS) obj/pt_trace.o
 bin/jit_test: $(OBJDIRDEPS) obj/jit_test.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
+#obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
+#	llc  $< -o $@
+
+#obj/libvex_amd64_helpers.o:   obj/libvex_amd64_helpers.s
+#	g++ $(CFLAGS)$(LLVMFLAGS)  -o $@ -c $<
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<

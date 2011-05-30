@@ -154,7 +154,7 @@ void VexStmtCAS::emit(void) const
 	builder->CreateBr(bb_merge);
 
 	builder->SetInsertPoint(bb_merge);
-	parent->setRegValue(oldVal_tmp, v_expected);
+	parent->setRegValue(oldVal_tmp, v_addr_load);
 }
 
 void VexStmtCAS::print(std::ostream& os) const
@@ -165,7 +165,7 @@ void VexStmtCAS::print(std::ostream& os) const
 	expected_val->print(os);
 	os << " => ";
 	new_val->print(os);
-	os << ")";
+	os << ")" << " tmp=t" << oldVal_tmp;
 }
 
 void VexStmtLLSC::print(std::ostream& os) const { os << "LLSC"; }

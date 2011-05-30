@@ -105,6 +105,8 @@ const char* VexSB::getTypeStr(IRType ty)
 void VexSB::print(std::ostream& os) const
 {
 	unsigned int i = 0;
+	printRegisters(os);
+	os << "\n-----irsb----";
 	foreach (it, stmts.begin(), stmts.end()) {
 		os << "[" << i++ << "]: ";
 		(*it)->print(os);
@@ -118,12 +120,14 @@ void VexSB::printRegisters(std::ostream& os) const
 	for (unsigned int i = 0; i < getNumRegs(); i++) {
 		const Value*	v;
 
-		os <<	"t" << i << "\n";
+		os <<	"t" << i << " ";
 
 		v = values[i];
 		if (v == NULL) continue;
 		std::string s = v->getNameStr();
-		os << s << "\n";
+		os << s;
+		v->dump();
+		os << "\n";
 	}
 }
 
