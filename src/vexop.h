@@ -52,7 +52,7 @@ class VexExpr##x##y : public VexExpr##x		\
 {						\
 public:						\
 	VexExpr##x##y(VexStmt* in_parent, const IRExpr* expr)	\
-	: VexExpr##x(in_parent, expr) { }			\
+	: VexExpr##x(in_parent, expr) { }	\
 	VexExpr##x##y(VexStmt* in_parent, VexExpr** args)	\
 	: VexExpr##x(in_parent, args) {}			\
 	virtual ~VexExpr##x##y() {}		\

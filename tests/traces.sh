@@ -37,24 +37,31 @@ for a in tests/traces-bin/*; do
 	tests/trace_docmd.sh "$a"
 done
 
-echo "Now testing apps"
-IFS=$'\n'
-for line in `cat tests/bin_cmds.txt`;
-do
-	if [ -z "$line" ]; then
-		continue
-	fi
-	a="$line"
-	if [ ! -z `echo $a | grep "^#" ` ]; then
-		continue
-	fi
+function test_apps
+{
+	echo "Now testing apps"
+	IFS=$'\n'
+	for line in `cat tests/bin_cmds.txt`;
+	do
+		if [ -z "$line" ]; then
+			continue
+		fi
+		a="$line"
+		if [ ! -z `echo $a | grep "^#" ` ]; then
+			continue
+		fi
 
-	binname=`echo "$a" | cut -f1 -d' '` 
-	if [ ! -x "$binname" ]; then
-		continue
-	fi
-	tests/trace_docmd.sh "$a"
-done
+		binname=`echo "$a" | cut -f1 -d' '` 
+		if [ ! -x "$binname" ]; then
+			continue
+		fi
+		tests/trace_docmd.sh "$a"
+	done
+}
+
+if [ -z "$ONLY_BUILTIN" ]; then
+	test_apps
+fi
 
 echo	"Trace tests done"	\
 	". OK="`wc -l $OUTPATH/tests.ok | cut -f1 -d' '`	\

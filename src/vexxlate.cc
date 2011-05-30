@@ -7,6 +7,7 @@
 
 #include "Sugar.h"
 
+#include "vexexpr.h"
 #include "vexsb.h"
 #include "vexxlate.h"
 
@@ -71,7 +72,19 @@ VexXlate::VexXlate()
 	loadLogType();
 }
 
-VexXlate::~VexXlate() { /* ??? */ }
+VexXlate::~VexXlate()
+{
+	if (getenv("VEXLLVM_DUMP_XLATESTATS")) {
+		std::cerr << "VexLate: Dumping op stats\n";
+		for (unsigned int i = Iop_INVALID+1; i < Iop_Rsqrte32x4 /* XXX */; ++i) {
+			IROp	op = (IROp)i;
+			std::cerr <<
+				"[VEXLLVM] [VEXXLATESTAT] " <<
+				getVexOpName(op) << ": " <<
+				VexExpr::getOpCount(op) << std::endl;
+		}
+	}
+}
 
 void VexXlate::loadLogType(void)
 {

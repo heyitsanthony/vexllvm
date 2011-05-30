@@ -35,9 +35,17 @@ public:
 	}
 	static VexExpr* create(VexStmt* in_parent, const IRExpr* expr);
 	const VexStmt* getParent(void) const { return parent; }
+	static unsigned int getOpCount(IROp irop)
+	{ 
+		return vex_expr_op_count[irop - Iop_INVALID];
+	}
 protected:
 	VexExpr(VexStmt* in_parent)
 	: parent(in_parent) {}
+
+	/* no way more than 2K ops (at 713 now)! if more, assert thrown*/
+	#define VEX_MAX_OP	2048	
+	static unsigned int vex_expr_op_count[VEX_MAX_OP];
 private:
 	const VexStmt* parent;
 };

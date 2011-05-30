@@ -1,5 +1,9 @@
 BIN_BASE="0xa000000"
 CFLAGS=-g -O3 -DBIN_BASE="$(BIN_BASE)"
+ifndef TRACE_CFLAGS
+TRACE_CFLAGS=-g
+endif
+
 # XXX, MAKES BINARY SIZE EXPLODE
 LDFLAGS="-Wl,-Ttext-segment=$(BIN_BASE)"
 #LDFLAGS=
@@ -61,13 +65,13 @@ clean:
 	rm -f obj/* bin/*
 
 tests/traces-bin/dlsym : tests/traces-obj/dlsym.o
-	gcc -ldl $< -o $@
+	gcc $(TRACE_CFLAGS) -ldl $< -o $@
 
 tests/traces-bin/% : tests/traces-obj/%.o
-	gcc $< -o $@
+	gcc $(TRACE_CFLAGS) $< -o $@
 
 tests/traces-obj/%.o: tests/traces-src/%.c
-	gcc -g -c -o $@ $<
+	gcc $(TRACE_CFLAGS) -c -o $@ $<
 
 bitcode/%.bc: support/%.c
 	llvm-gcc -emit-llvm -O3 -c $< -o $@
@@ -80,6 +84,11 @@ tests-clean:
 TRACEDEPS_PATH=$(TRACEDEPS:%=tests/traces-bin/%)
 test-traces: all $(TRACEDEPS_PATH)
 	tests/traces.sh
+
+
+test-built-traces: all $(TRACEDEPS_PATH)
+	ONLY_BUILTIN=1 tests/traces.sh
+
 
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
