@@ -89,7 +89,18 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 	binary(argv[0]), steps(0), blocks(0),
 	hit_syscall(false)
 {
+	const char	*step_gauge;
+
 	log_steps = (getenv("VEXLLVM_LOG_STEPS")) ? true : false;
+	step_gauge =  getenv("VEXLLVM_STEP_GAUGE");
+	if (step_gauge == NULL)
+		log_gauge_overflow = 0;
+	else {
+		log_gauge_overflow = atoi(step_gauge);
+		fprintf(stderr,
+			"STEPS BETWEEN UPDATE: %d.\n", 
+			log_gauge_overflow);
+	}
 }
 
 void PTImgChk::handleChild(pid_t pid)
@@ -439,6 +450,12 @@ void PTImgChk::waitForSingleStep(void)
 		exit(1);
 	}
 	wait(&status);
+	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
+		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
+		fprintf(stderr, "STEPS %0#8d %c %0#8d BLOCKS\r", 
+			steps, c, blocks);
+	}
+
 }
 
 void PTImgChk::stackTraceSubservient(std::ostream& os, void* begin, void* end)
