@@ -1140,6 +1140,23 @@ Value* VexExprBinopCmpLT32F0x4::emit(void) const
 		get_c(32, 0));
 }
 
+Value* VexExprBinopCmpEQ64F0x2::emit(void) const
+{
+	Value	*lo_op_lhs, *lo_op_rhs, *result;
+	BINOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vtd(2));
+	v2 = builder->CreateBitCast(v2, get_vtd(2));
+	lo_op_lhs = builder->CreateExtractElement(v1, get_c(32, 0));
+	lo_op_rhs = builder->CreateExtractElement(v2, get_c(32, 0));
+	result = builder->CreateFCmpOEQ(lo_op_lhs, lo_op_rhs);
+	result = builder->CreateSExt(result, get_i(64));
+
+	return builder->CreateInsertElement(
+		builder->CreateBitCast(v1, get_vt(2, 64)), 
+		result,
+		get_c(32, 0));
+}
+
 Value* VexExprBinopMax32F0x4::emit(void) const
 {
 	Value	*lo_op_lhs, *lo_op_rhs, *result;
@@ -1150,6 +1167,34 @@ Value* VexExprBinopMax32F0x4::emit(void) const
 	lo_op_lhs = builder->CreateExtractElement(v1, get_c(32, 0));
 	lo_op_rhs = builder->CreateExtractElement(v2, get_c(32, 0));
 	f = theVexHelpers->getHelper("vexop_maxf32");
+	assert (f != NULL);
+	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);
+	return builder->CreateInsertElement(v1, result, get_c(32, 0));
+}
+
+Value* VexExprUnopSqrt64F0x2::emit(void) const
+{
+	Value		*lo_op, *result;
+	Function	*f;
+	UNOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vtd(2));
+	lo_op = builder->CreateExtractElement(v1, get_c(32, 0));
+	f = theVexHelpers->getHelper("vexop_sqrtf64");
+	assert (f != NULL);
+	result = builder->CreateCall(f, lo_op);
+	return builder->CreateInsertElement(v1, result, get_c(32, 0));
+}
+
+Value* VexExprBinopMin64F0x2::emit(void) const
+{
+	Value	*lo_op_lhs, *lo_op_rhs, *result;
+	Function	*f;
+	BINOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vtd(2));
+	v2 = builder->CreateBitCast(v2, get_vtd(2));
+	lo_op_lhs = builder->CreateExtractElement(v1, get_c(32, 0));
+	lo_op_rhs = builder->CreateExtractElement(v2, get_c(32, 0));
+	f = theVexHelpers->getHelper("vexop_minf64");
 	assert (f != NULL);
 	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);
 	return builder->CreateInsertElement(v1, result, get_c(32, 0));
@@ -1177,6 +1222,24 @@ Value* VexExprBinopSub8x16::emit(void) const
 	v1 = builder->CreateBitCast(v1, get_vt(16, 8));
 	v2 = builder->CreateBitCast(v2, get_vt(16, 8));
 	return builder->CreateSub(v1, v2);
+}
+
+Value* VexExprBinopSetV128lo64::emit(void) const
+{
+	BINOP_SETUP
+	return builder->CreateInsertElement(
+		builder->CreateBitCast(v1, get_vt(64, 2)),
+		v2,
+		get_c(32, 0));
+}
+
+Value* VexExprBinopSetV128lo32::emit(void) const
+{
+	BINOP_SETUP
+	return builder->CreateInsertElement(
+		builder->CreateBitCast(v1, get_vt(32, 4)),
+		v2,
+		get_c(32, 0));
 }
 
 #define EMIT_HELPER_BINOP(x,y)			\
