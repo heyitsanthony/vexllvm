@@ -15,7 +15,7 @@ protected:
 	VexExecChk(PTImgChk* gs);
 
 	virtual uint64_t doVexSB(VexSB* vsb);
-	virtual void doSysCall(void);
+	virtual void doSysCall(VexSB* vsb);
 private:
 	void dumpSubservient(VexSB* vsb);
 

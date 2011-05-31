@@ -36,6 +36,7 @@ uint64_t SyscallsMarshalled::apply(const SyscallParams& args)
 	uint64_t		ret;
 
 	ret = Syscalls::apply(args);
+	sys_nr = args.getSyscall();
 
 	if(log_syscalls) {
 		std::cerr << "syscall(" << sys_nr << ", " 
@@ -48,7 +49,6 @@ uint64_t SyscallsMarshalled::apply(const SyscallParams& args)
 
 	/* store write-out data from syscall */
 	assert (last_sc_ptrbuf == NULL && "Last PtrBuf not taken. Bad Sync");
-	sys_nr = args.getSyscall();
 	switch (sys_nr) {
 	case SYS_clock_gettime:
 		last_sc_ptrbuf = new SyscallPtrBuf(

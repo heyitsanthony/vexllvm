@@ -292,19 +292,14 @@ bool PTImgChk::filterSysCall(
 	switch (regs.rax) {
 	case SYS_brk:
 		regs.rax = -1;
-		regs.rcx = 0;
-		regs.r11 = 0;
 		return true;
 
 	case SYS_exit_group:
 		regs.rax = state.guest_RAX;
-		regs.r11 = 0;
 		return true;
 
 	case SYS_getpid:
 		regs.rax = getpid();
-		regs.rcx = 0;
-		regs.r11 = 0;
 		return true;
 
 	case SYS_mmap:
@@ -343,6 +338,8 @@ void PTImgChk::stepSysCall(
 
 	if (filterSysCall(state, regs)) {
 		regs.rip += 2;
+		//kernel clobbers these, assuming that the generated code, causes
+		regs.rcx = regs.r11 = 0;
 		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
 		assert (err >= 0);
 		return;

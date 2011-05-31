@@ -126,7 +126,7 @@ const VexSB* VexExec::doNextSB(void)
 		addr_stack.push((elfptr_t)vsb->getEndAddr());
 
 	if (vsb->isSyscall()) {
-		doSysCall();
+		doSysCall(vsb);
 		if (exited) return NULL;
 	}
 
@@ -140,7 +140,7 @@ const VexSB* VexExec::doNextSB(void)
 	return vsb;
 }
 
-void VexExec::doSysCall()
+void VexExec::doSysCall(VexSB* vsb)
 {
 	SyscallParams	sp(gs->getSyscallParams());
 	uint64_t	sc_ret;

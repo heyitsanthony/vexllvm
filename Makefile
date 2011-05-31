@@ -84,6 +84,9 @@ test-traces: all $(TRACEDEPS_PATH)
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
 
+tests-xchk_opcode: all $(TRACEDEPS_PATH)
+	tests/opcodes.sh
+
 tests-oprof: all
 	TRACES_OPROFILE=1 tests/traces.sh
 

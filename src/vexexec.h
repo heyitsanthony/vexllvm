@@ -44,7 +44,7 @@ public:
 protected:
 	VexExec(GuestState* gs);
 	virtual uint64_t doVexSB(VexSB* vsb);
-	virtual void doSysCall(void);
+	virtual void doSysCall(VexSB* vsb);
 	static void setupStatics(GuestState* in_gs);
 
 	GuestState		*gs;

@@ -122,7 +122,7 @@ VexExec* VexExecChk::create(PTImgChk* gs)
 	return ve_chk;
 }
 
-void VexExecChk::doSysCall(void)
+void VexExecChk::doSysCall(VexSB* vsb)
 {
 	VexGuestAMD64State* state;
 
@@ -131,7 +131,7 @@ void VexExecChk::doSysCall(void)
 	/* recall: shadow process <= vexllvm. hence, we must call the 
 	 * syscall for vexllvm prior to the syscall for the shadow process.
 	 * this lets us to fixups to match vexllvm's calls. */
-	VexExec::doSysCall();
+	VexExec::doSysCall(vsb);
 
 	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	cross_check->stepSysCall(sc_marshall, *state);
@@ -143,7 +143,7 @@ void VexExecChk::doSysCall(void)
 	 * the breaking syscall */
 	if (!cross_check->isMatch(*state)) {
 		fprintf(stderr, "MISMATCH: END OF SYSCALL. SYSEMU BUG.\n");
-		dumpSubservient(NULL);
+		dumpSubservient(vsb);
 	}
 
 	hit_syscall = false;
