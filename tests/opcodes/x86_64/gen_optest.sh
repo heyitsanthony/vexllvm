@@ -15,7 +15,7 @@ int main() {
 	asm volatile("movdqa (%0), %%xmm3" : : "a" (&xmb));
 	asm volatile("nop" : : "a" (&foo), "b" (bar));
         asm volatile("$op $r1");
-        asm volatile("mov %rax, %rci");
+        asm volatile("mov %rax, %rsi");
         asm volatile("mov \$0xe7, %rax");
         asm volatile("mov \$0x3c, %rsi");
         asm volatile("xor %rdi, %rdi");
