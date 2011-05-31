@@ -225,7 +225,7 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0xaaaaaaaaaaaaaaaa && *((uint64_t*)&st->guest_XMM1 + 1) == 0xbbbbbbbbbbbbbbbb;
+		return *((uint64_t*)&st->guest_XMM1+1) == 0xaaaaaaaaaaaaaaaa && *((uint64_t*)&st->guest_XMM1) == 0xbbbbbbbbbbbbbbbb;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -252,7 +252,7 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0xab12cd34ab12cd34;
+		return *((uint64_t*)&st->guest_XMM1) == 0x12ab34cd12ab34cd;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 

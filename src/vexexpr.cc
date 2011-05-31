@@ -8,6 +8,8 @@
 
 #include "vexexpr.h"
 
+unsigned int VexExpr::vex_expr_op_count[VEX_MAX_OP];
+
 VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 {
 	VexExpr	*ret = NULL;
@@ -23,7 +25,7 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 	case Iex_Qop:
 	case Iex_Triop:
 	case Iex_Binop:
-	case Iex_Unop: 
+	case Iex_Unop:
 		ret = VexExprNaryOp::createOp(in_parent, expr);
 		break;
 
@@ -44,7 +46,15 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 
 VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 {
-	IROp	op = expr->Iex.Unop.op;
+	IROp		op;
+	unsigned int	op_idx;
+
+	op = expr->Iex.Unop.op;
+
+	/* bump expression operation count */
+	op_idx = op - Iop_INVALID;
+	assert (op_idx < VEX_MAX_OP && "Op is larger than VEX_MAX_OP - OFLOW");
+	VexExpr::vex_expr_op_count[op_idx]++;
 
 	/* known ops */
 	switch (op) {
@@ -112,10 +122,18 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Add32F0x4);
 	BINOP_TAGOP(Sub32F0x4);
 
+	UNOP_TAGOP(Sqrt64F0x2);
+	BINOP_TAGOP(Min64F0x2);
 	BINOP_TAGOP(Max32F0x4);
 	BINOP_TAGOP(CmpLT32F0x4);
+	BINOP_TAGOP(CmpEQ64F0x2);
+
+	BINOP_TAGOP(SetV128lo64);
+	BINOP_TAGOP(SetV128lo32);
 
 	BINOP_TAGOP(InterleaveLO8x16);
+	BINOP_TAGOP(InterleaveLO64x2);
+	BINOP_TAGOP(InterleaveHI64x2);
 
 	BINOP_TAGOP(Mul8);
 	BINOP_TAGOP(Mul16);
@@ -202,6 +220,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(32HLto64);
 	BINOP_TAGOP(64HLtoV128);
 	BINOP_TAGOP(64HLto128);
+	UNOP_TAGOP(32HIto16);
 	UNOP_TAGOP(64HIto32);
 	UNOP_TAGOP(F32toF64);
 	BINOP_TAGOP(F64toF32);
@@ -222,8 +241,6 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Ctz64);
 	UNOP_TAGOP(Clz64);
 
-	BINOP_TAGOP(InterleaveLO64x2);
-	
 	BINOP_TAGOP(Shl8x8);
 	BINOP_TAGOP(Shr8x8);
 	BINOP_TAGOP(Sar8x8);
@@ -253,9 +270,12 @@ return new VexExprUnop##x(in_parent, expr)
 
 	BINOP_TAGOP(Perm8x8);
 	BINOP_TAGOP(Perm8x16);
-	
+
 	default:
-		fprintf(stderr, "UNKNOWN OP %s (%x)\n", getVexOpName(op), op);
+		fprintf(stderr, "createOp: UNKNOWN OP %s (%x)\n",
+			getVexOpName(op),
+			op);
+/* always works-- doesn't use our shady tables, but can't print nicely! */
 //		ppIROp(op);
 //		fprintf(stderr, "\n");
 		break;
@@ -298,7 +318,7 @@ VexExprConst* VexExprConst::createConst(
 #define EMIT_CONST_INT(x,y)	\
 llvm::Value* VexExprConst##x::emit(void) const { 	\
 	return llvm::ConstantInt::get(			\
-		llvm::getGlobalContext(), llvm::APInt(y, x)); }	
+		llvm::getGlobalContext(), llvm::APInt(y, x)); }
 EMIT_CONST_INT(U1, 1)
 EMIT_CONST_INT(U8, 8)
 EMIT_CONST_INT(U16, 16)
@@ -413,11 +433,11 @@ void VexExprLoad::print(std::ostream& os) const
 {
 	os << "Load(";
 	addr->print(os);
-	os << "):" << VexSB::getTypeStr(ty); 
+	os << "):" << VexSB::getTypeStr(ty);
 }
 
 VexExprCCall::VexExprCCall(VexStmt* in_parent, const IRExpr* expr)
-: VexExpr(in_parent) 
+: VexExpr(in_parent)
 {
 	const IRCallee*	callee = expr->Iex.CCall.cee;
 
@@ -534,5 +554,5 @@ void VexExprMux0X::print(std::ostream& os) const
 
 llvm::Value* VexExprGet::emit(void) const
 {
-	return theGenLLVM->readCtx(offset, ty);	
+	return theGenLLVM->readCtx(offset, ty);
 }

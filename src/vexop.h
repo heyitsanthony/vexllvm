@@ -52,7 +52,7 @@ class VexExpr##x##y : public VexExpr##x		\
 {						\
 public:						\
 	VexExpr##x##y(VexStmt* in_parent, const IRExpr* expr)	\
-	: VexExpr##x(in_parent, expr) { }			\
+	: VexExpr##x(in_parent, expr) { }	\
 	VexExpr##x##y(VexStmt* in_parent, VexExpr** args)	\
 	: VexExpr##x(in_parent, args) {}			\
 	virtual ~VexExpr##x##y() {}		\
@@ -94,6 +94,7 @@ BINOP_CLASS(16HLto32);
 BINOP_CLASS(32HLto64);
 BINOP_CLASS(64HLtoV128);
 BINOP_CLASS(64HLto128);
+UNOP_CLASS(32HIto16);
 UNOP_CLASS(64HIto32);
 UNOP_CLASS(F32toF64);
 
@@ -137,6 +138,7 @@ BINOP_CLASS(DivModU64to32);
 BINOP_CLASS(DivModS64to32);
 BINOP_CLASS(DivModU128to64);
 BINOP_CLASS(DivModS128to64);
+BINOP_CLASS(Min64F0x2);
 BINOP_CLASS(Mul64F0x2);
 BINOP_CLASS(Div64F0x2);
 BINOP_CLASS(Add64F0x2);
@@ -147,10 +149,16 @@ BINOP_CLASS(Div32F0x4);
 BINOP_CLASS(Add32F0x4);
 BINOP_CLASS(Sub32F0x4);
 
+UNOP_CLASS(Sqrt64F0x2);
 BINOP_CLASS(Max32F0x4);
 BINOP_CLASS(CmpLT32F0x4);
+BINOP_CLASS(CmpEQ64F0x2);
 
+BINOP_CLASS(SetV128lo64);
+BINOP_CLASS(SetV128lo32);
 BINOP_CLASS(InterleaveLO8x16);
+BINOP_CLASS(InterleaveLO64x2);
+BINOP_CLASS(InterleaveHI64x2);
 
 BINOP_CLASS(Mul8);
 BINOP_CLASS(Mul16);
@@ -232,8 +240,6 @@ BINOP_CLASS(CmpLE32S);
 BINOP_CLASS(CmpLE32U);
 BINOP_CLASS(CmpLT32S);
 BINOP_CLASS(CmpLT32U);
-
-BINOP_CLASS(InterleaveLO64x2);
 
 BINOP_CLASS(Shl8x8);
 BINOP_CLASS(Shr8x8);

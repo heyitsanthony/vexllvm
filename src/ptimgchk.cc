@@ -13,6 +13,10 @@
 #include "syscallsmarshalled.h"
 #include "ptimgchk.h"
 
+extern "C" {
+extern void amd64g_dirtyhelper_CPUID_baseline ( VexGuestAMD64State* st );
+}
+
 struct user_regs_desc
 {
 	const char*	name;
@@ -85,7 +89,18 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 	binary(argv[0]), steps(0), blocks(0),
 	hit_syscall(false)
 {
+	const char	*step_gauge;
+
 	log_steps = (getenv("VEXLLVM_LOG_STEPS")) ? true : false;
+	step_gauge =  getenv("VEXLLVM_STEP_GAUGE");
+	if (step_gauge == NULL)
+		log_gauge_overflow = 0;
+	else {
+		log_gauge_overflow = atoi(step_gauge);
+		fprintf(stderr,
+			"STEPS BETWEEN UPDATE: %d.\n", 
+			log_gauge_overflow);
+	}
 }
 
 void PTImgChk::handleChild(pid_t pid)
@@ -253,6 +268,23 @@ bool PTImgChk::doStep(
 		return true;
 	}
 
+	if (isOnCPUID(regs)) {
+		/* fake cpuid to match vexhelpers */
+		VexGuestAMD64State	fakeState;
+		regs.rip += 2;
+		fakeState.guest_RAX = regs.rax;
+		fakeState.guest_RBX = regs.rbx;
+		fakeState.guest_RCX = regs.rcx;
+		fakeState.guest_RDX = regs.rdx;
+		amd64g_dirtyhelper_CPUID_baseline(&fakeState);
+		regs.rax = fakeState.guest_RAX;
+		regs.rbx = fakeState.guest_RBX;
+		regs.rcx = fakeState.guest_RCX;
+		regs.rdx = fakeState.guest_RDX;
+		ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+		return true;
+	}
+
 	waitForSingleStep();
 	return true;
 }
@@ -286,6 +318,14 @@ bool PTImgChk::isOnRDTSC(const user_regs_struct& regs)
 	cur_opcode = getInsOp(regs);
 	return (cur_opcode & 0xffff) == 0x310f;
 }
+
+bool PTImgChk::isOnCPUID(const user_regs_struct& regs)
+{
+	long	cur_opcode;
+	cur_opcode = getInsOp(regs);
+	return (cur_opcode & 0xffff) == 0xA20F;
+}
+
 
 bool PTImgChk::filterSysCall(
 	const VexGuestAMD64State& state,
@@ -411,6 +451,12 @@ void PTImgChk::waitForSingleStep(void)
 		exit(1);
 	}
 	wait(&status);
+	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
+		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
+		fprintf(stderr, "STEPS %0#8d %c %0#8d BLOCKS\r", 
+			steps, c, blocks);
+	}
+
 }
 
 void PTImgChk::stackTraceSubservient(std::ostream& os, void* begin, void* end)

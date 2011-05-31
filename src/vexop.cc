@@ -224,512 +224,511 @@ CASE_OP(ReinterpI64asF64)
 CASE_OP(ReinterpF32asI32)
 CASE_OP(ReinterpI32asF32)
 
-case Iop_F64toI16S: fprintf(stderr, "unimplemented Iop_F64toI16S (%x)\n", op); return "Iop_F64toI16S";
-case Iop_F64toI32S: fprintf(stderr, "unimplemented Iop_F64toI32S (%x)\n", op); return "Iop_F64toI32S";
-case Iop_F64toI64S: fprintf(stderr, "unimplemented Iop_F64toI64S (%x)\n", op); return "Iop_F64toI64S";
-case Iop_F64toI32U: fprintf(stderr, "unimplemented Iop_F64toI32U (%x)\n", op); return "Iop_F64toI32U";
-case Iop_I16StoF64: fprintf(stderr, "unimplemented Iop_I16StoF64 (%x)\n", op); return "Iop_I16StoF64";
-case Iop_I32StoF64: fprintf(stderr, "unimplemented Iop_I32StoF64 (%x)\n", op); return "Iop_I32StoF64";
-case Iop_I64StoF64: fprintf(stderr, "unimplemented Iop_I64StoF64 (%x)\n", op); return "Iop_I64StoF64";
-case Iop_I32UtoF64: fprintf(stderr, "unimplemented Iop_I32UtoF64 (%x)\n", op); return "Iop_I32UtoF64";
-case Iop_F32toF64: fprintf(stderr, "unimplemented Iop_F32toF64 (%x)\n", op); return "Iop_F32toF64";
-case Iop_F64toF32: fprintf(stderr, "unimplemented Iop_F64toF32 (%x)\n", op); return "Iop_F64toF32";
-case Iop_AtanF64: fprintf(stderr, "unimplemented Iop_AtanF64 (%x)\n", op); return "Iop_AtanF64";
-case Iop_Yl2xF64: fprintf(stderr, "unimplemented Iop_Yl2xF64 (%x)\n", op); return "Iop_Yl2xF64";
-case Iop_Yl2xp1F64: fprintf(stderr, "unimplemented Iop_Yl2xp1F64 (%x)\n", op); return "Iop_Yl2xp1F64";
-case Iop_PRemF64: fprintf(stderr, "unimplemented Iop_PRemF64 (%x)\n", op); return "Iop_PRemF64";
-case Iop_PRemC3210F64: fprintf(stderr, "unimplemented Iop_PRemC3210F64 (%x)\n", op); return "Iop_PRemC3210F64";
-case Iop_PRem1F64: fprintf(stderr, "unimplemented Iop_PRem1F64 (%x)\n", op); return "Iop_PRem1F64";
-case Iop_PRem1C3210F64: fprintf(stderr, "unimplemented Iop_PRem1C3210F64 (%x)\n", op); return "Iop_PRem1C3210F64";
-case Iop_ScaleF64: fprintf(stderr, "unimplemented Iop_ScaleF64 (%x)\n", op); return "Iop_ScaleF64";
-case Iop_SinF64: fprintf(stderr, "unimplemented Iop_SinF64 (%x)\n", op); return "Iop_SinF64";
-case Iop_CosF64: fprintf(stderr, "unimplemented Iop_CosF64 (%x)\n", op); return "Iop_CosF64";
-case Iop_TanF64: fprintf(stderr, "unimplemented Iop_TanF64 (%x)\n", op); return "Iop_TanF64";
-case Iop_2xm1F64: fprintf(stderr, "unimplemented Iop_2xm1F64 (%x)\n", op); return "Iop_2xm1F64";
-case Iop_RoundF64toInt: fprintf(stderr, "unimplemented Iop_RoundF64toInt (%x)\n", op); return "Iop_RoundF64toInt";
-case Iop_RoundF32toInt: fprintf(stderr, "unimplemented Iop_RoundF32toInt (%x)\n", op); return "Iop_RoundF32toInt";
-case Iop_MAddF64: fprintf(stderr, "unimplemented Iop_MAddF64 (%x)\n", op); return "Iop_MAddF64";
-case Iop_MSubF64: fprintf(stderr, "unimplemented Iop_MSubF64 (%x)\n", op); return "Iop_MSubF64";
-case Iop_MAddF64r32: fprintf(stderr, "unimplemented Iop_MAddF64r32 (%x)\n", op); return "Iop_MAddF64r32";
-case Iop_MSubF64r32: fprintf(stderr, "unimplemented Iop_MSubF64r32 (%x)\n", op); return "Iop_MSubF64r32";
-case Iop_Est5FRSqrt: fprintf(stderr, "unimplemented Iop_Est5FRSqrt (%x)\n", op); return "Iop_Est5FRSqrt";
-case Iop_RoundF64toF64_NEAREST: fprintf(stderr, "unimplemented Iop_RoundF64toF64_NEAREST (%x)\n", op); return "Iop_RoundF64toF64_NEAREST";
-case Iop_RoundF64toF64_NegINF: fprintf(stderr, "unimplemented Iop_RoundF64toF64_NegINF (%x)\n", op); return "Iop_RoundF64toF64_NegINF";
-case Iop_RoundF64toF64_PosINF: fprintf(stderr, "unimplemented Iop_RoundF64toF64_PosINF (%x)\n", op); return "Iop_RoundF64toF64_PosINF";
-case Iop_RoundF64toF64_ZERO: fprintf(stderr, "unimplemented Iop_RoundF64toF64_ZERO (%x)\n", op); return "Iop_RoundF64toF64_ZERO";
-case Iop_TruncF64asF32: fprintf(stderr, "unimplemented Iop_TruncF64asF32 (%x)\n", op); return "Iop_TruncF64asF32";
-case Iop_RoundF64toF32: fprintf(stderr, "unimplemented Iop_RoundF64toF32 (%x)\n", op); return "Iop_RoundF64toF32";
-case Iop_CalcFPRF: fprintf(stderr, "unimplemented Iop_CalcFPRF (%x)\n", op); return "Iop_CalcFPRF";
-case Iop_Add16x2: fprintf(stderr, "unimplemented Iop_Add16x2 (%x)\n", op); return "Iop_Add16x2";
-case Iop_Sub16x2: fprintf(stderr, "unimplemented Iop_Sub16x2 (%x)\n", op); return "Iop_Sub16x2";
-case Iop_QAdd16Sx2: fprintf(stderr, "unimplemented Iop_QAdd16Sx2 (%x)\n", op); return "Iop_QAdd16Sx2";
-case Iop_QAdd16Ux2: fprintf(stderr, "unimplemented Iop_QAdd16Ux2 (%x)\n", op); return "Iop_QAdd16Ux2";
-case Iop_QSub16Sx2: fprintf(stderr, "unimplemented Iop_QSub16Sx2 (%x)\n", op); return "Iop_QSub16Sx2";
-case Iop_QSub16Ux2: fprintf(stderr, "unimplemented Iop_QSub16Ux2 (%x)\n", op); return "Iop_QSub16Ux2";
-case Iop_HAdd16Ux2: fprintf(stderr, "unimplemented Iop_HAdd16Ux2 (%x)\n", op); return "Iop_HAdd16Ux2";
-case Iop_HAdd16Sx2: fprintf(stderr, "unimplemented Iop_HAdd16Sx2 (%x)\n", op); return "Iop_HAdd16Sx2";
-case Iop_HSub16Ux2: fprintf(stderr, "unimplemented Iop_HSub16Ux2 (%x)\n", op); return "Iop_HSub16Ux2";
-case Iop_HSub16Sx2: fprintf(stderr, "unimplemented Iop_HSub16Sx2 (%x)\n", op); return "Iop_HSub16Sx2";
-case Iop_Add8x4: fprintf(stderr, "unimplemented Iop_Add8x4 (%x)\n", op); return "Iop_Add8x4";
-case Iop_Sub8x4: fprintf(stderr, "unimplemented Iop_Sub8x4 (%x)\n", op); return "Iop_Sub8x4";
-case Iop_QAdd8Sx4: fprintf(stderr, "unimplemented Iop_QAdd8Sx4 (%x)\n", op); return "Iop_QAdd8Sx4";
-case Iop_QAdd8Ux4: fprintf(stderr, "unimplemented Iop_QAdd8Ux4 (%x)\n", op); return "Iop_QAdd8Ux4";
-case Iop_QSub8Sx4: fprintf(stderr, "unimplemented Iop_QSub8Sx4 (%x)\n", op); return "Iop_QSub8Sx4";
-case Iop_QSub8Ux4: fprintf(stderr, "unimplemented Iop_QSub8Ux4 (%x)\n", op); return "Iop_QSub8Ux4";
-case Iop_HAdd8Ux4: fprintf(stderr, "unimplemented Iop_HAdd8Ux4 (%x)\n", op); return "Iop_HAdd8Ux4";
-case Iop_HAdd8Sx4: fprintf(stderr, "unimplemented Iop_HAdd8Sx4 (%x)\n", op); return "Iop_HAdd8Sx4";
-case Iop_HSub8Ux4: fprintf(stderr, "unimplemented Iop_HSub8Ux4 (%x)\n", op); return "Iop_HSub8Ux4";
-case Iop_HSub8Sx4: fprintf(stderr, "unimplemented Iop_HSub8Sx4 (%x)\n", op); return "Iop_HSub8Sx4";
-case Iop_Sad8Ux4: fprintf(stderr, "unimplemented Iop_Sad8Ux4 (%x)\n", op); return "Iop_Sad8Ux4";
-case Iop_CmpNEZ16x2: fprintf(stderr, "unimplemented Iop_CmpNEZ16x2 (%x)\n", op); return "Iop_CmpNEZ16x2";
-case Iop_CmpNEZ8x4: fprintf(stderr, "unimplemented Iop_CmpNEZ8x4 (%x)\n", op); return "Iop_CmpNEZ8x4";
-case Iop_I32UtoFx2: fprintf(stderr, "unimplemented Iop_I32UtoFx2 (%x)\n", op); return "Iop_I32UtoFx2";
-case Iop_I32StoFx2: fprintf(stderr, "unimplemented Iop_I32StoFx2 (%x)\n", op); return "Iop_I32StoFx2";
-case Iop_FtoI32Ux2_RZ: fprintf(stderr, "unimplemented Iop_FtoI32Ux2_RZ (%x)\n", op); return "Iop_FtoI32Ux2_RZ";
-case Iop_FtoI32Sx2_RZ: fprintf(stderr, "unimplemented Iop_FtoI32Sx2_RZ (%x)\n", op); return "Iop_FtoI32Sx2_RZ";
-case Iop_F32ToFixed32Ux2_RZ: fprintf(stderr, "unimplemented Iop_F32ToFixed32Ux2_RZ (%x)\n", op); return "Iop_F32ToFixed32Ux2_RZ";
-case Iop_F32ToFixed32Sx2_RZ: fprintf(stderr, "unimplemented Iop_F32ToFixed32Sx2_RZ (%x)\n", op); return "Iop_F32ToFixed32Sx2_RZ";
-case Iop_Fixed32UToF32x2_RN: fprintf(stderr, "unimplemented Iop_Fixed32UToF32x2_RN (%x)\n", op); return "Iop_Fixed32UToF32x2_RN";
-case Iop_Fixed32SToF32x2_RN: fprintf(stderr, "unimplemented Iop_Fixed32SToF32x2_RN (%x)\n", op); return "Iop_Fixed32SToF32x2_RN";
-case Iop_Max32Fx2: fprintf(stderr, "unimplemented Iop_Max32Fx2 (%x)\n", op); return "Iop_Max32Fx2";
-case Iop_Min32Fx2: fprintf(stderr, "unimplemented Iop_Min32Fx2 (%x)\n", op); return "Iop_Min32Fx2";
-case Iop_PwMax32Fx2: fprintf(stderr, "unimplemented Iop_PwMax32Fx2 (%x)\n", op); return "Iop_PwMax32Fx2";
-case Iop_PwMin32Fx2: fprintf(stderr, "unimplemented Iop_PwMin32Fx2 (%x)\n", op); return "Iop_PwMin32Fx2";
-case Iop_CmpEQ32Fx2: fprintf(stderr, "unimplemented Iop_CmpEQ32Fx2 (%x)\n", op); return "Iop_CmpEQ32Fx2";
-case Iop_CmpGT32Fx2: fprintf(stderr, "unimplemented Iop_CmpGT32Fx2 (%x)\n", op); return "Iop_CmpGT32Fx2";
-case Iop_CmpGE32Fx2: fprintf(stderr, "unimplemented Iop_CmpGE32Fx2 (%x)\n", op); return "Iop_CmpGE32Fx2";
-case Iop_Recip32Fx2: fprintf(stderr, "unimplemented Iop_Recip32Fx2 (%x)\n", op); return "Iop_Recip32Fx2";
-case Iop_Recps32Fx2: fprintf(stderr, "unimplemented Iop_Recps32Fx2 (%x)\n", op); return "Iop_Recps32Fx2";
-case Iop_Rsqrte32Fx2: fprintf(stderr, "unimplemented Iop_Rsqrte32Fx2 (%x)\n", op); return "Iop_Rsqrte32Fx2";
-case Iop_Rsqrts32Fx2: fprintf(stderr, "unimplemented Iop_Rsqrts32Fx2 (%x)\n", op); return "Iop_Rsqrts32Fx2";
-case Iop_Neg32Fx2: fprintf(stderr, "unimplemented Iop_Neg32Fx2 (%x)\n", op); return "Iop_Neg32Fx2";
-case Iop_Abs32Fx2: fprintf(stderr, "unimplemented Iop_Abs32Fx2 (%x)\n", op); return "Iop_Abs32Fx2";
-case Iop_CmpNEZ8x8: fprintf(stderr, "unimplemented Iop_CmpNEZ8x8 (%x)\n", op); return "Iop_CmpNEZ8x8";
-case Iop_CmpNEZ16x4: fprintf(stderr, "unimplemented Iop_CmpNEZ16x4 (%x)\n", op); return "Iop_CmpNEZ16x4";
-case Iop_CmpNEZ32x2: fprintf(stderr, "unimplemented Iop_CmpNEZ32x2 (%x)\n", op); return "Iop_CmpNEZ32x2";
-case Iop_Add8x8: fprintf(stderr, "unimplemented Iop_Add8x8 (%x)\n", op); return "Iop_Add8x8";
-case Iop_Add16x4: fprintf(stderr, "unimplemented Iop_Add16x4 (%x)\n", op); return "Iop_Add16x4";
-case Iop_Add32x2: fprintf(stderr, "unimplemented Iop_Add32x2 (%x)\n", op); return "Iop_Add32x2";
-case Iop_QAdd8Ux8: fprintf(stderr, "unimplemented Iop_QAdd8Ux8 (%x)\n", op); return "Iop_QAdd8Ux8";
-case Iop_QAdd16Ux4: fprintf(stderr, "unimplemented Iop_QAdd16Ux4 (%x)\n", op); return "Iop_QAdd16Ux4";
-case Iop_QAdd32Ux2: fprintf(stderr, "unimplemented Iop_QAdd32Ux2 (%x)\n", op); return "Iop_QAdd32Ux2";
-case Iop_QAdd64Ux1: fprintf(stderr, "unimplemented Iop_QAdd64Ux1 (%x)\n", op); return "Iop_QAdd64Ux1";
-case Iop_QAdd8Sx8: fprintf(stderr, "unimplemented Iop_QAdd8Sx8 (%x)\n", op); return "Iop_QAdd8Sx8";
-case Iop_QAdd16Sx4: fprintf(stderr, "unimplemented Iop_QAdd16Sx4 (%x)\n", op); return "Iop_QAdd16Sx4";
-case Iop_QAdd32Sx2: fprintf(stderr, "unimplemented Iop_QAdd32Sx2 (%x)\n", op); return "Iop_QAdd32Sx2";
-case Iop_QAdd64Sx1: fprintf(stderr, "unimplemented Iop_QAdd64Sx1 (%x)\n", op); return "Iop_QAdd64Sx1";
-case Iop_PwAdd8x8: fprintf(stderr, "unimplemented Iop_PwAdd8x8 (%x)\n", op); return "Iop_PwAdd8x8";
-case Iop_PwAdd16x4: fprintf(stderr, "unimplemented Iop_PwAdd16x4 (%x)\n", op); return "Iop_PwAdd16x4";
-case Iop_PwAdd32x2: fprintf(stderr, "unimplemented Iop_PwAdd32x2 (%x)\n", op); return "Iop_PwAdd32x2";
-case Iop_PwMax8Sx8: fprintf(stderr, "unimplemented Iop_PwMax8Sx8 (%x)\n", op); return "Iop_PwMax8Sx8";
-case Iop_PwMax16Sx4: fprintf(stderr, "unimplemented Iop_PwMax16Sx4 (%x)\n", op); return "Iop_PwMax16Sx4";
-case Iop_PwMax32Sx2: fprintf(stderr, "unimplemented Iop_PwMax32Sx2 (%x)\n", op); return "Iop_PwMax32Sx2";
-case Iop_PwMax8Ux8: fprintf(stderr, "unimplemented Iop_PwMax8Ux8 (%x)\n", op); return "Iop_PwMax8Ux8";
-case Iop_PwMax16Ux4: fprintf(stderr, "unimplemented Iop_PwMax16Ux4 (%x)\n", op); return "Iop_PwMax16Ux4";
-case Iop_PwMax32Ux2: fprintf(stderr, "unimplemented Iop_PwMax32Ux2 (%x)\n", op); return "Iop_PwMax32Ux2";
-case Iop_PwMin8Sx8: fprintf(stderr, "unimplemented Iop_PwMin8Sx8 (%x)\n", op); return "Iop_PwMin8Sx8";
-case Iop_PwMin16Sx4: fprintf(stderr, "unimplemented Iop_PwMin16Sx4 (%x)\n", op); return "Iop_PwMin16Sx4";
-case Iop_PwMin32Sx2: fprintf(stderr, "unimplemented Iop_PwMin32Sx2 (%x)\n", op); return "Iop_PwMin32Sx2";
-case Iop_PwMin8Ux8: fprintf(stderr, "unimplemented Iop_PwMin8Ux8 (%x)\n", op); return "Iop_PwMin8Ux8";
-case Iop_PwMin16Ux4: fprintf(stderr, "unimplemented Iop_PwMin16Ux4 (%x)\n", op); return "Iop_PwMin16Ux4";
-case Iop_PwMin32Ux2: fprintf(stderr, "unimplemented Iop_PwMin32Ux2 (%x)\n", op); return "Iop_PwMin32Ux2";
-case Iop_PwAddL8Ux8: fprintf(stderr, "unimplemented Iop_PwAddL8Ux8 (%x)\n", op); return "Iop_PwAddL8Ux8";
-case Iop_PwAddL16Ux4: fprintf(stderr, "unimplemented Iop_PwAddL16Ux4 (%x)\n", op); return "Iop_PwAddL16Ux4";
-case Iop_PwAddL32Ux2: fprintf(stderr, "unimplemented Iop_PwAddL32Ux2 (%x)\n", op); return "Iop_PwAddL32Ux2";
-case Iop_PwAddL8Sx8: fprintf(stderr, "unimplemented Iop_PwAddL8Sx8 (%x)\n", op); return "Iop_PwAddL8Sx8";
-case Iop_PwAddL16Sx4: fprintf(stderr, "unimplemented Iop_PwAddL16Sx4 (%x)\n", op); return "Iop_PwAddL16Sx4";
-case Iop_PwAddL32Sx2: fprintf(stderr, "unimplemented Iop_PwAddL32Sx2 (%x)\n", op); return "Iop_PwAddL32Sx2";
-case Iop_Sub8x8: fprintf(stderr, "unimplemented Iop_Sub8x8 (%x)\n", op); return "Iop_Sub8x8";
-case Iop_Sub16x4: fprintf(stderr, "unimplemented Iop_Sub16x4 (%x)\n", op); return "Iop_Sub16x4";
-case Iop_Sub32x2: fprintf(stderr, "unimplemented Iop_Sub32x2 (%x)\n", op); return "Iop_Sub32x2";
-case Iop_QSub8Ux8: fprintf(stderr, "unimplemented Iop_QSub8Ux8 (%x)\n", op); return "Iop_QSub8Ux8";
-case Iop_QSub16Ux4: fprintf(stderr, "unimplemented Iop_QSub16Ux4 (%x)\n", op); return "Iop_QSub16Ux4";
-case Iop_QSub32Ux2: fprintf(stderr, "unimplemented Iop_QSub32Ux2 (%x)\n", op); return "Iop_QSub32Ux2";
-case Iop_QSub64Ux1: fprintf(stderr, "unimplemented Iop_QSub64Ux1 (%x)\n", op); return "Iop_QSub64Ux1";
-case Iop_QSub8Sx8: fprintf(stderr, "unimplemented Iop_QSub8Sx8 (%x)\n", op); return "Iop_QSub8Sx8";
-case Iop_QSub16Sx4: fprintf(stderr, "unimplemented Iop_QSub16Sx4 (%x)\n", op); return "Iop_QSub16Sx4";
-case Iop_QSub32Sx2: fprintf(stderr, "unimplemented Iop_QSub32Sx2 (%x)\n", op); return "Iop_QSub32Sx2";
-case Iop_QSub64Sx1: fprintf(stderr, "unimplemented Iop_QSub64Sx1 (%x)\n", op); return "Iop_QSub64Sx1";
-case Iop_Abs8x8: fprintf(stderr, "unimplemented Iop_Abs8x8 (%x)\n", op); return "Iop_Abs8x8";
-case Iop_Abs16x4: fprintf(stderr, "unimplemented Iop_Abs16x4 (%x)\n", op); return "Iop_Abs16x4";
-case Iop_Abs32x2: fprintf(stderr, "unimplemented Iop_Abs32x2 (%x)\n", op); return "Iop_Abs32x2";
-case Iop_Mul8x8: fprintf(stderr, "unimplemented Iop_Mul8x8 (%x)\n", op); return "Iop_Mul8x8";
-case Iop_Mul16x4: fprintf(stderr, "unimplemented Iop_Mul16x4 (%x)\n", op); return "Iop_Mul16x4";
-case Iop_Mul32x2: fprintf(stderr, "unimplemented Iop_Mul32x2 (%x)\n", op); return "Iop_Mul32x2";
-case Iop_Mul32Fx2: fprintf(stderr, "unimplemented Iop_Mul32Fx2 (%x)\n", op); return "Iop_Mul32Fx2";
-case Iop_MulHi16Ux4: fprintf(stderr, "unimplemented Iop_MulHi16Ux4 (%x)\n", op); return "Iop_MulHi16Ux4";
-case Iop_MulHi16Sx4: fprintf(stderr, "unimplemented Iop_MulHi16Sx4 (%x)\n", op); return "Iop_MulHi16Sx4";
-case Iop_PolynomialMul8x8: fprintf(stderr, "unimplemented Iop_PolynomialMul8x8 (%x)\n", op); return "Iop_PolynomialMul8x8";
-case Iop_QDMulHi16Sx4: fprintf(stderr, "unimplemented Iop_QDMulHi16Sx4 (%x)\n", op); return "Iop_QDMulHi16Sx4";
-case Iop_QDMulHi32Sx2: fprintf(stderr, "unimplemented Iop_QDMulHi32Sx2 (%x)\n", op); return "Iop_QDMulHi32Sx2";
-case Iop_QRDMulHi16Sx4: fprintf(stderr, "unimplemented Iop_QRDMulHi16Sx4 (%x)\n", op); return "Iop_QRDMulHi16Sx4";
-case Iop_QRDMulHi32Sx2: fprintf(stderr, "unimplemented Iop_QRDMulHi32Sx2 (%x)\n", op); return "Iop_QRDMulHi32Sx2";
-case Iop_Avg8Ux8: fprintf(stderr, "unimplemented Iop_Avg8Ux8 (%x)\n", op); return "Iop_Avg8Ux8";
-case Iop_Avg16Ux4: fprintf(stderr, "unimplemented Iop_Avg16Ux4 (%x)\n", op); return "Iop_Avg16Ux4";
-case Iop_Max8Sx8: fprintf(stderr, "unimplemented Iop_Max8Sx8 (%x)\n", op); return "Iop_Max8Sx8";
-case Iop_Max16Sx4: fprintf(stderr, "unimplemented Iop_Max16Sx4 (%x)\n", op); return "Iop_Max16Sx4";
-case Iop_Max32Sx2: fprintf(stderr, "unimplemented Iop_Max32Sx2 (%x)\n", op); return "Iop_Max32Sx2";
-case Iop_Max8Ux8: fprintf(stderr, "unimplemented Iop_Max8Ux8 (%x)\n", op); return "Iop_Max8Ux8";
-case Iop_Max16Ux4: fprintf(stderr, "unimplemented Iop_Max16Ux4 (%x)\n", op); return "Iop_Max16Ux4";
-case Iop_Max32Ux2: fprintf(stderr, "unimplemented Iop_Max32Ux2 (%x)\n", op); return "Iop_Max32Ux2";
-case Iop_Min8Sx8: fprintf(stderr, "unimplemented Iop_Min8Sx8 (%x)\n", op); return "Iop_Min8Sx8";
-case Iop_Min16Sx4: fprintf(stderr, "unimplemented Iop_Min16Sx4 (%x)\n", op); return "Iop_Min16Sx4";
-case Iop_Min32Sx2: fprintf(stderr, "unimplemented Iop_Min32Sx2 (%x)\n", op); return "Iop_Min32Sx2";
-case Iop_Min8Ux8: fprintf(stderr, "unimplemented Iop_Min8Ux8 (%x)\n", op); return "Iop_Min8Ux8";
-case Iop_Min16Ux4: fprintf(stderr, "unimplemented Iop_Min16Ux4 (%x)\n", op); return "Iop_Min16Ux4";
-case Iop_Min32Ux2: fprintf(stderr, "unimplemented Iop_Min32Ux2 (%x)\n", op); return "Iop_Min32Ux2";
-case Iop_CmpEQ8x8: fprintf(stderr, "unimplemented Iop_CmpEQ8x8 (%x)\n", op); return "Iop_CmpEQ8x8";
-case Iop_CmpEQ16x4: fprintf(stderr, "unimplemented Iop_CmpEQ16x4 (%x)\n", op); return "Iop_CmpEQ16x4";
-case Iop_CmpEQ32x2: fprintf(stderr, "unimplemented Iop_CmpEQ32x2 (%x)\n", op); return "Iop_CmpEQ32x2";
-case Iop_CmpGT8Ux8: fprintf(stderr, "unimplemented Iop_CmpGT8Ux8 (%x)\n", op); return "Iop_CmpGT8Ux8";
-case Iop_CmpGT16Ux4: fprintf(stderr, "unimplemented Iop_CmpGT16Ux4 (%x)\n", op); return "Iop_CmpGT16Ux4";
-case Iop_CmpGT32Ux2: fprintf(stderr, "unimplemented Iop_CmpGT32Ux2 (%x)\n", op); return "Iop_CmpGT32Ux2";
-case Iop_CmpGT8Sx8: fprintf(stderr, "unimplemented Iop_CmpGT8Sx8 (%x)\n", op); return "Iop_CmpGT8Sx8";
-case Iop_CmpGT16Sx4: fprintf(stderr, "unimplemented Iop_CmpGT16Sx4 (%x)\n", op); return "Iop_CmpGT16Sx4";
-case Iop_CmpGT32Sx2: fprintf(stderr, "unimplemented Iop_CmpGT32Sx2 (%x)\n", op); return "Iop_CmpGT32Sx2";
-case Iop_Cnt8x8: fprintf(stderr, "unimplemented Iop_Cnt8x8 (%x)\n", op); return "Iop_Cnt8x8";
-case Iop_Clz8Sx8: fprintf(stderr, "unimplemented Iop_Clz8Sx8 (%x)\n", op); return "Iop_Clz8Sx8";
-case Iop_Clz16Sx4: fprintf(stderr, "unimplemented Iop_Clz16Sx4 (%x)\n", op); return "Iop_Clz16Sx4";
-case Iop_Clz32Sx2: fprintf(stderr, "unimplemented Iop_Clz32Sx2 (%x)\n", op); return "Iop_Clz32Sx2";
-case Iop_Cls8Sx8: fprintf(stderr, "unimplemented Iop_Cls8Sx8 (%x)\n", op); return "Iop_Cls8Sx8";
-case Iop_Cls16Sx4: fprintf(stderr, "unimplemented Iop_Cls16Sx4 (%x)\n", op); return "Iop_Cls16Sx4";
-case Iop_Cls32Sx2: fprintf(stderr, "unimplemented Iop_Cls32Sx2 (%x)\n", op); return "Iop_Cls32Sx2";
-case Iop_Sal64x1: fprintf(stderr, "unimplemented Iop_Sal64x1 (%x)\n", op); return "Iop_Sal64x1";
-case Iop_QShl8x8: fprintf(stderr, "unimplemented Iop_QShl8x8 (%x)\n", op); return "Iop_QShl8x8";
-case Iop_QShl16x4: fprintf(stderr, "unimplemented Iop_QShl16x4 (%x)\n", op); return "Iop_QShl16x4";
-case Iop_QShl32x2: fprintf(stderr, "unimplemented Iop_QShl32x2 (%x)\n", op); return "Iop_QShl32x2";
-case Iop_QShl64x1: fprintf(stderr, "unimplemented Iop_QShl64x1 (%x)\n", op); return "Iop_QShl64x1";
-case Iop_QSal8x8: fprintf(stderr, "unimplemented Iop_QSal8x8 (%x)\n", op); return "Iop_QSal8x8";
-case Iop_QSal16x4: fprintf(stderr, "unimplemented Iop_QSal16x4 (%x)\n", op); return "Iop_QSal16x4";
-case Iop_QSal32x2: fprintf(stderr, "unimplemented Iop_QSal32x2 (%x)\n", op); return "Iop_QSal32x2";
-case Iop_QSal64x1: fprintf(stderr, "unimplemented Iop_QSal64x1 (%x)\n", op); return "Iop_QSal64x1";
-case Iop_QShlN8Sx8: fprintf(stderr, "unimplemented Iop_QShlN8Sx8 (%x)\n", op); return "Iop_QShlN8Sx8";
-case Iop_QShlN16Sx4: fprintf(stderr, "unimplemented Iop_QShlN16Sx4 (%x)\n", op); return "Iop_QShlN16Sx4";
-case Iop_QShlN32Sx2: fprintf(stderr, "unimplemented Iop_QShlN32Sx2 (%x)\n", op); return "Iop_QShlN32Sx2";
-case Iop_QShlN64Sx1: fprintf(stderr, "unimplemented Iop_QShlN64Sx1 (%x)\n", op); return "Iop_QShlN64Sx1";
-case Iop_QShlN8x8: fprintf(stderr, "unimplemented Iop_QShlN8x8 (%x)\n", op); return "Iop_QShlN8x8";
-case Iop_QShlN16x4: fprintf(stderr, "unimplemented Iop_QShlN16x4 (%x)\n", op); return "Iop_QShlN16x4";
-case Iop_QShlN32x2: fprintf(stderr, "unimplemented Iop_QShlN32x2 (%x)\n", op); return "Iop_QShlN32x2";
-case Iop_QShlN64x1: fprintf(stderr, "unimplemented Iop_QShlN64x1 (%x)\n", op); return "Iop_QShlN64x1";
-case Iop_QSalN8x8: fprintf(stderr, "unimplemented Iop_QSalN8x8 (%x)\n", op); return "Iop_QSalN8x8";
-case Iop_QSalN16x4: fprintf(stderr, "unimplemented Iop_QSalN16x4 (%x)\n", op); return "Iop_QSalN16x4";
-case Iop_QSalN32x2: fprintf(stderr, "unimplemented Iop_QSalN32x2 (%x)\n", op); return "Iop_QSalN32x2";
-case Iop_QSalN64x1: fprintf(stderr, "unimplemented Iop_QSalN64x1 (%x)\n", op); return "Iop_QSalN64x1";
-case Iop_QNarrow16Ux4: fprintf(stderr, "unimplemented Iop_QNarrow16Ux4 (%x)\n", op); return "Iop_QNarrow16Ux4";
-case Iop_QNarrow16Sx4: fprintf(stderr, "unimplemented Iop_QNarrow16Sx4 (%x)\n", op); return "Iop_QNarrow16Sx4";
-case Iop_QNarrow32Sx2: fprintf(stderr, "unimplemented Iop_QNarrow32Sx2 (%x)\n", op); return "Iop_QNarrow32Sx2";
-case Iop_InterleaveHI8x8: fprintf(stderr, "unimplemented Iop_InterleaveHI8x8 (%x)\n", op); return "Iop_InterleaveHI8x8";
-case Iop_InterleaveHI16x4: fprintf(stderr, "unimplemented Iop_InterleaveHI16x4 (%x)\n", op); return "Iop_InterleaveHI16x4";
-case Iop_InterleaveHI32x2: fprintf(stderr, "unimplemented Iop_InterleaveHI32x2 (%x)\n", op); return "Iop_InterleaveHI32x2";
-case Iop_InterleaveLO8x8: fprintf(stderr, "unimplemented Iop_InterleaveLO8x8 (%x)\n", op); return "Iop_InterleaveLO8x8";
-case Iop_InterleaveLO16x4: fprintf(stderr, "unimplemented Iop_InterleaveLO16x4 (%x)\n", op); return "Iop_InterleaveLO16x4";
-case Iop_InterleaveLO32x2: fprintf(stderr, "unimplemented Iop_InterleaveLO32x2 (%x)\n", op); return "Iop_InterleaveLO32x2";
-case Iop_InterleaveOddLanes8x8: fprintf(stderr, "unimplemented Iop_InterleaveOddLanes8x8 (%x)\n", op); return "Iop_InterleaveOddLanes8x8";
-case Iop_InterleaveEvenLanes8x8: fprintf(stderr, "unimplemented Iop_InterleaveEvenLanes8x8 (%x)\n", op); return "Iop_InterleaveEvenLanes8x8";
-case Iop_InterleaveOddLanes16x4: fprintf(stderr, "unimplemented Iop_InterleaveOddLanes16x4 (%x)\n", op); return "Iop_InterleaveOddLanes16x4";
-case Iop_InterleaveEvenLanes16x4: fprintf(stderr, "unimplemented Iop_InterleaveEvenLanes16x4 (%x)\n", op); return "Iop_InterleaveEvenLanes16x4";
-case Iop_CatOddLanes8x8: fprintf(stderr, "unimplemented Iop_CatOddLanes8x8 (%x)\n", op); return "Iop_CatOddLanes8x8";
-case Iop_CatOddLanes16x4: fprintf(stderr, "unimplemented Iop_CatOddLanes16x4 (%x)\n", op); return "Iop_CatOddLanes16x4";
-case Iop_CatEvenLanes8x8: fprintf(stderr, "unimplemented Iop_CatEvenLanes8x8 (%x)\n", op); return "Iop_CatEvenLanes8x8";
-case Iop_CatEvenLanes16x4: fprintf(stderr, "unimplemented Iop_CatEvenLanes16x4 (%x)\n", op); return "Iop_CatEvenLanes16x4";
-case Iop_GetElem8x8: fprintf(stderr, "unimplemented Iop_GetElem8x8 (%x)\n", op); return "Iop_GetElem8x8";
-case Iop_GetElem16x4: fprintf(stderr, "unimplemented Iop_GetElem16x4 (%x)\n", op); return "Iop_GetElem16x4";
-case Iop_GetElem32x2: fprintf(stderr, "unimplemented Iop_GetElem32x2 (%x)\n", op); return "Iop_GetElem32x2";
-case Iop_SetElem8x8: fprintf(stderr, "unimplemented Iop_SetElem8x8 (%x)\n", op); return "Iop_SetElem8x8";
-case Iop_SetElem16x4: fprintf(stderr, "unimplemented Iop_SetElem16x4 (%x)\n", op); return "Iop_SetElem16x4";
-case Iop_SetElem32x2: fprintf(stderr, "unimplemented Iop_SetElem32x2 (%x)\n", op); return "Iop_SetElem32x2";
-case Iop_Dup8x8: fprintf(stderr, "unimplemented Iop_Dup8x8 (%x)\n", op); return "Iop_Dup8x8";
-case Iop_Dup16x4: fprintf(stderr, "unimplemented Iop_Dup16x4 (%x)\n", op); return "Iop_Dup16x4";
-case Iop_Dup32x2: fprintf(stderr, "unimplemented Iop_Dup32x2 (%x)\n", op); return "Iop_Dup32x2";
-case Iop_Extract64: fprintf(stderr, "unimplemented Iop_Extract64 (%x)\n", op); return "Iop_Extract64";
-case Iop_Reverse16_8x8: fprintf(stderr, "unimplemented Iop_Reverse16_8x8 (%x)\n", op); return "Iop_Reverse16_8x8";
-case Iop_Reverse32_8x8: fprintf(stderr, "unimplemented Iop_Reverse32_8x8 (%x)\n", op); return "Iop_Reverse32_8x8";
-case Iop_Reverse32_16x4: fprintf(stderr, "unimplemented Iop_Reverse32_16x4 (%x)\n", op); return "Iop_Reverse32_16x4";
-case Iop_Reverse64_8x8: fprintf(stderr, "unimplemented Iop_Reverse64_8x8 (%x)\n", op); return "Iop_Reverse64_8x8";
-case Iop_Reverse64_16x4: fprintf(stderr, "unimplemented Iop_Reverse64_16x4 (%x)\n", op); return "Iop_Reverse64_16x4";
-case Iop_Reverse64_32x2: fprintf(stderr, "unimplemented Iop_Reverse64_32x2 (%x)\n", op); return "Iop_Reverse64_32x2";
-case Iop_Recip32x2: fprintf(stderr, "unimplemented Iop_Recip32x2 (%x)\n", op); return "Iop_Recip32x2";
-case Iop_Rsqrte32x2: fprintf(stderr, "unimplemented Iop_Rsqrte32x2 (%x)\n", op); return "Iop_Rsqrte32x2";
-case Iop_Add32Fx4: fprintf(stderr, "unimplemented Iop_Add32Fx4 (%x)\n", op); return "Iop_Add32Fx4";
-case Iop_Sub32Fx4: fprintf(stderr, "unimplemented Iop_Sub32Fx4 (%x)\n", op); return "Iop_Sub32Fx4";
-case Iop_Mul32Fx4: fprintf(stderr, "unimplemented Iop_Mul32Fx4 (%x)\n", op); return "Iop_Mul32Fx4";
-case Iop_Div32Fx4: fprintf(stderr, "unimplemented Iop_Div32Fx4 (%x)\n", op); return "Iop_Div32Fx4";
-case Iop_Max32Fx4: fprintf(stderr, "unimplemented Iop_Max32Fx4 (%x)\n", op); return "Iop_Max32Fx4";
-case Iop_Min32Fx4: fprintf(stderr, "unimplemented Iop_Min32Fx4 (%x)\n", op); return "Iop_Min32Fx4";
-case Iop_Add32Fx2: fprintf(stderr, "unimplemented Iop_Add32Fx2 (%x)\n", op); return "Iop_Add32Fx2";
-case Iop_Sub32Fx2: fprintf(stderr, "unimplemented Iop_Sub32Fx2 (%x)\n", op); return "Iop_Sub32Fx2";
-case Iop_CmpEQ32Fx4: fprintf(stderr, "unimplemented Iop_CmpEQ32Fx4 (%x)\n", op); return "Iop_CmpEQ32Fx4";
-case Iop_CmpLT32Fx4: fprintf(stderr, "unimplemented Iop_CmpLT32Fx4 (%x)\n", op); return "Iop_CmpLT32Fx4";
-case Iop_CmpLE32Fx4: fprintf(stderr, "unimplemented Iop_CmpLE32Fx4 (%x)\n", op); return "Iop_CmpLE32Fx4";
-case Iop_CmpUN32Fx4: fprintf(stderr, "unimplemented Iop_CmpUN32Fx4 (%x)\n", op); return "Iop_CmpUN32Fx4";
-case Iop_CmpGT32Fx4: fprintf(stderr, "unimplemented Iop_CmpGT32Fx4 (%x)\n", op); return "Iop_CmpGT32Fx4";
-case Iop_CmpGE32Fx4: fprintf(stderr, "unimplemented Iop_CmpGE32Fx4 (%x)\n", op); return "Iop_CmpGE32Fx4";
-case Iop_Abs32Fx4: fprintf(stderr, "unimplemented Iop_Abs32Fx4 (%x)\n", op); return "Iop_Abs32Fx4";
-case Iop_PwMax32Fx4: fprintf(stderr, "unimplemented Iop_PwMax32Fx4 (%x)\n", op); return "Iop_PwMax32Fx4";
-case Iop_PwMin32Fx4: fprintf(stderr, "unimplemented Iop_PwMin32Fx4 (%x)\n", op); return "Iop_PwMin32Fx4";
-case Iop_Sqrt32Fx4: fprintf(stderr, "unimplemented Iop_Sqrt32Fx4 (%x)\n", op); return "Iop_Sqrt32Fx4";
-case Iop_RSqrt32Fx4: fprintf(stderr, "unimplemented Iop_RSqrt32Fx4 (%x)\n", op); return "Iop_RSqrt32Fx4";
-case Iop_Neg32Fx4: fprintf(stderr, "unimplemented Iop_Neg32Fx4 (%x)\n", op); return "Iop_Neg32Fx4";
-case Iop_Recip32Fx4: fprintf(stderr, "unimplemented Iop_Recip32Fx4 (%x)\n", op); return "Iop_Recip32Fx4";
-case Iop_Recps32Fx4: fprintf(stderr, "unimplemented Iop_Recps32Fx4 (%x)\n", op); return "Iop_Recps32Fx4";
-case Iop_Rsqrte32Fx4: fprintf(stderr, "unimplemented Iop_Rsqrte32Fx4 (%x)\n", op); return "Iop_Rsqrte32Fx4";
-case Iop_Rsqrts32Fx4: fprintf(stderr, "unimplemented Iop_Rsqrts32Fx4 (%x)\n", op); return "Iop_Rsqrts32Fx4";
-case Iop_I32UtoFx4: fprintf(stderr, "unimplemented Iop_I32UtoFx4 (%x)\n", op); return "Iop_I32UtoFx4";
-case Iop_I32StoFx4: fprintf(stderr, "unimplemented Iop_I32StoFx4 (%x)\n", op); return "Iop_I32StoFx4";
-case Iop_FtoI32Ux4_RZ: fprintf(stderr, "unimplemented Iop_FtoI32Ux4_RZ (%x)\n", op); return "Iop_FtoI32Ux4_RZ";
-case Iop_FtoI32Sx4_RZ: fprintf(stderr, "unimplemented Iop_FtoI32Sx4_RZ (%x)\n", op); return "Iop_FtoI32Sx4_RZ";
-case Iop_QFtoI32Ux4_RZ: fprintf(stderr, "unimplemented Iop_QFtoI32Ux4_RZ (%x)\n", op); return "Iop_QFtoI32Ux4_RZ";
-case Iop_QFtoI32Sx4_RZ: fprintf(stderr, "unimplemented Iop_QFtoI32Sx4_RZ (%x)\n", op); return "Iop_QFtoI32Sx4_RZ";
-case Iop_RoundF32x4_RM: fprintf(stderr, "unimplemented Iop_RoundF32x4_RM (%x)\n", op); return "Iop_RoundF32x4_RM";
-case Iop_RoundF32x4_RP: fprintf(stderr, "unimplemented Iop_RoundF32x4_RP (%x)\n", op); return "Iop_RoundF32x4_RP";
-case Iop_RoundF32x4_RN: fprintf(stderr, "unimplemented Iop_RoundF32x4_RN (%x)\n", op); return "Iop_RoundF32x4_RN";
-case Iop_RoundF32x4_RZ: fprintf(stderr, "unimplemented Iop_RoundF32x4_RZ (%x)\n", op); return "Iop_RoundF32x4_RZ";
-case Iop_F32ToFixed32Ux4_RZ: fprintf(stderr, "unimplemented Iop_F32ToFixed32Ux4_RZ (%x)\n", op); return "Iop_F32ToFixed32Ux4_RZ";
-case Iop_F32ToFixed32Sx4_RZ: fprintf(stderr, "unimplemented Iop_F32ToFixed32Sx4_RZ (%x)\n", op); return "Iop_F32ToFixed32Sx4_RZ";
-case Iop_Fixed32UToF32x4_RN: fprintf(stderr, "unimplemented Iop_Fixed32UToF32x4_RN (%x)\n", op); return "Iop_Fixed32UToF32x4_RN";
-case Iop_Fixed32SToF32x4_RN: fprintf(stderr, "unimplemented Iop_Fixed32SToF32x4_RN (%x)\n", op); return "Iop_Fixed32SToF32x4_RN";
-case Iop_F32toF16x4: fprintf(stderr, "unimplemented Iop_F32toF16x4 (%x)\n", op); return "Iop_F32toF16x4";
-case Iop_F16toF32x4: fprintf(stderr, "unimplemented Iop_F16toF32x4 (%x)\n", op); return "Iop_F16toF32x4";
-case Iop_Add32F0x4: fprintf(stderr, "unimplemented Iop_Add32F0x4 (%x)\n", op); return "Iop_Add32F0x4";
-case Iop_Sub32F0x4: fprintf(stderr, "unimplemented Iop_Sub32F0x4 (%x)\n", op); return "Iop_Sub32F0x4";
-case Iop_Mul32F0x4: fprintf(stderr, "unimplemented Iop_Mul32F0x4 (%x)\n", op); return "Iop_Mul32F0x4";
-case Iop_Div32F0x4: fprintf(stderr, "unimplemented Iop_Div32F0x4 (%x)\n", op); return "Iop_Div32F0x4";
-case Iop_Max32F0x4: fprintf(stderr, "unimplemented Iop_Max32F0x4 (%x)\n", op); return "Iop_Max32F0x4";
-case Iop_Min32F0x4: fprintf(stderr, "unimplemented Iop_Min32F0x4 (%x)\n", op); return "Iop_Min32F0x4";
-case Iop_CmpEQ32F0x4: fprintf(stderr, "unimplemented Iop_CmpEQ32F0x4 (%x)\n", op); return "Iop_CmpEQ32F0x4";
-case Iop_CmpLT32F0x4: fprintf(stderr, "unimplemented Iop_CmpLT32F0x4 (%x)\n", op); return "Iop_CmpLT32F0x4";
-case Iop_CmpLE32F0x4: fprintf(stderr, "unimplemented Iop_CmpLE32F0x4 (%x)\n", op); return "Iop_CmpLE32F0x4";
-case Iop_CmpUN32F0x4: fprintf(stderr, "unimplemented Iop_CmpUN32F0x4 (%x)\n", op); return "Iop_CmpUN32F0x4";
-case Iop_Recip32F0x4: fprintf(stderr, "unimplemented Iop_Recip32F0x4 (%x)\n", op); return "Iop_Recip32F0x4";
-case Iop_Sqrt32F0x4: fprintf(stderr, "unimplemented Iop_Sqrt32F0x4 (%x)\n", op); return "Iop_Sqrt32F0x4";
-case Iop_RSqrt32F0x4: fprintf(stderr, "unimplemented Iop_RSqrt32F0x4 (%x)\n", op); return "Iop_RSqrt32F0x4";
-case Iop_V128HIto64: fprintf(stderr, "unimplemented Iop_V128HIto64 (%x)\n", op); return "Iop_V128HIto64";
-case Iop_64UtoV128: fprintf(stderr, "unimplemented Iop_64UtoV128 (%x)\n", op); return "Iop_64UtoV128";
-case Iop_SetV128lo64: fprintf(stderr, "unimplemented Iop_SetV128lo64 (%x)\n", op); return "Iop_SetV128lo64";
-case Iop_V128to32: fprintf(stderr, "unimplemented Iop_V128to32 (%x)\n", op); return "Iop_V128to32";
-case Iop_SetV128lo32: fprintf(stderr, "unimplemented Iop_SetV128lo32 (%x)\n", op); return "Iop_SetV128lo32";
-case Iop_NotV128: fprintf(stderr, "unimplemented Iop_NotV128 (%x)\n", op); return "Iop_NotV128";
-case Iop_AndV128: fprintf(stderr, "unimplemented Iop_AndV128 (%x)\n", op); return "Iop_AndV128";
-case Iop_OrV128: fprintf(stderr, "unimplemented Iop_OrV128 (%x)\n", op); return "Iop_OrV128";
-case Iop_XorV128: fprintf(stderr, "unimplemented Iop_XorV128 (%x)\n", op); return "Iop_XorV128";
-case Iop_ShlV128: fprintf(stderr, "unimplemented Iop_ShlV128 (%x)\n", op); return "Iop_ShlV128";
-case Iop_ShrV128: fprintf(stderr, "unimplemented Iop_ShrV128 (%x)\n", op); return "Iop_ShrV128";
-case Iop_CmpNEZ8x16: fprintf(stderr, "unimplemented Iop_CmpNEZ8x16 (%x)\n", op); return "Iop_CmpNEZ8x16";
-case Iop_CmpNEZ16x8: fprintf(stderr, "unimplemented Iop_CmpNEZ16x8 (%x)\n", op); return "Iop_CmpNEZ16x8";
-case Iop_CmpNEZ32x4: fprintf(stderr, "unimplemented Iop_CmpNEZ32x4 (%x)\n", op); return "Iop_CmpNEZ32x4";
-case Iop_CmpNEZ64x2: fprintf(stderr, "unimplemented Iop_CmpNEZ64x2 (%x)\n", op); return "Iop_CmpNEZ64x2";
-case Iop_Add8x16: fprintf(stderr, "unimplemented Iop_Add8x16 (%x)\n", op); return "Iop_Add8x16";
-case Iop_Add16x8: fprintf(stderr, "unimplemented Iop_Add16x8 (%x)\n", op); return "Iop_Add16x8";
-case Iop_Add32x4: fprintf(stderr, "unimplemented Iop_Add32x4 (%x)\n", op); return "Iop_Add32x4";
-case Iop_Add64x2: fprintf(stderr, "unimplemented Iop_Add64x2 (%x)\n", op); return "Iop_Add64x2";
-case Iop_QAdd8Ux16: fprintf(stderr, "unimplemented Iop_QAdd8Ux16 (%x)\n", op); return "Iop_QAdd8Ux16";
-case Iop_QAdd16Ux8: fprintf(stderr, "unimplemented Iop_QAdd16Ux8 (%x)\n", op); return "Iop_QAdd16Ux8";
-case Iop_QAdd32Ux4: fprintf(stderr, "unimplemented Iop_QAdd32Ux4 (%x)\n", op); return "Iop_QAdd32Ux4";
-case Iop_QAdd64Ux2: fprintf(stderr, "unimplemented Iop_QAdd64Ux2 (%x)\n", op); return "Iop_QAdd64Ux2";
-case Iop_QAdd8Sx16: fprintf(stderr, "unimplemented Iop_QAdd8Sx16 (%x)\n", op); return "Iop_QAdd8Sx16";
-case Iop_QAdd16Sx8: fprintf(stderr, "unimplemented Iop_QAdd16Sx8 (%x)\n", op); return "Iop_QAdd16Sx8";
-case Iop_QAdd32Sx4: fprintf(stderr, "unimplemented Iop_QAdd32Sx4 (%x)\n", op); return "Iop_QAdd32Sx4";
-case Iop_QAdd64Sx2: fprintf(stderr, "unimplemented Iop_QAdd64Sx2 (%x)\n", op); return "Iop_QAdd64Sx2";
-case Iop_Sub8x16: fprintf(stderr, "unimplemented Iop_Sub8x16 (%x)\n", op); return "Iop_Sub8x16";
-case Iop_Sub16x8: fprintf(stderr, "unimplemented Iop_Sub16x8 (%x)\n", op); return "Iop_Sub16x8";
-case Iop_Sub32x4: fprintf(stderr, "unimplemented Iop_Sub32x4 (%x)\n", op); return "Iop_Sub32x4";
-case Iop_Sub64x2: fprintf(stderr, "unimplemented Iop_Sub64x2 (%x)\n", op); return "Iop_Sub64x2";
-case Iop_QSub8Ux16: fprintf(stderr, "unimplemented Iop_QSub8Ux16 (%x)\n", op); return "Iop_QSub8Ux16";
-case Iop_QSub16Ux8: fprintf(stderr, "unimplemented Iop_QSub16Ux8 (%x)\n", op); return "Iop_QSub16Ux8";
-case Iop_QSub32Ux4: fprintf(stderr, "unimplemented Iop_QSub32Ux4 (%x)\n", op); return "Iop_QSub32Ux4";
-case Iop_QSub64Ux2: fprintf(stderr, "unimplemented Iop_QSub64Ux2 (%x)\n", op); return "Iop_QSub64Ux2";
-case Iop_QSub8Sx16: fprintf(stderr, "unimplemented Iop_QSub8Sx16 (%x)\n", op); return "Iop_QSub8Sx16";
-case Iop_QSub16Sx8: fprintf(stderr, "unimplemented Iop_QSub16Sx8 (%x)\n", op); return "Iop_QSub16Sx8";
-case Iop_QSub32Sx4: fprintf(stderr, "unimplemented Iop_QSub32Sx4 (%x)\n", op); return "Iop_QSub32Sx4";
-case Iop_QSub64Sx2: fprintf(stderr, "unimplemented Iop_QSub64Sx2 (%x)\n", op); return "Iop_QSub64Sx2";
-case Iop_Mul8x16: fprintf(stderr, "unimplemented Iop_Mul8x16 (%x)\n", op); return "Iop_Mul8x16";
-case Iop_Mul16x8: fprintf(stderr, "unimplemented Iop_Mul16x8 (%x)\n", op); return "Iop_Mul16x8";
-case Iop_Mul32x4: fprintf(stderr, "unimplemented Iop_Mul32x4 (%x)\n", op); return "Iop_Mul32x4";
-case Iop_MulHi16Ux8: fprintf(stderr, "unimplemented Iop_MulHi16Ux8 (%x)\n", op); return "Iop_MulHi16Ux8";
-case Iop_MulHi32Ux4: fprintf(stderr, "unimplemented Iop_MulHi32Ux4 (%x)\n", op); return "Iop_MulHi32Ux4";
-case Iop_MulHi16Sx8: fprintf(stderr, "unimplemented Iop_MulHi16Sx8 (%x)\n", op); return "Iop_MulHi16Sx8";
-case Iop_MulHi32Sx4: fprintf(stderr, "unimplemented Iop_MulHi32Sx4 (%x)\n", op); return "Iop_MulHi32Sx4";
-case Iop_MullEven8Ux16: fprintf(stderr, "unimplemented Iop_MullEven8Ux16 (%x)\n", op); return "Iop_MullEven8Ux16";
-case Iop_MullEven16Ux8: fprintf(stderr, "unimplemented Iop_MullEven16Ux8 (%x)\n", op); return "Iop_MullEven16Ux8";
-case Iop_MullEven8Sx16: fprintf(stderr, "unimplemented Iop_MullEven8Sx16 (%x)\n", op); return "Iop_MullEven8Sx16";
-case Iop_MullEven16Sx8: fprintf(stderr, "unimplemented Iop_MullEven16Sx8 (%x)\n", op); return "Iop_MullEven16Sx8";
-case Iop_Mull8Ux8: fprintf(stderr, "unimplemented Iop_Mull8Ux8 (%x)\n", op); return "Iop_Mull8Ux8";
-case Iop_Mull8Sx8: fprintf(stderr, "unimplemented Iop_Mull8Sx8 (%x)\n", op); return "Iop_Mull8Sx8";
-case Iop_Mull16Ux4: fprintf(stderr, "unimplemented Iop_Mull16Ux4 (%x)\n", op); return "Iop_Mull16Ux4";
-case Iop_Mull16Sx4: fprintf(stderr, "unimplemented Iop_Mull16Sx4 (%x)\n", op); return "Iop_Mull16Sx4";
-case Iop_Mull32Ux2: fprintf(stderr, "unimplemented Iop_Mull32Ux2 (%x)\n", op); return "Iop_Mull32Ux2";
-case Iop_Mull32Sx2: fprintf(stderr, "unimplemented Iop_Mull32Sx2 (%x)\n", op); return "Iop_Mull32Sx2";
-case Iop_QDMulHi16Sx8: fprintf(stderr, "unimplemented Iop_QDMulHi16Sx8 (%x)\n", op); return "Iop_QDMulHi16Sx8";
-case Iop_QDMulHi32Sx4: fprintf(stderr, "unimplemented Iop_QDMulHi32Sx4 (%x)\n", op); return "Iop_QDMulHi32Sx4";
-case Iop_QRDMulHi16Sx8: fprintf(stderr, "unimplemented Iop_QRDMulHi16Sx8 (%x)\n", op); return "Iop_QRDMulHi16Sx8";
-case Iop_QRDMulHi32Sx4: fprintf(stderr, "unimplemented Iop_QRDMulHi32Sx4 (%x)\n", op); return "Iop_QRDMulHi32Sx4";
-case Iop_QDMulLong16Sx4: fprintf(stderr, "unimplemented Iop_QDMulLong16Sx4 (%x)\n", op); return "Iop_QDMulLong16Sx4";
-case Iop_QDMulLong32Sx2: fprintf(stderr, "unimplemented Iop_QDMulLong32Sx2 (%x)\n", op); return "Iop_QDMulLong32Sx2";
-case Iop_PolynomialMul8x16: fprintf(stderr, "unimplemented Iop_PolynomialMul8x16 (%x)\n", op); return "Iop_PolynomialMul8x16";
-case Iop_PolynomialMull8x8: fprintf(stderr, "unimplemented Iop_PolynomialMull8x8 (%x)\n", op); return "Iop_PolynomialMull8x8";
-case Iop_PwAdd8x16: fprintf(stderr, "unimplemented Iop_PwAdd8x16 (%x)\n", op); return "Iop_PwAdd8x16";
-case Iop_PwAdd16x8: fprintf(stderr, "unimplemented Iop_PwAdd16x8 (%x)\n", op); return "Iop_PwAdd16x8";
-case Iop_PwAdd32x4: fprintf(stderr, "unimplemented Iop_PwAdd32x4 (%x)\n", op); return "Iop_PwAdd32x4";
-case Iop_PwAdd32Fx2: fprintf(stderr, "unimplemented Iop_PwAdd32Fx2 (%x)\n", op); return "Iop_PwAdd32Fx2";
-case Iop_PwAddL8Ux16: fprintf(stderr, "unimplemented Iop_PwAddL8Ux16 (%x)\n", op); return "Iop_PwAddL8Ux16";
-case Iop_PwAddL16Ux8: fprintf(stderr, "unimplemented Iop_PwAddL16Ux8 (%x)\n", op); return "Iop_PwAddL16Ux8";
-case Iop_PwAddL32Ux4: fprintf(stderr, "unimplemented Iop_PwAddL32Ux4 (%x)\n", op); return "Iop_PwAddL32Ux4";
-case Iop_PwAddL8Sx16: fprintf(stderr, "unimplemented Iop_PwAddL8Sx16 (%x)\n", op); return "Iop_PwAddL8Sx16";
-case Iop_PwAddL16Sx8: fprintf(stderr, "unimplemented Iop_PwAddL16Sx8 (%x)\n", op); return "Iop_PwAddL16Sx8";
-case Iop_PwAddL32Sx4: fprintf(stderr, "unimplemented Iop_PwAddL32Sx4 (%x)\n", op); return "Iop_PwAddL32Sx4";
-case Iop_Abs8x16: fprintf(stderr, "unimplemented Iop_Abs8x16 (%x)\n", op); return "Iop_Abs8x16";
-case Iop_Abs16x8: fprintf(stderr, "unimplemented Iop_Abs16x8 (%x)\n", op); return "Iop_Abs16x8";
-case Iop_Abs32x4: fprintf(stderr, "unimplemented Iop_Abs32x4 (%x)\n", op); return "Iop_Abs32x4";
-case Iop_Avg8Ux16: fprintf(stderr, "unimplemented Iop_Avg8Ux16 (%x)\n", op); return "Iop_Avg8Ux16";
-case Iop_Avg16Ux8: fprintf(stderr, "unimplemented Iop_Avg16Ux8 (%x)\n", op); return "Iop_Avg16Ux8";
-case Iop_Avg32Ux4: fprintf(stderr, "unimplemented Iop_Avg32Ux4 (%x)\n", op); return "Iop_Avg32Ux4";
-case Iop_Avg8Sx16: fprintf(stderr, "unimplemented Iop_Avg8Sx16 (%x)\n", op); return "Iop_Avg8Sx16";
-case Iop_Avg16Sx8: fprintf(stderr, "unimplemented Iop_Avg16Sx8 (%x)\n", op); return "Iop_Avg16Sx8";
-case Iop_Avg32Sx4: fprintf(stderr, "unimplemented Iop_Avg32Sx4 (%x)\n", op); return "Iop_Avg32Sx4";
-case Iop_Max8Sx16: fprintf(stderr, "unimplemented Iop_Max8Sx16 (%x)\n", op); return "Iop_Max8Sx16";
-case Iop_Max16Sx8: fprintf(stderr, "unimplemented Iop_Max16Sx8 (%x)\n", op); return "Iop_Max16Sx8";
-case Iop_Max32Sx4: fprintf(stderr, "unimplemented Iop_Max32Sx4 (%x)\n", op); return "Iop_Max32Sx4";
-case Iop_Max8Ux16: fprintf(stderr, "unimplemented Iop_Max8Ux16 (%x)\n", op); return "Iop_Max8Ux16";
-case Iop_Max16Ux8: fprintf(stderr, "unimplemented Iop_Max16Ux8 (%x)\n", op); return "Iop_Max16Ux8";
-case Iop_Max32Ux4: fprintf(stderr, "unimplemented Iop_Max32Ux4 (%x)\n", op); return "Iop_Max32Ux4";
-case Iop_Min8Sx16: fprintf(stderr, "unimplemented Iop_Min8Sx16 (%x)\n", op); return "Iop_Min8Sx16";
-case Iop_Min16Sx8: fprintf(stderr, "unimplemented Iop_Min16Sx8 (%x)\n", op); return "Iop_Min16Sx8";
-case Iop_Min32Sx4: fprintf(stderr, "unimplemented Iop_Min32Sx4 (%x)\n", op); return "Iop_Min32Sx4";
-case Iop_Min8Ux16: fprintf(stderr, "unimplemented Iop_Min8Ux16 (%x)\n", op); return "Iop_Min8Ux16";
-case Iop_Min16Ux8: fprintf(stderr, "unimplemented Iop_Min16Ux8 (%x)\n", op); return "Iop_Min16Ux8";
-case Iop_Min32Ux4: fprintf(stderr, "unimplemented Iop_Min32Ux4 (%x)\n", op); return "Iop_Min32Ux4";
-case Iop_CmpEQ8x16: fprintf(stderr, "unimplemented Iop_CmpEQ8x16 (%x)\n", op); return "Iop_CmpEQ8x16";
-case Iop_CmpEQ16x8: fprintf(stderr, "unimplemented Iop_CmpEQ16x8 (%x)\n", op); return "Iop_CmpEQ16x8";
-case Iop_CmpEQ32x4: fprintf(stderr, "unimplemented Iop_CmpEQ32x4 (%x)\n", op); return "Iop_CmpEQ32x4";
-case Iop_CmpGT8Sx16: fprintf(stderr, "unimplemented Iop_CmpGT8Sx16 (%x)\n", op); return "Iop_CmpGT8Sx16";
-case Iop_CmpGT16Sx8: fprintf(stderr, "unimplemented Iop_CmpGT16Sx8 (%x)\n", op); return "Iop_CmpGT16Sx8";
-case Iop_CmpGT32Sx4: fprintf(stderr, "unimplemented Iop_CmpGT32Sx4 (%x)\n", op); return "Iop_CmpGT32Sx4";
-case Iop_CmpGT64Sx2: fprintf(stderr, "unimplemented Iop_CmpGT64Sx2 (%x)\n", op); return "Iop_CmpGT64Sx2";
-case Iop_CmpGT8Ux16: fprintf(stderr, "unimplemented Iop_CmpGT8Ux16 (%x)\n", op); return "Iop_CmpGT8Ux16";
-case Iop_CmpGT16Ux8: fprintf(stderr, "unimplemented Iop_CmpGT16Ux8 (%x)\n", op); return "Iop_CmpGT16Ux8";
-case Iop_CmpGT32Ux4: fprintf(stderr, "unimplemented Iop_CmpGT32Ux4 (%x)\n", op); return "Iop_CmpGT32Ux4";
-case Iop_Cnt8x16: fprintf(stderr, "unimplemented Iop_Cnt8x16 (%x)\n", op); return "Iop_Cnt8x16";
-case Iop_Clz8Sx16: fprintf(stderr, "unimplemented Iop_Clz8Sx16 (%x)\n", op); return "Iop_Clz8Sx16";
-case Iop_Clz16Sx8: fprintf(stderr, "unimplemented Iop_Clz16Sx8 (%x)\n", op); return "Iop_Clz16Sx8";
-case Iop_Clz32Sx4: fprintf(stderr, "unimplemented Iop_Clz32Sx4 (%x)\n", op); return "Iop_Clz32Sx4";
-case Iop_Cls8Sx16: fprintf(stderr, "unimplemented Iop_Cls8Sx16 (%x)\n", op); return "Iop_Cls8Sx16";
-case Iop_Cls16Sx8: fprintf(stderr, "unimplemented Iop_Cls16Sx8 (%x)\n", op); return "Iop_Cls16Sx8";
-case Iop_Cls32Sx4: fprintf(stderr, "unimplemented Iop_Cls32Sx4 (%x)\n", op); return "Iop_Cls32Sx4";
-case Iop_ShlN8x16: fprintf(stderr, "unimplemented Iop_ShlN8x16 (%x)\n", op); return "Iop_ShlN8x16";
-case Iop_ShlN16x8: fprintf(stderr, "unimplemented Iop_ShlN16x8 (%x)\n", op); return "Iop_ShlN16x8";
-case Iop_ShlN32x4: fprintf(stderr, "unimplemented Iop_ShlN32x4 (%x)\n", op); return "Iop_ShlN32x4";
-case Iop_ShlN64x2: fprintf(stderr, "unimplemented Iop_ShlN64x2 (%x)\n", op); return "Iop_ShlN64x2";
-case Iop_ShrN8x16: fprintf(stderr, "unimplemented Iop_ShrN8x16 (%x)\n", op); return "Iop_ShrN8x16";
-case Iop_ShrN16x8: fprintf(stderr, "unimplemented Iop_ShrN16x8 (%x)\n", op); return "Iop_ShrN16x8";
-case Iop_ShrN32x4: fprintf(stderr, "unimplemented Iop_ShrN32x4 (%x)\n", op); return "Iop_ShrN32x4";
-case Iop_ShrN64x2: fprintf(stderr, "unimplemented Iop_ShrN64x2 (%x)\n", op); return "Iop_ShrN64x2";
-case Iop_SarN8x16: fprintf(stderr, "unimplemented Iop_SarN8x16 (%x)\n", op); return "Iop_SarN8x16";
-case Iop_SarN16x8: fprintf(stderr, "unimplemented Iop_SarN16x8 (%x)\n", op); return "Iop_SarN16x8";
-case Iop_SarN32x4: fprintf(stderr, "unimplemented Iop_SarN32x4 (%x)\n", op); return "Iop_SarN32x4";
-case Iop_SarN64x2: fprintf(stderr, "unimplemented Iop_SarN64x2 (%x)\n", op); return "Iop_SarN64x2";
-case Iop_Shl8x16: fprintf(stderr, "unimplemented Iop_Shl8x16 (%x)\n", op); return "Iop_Shl8x16";
-case Iop_Shl16x8: fprintf(stderr, "unimplemented Iop_Shl16x8 (%x)\n", op); return "Iop_Shl16x8";
-case Iop_Shl32x4: fprintf(stderr, "unimplemented Iop_Shl32x4 (%x)\n", op); return "Iop_Shl32x4";
-case Iop_Shl64x2: fprintf(stderr, "unimplemented Iop_Shl64x2 (%x)\n", op); return "Iop_Shl64x2";
-case Iop_Shr8x16: fprintf(stderr, "unimplemented Iop_Shr8x16 (%x)\n", op); return "Iop_Shr8x16";
-case Iop_Shr16x8: fprintf(stderr, "unimplemented Iop_Shr16x8 (%x)\n", op); return "Iop_Shr16x8";
-case Iop_Shr32x4: fprintf(stderr, "unimplemented Iop_Shr32x4 (%x)\n", op); return "Iop_Shr32x4";
-case Iop_Shr64x2: fprintf(stderr, "unimplemented Iop_Shr64x2 (%x)\n", op); return "Iop_Shr64x2";
-case Iop_Sar8x16: fprintf(stderr, "unimplemented Iop_Sar8x16 (%x)\n", op); return "Iop_Sar8x16";
-case Iop_Sar16x8: fprintf(stderr, "unimplemented Iop_Sar16x8 (%x)\n", op); return "Iop_Sar16x8";
-case Iop_Sar32x4: fprintf(stderr, "unimplemented Iop_Sar32x4 (%x)\n", op); return "Iop_Sar32x4";
-case Iop_Sar64x2: fprintf(stderr, "unimplemented Iop_Sar64x2 (%x)\n", op); return "Iop_Sar64x2";
-case Iop_Sal8x16: fprintf(stderr, "unimplemented Iop_Sal8x16 (%x)\n", op); return "Iop_Sal8x16";
-case Iop_Sal16x8: fprintf(stderr, "unimplemented Iop_Sal16x8 (%x)\n", op); return "Iop_Sal16x8";
-case Iop_Sal32x4: fprintf(stderr, "unimplemented Iop_Sal32x4 (%x)\n", op); return "Iop_Sal32x4";
-case Iop_Sal64x2: fprintf(stderr, "unimplemented Iop_Sal64x2 (%x)\n", op); return "Iop_Sal64x2";
-case Iop_Rol8x16: fprintf(stderr, "unimplemented Iop_Rol8x16 (%x)\n", op); return "Iop_Rol8x16";
-case Iop_Rol16x8: fprintf(stderr, "unimplemented Iop_Rol16x8 (%x)\n", op); return "Iop_Rol16x8";
-case Iop_Rol32x4: fprintf(stderr, "unimplemented Iop_Rol32x4 (%x)\n", op); return "Iop_Rol32x4";
-case Iop_QShl8x16: fprintf(stderr, "unimplemented Iop_QShl8x16 (%x)\n", op); return "Iop_QShl8x16";
-case Iop_QShl16x8: fprintf(stderr, "unimplemented Iop_QShl16x8 (%x)\n", op); return "Iop_QShl16x8";
-case Iop_QShl32x4: fprintf(stderr, "unimplemented Iop_QShl32x4 (%x)\n", op); return "Iop_QShl32x4";
-case Iop_QShl64x2: fprintf(stderr, "unimplemented Iop_QShl64x2 (%x)\n", op); return "Iop_QShl64x2";
-case Iop_QSal8x16: fprintf(stderr, "unimplemented Iop_QSal8x16 (%x)\n", op); return "Iop_QSal8x16";
-case Iop_QSal16x8: fprintf(stderr, "unimplemented Iop_QSal16x8 (%x)\n", op); return "Iop_QSal16x8";
-case Iop_QSal32x4: fprintf(stderr, "unimplemented Iop_QSal32x4 (%x)\n", op); return "Iop_QSal32x4";
-case Iop_QSal64x2: fprintf(stderr, "unimplemented Iop_QSal64x2 (%x)\n", op); return "Iop_QSal64x2";
-case Iop_QShlN8Sx16: fprintf(stderr, "unimplemented Iop_QShlN8Sx16 (%x)\n", op); return "Iop_QShlN8Sx16";
-case Iop_QShlN16Sx8: fprintf(stderr, "unimplemented Iop_QShlN16Sx8 (%x)\n", op); return "Iop_QShlN16Sx8";
-case Iop_QShlN32Sx4: fprintf(stderr, "unimplemented Iop_QShlN32Sx4 (%x)\n", op); return "Iop_QShlN32Sx4";
-case Iop_QShlN64Sx2: fprintf(stderr, "unimplemented Iop_QShlN64Sx2 (%x)\n", op); return "Iop_QShlN64Sx2";
-case Iop_QShlN8x16: fprintf(stderr, "unimplemented Iop_QShlN8x16 (%x)\n", op); return "Iop_QShlN8x16";
-case Iop_QShlN16x8: fprintf(stderr, "unimplemented Iop_QShlN16x8 (%x)\n", op); return "Iop_QShlN16x8";
-case Iop_QShlN32x4: fprintf(stderr, "unimplemented Iop_QShlN32x4 (%x)\n", op); return "Iop_QShlN32x4";
-case Iop_QShlN64x2: fprintf(stderr, "unimplemented Iop_QShlN64x2 (%x)\n", op); return "Iop_QShlN64x2";
-case Iop_QSalN8x16: fprintf(stderr, "unimplemented Iop_QSalN8x16 (%x)\n", op); return "Iop_QSalN8x16";
-case Iop_QSalN16x8: fprintf(stderr, "unimplemented Iop_QSalN16x8 (%x)\n", op); return "Iop_QSalN16x8";
-case Iop_QSalN32x4: fprintf(stderr, "unimplemented Iop_QSalN32x4 (%x)\n", op); return "Iop_QSalN32x4";
-case Iop_QSalN64x2: fprintf(stderr, "unimplemented Iop_QSalN64x2 (%x)\n", op); return "Iop_QSalN64x2";
-case Iop_QNarrow16Ux8: fprintf(stderr, "unimplemented Iop_QNarrow16Ux8 (%x)\n", op); return "Iop_QNarrow16Ux8";
-case Iop_QNarrow32Ux4: fprintf(stderr, "unimplemented Iop_QNarrow32Ux4 (%x)\n", op); return "Iop_QNarrow32Ux4";
-case Iop_QNarrow16Sx8: fprintf(stderr, "unimplemented Iop_QNarrow16Sx8 (%x)\n", op); return "Iop_QNarrow16Sx8";
-case Iop_QNarrow32Sx4: fprintf(stderr, "unimplemented Iop_QNarrow32Sx4 (%x)\n", op); return "Iop_QNarrow32Sx4";
-case Iop_Narrow16x8: fprintf(stderr, "unimplemented Iop_Narrow16x8 (%x)\n", op); return "Iop_Narrow16x8";
-case Iop_Narrow32x4: fprintf(stderr, "unimplemented Iop_Narrow32x4 (%x)\n", op); return "Iop_Narrow32x4";
-case Iop_Shorten16x8: fprintf(stderr, "unimplemented Iop_Shorten16x8 (%x)\n", op); return "Iop_Shorten16x8";
-case Iop_Shorten32x4: fprintf(stderr, "unimplemented Iop_Shorten32x4 (%x)\n", op); return "Iop_Shorten32x4";
-case Iop_Shorten64x2: fprintf(stderr, "unimplemented Iop_Shorten64x2 (%x)\n", op); return "Iop_Shorten64x2";
-case Iop_QShortenS16Sx8: fprintf(stderr, "unimplemented Iop_QShortenS16Sx8 (%x)\n", op); return "Iop_QShortenS16Sx8";
-case Iop_QShortenS32Sx4: fprintf(stderr, "unimplemented Iop_QShortenS32Sx4 (%x)\n", op); return "Iop_QShortenS32Sx4";
-case Iop_QShortenS64Sx2: fprintf(stderr, "unimplemented Iop_QShortenS64Sx2 (%x)\n", op); return "Iop_QShortenS64Sx2";
-case Iop_QShortenU16Sx8: fprintf(stderr, "unimplemented Iop_QShortenU16Sx8 (%x)\n", op); return "Iop_QShortenU16Sx8";
-case Iop_QShortenU32Sx4: fprintf(stderr, "unimplemented Iop_QShortenU32Sx4 (%x)\n", op); return "Iop_QShortenU32Sx4";
-case Iop_QShortenU64Sx2: fprintf(stderr, "unimplemented Iop_QShortenU64Sx2 (%x)\n", op); return "Iop_QShortenU64Sx2";
-case Iop_QShortenU16Ux8: fprintf(stderr, "unimplemented Iop_QShortenU16Ux8 (%x)\n", op); return "Iop_QShortenU16Ux8";
-case Iop_QShortenU32Ux4: fprintf(stderr, "unimplemented Iop_QShortenU32Ux4 (%x)\n", op); return "Iop_QShortenU32Ux4";
-case Iop_QShortenU64Ux2: fprintf(stderr, "unimplemented Iop_QShortenU64Ux2 (%x)\n", op); return "Iop_QShortenU64Ux2";
-case Iop_Longen8Ux8: fprintf(stderr, "unimplemented Iop_Longen8Ux8 (%x)\n", op); return "Iop_Longen8Ux8";
-case Iop_Longen16Ux4: fprintf(stderr, "unimplemented Iop_Longen16Ux4 (%x)\n", op); return "Iop_Longen16Ux4";
-case Iop_Longen32Ux2: fprintf(stderr, "unimplemented Iop_Longen32Ux2 (%x)\n", op); return "Iop_Longen32Ux2";
-case Iop_Longen8Sx8: fprintf(stderr, "unimplemented Iop_Longen8Sx8 (%x)\n", op); return "Iop_Longen8Sx8";
-case Iop_Longen16Sx4: fprintf(stderr, "unimplemented Iop_Longen16Sx4 (%x)\n", op); return "Iop_Longen16Sx4";
-case Iop_Longen32Sx2: fprintf(stderr, "unimplemented Iop_Longen32Sx2 (%x)\n", op); return "Iop_Longen32Sx2";
-case Iop_InterleaveHI8x16: fprintf(stderr, "unimplemented Iop_InterleaveHI8x16 (%x)\n", op); return "Iop_InterleaveHI8x16";
-case Iop_InterleaveHI16x8: fprintf(stderr, "unimplemented Iop_InterleaveHI16x8 (%x)\n", op); return "Iop_InterleaveHI16x8";
-case Iop_InterleaveHI32x4: fprintf(stderr, "unimplemented Iop_InterleaveHI32x4 (%x)\n", op); return "Iop_InterleaveHI32x4";
-case Iop_InterleaveHI64x2: fprintf(stderr, "unimplemented Iop_InterleaveHI64x2 (%x)\n", op); return "Iop_InterleaveHI64x2";
-case Iop_InterleaveLO16x8: fprintf(stderr, "unimplemented Iop_InterleaveLO16x8 (%x)\n", op); return "Iop_InterleaveLO16x8";
-case Iop_InterleaveLO32x4: fprintf(stderr, "unimplemented Iop_InterleaveLO32x4 (%x)\n", op); return "Iop_InterleaveLO32x4";
-case Iop_InterleaveOddLanes8x16: fprintf(stderr, "unimplemented Iop_InterleaveOddLanes8x16 (%x)\n", op); return "Iop_InterleaveOddLanes8x16";
-case Iop_InterleaveEvenLanes8x16: fprintf(stderr, "unimplemented Iop_InterleaveEvenLanes8x16 (%x)\n", op); return "Iop_InterleaveEvenLanes8x16";
-case Iop_InterleaveOddLanes16x8: fprintf(stderr, "unimplemented Iop_InterleaveOddLanes16x8 (%x)\n", op); return "Iop_InterleaveOddLanes16x8";
-case Iop_InterleaveEvenLanes16x8: fprintf(stderr, "unimplemented Iop_InterleaveEvenLanes16x8 (%x)\n", op); return "Iop_InterleaveEvenLanes16x8";
-case Iop_InterleaveOddLanes32x4: fprintf(stderr, "unimplemented Iop_InterleaveOddLanes32x4 (%x)\n", op); return "Iop_InterleaveOddLanes32x4";
-case Iop_InterleaveEvenLanes32x4: fprintf(stderr, "unimplemented Iop_InterleaveEvenLanes32x4 (%x)\n", op); return "Iop_InterleaveEvenLanes32x4";
-case Iop_CatOddLanes8x16: fprintf(stderr, "unimplemented Iop_CatOddLanes8x16 (%x)\n", op); return "Iop_CatOddLanes8x16";
-case Iop_CatOddLanes16x8: fprintf(stderr, "unimplemented Iop_CatOddLanes16x8 (%x)\n", op); return "Iop_CatOddLanes16x8";
-case Iop_CatOddLanes32x4: fprintf(stderr, "unimplemented Iop_CatOddLanes32x4 (%x)\n", op); return "Iop_CatOddLanes32x4";
-case Iop_CatEvenLanes8x16: fprintf(stderr, "unimplemented Iop_CatEvenLanes8x16 (%x)\n", op); return "Iop_CatEvenLanes8x16";
-case Iop_CatEvenLanes16x8: fprintf(stderr, "unimplemented Iop_CatEvenLanes16x8 (%x)\n", op); return "Iop_CatEvenLanes16x8";
-case Iop_CatEvenLanes32x4: fprintf(stderr, "unimplemented Iop_CatEvenLanes32x4 (%x)\n", op); return "Iop_CatEvenLanes32x4";
-case Iop_GetElem8x16: fprintf(stderr, "unimplemented Iop_GetElem8x16 (%x)\n", op); return "Iop_GetElem8x16";
-case Iop_GetElem16x8: fprintf(stderr, "unimplemented Iop_GetElem16x8 (%x)\n", op); return "Iop_GetElem16x8";
-case Iop_GetElem32x4: fprintf(stderr, "unimplemented Iop_GetElem32x4 (%x)\n", op); return "Iop_GetElem32x4";
-case Iop_GetElem64x2: fprintf(stderr, "unimplemented Iop_GetElem64x2 (%x)\n", op); return "Iop_GetElem64x2";
-case Iop_Dup8x16: fprintf(stderr, "unimplemented Iop_Dup8x16 (%x)\n", op); return "Iop_Dup8x16";
-case Iop_Dup16x8: fprintf(stderr, "unimplemented Iop_Dup16x8 (%x)\n", op); return "Iop_Dup16x8";
-case Iop_Dup32x4: fprintf(stderr, "unimplemented Iop_Dup32x4 (%x)\n", op); return "Iop_Dup32x4";
-case Iop_ExtractV128: fprintf(stderr, "unimplemented Iop_ExtractV128 (%x)\n", op); return "Iop_ExtractV128";
-case Iop_Reverse16_8x16: fprintf(stderr, "unimplemented Iop_Reverse16_8x16 (%x)\n", op); return "Iop_Reverse16_8x16";
-case Iop_Reverse32_8x16: fprintf(stderr, "unimplemented Iop_Reverse32_8x16 (%x)\n", op); return "Iop_Reverse32_8x16";
-case Iop_Reverse32_16x8: fprintf(stderr, "unimplemented Iop_Reverse32_16x8 (%x)\n", op); return "Iop_Reverse32_16x8";
-case Iop_Reverse64_8x16: fprintf(stderr, "unimplemented Iop_Reverse64_8x16 (%x)\n", op); return "Iop_Reverse64_8x16";
-case Iop_Reverse64_16x8: fprintf(stderr, "unimplemented Iop_Reverse64_16x8 (%x)\n", op); return "Iop_Reverse64_16x8";
-case Iop_Reverse64_32x4: fprintf(stderr, "unimplemented Iop_Reverse64_32x4 (%x)\n", op); return "Iop_Reverse64_32x4";
-case Iop_Recip32x4: fprintf(stderr, "unimplemented Iop_Recip32x4 (%x)\n", op); return "Iop_Recip32x4";
-case Iop_Rsqrte32x4: fprintf(stderr, "unimplemented Iop_Rsqrte32x4 (%x)\n", op); return "Iop_Rsqrte32x4";
 
-
+CASE_OP(F64toI16S)
+CASE_OP(F64toI32S)
+CASE_OP(F64toI64S)
+CASE_OP(F64toI32U)
+CASE_OP(I16StoF64)
+CASE_OP(I32StoF64)
+CASE_OP(I64StoF64)
+CASE_OP(I32UtoF64)
+CASE_OP(F32toF64)
+CASE_OP(F64toF32)
+CASE_OP(AtanF64)
+CASE_OP(Yl2xF64)
+CASE_OP(Yl2xp1F64)
+CASE_OP(PRemF64)
+CASE_OP(PRemC3210F64)
+CASE_OP(PRem1F64)
+CASE_OP(PRem1C3210F64)
+CASE_OP(ScaleF64)
+CASE_OP(SinF64)
+CASE_OP(CosF64)
+CASE_OP(TanF64)
+CASE_OP(2xm1F64)
+CASE_OP(RoundF64toInt)
+CASE_OP(RoundF32toInt)
+CASE_OP(MAddF64)
+CASE_OP(MSubF64)
+CASE_OP(MAddF64r32)
+CASE_OP(MSubF64r32)
+CASE_OP(Est5FRSqrt)
+CASE_OP(RoundF64toF64_NEAREST)
+CASE_OP(RoundF64toF64_NegINF)
+CASE_OP(RoundF64toF64_PosINF)
+CASE_OP(RoundF64toF64_ZERO)
+CASE_OP(TruncF64asF32)
+CASE_OP(RoundF64toF32)
+CASE_OP(CalcFPRF)
+CASE_OP(Add16x2)
+CASE_OP(Sub16x2)
+CASE_OP(QAdd16Sx2)
+CASE_OP(QAdd16Ux2)
+CASE_OP(QSub16Sx2)
+CASE_OP(QSub16Ux2)
+CASE_OP(HAdd16Ux2)
+CASE_OP(HAdd16Sx2)
+CASE_OP(HSub16Ux2)
+CASE_OP(HSub16Sx2)
+CASE_OP(Add8x4)
+CASE_OP(Sub8x4)
+CASE_OP(QAdd8Sx4)
+CASE_OP(QAdd8Ux4)
+CASE_OP(QSub8Sx4)
+CASE_OP(QSub8Ux4)
+CASE_OP(HAdd8Ux4)
+CASE_OP(HAdd8Sx4)
+CASE_OP(HSub8Ux4)
+CASE_OP(HSub8Sx4)
+CASE_OP(Sad8Ux4)
+CASE_OP(CmpNEZ16x2)
+CASE_OP(CmpNEZ8x4)
+CASE_OP(I32UtoFx2)
+CASE_OP(I32StoFx2)
+CASE_OP(FtoI32Ux2_RZ)
+CASE_OP(FtoI32Sx2_RZ)
+CASE_OP(F32ToFixed32Ux2_RZ)
+CASE_OP(F32ToFixed32Sx2_RZ)
+CASE_OP(Fixed32UToF32x2_RN)
+CASE_OP(Fixed32SToF32x2_RN)
+CASE_OP(Max32Fx2)
+CASE_OP(Min32Fx2)
+CASE_OP(PwMax32Fx2)
+CASE_OP(PwMin32Fx2)
+CASE_OP(CmpEQ32Fx2)
+CASE_OP(CmpGT32Fx2)
+CASE_OP(CmpGE32Fx2)
+CASE_OP(Recip32Fx2)
+CASE_OP(Recps32Fx2)
+CASE_OP(Rsqrte32Fx2)
+CASE_OP(Rsqrts32Fx2)
+CASE_OP(Neg32Fx2)
+CASE_OP(Abs32Fx2)
+CASE_OP(CmpNEZ8x8)
+CASE_OP(CmpNEZ16x4)
+CASE_OP(CmpNEZ32x2)
+CASE_OP(Add8x8)
+CASE_OP(Add16x4)
+CASE_OP(Add32x2)
+CASE_OP(QAdd8Ux8)
+CASE_OP(QAdd16Ux4)
+CASE_OP(QAdd32Ux2)
+CASE_OP(QAdd64Ux1)
+CASE_OP(QAdd8Sx8)
+CASE_OP(QAdd16Sx4)
+CASE_OP(QAdd32Sx2)
+CASE_OP(QAdd64Sx1)
+CASE_OP(PwAdd8x8)
+CASE_OP(PwAdd16x4)
+CASE_OP(PwAdd32x2)
+CASE_OP(PwMax8Sx8)
+CASE_OP(PwMax16Sx4)
+CASE_OP(PwMax32Sx2)
+CASE_OP(PwMax8Ux8)
+CASE_OP(PwMax16Ux4)
+CASE_OP(PwMax32Ux2)
+CASE_OP(PwMin8Sx8)
+CASE_OP(PwMin16Sx4)
+CASE_OP(PwMin32Sx2)
+CASE_OP(PwMin8Ux8)
+CASE_OP(PwMin16Ux4)
+CASE_OP(PwMin32Ux2)
+CASE_OP(PwAddL8Ux8)
+CASE_OP(PwAddL16Ux4)
+CASE_OP(PwAddL32Ux2)
+CASE_OP(PwAddL8Sx8)
+CASE_OP(PwAddL16Sx4)
+CASE_OP(PwAddL32Sx2)
+CASE_OP(Sub8x8)
+CASE_OP(Sub16x4)
+CASE_OP(Sub32x2)
+CASE_OP(QSub8Ux8)
+CASE_OP(QSub16Ux4)
+CASE_OP(QSub32Ux2)
+CASE_OP(QSub64Ux1)
+CASE_OP(QSub8Sx8)
+CASE_OP(QSub16Sx4)
+CASE_OP(QSub32Sx2)
+CASE_OP(QSub64Sx1)
+CASE_OP(Abs8x8)
+CASE_OP(Abs16x4)
+CASE_OP(Abs32x2)
+CASE_OP(Mul8x8)
+CASE_OP(Mul16x4)
+CASE_OP(Mul32x2)
+CASE_OP(Mul32Fx2)
+CASE_OP(MulHi16Ux4)
+CASE_OP(MulHi16Sx4)
+CASE_OP(PolynomialMul8x8)
+CASE_OP(QDMulHi16Sx4)
+CASE_OP(QDMulHi32Sx2)
+CASE_OP(QRDMulHi16Sx4)
+CASE_OP(QRDMulHi32Sx2)
+CASE_OP(Avg8Ux8)
+CASE_OP(Avg16Ux4)
+CASE_OP(Max8Sx8)
+CASE_OP(Max16Sx4)
+CASE_OP(Max32Sx2)
+CASE_OP(Max8Ux8)
+CASE_OP(Max16Ux4)
+CASE_OP(Max32Ux2)
+CASE_OP(Min8Sx8)
+CASE_OP(Min16Sx4)
+CASE_OP(Min32Sx2)
+CASE_OP(Min8Ux8)
+CASE_OP(Min16Ux4)
+CASE_OP(Min32Ux2)
+CASE_OP(CmpEQ8x8)
+CASE_OP(CmpEQ16x4)
+CASE_OP(CmpEQ32x2)
+CASE_OP(CmpGT8Ux8)
+CASE_OP(CmpGT16Ux4)
+CASE_OP(CmpGT32Ux2)
+CASE_OP(CmpGT8Sx8)
+CASE_OP(CmpGT16Sx4)
+CASE_OP(CmpGT32Sx2)
+CASE_OP(Cnt8x8)
+CASE_OP(Clz8Sx8)
+CASE_OP(Clz16Sx4)
+CASE_OP(Clz32Sx2)
+CASE_OP(Cls8Sx8)
+CASE_OP(Cls16Sx4)
+CASE_OP(Cls32Sx2)
+CASE_OP(Sal64x1)
+CASE_OP(QShl8x8)
+CASE_OP(QShl16x4)
+CASE_OP(QShl32x2)
+CASE_OP(QShl64x1)
+CASE_OP(QSal8x8)
+CASE_OP(QSal16x4)
+CASE_OP(QSal32x2)
+CASE_OP(QSal64x1)
+CASE_OP(QShlN8Sx8)
+CASE_OP(QShlN16Sx4)
+CASE_OP(QShlN32Sx2)
+CASE_OP(QShlN64Sx1)
+CASE_OP(QShlN8x8)
+CASE_OP(QShlN16x4)
+CASE_OP(QShlN32x2)
+CASE_OP(QShlN64x1)
+CASE_OP(QSalN8x8)
+CASE_OP(QSalN16x4)
+CASE_OP(QSalN32x2)
+CASE_OP(QSalN64x1)
+CASE_OP(QNarrow16Ux4)
+CASE_OP(QNarrow16Sx4)
+CASE_OP(QNarrow32Sx2)
+CASE_OP(InterleaveHI8x8)
+CASE_OP(InterleaveHI16x4)
+CASE_OP(InterleaveHI32x2)
+CASE_OP(InterleaveLO8x8)
+CASE_OP(InterleaveLO16x4)
+CASE_OP(InterleaveLO32x2)
+CASE_OP(InterleaveOddLanes8x8)
+CASE_OP(InterleaveEvenLanes8x8)
+CASE_OP(InterleaveOddLanes16x4)
+CASE_OP(InterleaveEvenLanes16x4)
+CASE_OP(CatOddLanes8x8)
+CASE_OP(CatOddLanes16x4)
+CASE_OP(CatEvenLanes8x8)
+CASE_OP(CatEvenLanes16x4)
+CASE_OP(GetElem8x8)
+CASE_OP(GetElem16x4)
+CASE_OP(GetElem32x2)
+CASE_OP(SetElem8x8)
+CASE_OP(SetElem16x4)
+CASE_OP(SetElem32x2)
+CASE_OP(Dup8x8)
+CASE_OP(Dup16x4)
+CASE_OP(Dup32x2)
+CASE_OP(Extract64)
+CASE_OP(Reverse16_8x8)
+CASE_OP(Reverse32_8x8)
+CASE_OP(Reverse32_16x4)
+CASE_OP(Reverse64_8x8)
+CASE_OP(Reverse64_16x4)
+CASE_OP(Reverse64_32x2)
+CASE_OP(Recip32x2)
+CASE_OP(Rsqrte32x2)
+CASE_OP(Add32Fx4)
+CASE_OP(Sub32Fx4)
+CASE_OP(Mul32Fx4)
+CASE_OP(Div32Fx4)
+CASE_OP(Max32Fx4)
+CASE_OP(Min32Fx4)
+CASE_OP(Add32Fx2)
+CASE_OP(Sub32Fx2)
+CASE_OP(CmpEQ32Fx4)
+CASE_OP(CmpLT32Fx4)
+CASE_OP(CmpLE32Fx4)
+CASE_OP(CmpUN32Fx4)
+CASE_OP(CmpGT32Fx4)
+CASE_OP(CmpGE32Fx4)
+CASE_OP(Abs32Fx4)
+CASE_OP(PwMax32Fx4)
+CASE_OP(PwMin32Fx4)
+CASE_OP(Sqrt32Fx4)
+CASE_OP(RSqrt32Fx4)
+CASE_OP(Neg32Fx4)
+CASE_OP(Recip32Fx4)
+CASE_OP(Recps32Fx4)
+CASE_OP(Rsqrte32Fx4)
+CASE_OP(Rsqrts32Fx4)
+CASE_OP(I32UtoFx4)
+CASE_OP(I32StoFx4)
+CASE_OP(FtoI32Ux4_RZ)
+CASE_OP(FtoI32Sx4_RZ)
+CASE_OP(QFtoI32Ux4_RZ)
+CASE_OP(QFtoI32Sx4_RZ)
+CASE_OP(RoundF32x4_RM)
+CASE_OP(RoundF32x4_RP)
+CASE_OP(RoundF32x4_RN)
+CASE_OP(RoundF32x4_RZ)
+CASE_OP(F32ToFixed32Ux4_RZ)
+CASE_OP(F32ToFixed32Sx4_RZ)
+CASE_OP(Fixed32UToF32x4_RN)
+CASE_OP(Fixed32SToF32x4_RN)
+CASE_OP(F32toF16x4)
+CASE_OP(F16toF32x4)
+CASE_OP(Add32F0x4)
+CASE_OP(Sub32F0x4)
+CASE_OP(Mul32F0x4)
+CASE_OP(Div32F0x4)
+CASE_OP(Max32F0x4)
+CASE_OP(Min32F0x4)
+CASE_OP(CmpEQ32F0x4)
+CASE_OP(CmpLT32F0x4)
+CASE_OP(CmpLE32F0x4)
+CASE_OP(CmpUN32F0x4)
+CASE_OP(Recip32F0x4)
+CASE_OP(Sqrt32F0x4)
+CASE_OP(RSqrt32F0x4)
+CASE_OP(V128HIto64)
+CASE_OP(64UtoV128)
+CASE_OP(SetV128lo64)
+CASE_OP(V128to32)
+CASE_OP(SetV128lo32)
+CASE_OP(NotV128)
+CASE_OP(AndV128)
+CASE_OP(OrV128)
+CASE_OP(XorV128)
+CASE_OP(ShlV128)
+CASE_OP(ShrV128)
+CASE_OP(CmpNEZ8x16)
+CASE_OP(CmpNEZ16x8)
+CASE_OP(CmpNEZ32x4)
+CASE_OP(CmpNEZ64x2)
+CASE_OP(Add8x16)
+CASE_OP(Add16x8)
+CASE_OP(Add32x4)
+CASE_OP(Add64x2)
+CASE_OP(QAdd8Ux16)
+CASE_OP(QAdd16Ux8)
+CASE_OP(QAdd32Ux4)
+CASE_OP(QAdd64Ux2)
+CASE_OP(QAdd8Sx16)
+CASE_OP(QAdd16Sx8)
+CASE_OP(QAdd32Sx4)
+CASE_OP(QAdd64Sx2)
+CASE_OP(Sub8x16)
+CASE_OP(Sub16x8)
+CASE_OP(Sub32x4)
+CASE_OP(Sub64x2)
+CASE_OP(QSub8Ux16)
+CASE_OP(QSub16Ux8)
+CASE_OP(QSub32Ux4)
+CASE_OP(QSub64Ux2)
+CASE_OP(QSub8Sx16)
+CASE_OP(QSub16Sx8)
+CASE_OP(QSub32Sx4)
+CASE_OP(QSub64Sx2)
+CASE_OP(Mul8x16)
+CASE_OP(Mul16x8)
+CASE_OP(Mul32x4)
+CASE_OP(MulHi16Ux8)
+CASE_OP(MulHi32Ux4)
+CASE_OP(MulHi16Sx8)
+CASE_OP(MulHi32Sx4)
+CASE_OP(MullEven8Ux16)
+CASE_OP(MullEven16Ux8)
+CASE_OP(MullEven8Sx16)
+CASE_OP(MullEven16Sx8)
+CASE_OP(Mull8Ux8)
+CASE_OP(Mull8Sx8)
+CASE_OP(Mull16Ux4)
+CASE_OP(Mull16Sx4)
+CASE_OP(Mull32Ux2)
+CASE_OP(Mull32Sx2)
+CASE_OP(QDMulHi16Sx8)
+CASE_OP(QDMulHi32Sx4)
+CASE_OP(QRDMulHi16Sx8)
+CASE_OP(QRDMulHi32Sx4)
+CASE_OP(QDMulLong16Sx4)
+CASE_OP(QDMulLong32Sx2)
+CASE_OP(PolynomialMul8x16)
+CASE_OP(PolynomialMull8x8)
+CASE_OP(PwAdd8x16)
+CASE_OP(PwAdd16x8)
+CASE_OP(PwAdd32x4)
+CASE_OP(PwAdd32Fx2)
+CASE_OP(PwAddL8Ux16)
+CASE_OP(PwAddL16Ux8)
+CASE_OP(PwAddL32Ux4)
+CASE_OP(PwAddL8Sx16)
+CASE_OP(PwAddL16Sx8)
+CASE_OP(PwAddL32Sx4)
+CASE_OP(Abs8x16)
+CASE_OP(Abs16x8)
+CASE_OP(Abs32x4)
+CASE_OP(Avg8Ux16)
+CASE_OP(Avg16Ux8)
+CASE_OP(Avg32Ux4)
+CASE_OP(Avg8Sx16)
+CASE_OP(Avg16Sx8)
+CASE_OP(Avg32Sx4)
+CASE_OP(Max8Sx16)
+CASE_OP(Max16Sx8)
+CASE_OP(Max32Sx4)
+CASE_OP(Max8Ux16)
+CASE_OP(Max16Ux8)
+CASE_OP(Max32Ux4)
+CASE_OP(Min8Sx16)
+CASE_OP(Min16Sx8)
+CASE_OP(Min32Sx4)
+CASE_OP(Min8Ux16)
+CASE_OP(Min16Ux8)
+CASE_OP(Min32Ux4)
+CASE_OP(CmpEQ8x16)
+CASE_OP(CmpEQ16x8)
+CASE_OP(CmpEQ32x4)
+CASE_OP(CmpGT8Sx16)
+CASE_OP(CmpGT16Sx8)
+CASE_OP(CmpGT32Sx4)
+CASE_OP(CmpGT64Sx2)
+CASE_OP(CmpGT8Ux16)
+CASE_OP(CmpGT16Ux8)
+CASE_OP(CmpGT32Ux4)
+CASE_OP(Cnt8x16)
+CASE_OP(Clz8Sx16)
+CASE_OP(Clz16Sx8)
+CASE_OP(Clz32Sx4)
+CASE_OP(Cls8Sx16)
+CASE_OP(Cls16Sx8)
+CASE_OP(Cls32Sx4)
+CASE_OP(ShlN8x16)
+CASE_OP(ShlN16x8)
+CASE_OP(ShlN32x4)
+CASE_OP(ShlN64x2)
+CASE_OP(ShrN8x16)
+CASE_OP(ShrN16x8)
+CASE_OP(ShrN32x4)
+CASE_OP(ShrN64x2)
+CASE_OP(SarN8x16)
+CASE_OP(SarN16x8)
+CASE_OP(SarN32x4)
+CASE_OP(SarN64x2)
+CASE_OP(Shl8x16)
+CASE_OP(Shl16x8)
+CASE_OP(Shl32x4)
+CASE_OP(Shl64x2)
+CASE_OP(Shr8x16)
+CASE_OP(Shr16x8)
+CASE_OP(Shr32x4)
+CASE_OP(Shr64x2)
+CASE_OP(Sar8x16)
+CASE_OP(Sar16x8)
+CASE_OP(Sar32x4)
+CASE_OP(Sar64x2)
+CASE_OP(Sal8x16)
+CASE_OP(Sal16x8)
+CASE_OP(Sal32x4)
+CASE_OP(Sal64x2)
+CASE_OP(Rol8x16)
+CASE_OP(Rol16x8)
+CASE_OP(Rol32x4)
+CASE_OP(QShl8x16)
+CASE_OP(QShl16x8)
+CASE_OP(QShl32x4)
+CASE_OP(QShl64x2)
+CASE_OP(QSal8x16)
+CASE_OP(QSal16x8)
+CASE_OP(QSal32x4)
+CASE_OP(QSal64x2)
+CASE_OP(QShlN8Sx16)
+CASE_OP(QShlN16Sx8)
+CASE_OP(QShlN32Sx4)
+CASE_OP(QShlN64Sx2)
+CASE_OP(QShlN8x16)
+CASE_OP(QShlN16x8)
+CASE_OP(QShlN32x4)
+CASE_OP(QShlN64x2)
+CASE_OP(QSalN8x16)
+CASE_OP(QSalN16x8)
+CASE_OP(QSalN32x4)
+CASE_OP(QSalN64x2)
+CASE_OP(QNarrow16Ux8)
+CASE_OP(QNarrow32Ux4)
+CASE_OP(QNarrow16Sx8)
+CASE_OP(QNarrow32Sx4)
+CASE_OP(Narrow16x8)
+CASE_OP(Narrow32x4)
+CASE_OP(Shorten16x8)
+CASE_OP(Shorten32x4)
+CASE_OP(Shorten64x2)
+CASE_OP(QShortenS16Sx8)
+CASE_OP(QShortenS32Sx4)
+CASE_OP(QShortenS64Sx2)
+CASE_OP(QShortenU16Sx8)
+CASE_OP(QShortenU32Sx4)
+CASE_OP(QShortenU64Sx2)
+CASE_OP(QShortenU16Ux8)
+CASE_OP(QShortenU32Ux4)
+CASE_OP(QShortenU64Ux2)
+CASE_OP(Longen8Ux8)
+CASE_OP(Longen16Ux4)
+CASE_OP(Longen32Ux2)
+CASE_OP(Longen8Sx8)
+CASE_OP(Longen16Sx4)
+CASE_OP(Longen32Sx2)
+CASE_OP(InterleaveHI8x16)
+CASE_OP(InterleaveHI16x8)
+CASE_OP(InterleaveHI32x4)
+CASE_OP(InterleaveHI64x2)
+CASE_OP(InterleaveLO16x8)
+CASE_OP(InterleaveLO32x4)
+CASE_OP(InterleaveOddLanes8x16)
+CASE_OP(InterleaveEvenLanes8x16)
+CASE_OP(InterleaveOddLanes16x8)
+CASE_OP(InterleaveEvenLanes16x8)
+CASE_OP(InterleaveOddLanes32x4)
+CASE_OP(InterleaveEvenLanes32x4)
+CASE_OP(CatOddLanes8x16)
+CASE_OP(CatOddLanes16x8)
+CASE_OP(CatOddLanes32x4)
+CASE_OP(CatEvenLanes8x16)
+CASE_OP(CatEvenLanes16x8)
+CASE_OP(CatEvenLanes32x4)
+CASE_OP(GetElem8x16)
+CASE_OP(GetElem16x8)
+CASE_OP(GetElem32x4)
+CASE_OP(GetElem64x2)
+CASE_OP(Dup8x16)
+CASE_OP(Dup16x8)
+CASE_OP(Dup32x4)
+CASE_OP(ExtractV128)
+CASE_OP(Reverse16_8x16)
+CASE_OP(Reverse32_8x16)
+CASE_OP(Reverse32_16x8)
+CASE_OP(Reverse64_8x16)
+CASE_OP(Reverse64_16x8)
+CASE_OP(Reverse64_32x4)
+CASE_OP(Recip32x4)
+CASE_OP(Rsqrte32x4)
 
 	case Iop_INVALID: return "Iop_INVALID";
 	default:
-	fprintf(stderr, "Unknown opcode %x\n", op);
+	fprintf(stderr, "Really unknown opcode %x\n", op);
 	}
 	return "???Op???";
 }
@@ -789,6 +788,7 @@ Value* VexExprUnop##x::emit(void) const		\
 }						\
 
 XHI_TO_Y_EMIT(64HIto32, 32, get_i(32))
+XHI_TO_Y_EMIT(32HIto16, 16, get_i(32))
 
 X_TO_Y_EMIT(64to32, CreateTrunc, get_i(32))
 X_TO_Y_EMIT(32Uto64,CreateZExt, get_i(64))
@@ -1140,6 +1140,23 @@ Value* VexExprBinopCmpLT32F0x4::emit(void) const
 		get_c(32, 0));
 }
 
+Value* VexExprBinopCmpEQ64F0x2::emit(void) const
+{
+	Value	*lo_op_lhs, *lo_op_rhs, *result;
+	BINOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vtd(2));
+	v2 = builder->CreateBitCast(v2, get_vtd(2));
+	lo_op_lhs = builder->CreateExtractElement(v1, get_c(32, 0));
+	lo_op_rhs = builder->CreateExtractElement(v2, get_c(32, 0));
+	result = builder->CreateFCmpOEQ(lo_op_lhs, lo_op_rhs);
+	result = builder->CreateSExt(result, get_i(64));
+
+	return builder->CreateInsertElement(
+		builder->CreateBitCast(v1, get_vt(2, 64)), 
+		result,
+		get_c(32, 0));
+}
+
 Value* VexExprBinopMax32F0x4::emit(void) const
 {
 	Value	*lo_op_lhs, *lo_op_rhs, *result;
@@ -1150,6 +1167,34 @@ Value* VexExprBinopMax32F0x4::emit(void) const
 	lo_op_lhs = builder->CreateExtractElement(v1, get_c(32, 0));
 	lo_op_rhs = builder->CreateExtractElement(v2, get_c(32, 0));
 	f = theVexHelpers->getHelper("vexop_maxf32");
+	assert (f != NULL);
+	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);
+	return builder->CreateInsertElement(v1, result, get_c(32, 0));
+}
+
+Value* VexExprUnopSqrt64F0x2::emit(void) const
+{
+	Value		*lo_op, *result;
+	Function	*f;
+	UNOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vtd(2));
+	lo_op = builder->CreateExtractElement(v1, get_c(32, 0));
+	f = theVexHelpers->getHelper("vexop_sqrtf64");
+	assert (f != NULL);
+	result = builder->CreateCall(f, lo_op);
+	return builder->CreateInsertElement(v1, result, get_c(32, 0));
+}
+
+Value* VexExprBinopMin64F0x2::emit(void) const
+{
+	Value	*lo_op_lhs, *lo_op_rhs, *result;
+	Function	*f;
+	BINOP_SETUP
+	v1 = builder->CreateBitCast(v1, get_vtd(2));
+	v2 = builder->CreateBitCast(v2, get_vtd(2));
+	lo_op_lhs = builder->CreateExtractElement(v1, get_c(32, 0));
+	lo_op_rhs = builder->CreateExtractElement(v2, get_c(32, 0));
+	f = theVexHelpers->getHelper("vexop_minf64");
 	assert (f != NULL);
 	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);
 	return builder->CreateInsertElement(v1, result, get_c(32, 0));
@@ -1177,6 +1222,24 @@ Value* VexExprBinopSub8x16::emit(void) const
 	v1 = builder->CreateBitCast(v1, get_vt(16, 8));
 	v2 = builder->CreateBitCast(v2, get_vt(16, 8));
 	return builder->CreateSub(v1, v2);
+}
+
+Value* VexExprBinopSetV128lo64::emit(void) const
+{
+	BINOP_SETUP
+	return builder->CreateInsertElement(
+		builder->CreateBitCast(v1, get_vt(64, 2)),
+		v2,
+		get_c(32, 0));
+}
+
+Value* VexExprBinopSetV128lo32::emit(void) const
+{
+	BINOP_SETUP
+	return builder->CreateInsertElement(
+		builder->CreateBitCast(v1, get_vt(32, 4)),
+		v2,
+		get_c(32, 0));
 }
 
 #define EMIT_HELPER_BINOP(x,y)			\
@@ -1224,15 +1287,16 @@ EMIT_HELPER_UNOP(Clz64, "vexop_clz64")
 /* interleave 16 elements of an 8-bit width */
 Value* VexExprBinopInterleaveLO8x16::emit(void) const
 {
-	Constant	*shuffle_v[] = {
-		get_c(32, 0), get_c(32, 16),
-		get_c(32, 1), get_c(32, 17),
-		get_c(32, 2), get_c(32, 18),
-		get_c(32, 3), get_c(32, 19),
-		get_c(32, 4), get_c(32, 20),
-		get_c(32, 5), get_c(32, 21),
-		get_c(32, 6), get_c(32, 22),
-		get_c(32, 7), get_c(32, 23)};
+	Constant	*shuffle_v[] = { 
+		/* this was backwards (0,16) instead of (16,0)-- thx xchk! */
+		get_c(32, 16), get_c(32, 0),
+		get_c(32, 17), get_c(32, 1),
+		get_c(32, 18), get_c(32, 2),
+		get_c(32, 19), get_c(32, 3),
+		get_c(32, 20), get_c(32, 4),
+		get_c(32, 21), get_c(32, 5),
+		get_c(32, 22), get_c(32, 6),
+		get_c(32, 23), get_c(32, 7)};
 	Constant	*cv;
 
 	BINOP_SETUP
@@ -1250,18 +1314,39 @@ Value* VexExprBinopInterleaveLO8x16::emit(void) const
 
 Value* VexExprBinopInterleaveLO64x2::emit(void) const
 {
-	Value		*v1_64, *v2_64;
-	Value		*v_lo;
-	Constant	*c_lo = get_c(32, 0);
-	Constant	*c_hi = get_c(32, 1);
+	Constant	*shuffle_v[] = {get_c(32, 2), get_c(32, 0)};
+	Constant	*cv;
 
 	BINOP_SETUP
 
-	v1_64 = builder->CreateBitCast(v1, get_vt(2, 64), "InterleaveLO64x2_cast_arg1");
-	v2_64 = builder->CreateBitCast(v2, get_vt(2, 64), "InterleaveLO64x2_cast_arg2");
+	v1 = builder->CreateBitCast(v1, get_vt(2, 64), "IleaveLO64x2_arg1");
+	v2 = builder->CreateBitCast(v2, get_vt(2, 64), "IleaveLO64x2_arg2");
 
-	v_lo = builder->CreateExtractElement(v2_64, c_lo, "InterleaveLO64x2_extract_low");
-	return builder->CreateInsertElement(v1_64, v_lo, c_hi, "InterleaveLO64x2_insert_upper");
+	cv = ConstantVector::get(
+		std::vector<Constant*>(
+			shuffle_v,
+			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
+
+	return builder->CreateShuffleVector(v1, v2, cv, "IlLO64x2_ret");
+
+}
+
+Value* VexExprBinopInterleaveHI64x2::emit(void) const
+{
+	Constant	*shuffle_v[] = {get_c(32, 3), get_c(32, 1)};
+	Constant	*cv;
+
+	BINOP_SETUP
+
+	v1 = builder->CreateBitCast(v1, get_vt(2, 64), "IleaveHI64x2_arg1");
+	v2 = builder->CreateBitCast(v2, get_vt(2, 64), "IleaveHI64x2_arg2");
+
+	cv = ConstantVector::get(
+		std::vector<Constant*>(
+			shuffle_v,
+			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
+
+	return builder->CreateShuffleVector(v1, v2, cv, "IlHI64x2_ret");
 }
 
 #define OPV_EMIT(x, y, z)			\
