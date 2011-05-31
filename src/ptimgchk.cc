@@ -127,10 +127,14 @@ uintptr_t PTImgChk::continueForwardWithBounds(
 	}
 
 	hit_syscall = false;
+	uintptr_t last_rip = 0;
 	while (doStep(start, end, regs, state)) {
 		/* so we trap on backjumps */
 		if (regs.rip > start)
 			start = regs.rip;
+		/* its stuck, probably a signal at that rip, need to do better signal handling */
+		assert(last_rip != regs.rip && "signal handling?");
+		last_rip = regs.rip;
 	}
 
 	blocks++;
