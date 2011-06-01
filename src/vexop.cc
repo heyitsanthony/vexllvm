@@ -1031,20 +1031,29 @@ BINOP_EMIT(Or32, Or)
 BINOP_EMIT(Or64, Or)
 BINOP_EMIT(OrV128, Or)
 
-BINOP_EMIT(Shl8, Shl)
-BINOP_EMIT(Shl16, Shl)
-BINOP_EMIT(Shl32, Shl)
-BINOP_EMIT(Shl64, Shl)
-
-BINOP_EMIT(Shr8, LShr)
-BINOP_EMIT(Shr16, LShr)
-BINOP_EMIT(Shr32, LShr)
-BINOP_EMIT(Shr64, LShr)
-
-BINOP_EMIT(Sar8, AShr)
-BINOP_EMIT(Sar16, AShr)
-BINOP_EMIT(Sar32, AShr)
-BINOP_EMIT(Sar64, AShr)
+#define SHIFT_EMIT(x,y,b)				\
+Value* VexExprBinop##x::emit(void) const	\
+{						\
+	BINOP_SETUP				\
+	return builder->Create##y(v1,		\
+		builder->CreateZExt(	\
+			builder->CreateTrunc(v2, get_i(b)),	\
+			v1->getType()));	\
+}
+SHIFT_EMIT(Shl8, Shl, 3)
+SHIFT_EMIT(Shl16, Shl, 4)
+SHIFT_EMIT(Shl32, Shl, 5)
+SHIFT_EMIT(Shl64, Shl, 6)
+              
+SHIFT_EMIT(Shr8, LShr, 3)
+SHIFT_EMIT(Shr16, LShr, 4)
+SHIFT_EMIT(Shr32, LShr, 5)
+SHIFT_EMIT(Shr64, LShr, 6)
+              
+SHIFT_EMIT(Sar8, AShr, 3)
+SHIFT_EMIT(Sar16, AShr, 4)
+SHIFT_EMIT(Sar32, AShr, 5)
+SHIFT_EMIT(Sar64, AShr, 6)
 
 BINOP_EMIT(Sub8, Sub)
 BINOP_EMIT(Sub16, Sub)
