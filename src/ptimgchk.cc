@@ -447,6 +447,10 @@ void PTImgChk::waitForSingleStep(void)
 		exit(1);
 	}
 	wait(&status);
+
+	//TODO: real signal handling needed, but the main process doesn't really have that yet...
+	assert(status == 1407 && "child received a signal or ptrace can't single step");
+
 	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
 		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
 		fprintf(stderr, "STEPS %0#8d %c %0#8d BLOCKS\r", 
