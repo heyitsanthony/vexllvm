@@ -327,19 +327,30 @@ EMIT_CONST_INT(U64, 64)
 //EMIT_CONST_INT(F32i, 32) 3.7.0
 EMIT_CONST_INT(F64i, 64)
 
+static uint64_t bitmask8_to_bytemask64 ( uint8_t w8 )
+{
+   uint64_t w64 = 0;
+   int i;
+   for (i = 0; i < 8; i++) {
+      if (w8 & (1<<i))
+         w64 |= (0xFFULL << (8 * i));
+   }
+   return w64;
+}
+
 llvm::Value* VexExprConstV128::emit(void) const
 {
-	llvm::VectorType* v128ty = llvm::VectorType::get(
-		llvm::Type::getInt16Ty(
-			llvm::getGlobalContext()),
-		8);
-	std::vector<llvm::Constant*> splat(
-		8,
-		llvm::ConstantInt::get(
-			llvm::getGlobalContext(),
-			llvm::APInt(16, V128)));
-
-	return theGenLLVM->to16x8i(llvm::ConstantVector::get(v128ty, splat));
+	using namespace llvm;
+	Constant	* data[] = {
+		ConstantInt::get(getGlobalContext(), APInt(64, bitmask8_to_bytemask64((V128 >> 0) & 0xFF))),
+		ConstantInt::get(getGlobalContext(), APInt(64, bitmask8_to_bytemask64((V128 >> 8) & 0xFF))),
+	};
+	Value	*cv = ConstantVector::get(
+		std::vector<Constant*>(
+			data,
+			data + sizeof(data)/sizeof(Constant*)));
+			
+	return theGenLLVM->to16x8i(cv);
 }
 
 // 3.7.0
