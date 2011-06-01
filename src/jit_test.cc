@@ -125,14 +125,14 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return st->guest_RDX == 0x1234123412341234;
+		return st->guest_RDX == 0xffff;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[1];
-		args[0] = new VexExprConstV128(NULL, 0x1234);
+		args[0] = new VexExprConstV128(NULL, 0x1003);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
@@ -149,15 +149,15 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0x3333333333333333;
+		return *((uint64_t*)&st->guest_XMM1) == 0xffff;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[2];
-		args[0] = new VexExprConstV128(NULL, 0x1111);
-		args[1] = new VexExprConstV128(NULL, 0x2222);
+		args[0] = new VexExprConstV128(NULL, 0x0001);
+		args[1] = new VexExprConstV128(NULL, 0x1003);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
@@ -175,15 +175,15 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0x1111111111111111;
+		return *((uint64_t*)&st->guest_XMM1) == 0xff;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[2];
-		args[0] = new VexExprConstV128(NULL, 0x3333);
-		args[1] = new VexExprConstV128(NULL, 0x5555);
+		args[0] = new VexExprConstV128(NULL, 0x1001);
+		args[1] = new VexExprConstV128(NULL, 0x1013);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
@@ -201,15 +201,15 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0x00ff00ff00ff00ff;
+		return *((uint64_t*)&st->guest_XMM1) == 0xff00;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[2];
-		args[0] = new VexExprConstV128(NULL, 0x3360);
-		args[1] = new VexExprConstV128(NULL, 0x5455);
+		args[0] = new VexExprConstV128(NULL, 0x1111);
+		args[1] = new VexExprConstV128(NULL, 0x0003);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
@@ -225,15 +225,16 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1+1) == 0xaaaaaaaaaaaaaaaa && *((uint64_t*)&st->guest_XMM1) == 0xbbbbbbbbbbbbbbbb;
+		return	*((uint64_t*)&st->guest_XMM1+1) == 0xff &&
+			*((uint64_t*)&st->guest_XMM1) == 0xff00;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[2];
-		args[0] = new VexExprConstV128(NULL, 0xaaaa);
-		args[1] = new VexExprConstV128(NULL, 0xbbbb);
+		args[0] = new VexExprConstV128(NULL, 0x1);
+		args[1] = new VexExprConstV128(NULL, 0x2);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
@@ -252,15 +253,15 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0x12ab34cd12ab34cd;
+		return *((uint64_t*)&st->guest_XMM1) == 0xff0000ff00;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[2];
-		args[0] = new VexExprConstV128(NULL, 0x1234);
-		args[1] = new VexExprConstV128(NULL, 0xabcd);
+		args[0] = new VexExprConstV128(NULL, 0x0001);
+		args[1] = new VexExprConstV128(NULL, 0x0004);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
@@ -278,15 +279,15 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0x4411441144114411;
+		return *((uint64_t*)&st->guest_XMM1) == 0xff0000;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[2];
-		args[0] = new VexExprConstV128(NULL, 0x5533);
-		args[1] = new VexExprConstV128(NULL, 0x1122);
+		args[0] = new VexExprConstV128(NULL, 0x5);
+		args[1] = new VexExprConstV128(NULL, 0x1);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
@@ -402,14 +403,14 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return st->guest_RDX == 0x1234123412341234;
+		return st->guest_RDX == 0xffffffff00000000;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[1];
-		args[0] = new VexExprConstV128(NULL, 0x1234);
+		args[0] = new VexExprConstV128(NULL, 0xf001);
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
@@ -426,7 +427,9 @@ public:
 	virtual bool isGoodState(GuestState* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return (st->guest_RDX >> 32) == 0x3b9;
+		return ((st->guest_RDX & 0xffffffff) == (0xf63d4e2e/1011)) &&
+			((st->guest_RDX >> 32) == (0xf63d4e2e % 1011));
+
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -452,14 +455,14 @@ public:
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
 		uint64_t		*xmm = (uint64_t*)&st->guest_XMM0;
-		return xmm[0] == 0x2000200020002 && xmm[1] == 0x1000100010001;
+		return xmm[0] == 0x1fe00000000 && xmm[1] == 0 /* no rem */;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
 	{
 		VexExpr**		args;
 		args = new VexExpr*[2];
-		args[0] = new VexExprConstV128(NULL, 0x01);
+		args[0] = new VexExprConstV128(NULL, 0x1000);
 		args[1] = new VexExprConstU64(NULL, 0x8000000000000000);
 		stmts.push_back(
 			new VexStmtPut(
@@ -517,11 +520,10 @@ int main(int argc, char* argv[])
 	assert (exeEngine && "Could not make exe engine");
 
 	theVexHelpers->bindToExeEngine(exeEngine);
-	doTest(gs, new TestDivModU128to64 ());
+	doTest(gs, new TestV128to64());
 	doTest(gs, new TestCmpGT8Sx16());
 	doTest(gs, new TestAndV128());
 	doTest(gs, new TestOrV128());
-	doTest(gs, new TestV128to64());
 	doTest(gs, new TestInterleaveLO8x16());
 	doTest(gs, new TestInterleaveLO64x2());
 	doTest(gs, new TestSub8x16());
@@ -530,6 +532,7 @@ int main(int argc, char* argv[])
 	doTest(gs, new Test64HIto32());
 	doTest(gs, new Test128HIto64());
 	doTest(gs, new Test32UtoV128());
+	doTest(gs, new TestDivModU128to64 ());
 	doTest(gs, new TestDivModU64to32());
 
 	delete theVexHelpers;

@@ -883,7 +883,7 @@ Value* VexExprBinop64HLto128::emit(void) const
 Value* VexExprUnop128HIto64::emit(void) const
 {
 	UNOP_SETUP
-	assert(v1->getType()->isIntegerTy(128));
+	assert(v1->getType()->getPrimitiveSizeInBits() == 128);
 	return builder->CreateExtractElement(
 		builder->CreateBitCast(v1, get_vt(2, 64)), 
 		get_c(32, 1));
@@ -1070,16 +1070,14 @@ Value* VexExprBinop##x::emit(void) const	\
 {	\
 	Value	*div, *rem;	\
 	BINOP_SETUP	\
-	v1 = builder->CreateBitCast(v1, 			\
-		IntegerType::get(getGlobalContext(), w));	\
-	v2 = builder->Create##z##Ext(v2, 			\
-		IntegerType::get(getGlobalContext(), w));	\
+	v1 = builder->CreateBitCast(v1, get_i(w));		\
+	v2 = builder->Create##z##Ext(v2, get_i(w)); 		\
 	div = builder->Create##z##Ext(				\
 		builder->Create##y##Div(v1, v2),		\
-		IntegerType::get(getGlobalContext(), w));	\
+		get_i(w));					\
 	rem = builder->Create##z##Ext(				\
 		builder->Create##y##Rem(v1, v2),		\
-		IntegerType::get(getGlobalContext(), w));	\
+		get_i(w));					\
 	Constant	*shuffle_v[] = { get_c(32, 0), get_c(32, 2) };	\
 	Constant	*cv = ConstantVector::get(	\
 		std::vector<Constant*>(	\
