@@ -788,7 +788,7 @@ Value* VexExprUnop##x::emit(void) const		\
 }						\
 
 XHI_TO_Y_EMIT(64HIto32, 32, get_i(32))
-XHI_TO_Y_EMIT(32HIto16, 16, get_i(32))
+XHI_TO_Y_EMIT(32HIto16, 16, get_i(16))
 
 X_TO_Y_EMIT(64to32, CreateTrunc, get_i(32))
 X_TO_Y_EMIT(32Uto64,CreateZExt, get_i(64))
