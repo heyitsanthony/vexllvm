@@ -1280,70 +1280,44 @@ Value* VexExprUnop##x::emit(void) const	\
 EMIT_HELPER_UNOP(Ctz64, "vexop_ctz64")
 EMIT_HELPER_UNOP(Clz64, "vexop_clz64")
 
-/* interleave 16 elements of an 8-bit width */
-Value* VexExprBinopInterleaveLO8x16::emit(void) const
-{
-	Constant	*shuffle_v[] = { 
-		/* this was backwards (0,16) instead of (16,0)-- thx xchk! */
-		get_c(32, 16), get_c(32, 0),
-		get_c(32, 17), get_c(32, 1),
-		get_c(32, 18), get_c(32, 2),
-		get_c(32, 19), get_c(32, 3),
-		get_c(32, 20), get_c(32, 4),
-		get_c(32, 21), get_c(32, 5),
-		get_c(32, 22), get_c(32, 6),
-		get_c(32, 23), get_c(32, 7)};
-	Constant	*cv;
+static Constant* ileave_lo8x16[] =  {
+	/* this was backwards (0,16) instead of (16,0)-- thx xchk! */
+	get_c(32, 16), get_c(32, 0),
+	get_c(32, 17), get_c(32, 1),
+	get_c(32, 18), get_c(32, 2),
+	get_c(32, 19), get_c(32, 3),
+	get_c(32, 20), get_c(32, 4),
+	get_c(32, 21), get_c(32, 5),
+	get_c(32, 22), get_c(32, 6),
+	get_c(32, 23), get_c(32, 7)};
+static Constant* ileave_lo64x2[] = { get_c(32, 2), get_c(32, 0) };
+static Constant* ileave_hi64x2[] = {get_c(32, 3), get_c(32, 1)};
+static Constant* ileave_lo32x4[] = { 
+	get_c(32, 4), get_c(32, 0),
+	get_c(32, 6), get_c(32, 2)};
 
-	BINOP_SETUP
-
-	v1 = builder->CreateBitCast(v1, get_vt(16, 8), "lo8x16_v1");
-	v2 = builder->CreateBitCast(v2, get_vt(16, 8), "lo8x16_v2");
-
-	cv = ConstantVector::get(
-		std::vector<Constant*>(
-			shuffle_v,
-			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
-
-	return builder->CreateShuffleVector(v1, v2, cv, "ILO8x16");
+#define EMIT_ILEAVE(x, y, z, w)				\
+Value* VexExprBinopInterleave##x::emit(void) const	\
+{							\
+	Constant	**shuffle_v = y;		\
+	Constant	*cv;				\
+\
+	BINOP_SETUP					\
+\
+	v1 = builder->CreateBitCast(v1, w, #x "_v1");	\
+	v2 = builder->CreateBitCast(v2, w, #x "_v2");	\
+\
+	cv = ConstantVector::get(	\
+		std::vector<Constant*>(	\
+			shuffle_v, shuffle_v + z));	\
+\
+	return builder->CreateShuffleVector(v1, v2, cv, "ileave_"#x);	\
 }
 
-Value* VexExprBinopInterleaveLO64x2::emit(void) const
-{
-	Constant	*shuffle_v[] = {get_c(32, 2), get_c(32, 0)};
-	Constant	*cv;
-
-	BINOP_SETUP
-
-	v1 = builder->CreateBitCast(v1, get_vt(2, 64), "IleaveLO64x2_arg1");
-	v2 = builder->CreateBitCast(v2, get_vt(2, 64), "IleaveLO64x2_arg2");
-
-	cv = ConstantVector::get(
-		std::vector<Constant*>(
-			shuffle_v,
-			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
-
-	return builder->CreateShuffleVector(v1, v2, cv, "IlLO64x2_ret");
-
-}
-
-Value* VexExprBinopInterleaveHI64x2::emit(void) const
-{
-	Constant	*shuffle_v[] = {get_c(32, 3), get_c(32, 1)};
-	Constant	*cv;
-
-	BINOP_SETUP
-
-	v1 = builder->CreateBitCast(v1, get_vt(2, 64), "IleaveHI64x2_arg1");
-	v2 = builder->CreateBitCast(v2, get_vt(2, 64), "IleaveHI64x2_arg2");
-
-	cv = ConstantVector::get(
-		std::vector<Constant*>(
-			shuffle_v,
-			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
-
-	return builder->CreateShuffleVector(v1, v2, cv, "IlHI64x2_ret");
-}
+EMIT_ILEAVE(LO8x16, ileave_lo8x16, 16, get_vt(16, 8))
+EMIT_ILEAVE(LO64x2, ileave_lo64x2, 2, get_vt(2, 64))
+EMIT_ILEAVE(HI64x2, ileave_hi64x2, 2, get_vt(2, 64))
+EMIT_ILEAVE(LO32x4, ileave_lo32x4, 4, get_vt(4, 32))
 
 #define OPV_EMIT(x, y, z)			\
 Value* VexExprBinop##x::emit(void) const	\

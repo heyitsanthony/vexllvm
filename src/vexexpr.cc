@@ -134,6 +134,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(InterleaveLO8x16);
 	BINOP_TAGOP(InterleaveLO64x2);
 	BINOP_TAGOP(InterleaveHI64x2);
+	BINOP_TAGOP(InterleaveLO32x4);
 
 	BINOP_TAGOP(Mul8);
 	BINOP_TAGOP(Mul16);
