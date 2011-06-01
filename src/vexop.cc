@@ -860,26 +860,10 @@ Value* VexExprUnopV128to64::emit(void) const
 }
 Value* VexExprUnopV128HIto64::emit(void) const
 {
-	Value		*v_hilo;
-	Constant	*shuffle_v[] = {
-		get_c(32, 8), get_c(32, 9),
-		get_c(32, 10), get_c(32, 11),
-		get_c(32, 12), get_c(32, 13),
-		get_c(32, 14), get_c(32, 15),
-	};
-	Constant	*cv;
-
 	UNOP_SETUP
-	cv = ConstantVector::get(
-		std::vector<Constant*>(
-			shuffle_v,
-			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));
-	v_hilo = builder->CreateShuffleVector(v1, v1, cv, "v128extracthi_shuffle");
-
-	return builder->CreateBitCast(
-		v_hilo,
-		get_i(64), 
-		"V128Hito64");
+	return builder->CreateExtractElement(
+		builder->CreateBitCast(v1, get_vt(2, 64)), 
+		get_c(32, 1));
 }
 
 Value* VexExprBinop64HLto128::emit(void) const
@@ -899,13 +883,10 @@ Value* VexExprBinop64HLto128::emit(void) const
 Value* VexExprUnop128HIto64::emit(void) const
 {
 	UNOP_SETUP
-	return builder->CreateTrunc(
-		builder->CreateLShr(
-			builder->CreateBitCast(
-				v1, 
-				get_i(128)),
-			64),
-		get_i(64));
+	assert(v1->getType()->isIntegerTy(128));
+	return builder->CreateExtractElement(
+		builder->CreateBitCast(v1, get_vt(2, 64)), 
+		get_c(32, 1));
 }
 
 /* so stupid */
@@ -1087,7 +1068,7 @@ BINOP_EMIT(CasCmpNE64, ICmpNE)
 #define DIVMOD_EMIT(x,y,z,w)			\
 Value* VexExprBinop##x::emit(void) const	\
 {	\
-	Value	*div, *mod;	\
+	Value	*div, *rem;	\
 	BINOP_SETUP	\
 	v1 = builder->CreateBitCast(v1, 			\
 		IntegerType::get(getGlobalContext(), w));	\
@@ -1096,12 +1077,20 @@ Value* VexExprBinop##x::emit(void) const	\
 	div = builder->Create##z##Ext(				\
 		builder->Create##y##Div(v1, v2),		\
 		IntegerType::get(getGlobalContext(), w));	\
-	mod = builder->Create##z##Ext(				\
+	rem = builder->Create##z##Ext(				\
 		builder->Create##y##Rem(v1, v2),		\
 		IntegerType::get(getGlobalContext(), w));	\
-	return builder->CreateOr(	\
-		div,			\
-		builder->CreateShl(mod, w/2));		\
+	Constant	*shuffle_v[] = { get_c(32, 0), get_c(32, 2) };	\
+	Constant	*cv = ConstantVector::get(	\
+		std::vector<Constant*>(	\
+			shuffle_v,	\
+			shuffle_v + sizeof(shuffle_v)/sizeof(Constant*)));	\
+	return builder->CreateBitCast( \
+		builder->CreateShuffleVector(	\
+			builder->CreateBitCast(div, get_vt(2, w / 2)),	\
+			builder->CreateBitCast(rem, get_vt(2, w / 2)),	\
+			cv),	\
+		get_i(w));	\
 }
 
 DIVMOD_EMIT(DivModU128to64, U, Z, 128)
@@ -1237,7 +1226,7 @@ Value* VexExprBinopSetV128lo64::emit(void) const
 {
 	BINOP_SETUP
 	return builder->CreateInsertElement(
-		builder->CreateBitCast(v1, get_vt(64, 2)),
+		builder->CreateBitCast(v1, get_vt(2, 64)),
 		v2,
 		get_c(32, 0));
 }
@@ -1246,7 +1235,7 @@ Value* VexExprBinopSetV128lo32::emit(void) const
 {
 	BINOP_SETUP
 	return builder->CreateInsertElement(
-		builder->CreateBitCast(v1, get_vt(32, 4)),
+		builder->CreateBitCast(v1, get_vt(4, 32)),
 		v2,
 		get_c(32, 0));
 }
