@@ -828,7 +828,6 @@ UNOP_EMIT(Not8, CreateNot)
 UNOP_EMIT(Not16, CreateNot)
 UNOP_EMIT(Not32, CreateNot)
 UNOP_EMIT(Not64, CreateNot)
-UNOP_EMIT(NotV128, CreateNot)
 
 X_TO_Y_EMIT(ReinterpF64asI64, CreateBitCast, get_i(64))
 X_TO_Y_EMIT(ReinterpI64asF64, CreateBitCast, get_d())
@@ -981,7 +980,6 @@ BINOP_EMIT(And8, And)
 BINOP_EMIT(And16, And)
 BINOP_EMIT(And32, And)
 BINOP_EMIT(And64, And)
-BINOP_EMIT(AndV128, And)
 
 BINOP_EMIT(Mul8, Mul)
 BINOP_EMIT(Mul16, Mul)
@@ -1011,7 +1009,6 @@ BINOP_EMIT(Or8, Or)
 BINOP_EMIT(Or16, Or)
 BINOP_EMIT(Or32, Or)
 BINOP_EMIT(Or64, Or)
-BINOP_EMIT(OrV128, Or)
 
 #define SHIFT_EMIT(x,y,b)				\
 Value* VexExprBinop##x::emit(void) const	\
@@ -1046,7 +1043,6 @@ BINOP_EMIT(Xor8, Xor)
 BINOP_EMIT(Xor16, Xor)
 BINOP_EMIT(Xor32, Xor)
 BINOP_EMIT(Xor64, Xor)
-BINOP_EMIT(XorV128, Xor)
 
 BINOP_EMIT(CmpEQ8, ICmpEQ)
 BINOP_EMIT(CmpEQ16, ICmpEQ)
@@ -1267,13 +1263,27 @@ static Constant* ileave_lo8x16[] =  {
 	get_c(32, 21), get_c(32, 5),
 	get_c(32, 22), get_c(32, 6),
 	get_c(32, 23), get_c(32, 7)};
+static Constant* ileave_hi8x16[] =  {
+	get_c(32, 24), get_c(32, 8),
+	get_c(32, 25), get_c(32, 9),
+	get_c(32, 26), get_c(32, 10),
+	get_c(32, 27), get_c(32, 11),
+	get_c(32, 28), get_c(32, 12),
+	get_c(32, 29), get_c(32, 13),
+	get_c(32, 30), get_c(32, 14),
+	get_c(32, 31), get_c(32, 15)};
 static Constant* ileave_lo64x2[] = { get_c(32, 2), get_c(32, 0) };
 static Constant* ileave_hi64x2[] = {get_c(32, 3), get_c(32, 1)};
 static Constant* ileave_lo32x4[] = { 
 	get_c(32, 4), get_c(32, 0),
 	get_c(32, 5), get_c(32, 1)};
+static Constant* ileave_hi32x4[] = { 
+	get_c(32, 6), get_c(32, 2),
+	get_c(32, 7), get_c(32, 3)};
 static Constant* ileave_lo32x2[] = { 
-	get_c(32, 4), get_c(32, 0)};
+	get_c(32, 2), get_c(32, 0)};
+static Constant* ileave_hi32x2[] = { 
+	get_c(32, 3), get_c(32, 1)};
 
 #define EMIT_ILEAVE(x, y, z, w)				\
 Value* VexExprBinopInterleave##x::emit(void) const	\
@@ -1294,10 +1304,21 @@ Value* VexExprBinopInterleave##x::emit(void) const	\
 }
 
 EMIT_ILEAVE(LO8x16, ileave_lo8x16, 16, get_vt(16, 8))
+EMIT_ILEAVE(HI8x16, ileave_hi8x16, 2, get_vt(16, 8))
 EMIT_ILEAVE(LO64x2, ileave_lo64x2, 2, get_vt(2, 64))
 EMIT_ILEAVE(HI64x2, ileave_hi64x2, 2, get_vt(2, 64))
 EMIT_ILEAVE(LO32x4, ileave_lo32x4, 4, get_vt(4, 32))
+EMIT_ILEAVE(HI32x4, ileave_hi32x4, 4, get_vt(4, 32))
 EMIT_ILEAVE(LO32x2, ileave_lo32x2, 2, get_vt(2, 32))
+EMIT_ILEAVE(HI32x2, ileave_hi32x2, 2, get_vt(2, 32))
+
+#define UNOPV_EMIT(x, y, z)			\
+Value* VexExprUnop##x::emit(void) const	\
+{	\
+	UNOP_SETUP					\
+	v1 = builder->CreateBitCast(v1, y);		\
+	return builder->Create##z(v1);		\
+}
 
 #define OPV_EMIT(x, y, z)			\
 Value* VexExprBinop##x::emit(void) const	\
@@ -1307,6 +1328,13 @@ Value* VexExprBinop##x::emit(void) const	\
 	v2 = builder->CreateBitCast(v2, y);		\
 	return builder->Create##z(v1, v2);		\
 }
+
+OPV_EMIT(OrV128, get_i(128), Or)
+OPV_EMIT(XorV128, get_i(128), Xor)
+OPV_EMIT(AndV128, get_i(128), And)
+UNOPV_EMIT(NotV128, get_i(128), Not)
+
+
 
 OPV_EMIT(Shl8x8 , get_vt(8, 8), Shl )
 OPV_EMIT(Shr8x8 , get_vt(8, 8), LShr)
