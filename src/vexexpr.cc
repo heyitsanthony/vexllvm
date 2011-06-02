@@ -85,8 +85,6 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CasCmpNE32);
 	BINOP_TAGOP(CasCmpNE64);
 
-	BINOP_TAGOP(CmpEQ8x16);
-	BINOP_TAGOP(CmpGT8Sx16);
 	BINOP_TAGOP(CmpLE64S);
 	BINOP_TAGOP(CmpLE64U);
 	BINOP_TAGOP(CmpLT64S);
@@ -135,6 +133,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(InterleaveLO64x2);
 	BINOP_TAGOP(InterleaveHI64x2);
 	BINOP_TAGOP(InterleaveLO32x4);
+	BINOP_TAGOP(InterleaveLO32x2);
 
 	BINOP_TAGOP(Mul8);
 	BINOP_TAGOP(Mul16);
@@ -247,28 +246,115 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Sar8x8);
 	BINOP_TAGOP(Sal8x8);
 
+	BINOP_TAGOP(Shl8x16);
+	BINOP_TAGOP(Shr8x16);
+	BINOP_TAGOP(Sar8x16);
+	BINOP_TAGOP(Sal8x16);
+
 	BINOP_TAGOP(Shl16x4);
 	BINOP_TAGOP(Shr16x4);
 	BINOP_TAGOP(Sar16x4);
 	BINOP_TAGOP(Sal16x4);
+
+	BINOP_TAGOP(Shl16x8);
+	BINOP_TAGOP(Shr16x8);
+	BINOP_TAGOP(Sar16x8);
+	BINOP_TAGOP(Sal16x8);
 
 	BINOP_TAGOP(Shl32x2);
 	BINOP_TAGOP(Shr32x2);
 	BINOP_TAGOP(Sar32x2);
 	BINOP_TAGOP(Sal32x2);
 
+	BINOP_TAGOP(Shl32x4);
+	BINOP_TAGOP(Shr32x4);
+	BINOP_TAGOP(Sar32x4);
+	BINOP_TAGOP(Sal32x4);
+
 	BINOP_TAGOP(SarN8x8);
 	BINOP_TAGOP(ShlN8x8);
 	BINOP_TAGOP(ShrN8x8);
+
+	BINOP_TAGOP(SarN8x16);
+	BINOP_TAGOP(ShlN8x16);
+	BINOP_TAGOP(ShrN8x16);
 
 	BINOP_TAGOP(ShlN16x4);
 	BINOP_TAGOP(ShrN16x4);
 	BINOP_TAGOP(SarN16x4);
 
+	BINOP_TAGOP(ShlN16x8);
+	BINOP_TAGOP(ShrN16x8);
+	BINOP_TAGOP(SarN16x8);
+
 	BINOP_TAGOP(ShlN32x2);
 	BINOP_TAGOP(ShrN32x2);
 	BINOP_TAGOP(SarN32x2);
 
+	BINOP_TAGOP(ShlN32x4);
+	BINOP_TAGOP(ShrN32x4);
+	BINOP_TAGOP(SarN32x4);
+
+	BINOP_TAGOP(ShlN64x2);
+	BINOP_TAGOP(ShrN64x2);
+	BINOP_TAGOP(SarN64x2);
+
+	BINOP_TAGOP(Add8x8);
+	BINOP_TAGOP(Add8x16);
+	BINOP_TAGOP(Add16x4);
+	BINOP_TAGOP(Add16x8);
+	BINOP_TAGOP(Add32x2);
+	BINOP_TAGOP(Add32x4);
+	BINOP_TAGOP(Add64x2);
+
+	BINOP_TAGOP(Add32Fx2);
+	BINOP_TAGOP(Add32Fx4);
+	BINOP_TAGOP(Add64Fx2);
+
+	BINOP_TAGOP(Sub32Fx2);
+	BINOP_TAGOP(Sub32Fx4);
+	BINOP_TAGOP(Sub64Fx2);
+
+	BINOP_TAGOP(CmpEQ8x8);
+	BINOP_TAGOP(CmpEQ8x16);
+	BINOP_TAGOP(CmpEQ16x4);
+	BINOP_TAGOP(CmpEQ16x8);
+	BINOP_TAGOP(CmpEQ32x2);
+	BINOP_TAGOP(CmpEQ32x4);
+
+	BINOP_TAGOP(CmpGT8Sx8);
+	BINOP_TAGOP(CmpGT8Sx16);
+	BINOP_TAGOP(CmpGT16Sx4);
+	BINOP_TAGOP(CmpGT16Sx8);
+	BINOP_TAGOP(CmpGT32Sx2);
+	BINOP_TAGOP(CmpGT32Sx4);
+	BINOP_TAGOP(CmpGT64Sx2);
+
+	BINOP_TAGOP(CmpGT8Ux8);
+	BINOP_TAGOP(CmpGT8Ux16);
+	BINOP_TAGOP(CmpGT16Ux4);
+	BINOP_TAGOP(CmpGT16Ux8);
+	BINOP_TAGOP(CmpGT32Ux2);
+	BINOP_TAGOP(CmpGT32Ux4);
+
+	BINOP_TAGOP(CmpEQ32Fx2);
+	BINOP_TAGOP(CmpEQ32Fx4);
+	BINOP_TAGOP(CmpEQ64Fx2);
+
+	BINOP_TAGOP(CmpGT32Fx2);
+	BINOP_TAGOP(CmpGT32Fx4);
+
+	BINOP_TAGOP(CmpGE32Fx2);
+	BINOP_TAGOP(CmpGE32Fx4);
+
+	BINOP_TAGOP(CmpLT32Fx4);
+	BINOP_TAGOP(CmpLT64Fx2);
+
+	BINOP_TAGOP(CmpLE32Fx4);
+	BINOP_TAGOP(CmpLE64Fx2);
+
+	BINOP_TAGOP(CmpUN32Fx4);
+	BINOP_TAGOP(CmpUN64Fx2);
 	BINOP_TAGOP(Perm8x8);
 	BINOP_TAGOP(Perm8x16);
 
@@ -534,11 +620,19 @@ llvm::Value* VexExprMux0X::emit(void) const
 
 	builder->SetInsertPoint(bb_nonzero);
 	nonzero_val = exprX->emit();
-	bb_nz = builder->GetInsertBlock();
+	if(nonzero_val->getType()->isVectorTy())
+		nonzero_val = builder->CreateBitCast(nonzero_val,
+			llvm::IntegerType::get(llvm::getGlobalContext(),
+				dynamic_cast<const llvm::VectorType*>(nonzero_val->getType())->getBitWidth()));
+			bb_nz = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 
 	builder->SetInsertPoint(bb_zero);
 	zero_val = expr0->emit();
+	if(zero_val->getType()->isVectorTy())
+		zero_val = builder->CreateBitCast(zero_val,
+			llvm::IntegerType::get(llvm::getGlobalContext(),
+				dynamic_cast<const llvm::VectorType*>(zero_val->getType())->getBitWidth()));
 	bb_z = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 

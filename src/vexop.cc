@@ -790,6 +790,7 @@ Value* VexExprUnop##x::emit(void) const		\
 XHI_TO_Y_EMIT(64HIto32, 32, get_i(32))
 XHI_TO_Y_EMIT(32HIto16, 16, get_i(16))
 
+X_TO_Y_EMIT(16to8, CreateTrunc, get_i(8))
 X_TO_Y_EMIT(64to32, CreateTrunc, get_i(32))
 X_TO_Y_EMIT(32Uto64,CreateZExt, get_i(64))
 X_TO_Y_EMIT(32Sto64, CreateSExt, get_i(64))
@@ -1004,7 +1005,7 @@ BINOP_EXPAND_EMIT(MullS64, SExt, get_i(128),Mul)
 BINOP_EXPAND_EMIT(MullU8, ZExt, get_i(16), Mul)
 BINOP_EXPAND_EMIT(MullU16, ZExt, get_i(32), Mul)
 BINOP_EXPAND_EMIT(MullU32, ZExt, get_i(64), Mul)
-BINOP_EXPAND_EMIT(MullU64, ZExt, IntegerType::get(getGlobalContext(),128), Mul)
+BINOP_EXPAND_EMIT(MullU64, ZExt, get_i(128), Mul)
 
 BINOP_EMIT(Or8, Or)
 BINOP_EMIT(Or16, Or)
@@ -1196,30 +1197,6 @@ Value* VexExprBinopMin64F0x2::emit(void) const
 	return builder->CreateInsertElement(v1, result, get_c(32, 0));
 }
 
-Value* VexExprBinopCmpEQ8x16::emit(void) const
-{
-	Value		*cmp_8x1;
-	BINOP_SETUP
-	cmp_8x1 = builder->CreateICmpEQ(v1, v2);
-	return builder->CreateSExt(cmp_8x1, get_vt(16, 8));
-}
-
-Value* VexExprBinopCmpGT8Sx16::emit(void) const
-{
-	Value		*cmp_8x1;
-	BINOP_SETUP
-	cmp_8x1 = builder->CreateICmpSGT(v1, v2);
-	return builder->CreateSExt(cmp_8x1, get_vt(16, 8));
-}
-
-Value* VexExprBinopSub8x16::emit(void) const
-{
-	BINOP_SETUP
-	v1 = builder->CreateBitCast(v1, get_vt(16, 8));
-	v2 = builder->CreateBitCast(v2, get_vt(16, 8));
-	return builder->CreateSub(v1, v2);
-}
-
 Value* VexExprBinopSetV128lo64::emit(void) const
 {
 	BINOP_SETUP
@@ -1294,7 +1271,9 @@ static Constant* ileave_lo64x2[] = { get_c(32, 2), get_c(32, 0) };
 static Constant* ileave_hi64x2[] = {get_c(32, 3), get_c(32, 1)};
 static Constant* ileave_lo32x4[] = { 
 	get_c(32, 4), get_c(32, 0),
-	get_c(32, 6), get_c(32, 2)};
+	get_c(32, 5), get_c(32, 1)};
+static Constant* ileave_lo32x2[] = { 
+	get_c(32, 4), get_c(32, 0)};
 
 #define EMIT_ILEAVE(x, y, z, w)				\
 Value* VexExprBinopInterleave##x::emit(void) const	\
@@ -1318,6 +1297,7 @@ EMIT_ILEAVE(LO8x16, ileave_lo8x16, 16, get_vt(16, 8))
 EMIT_ILEAVE(LO64x2, ileave_lo64x2, 2, get_vt(2, 64))
 EMIT_ILEAVE(HI64x2, ileave_hi64x2, 2, get_vt(2, 64))
 EMIT_ILEAVE(LO32x4, ileave_lo32x4, 4, get_vt(4, 32))
+EMIT_ILEAVE(LO32x2, ileave_lo32x2, 2, get_vt(2, 32))
 
 #define OPV_EMIT(x, y, z)			\
 Value* VexExprBinop##x::emit(void) const	\
@@ -1333,17 +1313,114 @@ OPV_EMIT(Shr8x8 , get_vt(8, 8), LShr)
 OPV_EMIT(Sar8x8 , get_vt(8, 8), AShr)
 OPV_EMIT(Sal8x8 , get_vt(8, 8), Shl )  //??
 
+OPV_EMIT(Shl8x16 , get_vt(16, 8), Shl )
+OPV_EMIT(Shr8x16 , get_vt(16, 8), LShr)
+OPV_EMIT(Sar8x16 , get_vt(16, 8), AShr)
+OPV_EMIT(Sal8x16 , get_vt(16, 8), Shl )  //??
+
 OPV_EMIT(Shl16x4 , get_vt(4, 16), Shl )
 OPV_EMIT(Shr16x4 , get_vt(4, 16), LShr)
 OPV_EMIT(Sar16x4 , get_vt(4, 16), AShr)
 OPV_EMIT(Sal16x4 , get_vt(4, 16), Shl )  //??
                                              
+OPV_EMIT(Shl16x8 , get_vt(8, 16), Shl )
+OPV_EMIT(Shr16x8 , get_vt(8, 16), LShr)
+OPV_EMIT(Sar16x8 , get_vt(8, 16), AShr)
+OPV_EMIT(Sal16x8 , get_vt(8, 16), Shl )  //??
 
 OPV_EMIT(Shl32x2 , get_vt(2, 32), Shl )
 OPV_EMIT(Shr32x2 , get_vt(2, 32), LShr)
 OPV_EMIT(Sar32x2 , get_vt(2, 32), AShr)
 OPV_EMIT(Sal32x2 , get_vt(2, 32), Shl )  //??
 
+OPV_EMIT(Shl32x4 , get_vt(4, 32), Shl )
+OPV_EMIT(Shr32x4 , get_vt(4, 32), LShr)
+OPV_EMIT(Sar32x4 , get_vt(4, 32), AShr)
+OPV_EMIT(Sal32x4 , get_vt(4, 32), Shl )  //??
+
+OPV_EMIT(Shl64x2 , get_vt(2, 64), Shl )
+OPV_EMIT(Shr64x2 , get_vt(2, 64), LShr)
+OPV_EMIT(Sar64x2 , get_vt(2, 64), AShr)
+OPV_EMIT(Sal64x2 , get_vt(2, 64), Shl )  //??
+
+OPV_EMIT(Add8x8  , get_vt(8, 8), Add )
+OPV_EMIT(Add8x16 , get_vt(16, 8), Add )
+OPV_EMIT(Add16x4 , get_vt(4, 16), Add )
+OPV_EMIT(Add16x8 , get_vt(8, 16), Add )
+OPV_EMIT(Add32x2 , get_vt(2, 32), Add )
+OPV_EMIT(Add32x4 , get_vt(4, 32), Add )
+OPV_EMIT(Add64x2 , get_vt(2, 64), Add )
+
+OPV_EMIT(Sub8x8  , get_vt(8, 8), Sub )
+OPV_EMIT(Sub8x16 , get_vt(16, 8), Sub )
+OPV_EMIT(Sub16x4 , get_vt(4, 16), Sub )
+OPV_EMIT(Sub16x8 , get_vt(8, 16), Sub )
+OPV_EMIT(Sub32x2 , get_vt(2, 32), Sub )
+OPV_EMIT(Sub32x4 , get_vt(4, 32), Sub )
+OPV_EMIT(Sub64x2 , get_vt(2, 64), Sub )
+
+#define OPV_CMP_T_EMIT(x, y, z, w)		\
+Value* VexExprBinop##x::emit(void) const	\
+{	\
+	BINOP_SETUP					\
+	v1 = builder->CreateBitCast(v1, y);		\
+	v2 = builder->CreateBitCast(v2, y);		\
+	return builder->CreateSExt(			\
+		builder->Create##z(v1, v2),		\
+		w);		\
+}
+
+#define OPV_CMP_EMIT(x, y, z)	OPV_CMP_T_EMIT(x, y, z, y)
+
+OPV_CMP_EMIT(CmpEQ8x8 , get_vt(8, 8) , ICmpEQ)
+OPV_CMP_EMIT(CmpEQ8x16, get_vt(16, 8), ICmpEQ)
+OPV_CMP_EMIT(CmpEQ16x4, get_vt(4, 16), ICmpEQ)
+OPV_CMP_EMIT(CmpEQ16x8, get_vt(8, 16), ICmpEQ)
+OPV_CMP_EMIT(CmpEQ32x2, get_vt(2, 32), ICmpEQ)
+OPV_CMP_EMIT(CmpEQ32x4, get_vt(4, 32), ICmpEQ)
+
+OPV_CMP_EMIT(CmpGT8Sx8 , get_vt(8, 8) , ICmpSGT)
+OPV_CMP_EMIT(CmpGT8Sx16, get_vt(16, 8), ICmpSGT)
+OPV_CMP_EMIT(CmpGT16Sx4, get_vt(4, 16), ICmpSGT)
+OPV_CMP_EMIT(CmpGT16Sx8, get_vt(8, 16), ICmpSGT)
+OPV_CMP_EMIT(CmpGT32Sx2, get_vt(2, 32), ICmpSGT)
+OPV_CMP_EMIT(CmpGT32Sx4, get_vt(4, 32), ICmpSGT)
+OPV_CMP_EMIT(CmpGT64Sx2, get_vt(2, 64), ICmpSGT)
+
+OPV_CMP_EMIT(CmpGT8Ux8 , get_vt(8, 8) , ICmpUGT)
+OPV_CMP_EMIT(CmpGT8Ux16, get_vt(16, 8), ICmpUGT)
+OPV_CMP_EMIT(CmpGT16Ux4, get_vt(4, 16), ICmpUGT)
+OPV_CMP_EMIT(CmpGT16Ux8, get_vt(8, 16), ICmpUGT)
+OPV_CMP_EMIT(CmpGT32Ux2, get_vt(2, 32), ICmpUGT)
+OPV_CMP_EMIT(CmpGT32Ux4, get_vt(4, 32), ICmpUGT)
+
+OPV_CMP_T_EMIT(CmpEQ32Fx2, get_vtf(2), FCmpOEQ, get_vt(2, 32))
+OPV_CMP_T_EMIT(CmpEQ32Fx4, get_vtf(4), FCmpOEQ, get_vt(4, 32))
+OPV_CMP_T_EMIT(CmpEQ64Fx2, get_vtd(2), FCmpOEQ, get_vt(2, 64))
+
+OPV_CMP_T_EMIT(CmpGT32Fx2, get_vtf(2), FCmpOGT, get_vt(2, 32))
+OPV_CMP_T_EMIT(CmpGT32Fx4, get_vtf(4), FCmpOGT, get_vt(4, 32))
+
+OPV_CMP_T_EMIT(CmpGE32Fx2, get_vtf(2), FCmpOGE, get_vt(2, 32))
+OPV_CMP_T_EMIT(CmpGE32Fx4, get_vtf(4), FCmpOGE, get_vt(4, 32))
+
+OPV_CMP_T_EMIT(CmpLT32Fx4, get_vtf(4), FCmpOLT, get_vt(4, 32))
+OPV_CMP_T_EMIT(CmpLT64Fx2, get_vtd(2), FCmpOLT, get_vt(2, 64))
+
+OPV_CMP_T_EMIT(CmpLE32Fx4, get_vtf(4), FCmpOLE, get_vt(4, 32))
+OPV_CMP_T_EMIT(CmpLE64Fx2, get_vtd(2), FCmpOLE, get_vt(2, 64))
+
+OPV_CMP_T_EMIT(CmpUN32Fx4, get_vtf(4), FCmpUNO, get_vt(4, 32))
+OPV_CMP_T_EMIT(CmpUN64Fx2, get_vtd(2), FCmpUNO, get_vt(2, 64))
+
+
+OPV_EMIT(Add32Fx2 , get_vtf(2), FAdd )
+OPV_EMIT(Add32Fx4 , get_vtf(4), FAdd )
+OPV_EMIT(Add64Fx2 , get_vtd(2), FAdd )
+
+OPV_EMIT(Sub32Fx2 , get_vtf(2), FSub )
+OPV_EMIT(Sub32Fx4 , get_vtf(4), FSub )
+OPV_EMIT(Sub64Fx2 , get_vtd(2), FSub )
 
 //note max vector elements of 16
 #define OPVS_EMIT(x, y, z)			\
@@ -1372,17 +1449,33 @@ Value* VexExprBinop##x::emit(void) const	\
 	return builder->Create##z(v1, v2);		\
 }
 
-OPVS_EMIT(SarN8x8, get_vt(8, 8), AShr)
 OPVS_EMIT(ShlN8x8, get_vt(8, 8), Shl )
+OPVS_EMIT(SarN8x8, get_vt(8, 8), AShr)
 OPVS_EMIT(ShrN8x8, get_vt(8, 8), LShr)
 
-OPVS_EMIT(ShlN16x4, get_vt(4, 16), AShr)
-OPVS_EMIT(ShrN16x4, get_vt(4, 16), Shl )
-OPVS_EMIT(SarN16x4, get_vt(4, 16), LShr)
+OPVS_EMIT(ShlN8x16, get_vt(16, 8), Shl )
+OPVS_EMIT(SarN8x16, get_vt(16, 8), AShr)
+OPVS_EMIT(ShrN8x16, get_vt(16, 8), LShr)
 
-OPVS_EMIT(ShlN32x2, get_vt(2, 32), AShr)
-OPVS_EMIT(ShrN32x2, get_vt(2, 32), Shl )
-OPVS_EMIT(SarN32x2, get_vt(2, 32), LShr)
+OPVS_EMIT(ShlN16x4, get_vt(4, 16), Shl)
+OPVS_EMIT(SarN16x4, get_vt(4, 16), AShr)
+OPVS_EMIT(ShrN16x4, get_vt(4, 16), LShr )
+
+OPVS_EMIT(ShlN16x8, get_vt(8, 16), Shl)
+OPVS_EMIT(SarN16x8, get_vt(8, 16), AShr)
+OPVS_EMIT(ShrN16x8, get_vt(8, 16), LShr )
+
+OPVS_EMIT(ShlN32x2, get_vt(2, 32), Shl)
+OPVS_EMIT(SarN32x2, get_vt(2, 32), AShr)
+OPVS_EMIT(ShrN32x2, get_vt(2, 32), LShr )
+
+OPVS_EMIT(ShlN32x4, get_vt(4, 32), Shl)
+OPVS_EMIT(SarN32x4, get_vt(4, 32), AShr)
+OPVS_EMIT(ShrN32x4, get_vt(4, 32), LShr )
+
+OPVS_EMIT(ShlN64x2, get_vt(2, 64), Shl)
+OPVS_EMIT(SarN64x2, get_vt(2, 64), AShr)
+OPVS_EMIT(ShrN64x2, get_vt(2, 64), LShr )
 
 #define OPSHUF_EMIT(x, y, z)			\
 Value* VexExprBinop##x::emit(void) const	\
