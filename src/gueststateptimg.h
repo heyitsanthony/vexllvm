@@ -90,6 +90,7 @@ protected:
 	GuestStatePTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
 
+	void slurpRegisters(pid_t pid);
 private:
 
 	void dumpSelfMap(void) const;
@@ -98,7 +99,6 @@ private:
 		int argc, char *const argv[], char *const envp[]);
 	void slurpBrains(pid_t pid);
 	void slurpMappings(pid_t pid);
-	void slurpRegisters(pid_t pid);
 
 	void			*entry_pt;
 	PtrList<PTImgMapEntry>	mappings;

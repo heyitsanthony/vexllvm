@@ -173,6 +173,43 @@ bool PTImgChk::isRegMismatch(
 	return false;
 }
 
+/* if we find an opcode that is causing problems, we'll replace the vexllvm
+ * state with the pt state (since the pt state is by definition correct)
+ */
+bool PTImgChk::fixup(const void* ip_begin, const void* ip_end)
+{
+	const char		*cur_window, *last_window;
+
+	/* guest ip's are mapped in our addr space, no need for IPC */
+	cur_window = (const char*)ip_begin;
+	last_window = ((const char*)ip_end)-(sizeof(long)-1);
+	while (cur_window < ip_end) {
+		long		op;
+		uint16_t	op16;
+
+		memcpy(&op, cur_window, sizeof(long));
+		op16 = op & 0xffff;
+		switch (op16) {
+		case 0xbc0f: /* BSF */
+		case 0xbd0f: /* BSR */
+			fprintf(stderr,
+				"[VEXLLVM] fixing up op=%p@IP=%p\n",
+				(void*)op16,
+				cur_window);
+			slurpRegisters(child_pid);
+			return true;
+		default:
+			break;
+		}
+
+		cur_window++;
+	}
+
+	fprintf(stderr, "VAIN ATTEMPT TO FIXUP %p-%p\n", ip_begin, ip_end);
+	/* couldn't figure out how to fix */
+	return false;
+}
+
 bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 {
 	user_regs_struct	regs;
@@ -290,7 +327,13 @@ long PTImgChk::getInsOp(const user_regs_struct& regs)
 	if (regs.rip == chk_addr) return chk_opcode;
 
 	chk_addr = regs.rip;
-	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+// SLOW WAY:
+// Don't need to do this so long as we have the data at chk_addr in the guest 
+// process also mapped into the parent process at chk_addr.
+//	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+
+// FAST WAY: read it off like a boss
+	chk_opcode = *((const long*)chk_addr);
 
 	return chk_opcode;
 }

@@ -28,6 +28,7 @@ public:
 
 	bool isMatch(const VexGuestAMD64State& state) const;
 
+	bool fixup(const void* ip_begin, const void* ip_end);
 protected:
 	virtual void handleChild(pid_t pid);
 	bool filterSysCall(

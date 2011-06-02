@@ -18,6 +18,7 @@ protected:
 	virtual void doSysCall(VexSB* vsb);
 private:
 	void dumpSubservient(VexSB* vsb);
+	void verifyBlockRun(VexSB* vsb);
 
 	bool		hit_syscall;
 	bool		is_deferred;

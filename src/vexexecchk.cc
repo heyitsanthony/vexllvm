@@ -99,13 +99,29 @@ uint64_t VexExecChk::doVexSB(VexSB* vsb)
 	}
 	
 states_should_be_equal:
-	if (!cross_check->isMatch(*state)) {
-		fprintf(stderr, "MISMATCH: END OF BLOCK. FIND NEW EMU BUG.\n");
-		dumpSubservient(vsb);
-	}
-
+	verifyBlockRun(vsb);
 done:
 	return new_ip;
+}
+
+/* check, fix, die */
+void VexExecChk::verifyBlockRun(VexSB* vsb)
+{
+	bool fixed;
+
+	if (cross_check->isMatch(
+		*(const VexGuestAMD64State*)gs->getCPUState()->getStateData()))
+	{
+		 return;
+	}
+
+	fixed = cross_check->fixup(
+		(void*)vsb->getGuestAddr(), 
+		(void*)vsb->getEndAddr());
+	if (fixed) return;
+
+	fprintf(stderr, "MISMATCH: END OF BLOCK. FIND NEW EMU BUG.\n");
+	dumpSubservient(vsb);
 }
 
 VexExec* VexExecChk::create(PTImgChk* gs)
