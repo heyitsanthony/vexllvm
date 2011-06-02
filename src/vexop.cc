@@ -1422,6 +1422,10 @@ OPV_EMIT(Sub32Fx2 , get_vtf(2), FSub )
 OPV_EMIT(Sub32Fx4 , get_vtf(4), FSub )
 OPV_EMIT(Sub64Fx2 , get_vtd(2), FSub )
 
+OPV_EMIT(Mul32Fx2 , get_vtf(2), FMul )
+OPV_EMIT(Mul32Fx4 , get_vtf(4), FMul )
+OPV_EMIT(Mul64Fx2 , get_vtd(2), FMul )
+
 //note max vector elements of 16
 #define OPVS_EMIT(x, y, z)			\
 Value* VexExprBinop##x::emit(void) const	\
