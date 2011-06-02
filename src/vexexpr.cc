@@ -1,3 +1,5 @@
+#include <llvm/Constants.h>
+#include <llvm/DerivedTypes.h>
 #include "genllvm.h"
 #include "Sugar.h"
 #include <stdio.h>
@@ -7,6 +9,8 @@
 #include "vexhelpers.h"
 
 #include "vexexpr.h"
+
+using namespace llvm;
 
 unsigned int VexExpr::vex_expr_op_count[VEX_MAX_OP];
 
@@ -409,10 +413,10 @@ VexExprConst* VexExprConst::createConst(
 	return NULL;
 }
 
-#define EMIT_CONST_INT(x,y)	\
-llvm::Value* VexExprConst##x::emit(void) const { 	\
-	return llvm::ConstantInt::get(			\
-		llvm::getGlobalContext(), llvm::APInt(y, x)); }
+#define EMIT_CONST_INT(x,y)				\
+Value* VexExprConst##x::emit(void) const { 		\
+	return ConstantInt::get(			\
+		getGlobalContext(), APInt(y, x)); }
 EMIT_CONST_INT(U1, 1)
 EMIT_CONST_INT(U8, 8)
 EMIT_CONST_INT(U16, 16)
@@ -432,12 +436,14 @@ static uint64_t bitmask8_to_bytemask64 ( uint8_t w8 )
    return w64;
 }
 
-llvm::Value* VexExprConstV128::emit(void) const
+Value* VexExprConstV128::emit(void) const
 {
 	using namespace llvm;
 	Constant	* data[] = {
-		ConstantInt::get(getGlobalContext(), APInt(64, bitmask8_to_bytemask64((V128 >> 0) & 0xFF))),
-		ConstantInt::get(getGlobalContext(), APInt(64, bitmask8_to_bytemask64((V128 >> 8) & 0xFF))),
+		ConstantInt::get(getGlobalContext(),
+			APInt(64, bitmask8_to_bytemask64((V128 >> 0) & 0xFF))),
+		ConstantInt::get(getGlobalContext(),
+			APInt(64, bitmask8_to_bytemask64((V128 >> 8) & 0xFF))),
 	};
 	Value	*cv = ConstantVector::get(
 		std::vector<Constant*>(
@@ -449,16 +455,16 @@ llvm::Value* VexExprConstV128::emit(void) const
 
 // 3.7.0
 #if 0
-llvm::Value* VexExprConstF32::emit(void) const {
-	return llvm::ConstantFP::get(
-		llvm::getGlobalContext(),
-		llvm::APFloat(F32)); }
+Value* VexExprConstF32::emit(void) const {
+	return ConstantFP::get(
+		getGlobalContext(),
+		APFloat(F32)); }
 #endif
 
-llvm::Value* VexExprConstF64::emit(void) const {
-	return llvm::ConstantFP::get(
-		llvm::getGlobalContext(),
-		llvm::APFloat(F64)); }
+Value* VexExprConstF64::emit(void) const
+{
+	return ConstantFP::get(getGlobalContext(), APFloat(F64));
+}
 
 void VexExprGet::print(std::ostream& os) const
 {
@@ -472,7 +478,7 @@ void VexExprRdTmp::print(std::ostream& os) const
 	os << "RdTmp(t" << tmp_reg << ")";
 }
 
-llvm::Value* VexExprRdTmp::emit(void) const
+Value* VexExprRdTmp::emit(void) const
 {
 	const VexStmt	*stmt = getParent();
 	const VexSB	*sb = stmt->getParent();
@@ -527,9 +533,9 @@ VexExprLoad::~VexExprLoad(void)
 	delete addr;
 }
 
-llvm::Value* VexExprLoad::emit(void) const
+Value* VexExprLoad::emit(void) const
 {
-	llvm::Value	*addr_expr;
+	Value	*addr_expr;
 	addr_expr = addr->emit();
 	return theGenLLVM->load(addr_expr, ty);
 }
@@ -557,9 +563,9 @@ VexExprCCall::VexExprCCall(VexStmt* in_parent, const IRExpr* expr)
 }
 
 
-llvm::Value* VexExprCCall::emit(void) const
+Value* VexExprCCall::emit(void) const
 {
-	std::vector<llvm::Value*>	args_v;
+	std::vector<Value*>	args_v;
 
 	foreach (it, args.begin(), args.end())
 		args_v.push_back((*it)->emit());
@@ -592,24 +598,24 @@ VexExprMux0X::~VexExprMux0X(void)
 	delete exprX;
 }
 
-llvm::Value* VexExprMux0X::emit(void) const
+Value* VexExprMux0X::emit(void) const
 {
-	llvm::IRBuilder<>	*builder;
-	llvm::Value		*cmp_val, *cmp_i8, *zero_val, *nonzero_val;
-	llvm::PHINode		*pn;
-	llvm::BasicBlock	*bb_zero, *bb_nonzero, *bb_merge, *bb_origin;
-	llvm::BasicBlock	*bb_nz, *bb_z;	/* BB in case of nested MuX */
+	IRBuilder<>	*builder;
+	Value		*cmp_val, *cmp_i8, *zero_val, *nonzero_val;
+	PHINode		*pn;
+	BasicBlock	*bb_zero, *bb_nonzero, *bb_merge, *bb_origin;
+	BasicBlock	*bb_nz, *bb_z;	/* BB in case of nested MuX */
 
 	builder = theGenLLVM->getBuilder();
 	bb_origin = builder->GetInsertBlock();
-	bb_zero = llvm::BasicBlock::Create(
-		llvm::getGlobalContext(), "mux0X_zero",
+	bb_zero = BasicBlock::Create(
+		getGlobalContext(), "mux0X_zero",
 		bb_origin->getParent());
-	bb_nonzero = llvm::BasicBlock::Create(
-		llvm::getGlobalContext(), "mux0X_nonzero",
+	bb_nonzero = BasicBlock::Create(
+		getGlobalContext(), "mux0X_nonzero",
 		bb_origin->getParent());
-	bb_merge = llvm::BasicBlock::Create(
-		llvm::getGlobalContext(), "mux0X_merge",
+	bb_merge = BasicBlock::Create(
+		getGlobalContext(), "mux0X_merge",
 		bb_origin->getParent());
 
 
@@ -618,28 +624,36 @@ llvm::Value* VexExprMux0X::emit(void) const
 	cmp_val = cond->emit();
 	cmp_i8 = builder->CreateICmpEQ(
 		cmp_val,
-		llvm::ConstantInt::get(
-			llvm::getGlobalContext(),
-			llvm::APInt(
+		ConstantInt::get(
+			getGlobalContext(),
+			APInt(
 				cmp_val->getType()->getPrimitiveSizeInBits(),
 				0)));
 	builder->CreateCondBr(cmp_i8, bb_zero, bb_nonzero);
 
 	builder->SetInsertPoint(bb_nonzero);
 	nonzero_val = exprX->emit();
-	if(nonzero_val->getType()->isVectorTy())
-		nonzero_val = builder->CreateBitCast(nonzero_val,
-			llvm::IntegerType::get(llvm::getGlobalContext(),
-				dynamic_cast<const llvm::VectorType*>(nonzero_val->getType())->getBitWidth()));
-			bb_nz = builder->GetInsertBlock();
+	if(isa<VectorType>(nonzero_val->getType())) {
+		nonzero_val = builder->CreateBitCast(
+			nonzero_val,
+			IntegerType::get(
+				getGlobalContext(),
+				static_cast<const VectorType*>(
+					nonzero_val->getType())->getBitWidth()));
+	}
+	bb_nz = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 
 	builder->SetInsertPoint(bb_zero);
 	zero_val = expr0->emit();
-	if(zero_val->getType()->isVectorTy())
-		zero_val = builder->CreateBitCast(zero_val,
-			llvm::IntegerType::get(llvm::getGlobalContext(),
-				dynamic_cast<const llvm::VectorType*>(zero_val->getType())->getBitWidth()));
+	if(isa<VectorType>(zero_val->getType())) {
+		zero_val = builder->CreateBitCast(
+			zero_val,
+			IntegerType::get(
+				getGlobalContext(),
+				static_cast<const VectorType*>(
+					zero_val->getType())->getBitWidth()));
+	}
 	bb_z = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 
@@ -665,7 +679,7 @@ void VexExprMux0X::print(std::ostream& os) const
 }
 
 
-llvm::Value* VexExprGet::emit(void) const
+Value* VexExprGet::emit(void) const
 {
 	return theGenLLVM->readCtx(offset, ty);
 }

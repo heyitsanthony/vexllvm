@@ -7,8 +7,6 @@
 #include <llvm/Module.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/IRBuilder.h>
-#include <llvm/Support/raw_os_ostream.h>
-
 
 extern "C" {
 #include <valgrind/libvex.h>

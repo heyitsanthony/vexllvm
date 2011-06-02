@@ -1,6 +1,9 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/Module.h>
-//#include "llvm/ModuleProvider.h" // XXX
+// XXX. Kill when KLEE is updated
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
+#include <llvm/ModuleProvider.h>
+#endif
 #include <llvm/Instructions.h>
 
 #include <llvm/Bitcode/ReaderWriter.h>
@@ -43,10 +46,26 @@ VexHelpers::VexHelpers()
 
 Module* VexHelpers::loadMod(const char* path)
 {
-	OwningPtr<MemoryBuffer> Buffer;
 	Module			*ret_mod;
-	bool			materialize_fail;
 	std::string		ErrorMsg;
+
+/* XXX. Kill this when KLEE is updated to non-ancient. */
+#if (LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
+	ModuleProvider	*MP = 0;
+	MemoryBuffer	*Buffer;
+	Buffer =  MemoryBuffer::getFileOrSTDIN(std::string(path), &ErrorMsg);
+	if (Buffer) {
+		MP = getBitcodeModuleProvider(Buffer, getGlobalContext(), &ErrorMsg);
+		if (!MP) delete Buffer;
+	}
+
+	assert (MP != NULL && "Error loading helper module");
+	ret_mod = MP->materializeModule();
+//	MP->releaseModule();
+//	delete MP;
+#else
+	OwningPtr<MemoryBuffer> Buffer;
+	bool			materialize_fail;
 
 	MemoryBuffer::getFile(path, Buffer);
 
@@ -63,6 +82,8 @@ Module* VexHelpers::loadMod(const char* path)
 		assert (0 == 1 && "BAD MOD");
 	}
 
+#endif
+
 	return ret_mod;
 }
 
@@ -76,8 +97,11 @@ std::list<llvm::Module*> VexHelpers::getModules(void) const
 
 VexHelpers::~VexHelpers()
 {
+/* XXX. Kill when KLEE is updated */
+#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
 	delete helper_mod;
 	delete vexop_mod;
+#endif
 }
 
 Function* VexHelpers::getHelper(const char* s) const
@@ -90,6 +114,9 @@ Function* VexHelpers::getHelper(const char* s) const
 
 void VexHelpers::bindToExeEngine(ExecutionEngine* exe) const
 {
+/* XXX. Kill when KLEE is updated */
+#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
 	exe->addModule(helper_mod);
 	exe->addModule(vexop_mod);
+#endif
 }
