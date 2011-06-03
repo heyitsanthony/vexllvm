@@ -148,7 +148,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len, Value* ix, Val
 	Value* bias_v = ConstantInt::get(
 		getGlobalContext(), APInt(sizeof(int)*8, bias));
 	Value* len_v = ConstantInt::get(
-		getGlobalContext(), APInt(sizeof(int)*8, bias));
+		getGlobalContext(), APInt(sizeof(int)*8, len));
 	Value* offset = builder->CreateAdd(
 		builder->CreateBitCast(ix, offset_type),
 		bias_v);

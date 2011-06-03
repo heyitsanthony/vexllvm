@@ -69,7 +69,13 @@ void VexStmtPutI::emit(void) const
 }
 
 
-void VexStmtPutI::print(std::ostream& os) const { os << "PutI"; }
+void VexStmtPutI::print(std::ostream& os) const { 
+	os << "PutI(" << base << ", " 
+		<< bias << ", ";
+	ix_expr->print(os);
+	os << ", " << len << ") <- ";
+	data_expr->print(os);
+}
 
 VexStmtWrTmp::VexStmtWrTmp(
 	VexSB* in_parent, const IRStmt* in_stmt)

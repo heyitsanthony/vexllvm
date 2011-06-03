@@ -241,11 +241,22 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 	// /* 456 */UInt  guest_FTOP;
 	//FPTAG?
 
-	//TODO: this is surely wrong, the sizes don't even match...
-	x87_ok = !memcmp(
-		&state.guest_FPREG[0],
-		&fpregs.st_space[0],
-		sizeof(state.guest_FPREG));
+	//what happens if the FP unit is doing long doubles?
+	//if VEX supports this, it probably should be filling in
+	//the extra 16 bits with the appropriate thing on MMX 
+	//operations, like a real x86 cpu
+	x87_ok = true;
+	for(int i = 0; i < 8; ++i) {
+		bool is_ok = state.guest_FPREG[i] == 
+			*(ULong*)&fpregs.st_space[4 * i] &&
+			(fpregs.st_space[4 * i + 2] == 0 || 
+			fpregs.st_space[4 * i + 2] == 0xFFFF) && 
+			fpregs.st_space[4 * i + 3] == 0;
+		if(!is_ok) {
+			x87_ok = false;
+			break;
+		}
+	}
 
 	//TODO: what are these?
 	// /* 536 */ ULong guest_FPROUND;
