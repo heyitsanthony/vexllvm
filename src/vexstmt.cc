@@ -48,6 +48,26 @@ void VexStmtPut::print(std::ostream& os) const
 	os << "Put(" << offset << ") <- ";
 	data_expr->print(os);
 }
+VexStmtPutI::VexStmtPutI(VexSB* in_parent, const IRStmt* in_stmt)
+: VexStmt(in_parent, in_stmt),
+  base(in_stmt->Ist.PutI.descr->base),
+  len(VexSB::getTypeBitWidth(in_stmt->Ist.PutI.descr->elemTy) / 8 * in_stmt->Ist.PutI.descr->nElems),
+  ix_expr(VexExpr::create(this, in_stmt->Ist.PutI.ix)),
+  bias(in_stmt->Ist.PutI.bias),
+  data_expr(VexExpr::create(this, in_stmt->Ist.PutI.data))
+{
+	assert (ix_expr != NULL && "Bad ix expr");
+	assert (data_expr != NULL && "Bad data expr");
+}
+
+void VexStmtPutI::emit(void) const
+{
+	Value	*out_v, *ix_v;
+	out_v = data_expr->emit();
+	ix_v = ix_expr->emit();
+	theGenLLVM->writeCtx(base, bias, len, ix_v, out_v);
+}
+
 
 void VexStmtPutI::print(std::ostream& os) const { os << "PutI"; }
 

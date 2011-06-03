@@ -1,6 +1,6 @@
 BIN_BASE="0xa000000"
 BIN_BASE2="0xc000000"
-CFLAGS=-g -O3
+CFLAGS=-g -Os
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
 endif
@@ -59,26 +59,16 @@ ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
 #TODO: use better config options
 
 VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
-#LLVMCONFIG_PATH="/home/chz/src/llvm/llvm-2.6/Release/bin/llvm-config"
-#CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=6
-LLVMCONFIG_PATH=llvm-config
-LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
-LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
+LLVMLDFLAGS=$(shell llvm-config --ldflags)
+LLVM_FLAGS_ORIGINAL=$(shell llvm-config --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
 
-all:	bin/elf_trace bin/elf_run bin/jit_test \
-	bitcode \
-	bin/pt_run bin/pt_trace bin/pt_xchk \
-	bin/pt_run_rebase bin/pt_xchk_rebase \
-	bin/vexllvm.a
+all: bin/elf_trace bin/jit_test bitcode bin/elf_run bin/pt_run bin/pt_trace bin/pt_xchk bin/pt_run_rebase bin/pt_xchk_rebase
 
 bitcode: $(BITCODE_FILES)
 
 clean:
 	rm -f obj/* bin/*
-
-bin/vexllvm.a: $(OBJDIRDEPS)
-	ar r $@ $^
 
 tests/traces-bin/dlsym : tests/traces-obj/dlsym.o
 	$(TRACECC) $(TRACE_CFLAGS) -ldl $< -o $@

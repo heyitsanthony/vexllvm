@@ -91,18 +91,16 @@ private:
 class VexStmtPutI : public VexStmt
 {
 public:
-	VexStmtPutI(VexSB* in_parent, const IRStmt* in_stmt)
-	 : VexStmt(in_parent, in_stmt) {}
+	VexStmtPutI(VexSB* in_parent, const IRStmt* in_stmt);
 	virtual ~VexStmtPutI() {}
-	virtual void emit(void) const { assert (0 == 1); }
+	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
-#if 0
-IRRegArray* descr; /* Part of guest state treated as circular */
-IRExpr*     ix;    /* Variable part of index into array */
-Int         bias;  /* Constant offset part of index into array */
-IRExpr*     data;  /* The value to write */
-#endif
+	int base;
+	int len;
+	VexExpr*     ix_expr;    /* Variable part of index into array */
+	int         bias;  /* Constant offset part of index into array */
+	VexExpr*     data_expr;  /* The value to write */
 };
 
 class VexStmtWrTmp : public VexStmt

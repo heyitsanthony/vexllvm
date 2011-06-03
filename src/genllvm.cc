@@ -99,24 +99,30 @@ Value* GenLLVM::readCtx(unsigned int byteOff, IRType ty)
 
 Value* GenLLVM::getCtxGEP(unsigned int byteOff, const Type* accessTy)
 {
-	const Type	*ptrTy;
 	unsigned int	tyBits;
-	Value		*addr_ptr, *ret; /* XXX assuming access are aligned */
-
-	ptrTy = PointerType::get(accessTy, 0);
 	tyBits = accessTy->getPrimitiveSizeInBits();
-
 	assert (tyBits && "Access type is 0 bits???");
-
-	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "accessCtxPtr");
-
-	ret = builder->CreateGEP(
-		addr_ptr, 
+	return getCtxGEP(
 		ConstantInt::get(
 			getGlobalContext(),
 			APInt(
 				32, 
 				(byteOff*8)/tyBits)),
+		accessTy);
+}
+
+Value* GenLLVM::getCtxGEP(Value* off, const Type* accessTy)
+{
+	const Type	*ptrTy;
+	Value		*addr_ptr, *ret; /* XXX assuming access are aligned */
+
+	ptrTy = PointerType::get(accessTy, 0);
+
+	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "accessCtxPtr");
+
+	ret = builder->CreateGEP(
+		addr_ptr, 
+		off,
 		"accessCtx");
 	return ret;
 }
@@ -132,6 +138,31 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 	ret = si;
 	return ret;
 }
+Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len, Value* ix, Value* v)
+{
+	Value		*ret, *addr;
+	StoreInst	*si;
+
+	const Type* offset_type = IntegerType::get(
+		getGlobalContext(), sizeof(int)*8);
+	Value* bias_v = ConstantInt::get(
+		getGlobalContext(), APInt(sizeof(int)*8, bias));
+	Value* len_v = ConstantInt::get(
+		getGlobalContext(), APInt(sizeof(int)*8, bias));
+	Value* offset = builder->CreateAdd(
+		builder->CreateBitCast(ix, offset_type),
+		bias_v);
+	Value* base_v = ConstantInt::get(
+		getGlobalContext(),
+		APInt(sizeof(unsigned int) * 8, byteOff));
+	offset = builder->CreateURem(offset, len_v);
+	offset = builder->CreateAdd(offset, base_v);
+	addr = getCtxGEP(offset, v->getType());
+	si = builder->CreateStore(v, addr);
+	ret = si;
+	return ret;
+}
+
 
 void GenLLVM::store(Value* addr_v, Value* data_v)
 {

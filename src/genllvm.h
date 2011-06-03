@@ -34,7 +34,9 @@ public:
 	
 	llvm::Value* readCtx(unsigned int byteOff, IRType ty);
 	llvm::Value* writeCtx(unsigned int byteOff, llvm::Value* v);
+	llvm::Value* writeCtx(unsigned int byteOff, int bias, int len, llvm::Value* ix, llvm::Value* v);
 	llvm::Value* getCtxGEP(unsigned int byteOff, const llvm::Type* ty);
+	llvm::Value* getCtxGEP(llvm::Value* byteOff, const llvm::Type* ty);
 	llvm::Value* getCtxBase(void);
 
 	void store(llvm::Value* addr, llvm::Value* data);
