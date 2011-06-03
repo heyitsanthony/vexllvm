@@ -19,7 +19,7 @@ namespace llvm
 {
 	class Value;
 	class Function;
-};
+}
 
 class VexSB
 {

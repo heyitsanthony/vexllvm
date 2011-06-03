@@ -18,7 +18,7 @@ GenLLVM* theGenLLVM;
 using namespace llvm;
 
 GenLLVM::GenLLVM(const GuestState* gs, const char* name)
-: guestState(gs), 
+: guestState(gs),
   funcTy(NULL),
   cur_guest_ctx(NULL),
   cur_f(NULL),
@@ -97,6 +97,34 @@ Value* GenLLVM::readCtx(unsigned int byteOff, IRType ty)
 	return ret;
 }
 
+Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len, Value* ix)
+{
+	Value		*ret, *addr;
+
+	const Type* offset_type = IntegerType::get(
+		getGlobalContext(), sizeof(int)*8);
+	Value* bias_v = ConstantInt::get(
+		getGlobalContext(), APInt(sizeof(int)*8, bias));
+	Value* len_v = ConstantInt::get(
+		getGlobalContext(), APInt(sizeof(int)*8, len));
+	Value* offset = builder->CreateAdd(
+		builder->CreateBitCast(ix, offset_type),
+		bias_v);
+	Value* base_v = ConstantInt::get(
+		getGlobalContext(),
+		APInt(sizeof(unsigned int) * 8, byteOff));
+	offset = builder->CreateURem(offset, len_v);
+	offset = builder->CreateAdd(offset, base_v);
+	addr = getCtxGEP(
+		offset,
+		IntegerType::get(
+			getGlobalContext(),
+			len*8)); // XXX check for vector values?
+	ret = builder->CreateLoad(addr);
+
+	return ret;
+}
+
 Value* GenLLVM::getCtxGEP(unsigned int byteOff, const Type* accessTy)
 {
 	unsigned int	tyBits;
@@ -106,7 +134,7 @@ Value* GenLLVM::getCtxGEP(unsigned int byteOff, const Type* accessTy)
 		ConstantInt::get(
 			getGlobalContext(),
 			APInt(
-				32, 
+				32,
 				(byteOff*8)/tyBits)),
 		accessTy);
 }
@@ -121,7 +149,7 @@ Value* GenLLVM::getCtxGEP(Value* off, const Type* accessTy)
 	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "accessCtxPtr");
 
 	ret = builder->CreateGEP(
-		addr_ptr, 
+		addr_ptr,
 		off,
 		"accessCtx");
 	return ret;
@@ -138,6 +166,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 	ret = si;
 	return ret;
 }
+
 Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len, Value* ix, Value* v)
 {
 	Value		*ret, *addr;
@@ -220,7 +249,7 @@ void GenLLVM::setExitType(uint8_t exit_type)
 			APInt(8, exit_type)));
 }
 
-/* llvm-ized VexSB functions take form of 
+/* llvm-ized VexSB functions take form of
  * guestaddr_t f(gueststate*) {  ...bullshit...; return ctrl_xfer_addr; } */
 void GenLLVM::mkFuncTy(void)
 {
@@ -236,7 +265,7 @@ void GenLLVM::mkFuncTy(void)
 Value* GenLLVM::to16x8i(Value* v) const
 {
 	return builder->CreateBitCast(
-		v, 
+		v,
 		VectorType::get(
 			Type::getInt8Ty(getGlobalContext()), 16));
 }

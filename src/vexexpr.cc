@@ -499,7 +499,37 @@ void VexExprGet::print(std::ostream& os) const
 	os << "GET(" << offset << "):" << VexSB::getTypeStr(ty);
 }
 
-void VexExprGetI::print(std::ostream& os) const { os << "GetI"; }
+
+VexExprGetI::VexExprGetI(VexStmt* in_parent, const IRExpr* in_expr)
+  : VexExpr(in_parent),
+  base(in_expr->Iex.GetI.descr->base),
+  len(VexSB::getTypeBitWidth(
+  	in_expr->Iex.GetI.descr->elemTy) / 8 * in_expr->Iex.GetI.descr->nElems),
+  ix_expr(VexExpr::create(in_parent, in_expr->Iex.GetI.ix)),
+  bias(in_expr->Iex.GetI.bias)
+{
+}
+
+VexExprGetI::~VexExprGetI(void)
+{
+	delete ix_expr;
+}
+
+llvm::Value* VexExprGetI::emit(void) const
+{
+	Value	*ix_v;
+	ix_v = ix_expr->emit();
+	return theGenLLVM->readCtx(base, bias, len, ix_v);
+}
+
+void VexExprGetI::print(std::ostream& os) const
+{
+	os << "GettI(" << base << ", " 
+		<< bias << ", ";
+	ix_expr->print(os);
+	os << ", " << len << ")";
+}
+
 
 void VexExprRdTmp::print(std::ostream& os) const
 {

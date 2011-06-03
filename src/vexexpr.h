@@ -71,17 +71,15 @@ private:
 class VexExprGetI : public VexExpr
 {
 public:
-	VexExprGetI(VexStmt* in_parent, const IRExpr* expr)
-	: VexExpr(in_parent) {}
-	virtual ~VexExprGetI(void) {}
+	VexExprGetI(VexStmt* in_parent, const IRExpr* expr);
+	virtual ~VexExprGetI(void);
 	virtual void print(std::ostream& os) const;
+	virtual llvm::Value* emit(void) const;
 private:
-
-      struct {
-         IRRegArray* descr; /* Part of guest state treated as circular */
-         const IRExpr*     ix;    /* Variable part of index into array */
-         Int         bias;  /* Constant offset part of index into array */
-      } GetI;
+	int		base;
+	int		len;
+	VexExpr		*ix_expr; /* Variable part of index into array */
+	int		bias;  /* Constant offset part of index into array */
 };
 
 class VexExprRdTmp : public VexExpr
