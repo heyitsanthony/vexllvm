@@ -133,14 +133,15 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(SetV128lo64);
 	BINOP_TAGOP(SetV128lo32);
 
-	BINOP_TAGOP(InterleaveLO8x8);
-	BINOP_TAGOP(InterleaveHI8x8);
+// TJ broke the build
+//	BINOP_TAGOP(InterleaveLO8x8);
+//	BINOP_TAGOP(InterleaveHI8x8);
 	BINOP_TAGOP(InterleaveLO8x16);
 	BINOP_TAGOP(InterleaveHI8x16);
-	BINOP_TAGOP(InterleaveLO16x4);
-	BINOP_TAGOP(InterleaveHI16x4);
-	BINOP_TAGOP(InterleaveLO16x8);
-	BINOP_TAGOP(InterleaveHI16x8);
+//	BINOP_TAGOP(InterleaveLO16x4);
+//	BINOP_TAGOP(InterleaveHI16x4);
+//	BINOP_TAGOP(InterleaveLO16x8);
+//	BINOP_TAGOP(InterleaveHI16x8);
 	BINOP_TAGOP(InterleaveLO64x2);
 	BINOP_TAGOP(InterleaveHI64x2);
 	BINOP_TAGOP(InterleaveLO32x4);
