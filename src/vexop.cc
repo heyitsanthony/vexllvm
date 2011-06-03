@@ -1411,6 +1411,8 @@ OPV_EMIT(Mul16x8 , get_vt(8, 16), Mul )
 OPV_EMIT(Mul32x2 , get_vt(2, 32), Mul )
 OPV_EMIT(Mul32x4 , get_vt(4, 32), Mul )
 
+
+// name, dstTy, ext type, intermediate type, shift bits, op
 #define OPV_EXT_EMIT(x, y, z, w, s, o)				\
 Value* VexExprBinop##x::emit(void) const			\
 {								\
@@ -1436,8 +1438,8 @@ Value* VexExprBinop##x::emit(void) const			\
 			shuffle_v,				\
 			shuffle_v + y->getNumElements()));	\
 	shift = builder->CreateShuffleVector(shift, shift, cv);	\
-	return builder->CreateTrunc(				\
-		builder->CreateLShr(full, s), y);		\
+	return builder->CreateTrunc(					\
+		builder->CreateLShr(full, get_c(s*2, s)), y);		\
 }
 
 OPV_EXT_EMIT(MulHi16Ux4, get_vt(4, 16), ZExt, get_vt(4, 32), 16, Mul)
