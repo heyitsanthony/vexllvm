@@ -342,6 +342,16 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(MulHi32Ux4);
 	BINOP_TAGOP(MulHi32Sx4);
 
+	BINOP_TAGOP(Narrow16x8);
+	BINOP_TAGOP(Narrow32x4);
+	BINOP_TAGOP(QNarrow16Ux8);
+	BINOP_TAGOP(QNarrow32Ux4);
+	BINOP_TAGOP(QNarrow16Sx8);
+	BINOP_TAGOP(QNarrow32Sx4);
+	BINOP_TAGOP(QNarrow16Ux4);
+	BINOP_TAGOP(QNarrow16Sx4);
+	BINOP_TAGOP(QNarrow32Sx2);
+
 	BINOP_TAGOP(Add32Fx2);
 	BINOP_TAGOP(Add32Fx4);
 	BINOP_TAGOP(Add64Fx2);
@@ -718,7 +728,11 @@ Value* VexExprMux0X::emit(void) const
 
 	/* phi node on the mux */
 	builder->SetInsertPoint(bb_merge);
+#if (LLVM_VERSION_MAJOR == 3)
+	pn = builder->CreatePHI(zero_val->getType(), 0, "mux0x_phi");
+#else
 	pn = builder->CreatePHI(zero_val->getType(), "mux0x_phi");
+#endif
 	pn->addIncoming(zero_val, bb_z);
 	pn->addIncoming(nonzero_val, bb_nz);
 
