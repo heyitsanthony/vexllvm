@@ -98,7 +98,7 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 	else {
 		log_gauge_overflow = atoi(step_gauge);
 		fprintf(stderr,
-			"STEPS BETWEEN UPDATE: %d.\n", 
+			"STEPS BETWEEN UPDATE: %d.\n",
 			log_gauge_overflow);
 	}
 }
@@ -242,14 +242,14 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 
 	//what happens if the FP unit is doing long doubles?
 	//if VEX supports this, it probably should be filling in
-	//the extra 16 bits with the appropriate thing on MMX 
+	//the extra 16 bits with the appropriate thing on MMX
 	//operations, like a real x86 cpu
 	x87_ok = true;
 	for(int i = 0; i < 8; ++i) {
-		bool is_ok = state.guest_FPREG[i] == 
+		bool is_ok = state.guest_FPREG[i] ==
 			*(ULong*)&fpregs.st_space[4 * i] &&
-			(fpregs.st_space[4 * i + 2] == 0 || 
-			fpregs.st_space[4 * i + 2] == 0xFFFF) && 
+			(fpregs.st_space[4 * i + 2] == 0 ||
+			fpregs.st_space[4 * i + 2] == 0xFFFF) &&
 			fpregs.st_space[4 * i + 3] == 0;
 		if(!is_ok) {
 			x87_ok = false;
@@ -333,7 +333,7 @@ long PTImgChk::getInsOp(long rip)
 
 	chk_addr = (uintptr_t)rip;
 // SLOW WAY:
-// Don't need to do this so long as we have the data at chk_addr in the guest 
+// Don't need to do this so long as we have the data at chk_addr in the guest
 // process also mapped into the parent process at chk_addr.
 //	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
 
@@ -495,8 +495,15 @@ void* PTImgChk::stepToBreakpoint(void)
 	}
 	wait(&status);
 
-	assert(	WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP &&
-		"child received a signal or ptrace can't sysstep");
+	if (!(WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP)) {
+		user_regs_struct regs;
+		fprintf(stderr,
+			"OOPS. status: stopped=%d sig=%d status=%p\n",
+			WIFSTOPPED(status), WSTOPSIG(status), status);
+		getRegs(regs);
+		stackTraceSubservient(std::cerr, NULL,  NULL);
+		assert (0 == 1 && "bad wait from breakpoint");
+	}
 
 	/* ptrace executes trap, so child process's IP needs to be fixed */
 	return undoBreakpoint(child_pid);
@@ -517,12 +524,12 @@ void PTImgChk::waitForSingleStep(void)
 	//TODO: real signal handling needed, but the main process
 	//doesn't really have that yet...
 	// 1407
-	assert(	WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP && 
+	assert(	WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP &&
 		"child received a signal or ptrace can't single step");
 
 	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
 		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
-		fprintf(stderr, "STEPS %0#8d %c %0#8d BLOCKS\r", 
+		fprintf(stderr, "STEPS %0#8d %c %0#8d BLOCKS\r",
 			steps, c, blocks);
 	}
 }

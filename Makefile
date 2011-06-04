@@ -110,6 +110,10 @@ test-built-traces: all $(TRACEDEPS_PATH)
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
 
+tests-fastxchk: all $(TRACEDEPS_PATH)
+	VEXLLVM_FASTCHK=1 RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
+
+
 tests-xchk_opcode: all $(TRACEDEPS_PATH)
 	tests/opcodes.sh
 
