@@ -86,7 +86,7 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 
 PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 : 	GuestStatePTImg(argc, argv, envp),
-	binary(argv[0]), steps(0), blocks(0),
+	binary(argv[0]), steps(0), bp_steps(0), blocks(0),
 	hit_syscall(false)
 {
 	const char	*step_gauge;
@@ -217,8 +217,7 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 	int			err;
 	bool			x86_fail, sse_ok, seg_fail, x87_ok;
 
-	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	assert (err != -1 && "couldn't PTRACE_GETREGS");
+	getRegs(regs);
 
 	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
 	assert (err != -1 && "couldn't PTRACE_GETFPREGS");
@@ -273,13 +272,7 @@ bool PTImgChk::doStep(
 	user_regs_struct& regs,
 	const VexGuestAMD64State& state)
 {
-	int	err;
-
-	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	if (err < 0) {
-		perror("PTImgChk::doStep ptrace get registers");
-		exit(1);
-	}
+	getRegs(regs);
 
 	/* check rip before executing possibly out of bounds instruction*/
 	if (regs.rip < start || regs.rip >= end) {
@@ -308,7 +301,7 @@ bool PTImgChk::doStep(
 		regs.rip += 2;
 		regs.rax = 1;
 		regs.rdx = 0;
-		ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+		setRegs(regs);
 		return true;
 	}
 
@@ -325,7 +318,7 @@ bool PTImgChk::doStep(
 		regs.rbx = fakeState.guest_RBX;
 		regs.rcx = fakeState.guest_RCX;
 		regs.rdx = fakeState.guest_RDX;
-		ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+		setRegs(regs);
 		return true;
 	}
 
@@ -333,11 +326,12 @@ bool PTImgChk::doStep(
 	return true;
 }
 
-long PTImgChk::getInsOp(const user_regs_struct& regs)
-{
-	if (regs.rip == chk_addr) return chk_opcode;
 
-	chk_addr = regs.rip;
+long PTImgChk::getInsOp(long rip)
+{
+	if ((uintptr_t)rip == chk_addr) return chk_opcode;
+
+	chk_addr = (uintptr_t)rip;
 // SLOW WAY:
 // Don't need to do this so long as we have the data at chk_addr in the guest 
 // process also mapped into the parent process at chk_addr.
@@ -349,6 +343,13 @@ long PTImgChk::getInsOp(const user_regs_struct& regs)
 	return chk_opcode;
 }
 
+long PTImgChk::getInsOp(const user_regs_struct& regs)
+{
+	return getInsOp(regs.rip);
+}
+
+#define OPCODE_SYSCALL	0x050f
+
 bool PTImgChk::isOnSysCall(const user_regs_struct& regs)
 {
 	long	cur_opcode;
@@ -356,7 +357,7 @@ bool PTImgChk::isOnSysCall(const user_regs_struct& regs)
 	
 	cur_opcode = getInsOp(regs);
 
-	is_chk_addr_syscall = ((cur_opcode & 0xffff) == 0x050f);
+	is_chk_addr_syscall = ((cur_opcode & 0xffff) == OPCODE_SYSCALL);
 	hit_syscall |= is_chk_addr_syscall;
 
 	return is_chk_addr_syscall;
@@ -381,8 +382,6 @@ bool PTImgChk::filterSysCall(
 	const VexGuestAMD64State& state,
 	user_regs_struct& regs)
 {
-	int	err;
-
 	switch (regs.rax) {
 	case SYS_brk:
 		regs.rax = -1;
@@ -399,13 +398,7 @@ bool PTImgChk::filterSysCall(
 	case SYS_mmap:
 		regs.rdi = state.guest_RAX;
 		regs.r10 |= MAP_FIXED;
-		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
-		if(err < 0) {
-			perror("PTImgChk::continueWithBounds "
-				"ptrace set registers pre-mmap");
-			exit(1);
-		}
-
+		setRegs(regs);
 		return false;
 	}
 
@@ -419,9 +412,8 @@ void PTImgChk::stepSysCall(
 	long			old_rdi, old_r10;
 	bool			syscall_restore_rdi_r10;
 	int			sys_nr;
-	int			err;
 
-	ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+	getRegs(regs);
 
 	/* do special syscallhandling if we're on an opcode */
 	assert (isOnSysCall(regs));
@@ -434,8 +426,7 @@ void PTImgChk::stepSysCall(
 		regs.rip += 2;
 		//kernel clobbers these, assuming that the generated code, causes
 		regs.rcx = regs.r11 = 0;
-		err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
-		assert (err >= 0);
+		setRegs(regs);
 		return;
 	}
 
@@ -444,12 +435,7 @@ void PTImgChk::stepSysCall(
 
 	waitForSingleStep();
 
-	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	if (err < 0) {
-		perror("PTImgChk::continueWithBounds getregsafter syscall");
-		exit(1);
-	}
-
+	getRegs(regs);
 	if (syscall_restore_rdi_r10) {
 		regs.r10 = old_r10;
 		regs.rdi = old_rdi;
@@ -457,17 +443,24 @@ void PTImgChk::stepSysCall(
 
 	//kernel clobbers these, assuming that the generated code, causes
 	regs.rcx = regs.r11 = 0;
-	err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
-	if(err < 0) {
-		perror("PTImgChk::stepSysCall setregs after syscall");
-		exit(1);
-	}
+	setRegs(regs);
 
 	/* fixup any calls that affect memory */
 	if (sc_m->isSyscallMarshalled(sys_nr)) {
 		SyscallPtrBuf	*spb = sc_m->takePtrBuf();
 		copyIn(spb->getPtr(), spb->getData(), spb->getLength());
 		delete spb;
+	}
+}
+
+void PTImgChk::setRegs(const user_regs_struct& regs)
+{
+	int	err;
+
+	err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+	if(err < 0) {
+		perror("PTImgChk::setregs");
+		exit(1);
 	}
 }
 
@@ -490,6 +483,25 @@ void PTImgChk::copyIn(void* dst, const void* src, unsigned int bytes)
 	}
 }
 
+void* PTImgChk::stepToBreakpoint(void)
+{
+	int	err, status;
+
+	bp_steps++;
+	err = ptrace(PTRACE_CONT, child_pid, NULL, NULL);
+	if(err < 0) {
+		perror("PTImgChk::doStep ptrace single step");
+		exit(1);
+	}
+	wait(&status);
+
+	assert(	WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP &&
+		"child received a signal or ptrace can't sysstep");
+
+	/* ptrace executes trap, so child process's IP needs to be fixed */
+	return undoBreakpoint(child_pid);
+}
+
 void PTImgChk::waitForSingleStep(void)
 {
 	int	err, status;
@@ -502,15 +514,17 @@ void PTImgChk::waitForSingleStep(void)
 	}
 	wait(&status);
 
-	//TODO: real signal handling needed, but the main process doesn't really have that yet...
-	assert(status == 1407 && "child received a signal or ptrace can't single step");
+	//TODO: real signal handling needed, but the main process
+	//doesn't really have that yet...
+	// 1407
+	assert(	WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP && 
+		"child received a signal or ptrace can't single step");
 
 	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
 		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
 		fprintf(stderr, "STEPS %0#8d %c %0#8d BLOCKS\r", 
 			steps, c, blocks);
 	}
-
 }
 
 void PTImgChk::stackTraceSubservient(std::ostream& os, void* begin, void* end)
@@ -585,6 +599,16 @@ void PTImgChk::printFPRegs(
 	}
 }
 
+void PTImgChk::getRegs(user_regs_struct& regs) const
+{
+	int	err;
+
+	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+	if(err < 0) {
+		perror("PTImgChk::getRegs");
+		exit(1);
+	}
+}
 
 void PTImgChk::printSubservient(
 	std::ostream& os,
@@ -594,11 +618,7 @@ void PTImgChk::printSubservient(
 	user_fpregs_struct	fpregs;
 	int			err;
 
-	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	if(err < 0) {
-		perror("PTImgChk::printState ptrace get registers");
-		exit(1);
-	}
+	getRegs(regs);
 
 	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
 	if(err < 0) {
@@ -615,4 +635,21 @@ void PTImgChk::printTraceStats(std::ostream& os)
 	os	<< "Traced "
 		<< blocks << " blocks, stepped "
 		<< steps << " instructions" << std::endl;
+}
+
+bool PTImgChk::breakpointSysCalls(const void* ip_begin, const void* ip_end)
+{
+	long	rip;
+	bool	set_bp = false;
+
+	rip = (long)(uintptr_t)ip_begin;
+	while ((void*)rip != (void*)ip_end) {
+		if (((getInsOp(rip) & 0xffff) == 0x050f)) {
+			setBreakpoint((void*)rip);
+			set_bp = true;
+		}
+		rip++;
+	}
+
+	return set_bp;
 }

@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "vexexecchk.h"
+#include "vexexecfastchk.h"
 #include "ptimgchk.h"
 
 using namespace llvm;
@@ -38,7 +39,10 @@ int main(int argc, char* argv[], char* envp[])
 
 	gs = GuestStatePTImg::create<PTImgChk>(argc - 1, argv + 1, envp);
 
-	vexexec = VexExecChk::create(gs);
+	if (getenv("VEXLLVM_FASTCHK"))
+		vexexec = VexExec::create<VexExecFastChk,PTImgChk>(gs);
+	else
+		vexexec = VexExec::create<VexExecChk,PTImgChk>(gs);
 	assert (vexexec && "Could not create vexexec");
 	
 	vexexec->run();

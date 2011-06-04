@@ -38,19 +38,6 @@ void VexExec::setupStatics(GuestState* in_gs)
 	if (!theVexHelpers) theVexHelpers = new VexHelpers();
 }
 
-VexExec* VexExec::create(GuestState* in_gs)
-{
-	VexExec	*ve;
-
-	setupStatics(in_gs);
-	ve = new VexExec(in_gs);
-	if (ve->getGuestState() == NULL) {
-		delete ve;
-		return NULL;
-	}
-
-	return ve;
-}
 
 VexExec::~VexExec()
 {

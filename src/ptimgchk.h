@@ -16,6 +16,8 @@ public:
 	void stepThroughBounds(
 		uint64_t start, uint64_t end,
 		const VexGuestAMD64State& state);
+	void* stepToBreakpoint(void);
+
 	void stepSysCall(SyscallsMarshalled* sc, const VexGuestAMD64State& st);
 	uint64_t continueForwardWithBounds(
 		uint64_t start, uint64_t end,
@@ -29,6 +31,16 @@ public:
 	bool isMatch(const VexGuestAMD64State& state) const;
 
 	bool fixup(const void* ip_begin, const void* ip_end);
+
+	bool breakpointSysCalls(const void* ip_begin, const void* ip_end);
+
+	void getRegs(user_regs_struct& regs) const;
+	void setRegs(const user_regs_struct& regs);
+
+	void resetBreakpoint(void* x) {
+		GuestStatePTImg::resetBreakpoint(child_pid, x); }
+	void setBreakpoint(void* x) {
+		GuestStatePTImg::setBreakpoint(child_pid, x); }
 protected:
 	virtual void handleChild(pid_t pid);
 	bool filterSysCall(
@@ -46,6 +58,7 @@ private:
 		const VexGuestAMD64State& state,
 		const user_regs_struct& regs) const;
 	long getInsOp(const user_regs_struct& regs);
+	long getInsOp(long rip);
 	bool isOnSysCall(const user_regs_struct& regs);
 	bool isOnRDTSC(const user_regs_struct& regs);
 	bool isOnCPUID(const user_regs_struct& regs);
@@ -66,6 +79,7 @@ private:
 	pid_t		child_pid;
 	
 	uint64_t	steps;
+	uint64_t	bp_steps;
 	uint64_t	blocks;
 
 	bool		log_steps;

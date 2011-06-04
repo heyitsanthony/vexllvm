@@ -50,10 +50,9 @@ void GuestStatePTImg::handleChild(pid_t pid)
 pid_t GuestStatePTImg::createSlurpedChild(
 	int argc, char *const argv[], char *const envp[])
 {
-	struct user_regs_struct	regs;
 	int			err, status;
 	pid_t			pid;
-	uint64_t		old_v;
+	void			*break_addr;
 
 	pid = fork();
 	if (pid == 0) {
@@ -73,30 +72,21 @@ pid_t GuestStatePTImg::createSlurpedChild(
 
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
-	old_v = ptrace(PTRACE_PEEKTEXT, pid, entry_pt, NULL);
-	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, trap_opcode);
-	assert (err != -1);
+	setBreakpoint(pid, entry_pt);
 
 	/* go until child hits entry point */
 	err = ptrace(PTRACE_CONT, pid, NULL, NULL);
 	assert (err != -1);
 	wait(&status);
-
-	/* should be halted on our trapcode. need to set rip prior to 
-	 * trapcode addr, and remove breakpoint. */
-	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-	assert (err != -1);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
-	assert (regs.rip == (uintptr_t)entry_pt+1);
 
-	regs.rip--; /* backtrack before int3 opcode */
-	err = ptrace(PTRACE_SETREGS, pid, NULL, &regs);
+	break_addr = undoBreakpoint(pid);
+	assert (break_addr == entry_pt && "Did not break at entry");
 
 	/* hit the entry point, everything should be linked now-- load it
 	 * into our context! */
 	/* cleanup bp */
-	err = ptrace(PTRACE_POKETEXT, pid, entry_pt, old_v);
-	assert (err != -1);
+	resetBreakpoint(pid, entry_pt);
 
 	if (dump_maps) dumpSelfMap();
 
@@ -104,6 +94,23 @@ pid_t GuestStatePTImg::createSlurpedChild(
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
 	return pid;
+}
+
+void* GuestStatePTImg::undoBreakpoint(pid_t pid)
+{
+	struct user_regs_struct	regs;
+	int			err;
+
+	/* should be halted on our trapcode. need to set rip prior to 
+	 * trapcode addr */
+	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
+	assert (err != -1);
+
+	regs.rip--; /* backtrack before int3 opcode */
+	err = ptrace(PTRACE_SETREGS, pid, NULL, &regs);
+
+	/* run again w/out reseting BP and you'll end up back here.. */
+	return (void*)regs.rip;
 }
 
 int PTImgMapEntry::getProt(void) const
@@ -398,4 +405,35 @@ void GuestStatePTImg::stackTrace(
 
 	while ((bytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
 		os.write(buffer, bytes);
+}
+
+/* TODO: only change a single character */
+void GuestStatePTImg::setBreakpoint(pid_t pid, void* addr)
+{
+	uint64_t		old_v, new_v;
+	int			err;
+
+	/* already set? */
+	if (breakpoints.count(addr)) return;
+
+	old_v = ptrace(PTRACE_PEEKTEXT, pid, addr, NULL);
+	new_v = old_v & ~0xff;
+	new_v |= 0xcc;
+
+	err = ptrace(PTRACE_POKETEXT, pid, addr, new_v);
+	assert (err != -1 && "Failed to set breakpoint");
+	breakpoints[addr] = old_v;
+}
+
+void GuestStatePTImg::resetBreakpoint(pid_t pid, void* addr)
+{
+	uint64_t	old_v;
+	int		err;
+
+	assert (breakpoints.count(addr) && "Resetting non-BP!");
+
+	old_v = breakpoints[addr];
+	err = ptrace(PTRACE_POKETEXT, pid, addr, old_v);
+	assert (err != -1 && "Failed to reset breakpoint");
+	breakpoints.erase(addr);
 }

@@ -28,6 +28,7 @@ OBJDEPS=	vexxlate.o		\
 		vexhelpers.o		\
 		vexexec.o		\
 		vexexecchk.o		\
+		vexexecfastchk.o	\
 		symbols.o		\
 		elfimg.o		\
 		dllib.o			\

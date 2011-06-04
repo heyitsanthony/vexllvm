@@ -124,24 +124,22 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 	dumpSubservient(vsb);
 }
 
-VexExec* VexExecChk::create(PTImgChk* gs)
+void VexExecChk::stepSysCall(VexSB* vsb)
 {
-	VexExecChk	*ve_chk;
+	VexGuestAMD64State* state;
 
-	setupStatics(gs);
-	ve_chk = new VexExecChk(gs);
-	if (ve_chk->cross_check == NULL) {
-		delete ve_chk;
-		return NULL;
-	}
+	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+	cross_check->stepSysCall(sc_marshall, *state);
 
-	return ve_chk;
+	state->guest_RCX = 0;
+	state->guest_R11 = 0;
 }
 
 void VexExecChk::doSysCall(VexSB* vsb)
 {
 	VexGuestAMD64State* state;
 
+	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	assert (hit_syscall && !is_deferred);
 
 	/* recall: shadow process <= vexllvm. hence, we must call the 
@@ -149,11 +147,7 @@ void VexExecChk::doSysCall(VexSB* vsb)
 	 * this lets us to fixups to match vexllvm's calls. */
 	VexExec::doSysCall(vsb);
 
-	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	cross_check->stepSysCall(sc_marshall, *state);
-
-	state->guest_RCX = 0;
-	state->guest_R11 = 0;
+	stepSysCall(vsb);
 
 	/* now both should be equal and at the instruction immediately following
 	 * the breaking syscall */

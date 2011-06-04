@@ -7,6 +7,7 @@
 #include <stack>
 #include <list>
 #include <vector>
+#include <iostream>
 #include "directcache.h"
 
 class GuestState;
@@ -32,7 +33,21 @@ typedef std::set<void*> exit_func_set;
 class VexExec
 {
 public:
-	static VexExec* create(GuestState* gs);
+	template <class T, class U>
+	static T* create(U* in_gs)
+	{
+		T	*ve;
+
+		setupStatics(in_gs);
+		ve = new T(in_gs);
+		if (ve->getGuestState() == NULL) {
+			delete ve;
+			return NULL;
+		}
+
+		return ve;
+	}
+
 	virtual ~VexExec(void);
 	const GuestState* getGuestState(void) const { return gs; }
 	const vexexec_addrs& getAddrStack(void) const { return addr_stack; }
