@@ -1002,6 +1002,48 @@ BINOP_EXPAND_EMIT(MullU16, ZExt, get_i(32), Mul)
 BINOP_EXPAND_EMIT(MullU32, ZExt, get_i(64), Mul)
 BINOP_EXPAND_EMIT(MullU64, ZExt, get_i(128), Mul)
 
+
+#define BINCMP_EMIT(x,y,z)					\
+Value* VexExprBinop##x::emit(void) const			\
+{								\
+	BINOP_SETUP						\
+	v1 = builder->CreateBitCast(v1, y);			\
+	v2 = builder->CreateBitCast(v2, y);			\
+	Value* result = builder->CreateBitCast(			\
+		get_c(y->getBitWidth(), 0), y);			\
+	for(unsigned i = 0; i < y->getNumElements(); ++i) {	\
+		Value* e1 = builder->CreateExtractElement(	\
+			v1, get_32i(i));			\
+		Value* e2 = builder->CreateExtractElement(	\
+			v2, get_32i(i));			\
+		Value* elem = builder->CreateSelect(		\
+			builder->Create##z(e1, e2),		\
+			e1, e2);				\
+		result = builder->CreateInsertElement(		\
+			result, elem, get_32i(i));		\
+	}							\
+	return result;						\
+}
+
+BINCMP_EMIT(Max8Ux8 , get_vt(8 , 8 ), ICmpUGT);
+BINCMP_EMIT(Max8Ux16, get_vt(16, 8 ), ICmpUGT);
+BINCMP_EMIT(Max16Sx4, get_vt(4 , 16), ICmpSGT);
+BINCMP_EMIT(Max16Sx8, get_vt(8 , 16), ICmpSGT);
+
+BINCMP_EMIT(Min8Ux8 , get_vt(8 , 8 ), ICmpULT);
+BINCMP_EMIT(Min8Ux16, get_vt(16, 8 ), ICmpULT);
+BINCMP_EMIT(Min16Sx4, get_vt(4 , 16), ICmpSLT);
+BINCMP_EMIT(Min16Sx8, get_vt(8 , 16), ICmpSLT);
+
+BINCMP_EMIT(Min32Fx2, get_vtf(2), FCmpULT);
+BINCMP_EMIT(Max32Fx2, get_vtf(2), FCmpUGT);
+BINCMP_EMIT(Min32Fx4, get_vtf(4), FCmpULT);
+BINCMP_EMIT(Max32Fx4, get_vtf(4), FCmpUGT);
+
+BINCMP_EMIT(Max64Fx2, get_vtd(2), FCmpUGT);
+BINCMP_EMIT(Min64Fx2, get_vtd(2), FCmpULT);
+
+
 BINOP_EMIT(Or8, Or)
 BINOP_EMIT(Or16, Or)
 BINOP_EMIT(Or32, Or)
@@ -1478,6 +1520,8 @@ Value* VexExprBinop##x::emit(void) const			\
 OPNRW_EMIT(Narrow16x8, get_vt(16, 8));
 OPNRW_EMIT(Narrow32x4, get_vt(8, 16));
 
+//LLVM is busted and doesnt work properly with a vector SELECT opcode...
+
 // name, srcTy, destTy, compare const, 
 #define OPNRWUS_EMIT(x, y, w, c)				\
 Value* VexExprBinop##x::emit(void) const			\
@@ -1553,55 +1597,6 @@ Value* VexExprBinop##x::emit(void) const			\
 	}							\
 	return result;						\
 }
-
-/* This would have been the preferred implementation, but it crashes LLVM */
-/*
-// name, srcTy, intermediateTy, compare const, 
-// if you try this out in the future NOTE intermediateTy != destTy
-#define OPNRWUS_EMIT(x, y, w, c)				\
-Value* VexExprBinop##x::emit(void) const			\
-{								\
-	BINOP_SETUP						\
-	v1 = builder->CreateBitCast(v1, y);			\
-	v2 = builder->CreateBitCast(v2, y);			\
-	assert(w->getNumElements() <= 16);			\
-	Constant *shuffle_v[] = {   				\
-		get_32i(0), get_32i(0),				\
-		get_32i(0), get_32i(0),				\
-		get_32i(0), get_32i(0),				\
-		get_32i(0), get_32i(0),				\
-	};							\
-	Constant *cv = ConstantVector::get(			\
-		std::vector<Constant*>(				\
-			shuffle_v,				\
-			shuffle_v + y->getNumElements()));	\
-	Value* ref_h = builder->CreateZExt(c,			\
-		get_i(y->getBitWidth()));			\
-	ref_h = builder->CreateBitCast(ref_h, y);		\
-	ref_h = builder->CreateShuffleVector(ref_h, ref_h, cv);	\
-	Value* cond_v1 = builder->CreateICmpUGT(v1, ref_h);	\
-	Value* cond_v2 = builder->CreateICmpUGT(v2, ref_h);	\
-	v1 = builder->CreateSelect(cond_v1, ref_h, v1);		\
-	v2 = builder->CreateSelect(cond_v2, ref_h, v2);		\
-	v1 = builder->CreateTrunc(v1, w);			\
-	v2 = builder->CreateTrunc(v2, w);			\
-	Constant *shuffle_v2[] = {   				\
-		get_32i(0), get_32i(1),				\
-		get_32i(2), get_32i(3),				\
-		get_32i(4), get_32i(5),				\
-		get_32i(6), get_32i(7),				\
-		get_32i(8), get_32i(9),				\
-		get_32i(10), get_32i(11),			\
-		get_32i(12), get_32i(13),			\
-		get_32i(14), get_32i(15),			\
-	};							\
-	Constant *cv2 = ConstantVector::get(			\
-		std::vector<Constant*>(				\
-			shuffle_v2,				\
-			shuffle_v2 + w->getNumElements()));	\
-	return builder->CreateShuffleVector(v1, v2, cv2);	\
-}
-*/
 
 OPNRWUS_EMIT(QNarrow16Ux4, get_vt(4, 16), get_vt(8 , 8 ), get_c(16, 0x00FF));
 OPNRWUS_EMIT(QNarrow16Ux8, get_vt(8, 16), get_vt(16, 8 ), get_c(16, 0x00FF));
