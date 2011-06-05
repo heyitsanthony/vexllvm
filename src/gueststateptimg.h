@@ -19,6 +19,7 @@ public:
 	{
 		return ((uintptr_t)mem_end - (uintptr_t)mem_begin);
 	}
+	void* getBase(void) const { return mem_begin; }
 private:
 	void ptraceCopy(pid_t pid, int prot);
 	void ptraceCopyRange(pid_t pid, int prot, void* m_beg, void* m_end);
@@ -87,6 +88,7 @@ public:
 		void* range_begin = 0, void* range_end = 0);
 
 
+	virtual std::list<GuestMemoryRange*> getMemoryMap(void) const;
 protected:
 	GuestStatePTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);

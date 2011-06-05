@@ -35,6 +35,3 @@ uint64_t GuestState::getExitCode(void) const
 }
 
 void GuestState::print(std::ostream& os) const { cpu_state->print(os); }
-
-
-

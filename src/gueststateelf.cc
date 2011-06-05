@@ -23,6 +23,11 @@ GuestStateELF::GuestStateELF(const ElfImg* in_img)
 
 GuestStateELF::~GuestStateELF(void) { delete [] stack; }
 
+std::list<GuestMemoryRange*> GuestStateELF::getMemoryMap(void) const
+{
+	assert (0 == 1 && "STUB");
+}
+
 Value* GuestStateELF::addrVal2Host(Value* addr_v) const
 {
 	const ConstantInt	*ci;

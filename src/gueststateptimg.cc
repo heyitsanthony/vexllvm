@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <sstream>
 #include <sys/syscall.h>
+#include "Sugar.h"
 
 #include "elfimg.h"
 
@@ -436,4 +437,18 @@ void GuestStatePTImg::resetBreakpoint(pid_t pid, void* addr)
 	err = ptrace(PTRACE_POKETEXT, pid, addr, old_v);
 	assert (err != -1 && "Failed to reset breakpoint");
 	breakpoints.erase(addr);
+}
+
+std::list<GuestMemoryRange*> GuestStatePTImg::getMemoryMap(void) const
+{
+	std::list<GuestMemoryRange*>	ret;
+
+	foreach (it, mappings.begin(), mappings.end()) {
+		PTImgMapEntry	*ptm = *it;
+		ret.push_back(new GuestMemoryRange(
+			ptm->getBase(),
+			ptm->getByteCount()));
+	}
+
+	return ret;
 }

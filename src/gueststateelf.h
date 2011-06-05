@@ -17,6 +17,8 @@ public:
 	void* getEntryPoint(void) const;
 	/* copy command line state into state */
 	void setArgv(unsigned int argc, const char* argv[]);
+
+	virtual std::list<GuestMemoryRange*> getMemoryMap(void) const;
 private:
 	const ElfImg	*img;
 	uint8_t		*stack;
