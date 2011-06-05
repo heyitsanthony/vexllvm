@@ -20,13 +20,14 @@ public:
 		return ((uintptr_t)mem_end - (uintptr_t)mem_begin);
 	}
 	void* getBase(void) const { return mem_begin; }
+	int getProt(void) const;
+
 private:
 	void ptraceCopy(pid_t pid, int prot);
 	void ptraceCopyRange(pid_t pid, int prot, void* m_beg, void* m_end);
 	void mapLib(pid_t pid);
 	void mapAnon(pid_t pid);
 	void mapStack(pid_t pid);
-	int getProt(void) const;
 
 	void		*mem_begin, *mem_end;
 	char		perms[5];

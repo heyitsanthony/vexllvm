@@ -445,6 +445,9 @@ std::list<GuestMemoryRange*> GuestStatePTImg::getMemoryMap(void) const
 
 	foreach (it, mappings.begin(), mappings.end()) {
 		PTImgMapEntry	*ptm = *it;
+
+		if ((ptm->getProt() & PROT_READ) == 0)
+			continue;
 		ret.push_back(new GuestMemoryRange(
 			ptm->getBase(),
 			ptm->getByteCount()));
