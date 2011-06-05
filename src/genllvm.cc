@@ -26,6 +26,18 @@ GenLLVM::GenLLVM(const GuestState* gs, const char* name)
 {
 	builder = new IRBuilder<>(getGlobalContext());
 	mod = new Module(name, getGlobalContext());
+
+	// *any* data layout *should* work, but klee will horribly fail
+	// if not LE and the vexllvm loads/stores would fail since it 
+	// ignores the ordering suffixes. Everything is broken; support
+	// BE if/when it finally matters. Right now, force LE.
+	//
+	// Layout string taken from the vexops.bc file. Good as any other.
+	mod->setDataLayout(
+		"e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:"
+		"32-i64:64:64-f32:3232-f64:64:64-v64:64:64-v128:128:"
+		"128-a0:0:64-s0:64:64-f80:128:128");
+
 	mod->addTypeName("guestCtxTy", guestState->getCPUState()->getTy());
 	mkFuncTy();
 }
