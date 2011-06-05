@@ -141,8 +141,12 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	vta.host_bytes_used = &host_bytes_used;
 
 	vta.traceflags = VEX_TRACE_FLAGS;
+#if !defined(VALGRIND_TRUNK)
 	vta.dispatch = (void*)dispatch_asm_amd64;
-
+#else
+	vta.dispatch_assisted = (void*)dispatch_asm_amd64;
+	vta.dispatch_unassisted = (void*)dispatch_asm_amd64;
+#endif
 	res = LibVEX_Translate(&vta);
 	if (res == VexTransAccessFail) return NULL;
 

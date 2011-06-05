@@ -305,6 +305,17 @@ bool PTImgChk::doStep(
 		return true;
 	}
 
+	if (isPushF(regs)) {
+		/* patch out the single step flag for perfect matching..
+		   other flags (IF, reserved bit 1) need vex patch */
+		waitForSingleStep();
+		long old_v = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rsp - sizeof(long), NULL);
+		long new_v = old_v & ~0x100;
+		long err = ptrace(PTRACE_POKETEXT, child_pid, regs.rsp - sizeof(long), new_v);
+		assert (err != -1 && "Failed to patch pushed flags");
+		return true;
+	}
+	
 	if (isOnCPUID(regs)) {
 		/* fake cpuid to match vexhelpers */
 		VexGuestAMD64State	fakeState;
@@ -375,6 +386,13 @@ bool PTImgChk::isOnCPUID(const user_regs_struct& regs)
 	long	cur_opcode;
 	cur_opcode = getInsOp(regs);
 	return (cur_opcode & 0xffff) == 0xA20F;
+}
+
+bool PTImgChk::isPushF(const user_regs_struct& regs)
+{
+	long	cur_opcode;
+	cur_opcode = getInsOp(regs);
+	return (cur_opcode & 0xff) == 0x9C;
 }
 
 

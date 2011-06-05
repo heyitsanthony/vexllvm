@@ -3,6 +3,7 @@
 #include "genllvm.h"
 #include "vexop.h"
 #include "vexhelpers.h"
+#include <llvm/Intrinsics.h>
 
 using namespace llvm;
 
@@ -1211,7 +1212,10 @@ Value* VexExprUnopSqrt64F0x2::emit(void) const
 	UNOP_SETUP
 	v1 = builder->CreateBitCast(v1, get_vtd(2));
 	lo_op = builder->CreateExtractElement(v1, get_32i(0));
-	f = theVexHelpers->getHelper("vexop_sqrtf64");
+	std::vector<const Type*> sqrtArgs;
+	sqrtArgs.push_back(get_d());
+	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), Intrinsic::sqrt,
+		&sqrtArgs[0], 1);
 	assert (f != NULL);
 	result = builder->CreateCall(f, lo_op);
 	return builder->CreateInsertElement(v1, result, get_32i(0));
