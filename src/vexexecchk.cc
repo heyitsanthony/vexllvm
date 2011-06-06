@@ -11,14 +11,14 @@
 #include "syscallsmarshalled.h"
 #include "vexexecchk.h"
 
-VexExecChk::VexExecChk(PTImgChk* gs)
-: VexExec(gs),
+VexExecChk::VexExecChk(PTImgChk* gs, const std::string& binary)
+: VexExec(gs, binary),
   hit_syscall(false), is_deferred(false)
 {
 	cross_check = (getGuestState()) ? gs : NULL;
 	if (!cross_check) return;
 
-	sc_marshall = new SyscallsMarshalled(mappings);
+	sc_marshall = new SyscallsMarshalled(mappings, binary);
 	delete sc;
 	sc = sc_marshall;
 }

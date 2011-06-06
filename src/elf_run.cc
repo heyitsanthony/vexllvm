@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 
 	gs = new GuestStateELF(img);
 	gs->setArgv(argc-1, const_cast<const char**>(argv+1));
-	vexexec = VexExec::create<VexExec, GuestState>(gs);
+	vexexec = VexExec::create<VexExec, GuestState>(gs, argv[1]);
 	assert (vexexec && "Could not create vexexec");
 	
 	vexexec->run();

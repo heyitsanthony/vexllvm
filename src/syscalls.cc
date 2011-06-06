@@ -8,8 +8,8 @@
 
 #include "Sugar.h"
 
-Syscalls::Syscalls(VexMem& _mappings) 
-: sc_seen_c(0), exited(false), mappings(_mappings) {}
+Syscalls::Syscalls(VexMem& _mappings, const std::string& _binary) 
+: sc_seen_c(0), exited(false), mappings(_mappings), binary(_binary) {}
 Syscalls::~Syscalls() {}
 
 /* pass through */
@@ -61,6 +61,29 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	} else if (sys_nr == SYS_munmap) {
 		m.offset = (void*)args.getArg(0);
 		m.length = args.getArg(1);
+	} else if (sys_nr == SYS_readlink) {
+		std::string path = (char*)args.getArg(0);
+		if(path == "/proc/self/exe") {
+			path = binary;
+			char* buf = (char*)args.getArg(1);
+			ssize_t res, last_res = 0;
+			/* repeatedly deref, because exe running does it */
+			for(;;) {
+				res = readlink(
+					path.c_str(), 
+					buf, 
+					args.getArg(2));
+				if(res < 0) {
+					return last_res ? last_res : -errno;
+				}
+				std::string new_path(buf, res);
+				if(path == new_path)
+					break;
+				path = new_path;
+				last_res = res;
+			}
+			return res;
+		}
 	}
 
 	unsigned long ret = syscall(

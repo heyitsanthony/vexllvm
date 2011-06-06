@@ -17,8 +17,9 @@ SyscallPtrBuf::SyscallPtrBuf(unsigned int in_len, void* in_ptr)
 		len = 0;
 	}
 }
-SyscallsMarshalled::SyscallsMarshalled(VexMem& mappings)
-: Syscalls(mappings), last_sc_ptrbuf(NULL)
+SyscallsMarshalled::SyscallsMarshalled(VexMem& mappings, 
+	const std::string& binary)
+: Syscalls(mappings, binary), last_sc_ptrbuf(NULL)
 , log_syscalls(getenv("VEXLLVM_XCHK_SYSCALLS") ? true : false)
 {
 }

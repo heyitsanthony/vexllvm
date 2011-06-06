@@ -36,12 +36,12 @@ class VexExec
 {
 public:
 	template <class T, class U>
-	static T* create(U* in_gs)
+	static T* create(U* in_gs, const std::string& binary)
 	{
 		T	*ve;
 
 		setupStatics(in_gs);
-		ve = new T(in_gs);
+		ve = new T(in_gs, binary);
 		if (ve->getGuestState() == NULL) {
 			delete ve;
 			return NULL;
@@ -59,7 +59,7 @@ public:
 	unsigned int getSBExecutedCount(void) const { return sb_executed_c; }
 
 protected:
-	VexExec(GuestState* gs);
+	VexExec(GuestState* gs, const std::string& binary);
 	virtual uint64_t doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);
 	static void setupStatics(GuestState* in_gs);

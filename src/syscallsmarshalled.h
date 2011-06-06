@@ -20,7 +20,7 @@ private:
 class SyscallsMarshalled : public Syscalls
 {
 public:
-	SyscallsMarshalled(VexMem& mappings);
+	SyscallsMarshalled(VexMem& mappings, const std::string& binary);
 	virtual ~SyscallsMarshalled()
 	{
 		if (last_sc_ptrbuf) delete last_sc_ptrbuf;

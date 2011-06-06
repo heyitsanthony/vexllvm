@@ -12,7 +12,7 @@ friend class VexExec;
 public:
 	virtual ~VexExecChk(void) {}
 protected:
-	VexExecChk(PTImgChk* gs);
+	VexExecChk(PTImgChk* gs, const std::string& binary);
 
 	virtual uint64_t doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);
