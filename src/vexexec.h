@@ -8,7 +8,9 @@
 #include <list>
 #include <vector>
 #include <iostream>
+#include <sys/signal.h>
 #include "directcache.h"
+#include "vexmem.h"
 
 class GuestState;
 class Syscalls;
@@ -64,6 +66,7 @@ protected:
 
 	GuestState		*gs;
 	Syscalls		*sc;
+	VexMem			mappings;
 private:
 	vexfunc_t getSBFuncPtr(VexSB* vsb);
 	VexSB* getSBFromGuestAddr(void* elfptr);
@@ -72,6 +75,10 @@ private:
 	void runAddrStack(void);
 	void loadExitFuncAddrs(void);
 	void glibcLocaleCheat(void);
+
+	static VexExec		*exec_context;
+	static void signalHandler(int sig, siginfo_t* si, void* raw_context);
+	void flushTamperedCode(void* start, void* end);
 
 	VexXlate		*vexlate;
 	llvm::ExecutionEngine	*exeEngine;

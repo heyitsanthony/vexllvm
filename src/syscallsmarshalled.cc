@@ -17,8 +17,9 @@ SyscallPtrBuf::SyscallPtrBuf(unsigned int in_len, void* in_ptr)
 		len = 0;
 	}
 }
-SyscallsMarshalled::SyscallsMarshalled()
-: last_sc_ptrbuf(NULL), log_syscalls(getenv("VEXLLVM_XCHK_SYSCALLS") ? true : false)
+SyscallsMarshalled::SyscallsMarshalled(VexMem& mappings)
+: Syscalls(mappings), last_sc_ptrbuf(NULL)
+, log_syscalls(getenv("VEXLLVM_XCHK_SYSCALLS") ? true : false)
 {
 }
 bool SyscallsMarshalled::isSyscallMarshalled(int sys_nr) const
@@ -30,7 +31,7 @@ bool SyscallsMarshalled::isSyscallMarshalled(int sys_nr) const
 
 #include <stdio.h>
 
-uint64_t SyscallsMarshalled::apply(const SyscallParams& args)
+uint64_t SyscallsMarshalled::apply(SyscallParams& args)
 {
 	uint64_t		sys_nr;
 	uint64_t		ret;

@@ -32,6 +32,12 @@ public:
 		if (ents[idx].ptr == p) return ents[idx].t;
 		return NULL;
 	}
+	void flush(void* begin, void* end) {
+		for(int i = 0; i < DC_SIZE; ++i) {
+			ents[i].ptr = NULL;
+			ents[i].t = NULL;
+		}
+	}
 private:
 	unsigned int ptr2slot(void* p) const
 	{

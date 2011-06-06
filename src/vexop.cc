@@ -757,6 +757,14 @@ CASE_OP(Rsqrte32x4)
 	v2 = args[1]->emit();			\
 	builder = theGenLLVM->getBuilder();
 
+#define TRIOP_SETUP				\
+	Value		*v1, *v2, *v3;		\
+	IRBuilder<>	*builder;		\
+	v1 = args[0]->emit();			\
+	v2 = args[1]->emit();			\
+	v3 = args[2]->emit();			\
+	builder = theGenLLVM->getBuilder();
+
 #define UNOP_EMIT(x,y)				\
 Value* VexExprUnop##x::emit(void) const	\
 {						\
@@ -1190,20 +1198,24 @@ Value* VexExprBinopCmpEQ64F0x2::emit(void) const
 		get_32i(0));
 }
 
-Value* VexExprBinopMax32F0x4::emit(void) const
-{
-	Value	*lo_op_lhs, *lo_op_rhs, *result;
-	Function	*f;
-	BINOP_SETUP
-	v1 = builder->CreateBitCast(v1, get_vtf(4));
-	v2 = builder->CreateBitCast(v2, get_vtf(4));
-	lo_op_lhs = builder->CreateExtractElement(v1, get_32i(0));
-	lo_op_rhs = builder->CreateExtractElement(v2, get_32i(0));
-	f = theVexHelpers->getHelper("vexop_maxf32");
-	assert (f != NULL);
-	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);
-	return builder->CreateInsertElement(v1, result, get_32i(0));
+#define OPF0X_SEL_EMIT(x, y, z)						\
+Value* VexExprBinop##x::emit(void) const				\
+{									\
+	Value	*result, *a, *b;					\
+	BINOP_SETUP							\
+	v1 = builder->CreateBitCast(v1, y);				\
+	v2 = builder->CreateBitCast(v2, y);				\
+	a = builder->CreateExtractElement(v1, get_32i(0));		\
+	b = builder->CreateExtractElement(v2, get_32i(0));		\
+	result = builder->CreateSelect(					\
+		builder->Create##z(a, b), a, b);			\
+	return builder->CreateInsertElement(v1, result, get_32i(0));	\
 }
+
+OPF0X_SEL_EMIT(Max32F0x4, get_vtf(4), FCmpUGT);
+OPF0X_SEL_EMIT(Min32F0x4, get_vtf(4), FCmpULT);
+OPF0X_SEL_EMIT(Max64F0x2, get_vtd(2), FCmpUGT);
+OPF0X_SEL_EMIT(Min64F0x2, get_vtd(2), FCmpULT);
 
 Value* VexExprUnopSqrt64F0x2::emit(void) const
 {
@@ -1218,21 +1230,6 @@ Value* VexExprUnopSqrt64F0x2::emit(void) const
 		&sqrtArgs[0], 1);
 	assert (f != NULL);
 	result = builder->CreateCall(f, lo_op);
-	return builder->CreateInsertElement(v1, result, get_32i(0));
-}
-
-Value* VexExprBinopMin64F0x2::emit(void) const
-{
-	Value	*lo_op_lhs, *lo_op_rhs, *result;
-	Function	*f;
-	BINOP_SETUP
-	v1 = builder->CreateBitCast(v1, get_vtd(2));
-	v2 = builder->CreateBitCast(v2, get_vtd(2));
-	lo_op_lhs = builder->CreateExtractElement(v1, get_32i(0));
-	lo_op_rhs = builder->CreateExtractElement(v2, get_32i(0));
-	f = theVexHelpers->getHelper("vexop_minf64");
-	assert (f != NULL);
-	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);
 	return builder->CreateInsertElement(v1, result, get_32i(0));
 }
 
@@ -1746,3 +1743,19 @@ Value* VexExprBinop##x::emit(void) const	\
 
 OPSHUF_EMIT(Perm8x8, get_vt(8, 8), get_vt(8, 8))
 OPSHUF_EMIT(Perm8x16, get_vt(16, 8), get_vt(16, 8))
+
+Value* VexExprTriopPRemF64::emit(void) const
+{
+	/* ignoring rounding mode etc */
+	TRIOP_SETUP
+	v2 = builder->CreateBitCast(v2, get_d());
+	v3 = builder->CreateBitCast(v3, get_d());
+	return builder->CreateFRem(v2, v3);
+}
+Value* VexExprTriopPRemC3210F64::emit(void) const
+{
+	/* no idea what these condition codes are */
+	TRIOP_SETUP
+	return get_32i(0);
+}
+

@@ -5,18 +5,20 @@
 #include <list>
 
 #include "syscallparams.h"
+#include "vexmem.h"
 
 class Syscalls
 {
 public:
-	Syscalls();
+	Syscalls(VexMem& mappings);
 	virtual ~Syscalls();
-	virtual uint64_t apply(const SyscallParams& args);
+	virtual uint64_t apply(SyscallParams& args);
 	void print(std::ostream& os) const;
 	bool isExit(void) const { return exited; }
 private:
 	std::list<SyscallParams>	call_trace;
 	bool				exited;
+	VexMem& mappings;
 };
 
 #endif

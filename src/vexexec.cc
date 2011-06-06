@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include <iostream>
 #include <string>
+#include <sys/signal.h>
+#include <sys/mman.h>
+#include <ucontext.h>
 
 #include "Sugar.h"
 
@@ -67,7 +70,7 @@ VexExec::VexExec(GuestState* in_gs)
 	theVexHelpers->bindToExeEngine(exeEngine);
 
 	vexlate = new VexXlate();
-	sc = new Syscalls();
+	sc = new Syscalls(mappings);
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
@@ -145,6 +148,8 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	hostptr_t			hostptr;
 	VexSB				*vsb;
 	vexsb_map::const_iterator	it;
+	VexMem::Mapping m;
+	bool found;
 
 	hostptr = (void*)(gs->addr2Host((uint64_t)elfptr));
 
@@ -166,9 +171,24 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 		return NULL;
 	}
 
+	found = mappings.lookupMapping(hostptr, m);
+	/* assuming !found means its ok... but that's not totally true */
+	if(found) {
+		if(!(m.req_prot & PROT_EXEC)) {
+			assert(false && "Trying to jump to non-code");
+		}
+		if(m.cur_prot & PROT_WRITE) {
+			m.cur_prot = m.req_prot & ~PROT_WRITE;
+			mprotect(m.offset, m.length, m.cur_prot);
+			mappings.recordMapping(m);
+		}
+	}
+
 	vsb = vexlate->xlate(hostptr, (uint64_t)elfptr);
 	vexsb_cache[elfptr] = vsb;
-
+	
+	assert((!found || (void*)vsb->getEndAddr() < m.end()) && 
+		"code spanned known page mappings");
 update_dc:
 	vexsb_dc.put(elfptr, vsb);
 	return vsb;
@@ -180,7 +200,7 @@ vexfunc_t VexExec::getSBFuncPtr(VexSB* vsb)
 	char				emitstr[1024];
 	vexfunc_t 			func_ptr;
 	jit_map::const_iterator		it;
-
+	
 	func_ptr = (vexfunc_t)jit_dc.get((void*)vsb);
 	if (func_ptr != NULL) goto hit_func;
 
@@ -272,6 +292,15 @@ void VexExec::glibcLocaleCheat(void)
 
 void VexExec::run(void)
 {
+	struct sigaction sa;
+
+	VexExec::exec_context = this;
+	memset(&sa, 0, sizeof(struct sigaction));
+	sa.sa_sigaction = &VexExec::signalHandler;
+	sa.sa_flags = SA_SIGINFO;
+	sigemptyset(&sa.sa_mask);
+   	sigaction(SIGSEGV, &sa, NULL);
+   
 	loadExitFuncAddrs();
 	glibcLocaleCheat();
 
@@ -310,3 +339,50 @@ void VexExec::dumpLogs(std::ostream& os) const
 	vexlate->dumpLog(os);
 	sc->print(os);
 }
+#define MAX_CODE_BYTES 1024
+void VexExec::flushTamperedCode(void* begin, void* end) {
+	exec_context->jit_dc.flush((char*)begin - MAX_CODE_BYTES, 
+		(char*)end + MAX_CODE_BYTES);
+	exec_context->vexsb_dc.flush((char*)begin - MAX_CODE_BYTES, 
+		(char*)end + MAX_CODE_BYTES);
+	for(vexsb_map::iterator i = 
+		vexsb_cache.lower_bound((char*)begin - MAX_CODE_BYTES); 
+		i != vexsb_cache.upper_bound((char*)end + MAX_CODE_BYTES);) {
+		VexSB* vsb = i->second;
+		bool in_range = (void*)vsb->getGuestAddr() < end && 
+			(void*)vsb->getEndAddr() > begin;
+		if(in_range) {
+			vexsb_map::iterator to_delete = i++;
+			/* TODO: how do we free the generated code? */
+			jit_cache.erase(vsb);
+			vexsb_cache.erase(to_delete);
+			delete vsb;
+		} else {
+			++i;
+		}
+	}
+	
+}
+void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context) {
+	// struct ucontext* context = (ucontext*)raw_context;
+	VexMem::Mapping m;
+	bool found = exec_context->mappings.lookupMapping(si->si_addr, m);
+	if(!found) {
+		std::cerr << "Caught SIGSEGV but couldn't " 
+			<< "find a mapping to tweak @ \n" 
+			<< si->si_addr << std::endl;
+		exit(1);
+	}
+	if((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
+		m.cur_prot = m.req_prot & ~PROT_EXEC;
+		mprotect(m.offset, m.length, m.cur_prot);
+		exec_context->mappings.recordMapping(m);
+		exec_context->flushTamperedCode(m.offset, m.end());
+	} else {
+		std::cerr << "Caught SIGSEGV but the mapping was" 
+			<< "a normal one... die! @ \n" 
+			<< si->si_addr << std::endl;
+		exit(1);
+	}
+}
+VexExec* VexExec::exec_context = NULL;

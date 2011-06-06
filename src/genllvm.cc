@@ -109,7 +109,8 @@ Value* GenLLVM::readCtx(unsigned int byteOff, IRType ty)
 	return ret;
 }
 
-Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len, Value* ix)
+Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len, 
+	Value* ix, const Type* accessTy)
 {
 	Value		*ret, *addr;
 
@@ -129,9 +130,7 @@ Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len, Value* ix)
 	offset = builder->CreateAdd(offset, base_v);
 	addr = getCtxGEP(
 		offset,
-		IntegerType::get(
-			getGlobalContext(),
-			len*8)); // XXX check for vector values?
+		accessTy); // XXX check for vector values?
 	ret = builder->CreateLoad(addr);
 
 	return ret;
@@ -179,7 +178,8 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 	return ret;
 }
 
-Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len, Value* ix, Value* v)
+Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len, 
+	Value* ix, Value* v)
 {
 	Value		*ret, *addr;
 	StoreInst	*si;

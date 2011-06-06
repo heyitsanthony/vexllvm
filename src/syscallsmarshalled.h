@@ -20,12 +20,12 @@ private:
 class SyscallsMarshalled : public Syscalls
 {
 public:
-	SyscallsMarshalled();
+	SyscallsMarshalled(VexMem& mappings);
 	virtual ~SyscallsMarshalled()
 	{
 		if (last_sc_ptrbuf) delete last_sc_ptrbuf;
 	}
-	virtual uint64_t apply(const SyscallParams& args);
+	virtual uint64_t apply(SyscallParams& args);
 	SyscallPtrBuf *takePtrBuf(void)
 	{
 		SyscallPtrBuf	*ret = last_sc_ptrbuf;
