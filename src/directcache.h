@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define DC_SIZE	4096
+#define DC_SIZE 4096
 
 template <typename T>
 class DirectCache
@@ -32,6 +32,8 @@ public:
 		if (ents[idx].ptr == p) return ents[idx].t;
 		return NULL;
 	}
+
+	void flush(void) { memset(ents, 0, sizeof(ents)); }
 private:
 	unsigned int ptr2slot(void* p) const
 	{

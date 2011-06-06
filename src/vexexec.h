@@ -8,7 +8,7 @@
 #include <list>
 #include <vector>
 #include <iostream>
-#include "directcache.h"
+#include "vexjitcache.h"
 
 class GuestState;
 class Syscalls;
@@ -22,12 +22,8 @@ class Function;
 }
 
 
-typedef uint64_t(*vexfunc_t)(void* /* guest cpu state */);
-
 typedef std::list<std::pair<void*, int /* depth */> > vexexec_traces;
 typedef std::stack<void*> vexexec_addrs;
-typedef std::map<void* /* guest addr */, VexSB*> vexsb_map;
-typedef std::map<VexSB*, vexfunc_t> jit_map;
 typedef std::set<void*> exit_func_set;
 
 class VexExec
@@ -64,8 +60,8 @@ protected:
 
 	GuestState		*gs;
 	Syscalls		*sc;
+	VexFCache		*f_cache;
 private:
-	vexfunc_t getSBFuncPtr(VexSB* vsb);
 	VexSB* getSBFromGuestAddr(void* elfptr);
 	const VexSB* doNextSB(void);
 	
@@ -73,8 +69,7 @@ private:
 	void loadExitFuncAddrs(void);
 	void glibcLocaleCheat(void);
 
-	VexXlate		*vexlate;
-	llvm::ExecutionEngine	*exeEngine;
+	VexJITCache	*jit_cache;
 
 	vexexec_addrs	addr_stack;
 	vexexec_traces	trace;
@@ -82,17 +77,11 @@ private:
 	/* stats */
 	unsigned int	sb_executed_c;
 
-	vexsb_map		vexsb_cache;
-	DirectCache<VexSB>	vexsb_dc;
-
-	jit_map			jit_cache;
-	DirectCache<vexfunc_t>	jit_dc;
 	exit_func_set		exit_addrs;
 
 	/* dump current state before executing BB */
 	/* defined by env var VEXLLVM_DUMP_STATES */
 	bool		dump_current_state;
-	bool		dump_llvm;
 
 	unsigned int	trace_c;
 	bool		exited;

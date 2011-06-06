@@ -26,6 +26,8 @@ OBJDEPS=	vexxlate.o		\
 		syscalls.o		\
 		syscallsmarshalled.o	\
 		vexhelpers.o		\
+		vexfcache.o		\
+		vexjitcache.o		\
 		vexexec.o		\
 		vexexecchk.o		\
 		vexexecfastchk.o	\

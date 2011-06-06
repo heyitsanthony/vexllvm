@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include <iostream>
 #include <string>
+#include <sys/signal.h>
+#include <sys/mman.h>
+#include <ucontext.h>
 
 #include "Sugar.h"
 
@@ -43,13 +46,7 @@ VexExec::~VexExec()
 {
 	if (gs == NULL) return;
 
-	/* free cache */
-	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
-		delete (*it).second;
-	}
-
-	delete vexlate;
-	delete exeEngine;
+	delete jit_cache;
 	delete sc;
 }
 
@@ -57,6 +54,7 @@ VexExec::VexExec(GuestState* in_gs)
 : gs(in_gs), sb_executed_c(0), trace_c(0), exited(false)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
+	ExecutionEngine	*exeEngine;
 	std::string	err_str;
 
 	eb.setErrorStr(&err_str);
@@ -66,11 +64,10 @@ VexExec::VexExec(GuestState* in_gs)
 	/* XXX need to fix ownership of module exe engine deletes it now! */
 	theVexHelpers->bindToExeEngine(exeEngine);
 
-	vexlate = new VexXlate();
+	jit_cache = new VexJITCache(new VexXlate(), exeEngine);
 	sc = new Syscalls();
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
-	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
 }
 
 const VexSB* VexExec::doNextSB(void)
@@ -143,22 +140,11 @@ void VexExec::doSysCall(VexSB* vsb)
 VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 {
 	hostptr_t			hostptr;
-	VexSB				*vsb;
-	vexsb_map::const_iterator	it;
 
 	hostptr = (void*)(gs->addr2Host((uint64_t)elfptr));
 
 	/* XXX recongnize library ranges */
 	if (hostptr == NULL) hostptr = elfptr;
-
-	vsb = vexsb_dc.get(elfptr);
-	if (vsb) return vsb;
-
-	it = vexsb_cache.find(elfptr);
-	if (it != vexsb_cache.end()) {
-		vsb = (*it).second;
-		goto update_dc;
-	}
 
 	if (exit_addrs.count((elfptr_t)elfptr)) {
 		exited = true;
@@ -166,47 +152,11 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 		return NULL;
 	}
 
-	vsb = vexlate->xlate(hostptr, (uint64_t)elfptr);
-	vexsb_cache[elfptr] = vsb;
+	/* compile it */
+	jit_cache->getFPtr(hostptr, (uint64_t)elfptr);
 
-update_dc:
-	vexsb_dc.put(elfptr, vsb);
-	return vsb;
-}
-
-vexfunc_t VexExec::getSBFuncPtr(VexSB* vsb)
-{
-	Function			*f;
-	char				emitstr[1024];
-	vexfunc_t 			func_ptr;
-	jit_map::const_iterator		it;
-
-	func_ptr = (vexfunc_t)jit_dc.get((void*)vsb);
-	if (func_ptr != NULL) goto hit_func;
-
-	it = jit_cache.find(vsb);
-	if (it != jit_cache.end()) {
-		func_ptr = ((*it).second);
-		goto miss_func;
-	}	
-	
-	/* not in caches, generate */
-	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
-	f = vsb->emit(emitstr);
-	assert (f && "FAILED TO EMIT FUNC??");
-
-	if(dump_llvm)
-		f->dump();
-
-	func_ptr = (vexfunc_t)exeEngine->getPointerToFunction(f);
-	assert (func_ptr != NULL && "Could not JIT");
-	jit_cache[vsb] = func_ptr;
-
-miss_func:
-	jit_dc.put((void*)vsb, (vexfunc_t*)func_ptr);
-	
-hit_func:
-	return func_ptr;
+	/* vsb should be cached still */
+	return jit_cache->getCachedVSB((uint64_t)elfptr);
 }
 
 uint64_t VexExec::doVexSB(VexSB* vsb)
@@ -215,7 +165,8 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	vexfunc_t	func_ptr;
 	uint64_t	new_ip;
 
-	func_ptr = getSBFuncPtr(vsb);
+	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
+	assert (func_ptr != NULL);
 
 	sb_executed_c++;
 
@@ -307,6 +258,6 @@ void VexExec::runAddrStack(void)
 
 void VexExec::dumpLogs(std::ostream& os) const
 {
-	vexlate->dumpLog(os);
+	jit_cache->dumpLog(os);
 	sc->print(os);
 }
