@@ -1731,14 +1731,27 @@ OPVS_EMIT(ShlN64x2, get_vt(2, 64), Shl)
 OPVS_EMIT(SarN64x2, get_vt(2, 64), AShr)
 OPVS_EMIT(ShrN64x2, get_vt(2, 64), LShr )
 
-#define OPSHUF_EMIT(x, y, z)			\
-Value* VexExprBinop##x::emit(void) const	\
-{	\
-	BINOP_SETUP					\
-	v1 = builder->CreateBitCast(v1, y);		\
-	v2 = builder->CreateBitCast(v2, y);		\
-	v2 = builder->CreateZExt(v2, get_vt(y->getNumElements(), 32));	\
-	return builder->CreateShuffleVector(v1, v1, v2);		\
+/* sadly the shuffle opcode requires a constant vector which is not
+   what this opcode always receives, TODO: check for constant vector
+   and do the faster version with the shuffle opcode. */
+#define OPSHUF_EMIT(x, y, z)						\
+Value* VexExprBinop##x::emit(void) const				\
+{									\
+	BINOP_SETUP							\
+	v1 = builder->CreateBitCast(v1, y);				\
+	v2 = builder->CreateBitCast(v2, y);				\
+	Value* result = get_c(y->getBitWidth(), 0);			\
+	result = builder->CreateBitCast(result, y);			\
+	for(unsigned i = 0; i < y->getNumElements(); ++i) {		\
+		result = builder->CreateInsertElement(result,		\
+			builder->CreateExtractElement(v1,		\
+				builder->CreateZExt(			\
+					builder->CreateExtractElement(	\
+						v2, get_32i(i)),	\
+						get_i(32))),		\
+			get_32i(i));					\
+	}								\
+	return result;							\
 }
 
 OPSHUF_EMIT(Perm8x8, get_vt(8, 8), get_vt(8, 8))
