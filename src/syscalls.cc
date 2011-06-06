@@ -8,7 +8,8 @@
 
 #include "Sugar.h"
 
-Syscalls::Syscalls(VexMem& _mappings) : exited(false), mappings(_mappings) {}
+Syscalls::Syscalls(VexMem& _mappings) 
+: sc_seen_c(0), exited(false), mappings(_mappings) {}
 Syscalls::~Syscalls() {}
 
 /* pass through */
@@ -28,7 +29,10 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	BAD_SYSCALL(SYS_exit)
 	BAD_SYSCALL(SYS_execve)
 	default:
-		call_trace.push_back(args);
+		sc_seen_c++;
+		if (sc_seen_c >= MAX_SC_TRACE)
+			sc_trace.pop_front();
+		sc_trace.push_back(args);
 	}
 
 	/* this will hold any memory mapping state across the call */
@@ -89,7 +93,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 
 void Syscalls::print(std::ostream& os) const
 {
-	foreach(it, call_trace.begin(), call_trace.end()) {
+	foreach(it, sc_trace.begin(), sc_trace.end()) {
 		SyscallParams	sp = *it;
 		os << "Syscall: NR=" << sp.getSyscall();
 		os << " {"
