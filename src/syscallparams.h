@@ -32,6 +32,11 @@ public:
 		assert (n < NUM_SYSCALL_ARGS);
 		return args[n];
 	}
+	void setArg(unsigned int n, uintptr_t v)
+	{
+		assert (n < NUM_SYSCALL_ARGS);
+		args[n] = v;
+	}
 private:
 	uintptr_t	sc;
 	uintptr_t	args[NUM_SYSCALL_ARGS];

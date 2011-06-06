@@ -40,9 +40,10 @@ int main(int argc, char* argv[], char* envp[])
 	gs = GuestStatePTImg::create<PTImgChk>(argc - 1, argv + 1, envp);
 
 	if (getenv("VEXLLVM_FASTCHK"))
-		vexexec = VexExec::create<VexExecFastChk,PTImgChk>(gs);
+		vexexec = VexExec::create<VexExecFastChk,PTImgChk>(
+			gs, argv[1]);
 	else
-		vexexec = VexExec::create<VexExecChk,PTImgChk>(gs);
+		vexexec = VexExec::create<VexExecChk,PTImgChk>(gs, argv[1]);
 	assert (vexexec && "Could not create vexexec");
 	
 	vexexec->run();

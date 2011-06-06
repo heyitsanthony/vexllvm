@@ -80,6 +80,7 @@ private:
 	int		len;
 	VexExpr		*ix_expr; /* Variable part of index into array */
 	int		bias;  /* Constant offset part of index into array */
+	int		bits;
 };
 
 class VexExprRdTmp : public VexExpr

@@ -33,6 +33,8 @@
 
 using namespace llvm;
 
+VexExec* VexExec::exec_context = NULL;
+
 #define TRACE_MAX	500
 
 void VexExec::setupStatics(GuestState* in_gs)
@@ -50,7 +52,7 @@ VexExec::~VexExec()
 	delete sc;
 }
 
-VexExec::VexExec(GuestState* in_gs)
+VexExec::VexExec(GuestState* in_gs, const std::string& binary)
 : gs(in_gs), sb_executed_c(0), trace_c(0), exited(false)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
@@ -65,7 +67,7 @@ VexExec::VexExec(GuestState* in_gs)
 	theVexHelpers->bindToExeEngine(exeEngine);
 
 	jit_cache = new VexJITCache(new VexXlate(), exeEngine);
-	sc = new Syscalls();
+	sc = new Syscalls(mappings, binary);
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 }
@@ -140,6 +142,10 @@ void VexExec::doSysCall(VexSB* vsb)
 VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 {
 	hostptr_t			hostptr;
+	VexSB				*vsb;
+	vexsb_map::const_iterator	it;
+	VexMem::Mapping			m;
+	bool				found;
 
 	hostptr = (void*)(gs->addr2Host((uint64_t)elfptr));
 
@@ -152,11 +158,29 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 		return NULL;
 	}
 
+	found = mappings.lookupMapping(hostptr, m);
+	/* assuming !found means its ok... but that's not totally true */
+	if (found) {
+		if(!(m.req_prot & PROT_EXEC)) {
+			assert(false && "Trying to jump to non-code");
+		}
+		if(m.cur_prot & PROT_WRITE) {
+			m.cur_prot = m.req_prot & ~PROT_WRITE;
+			mprotect(m.offset, m.length, m.cur_prot);
+			mappings.recordMapping(m);
+		}
+	}
+
 	/* compile it */
 	jit_cache->getFPtr(hostptr, (uint64_t)elfptr);
 
 	/* vsb should be cached still */
-	return jit_cache->getCachedVSB((uint64_t)elfptr);
+	vsb = jit_cache->getCachedVSB((uint64_t)elfptr);
+
+	assert((!found || (void*)vsb->getEndAddr() < m.end()) && 
+		"code spanned known page mappings");
+
+	return vsb;
 }
 
 uint64_t VexExec::doVexSB(VexSB* vsb)
@@ -223,6 +247,15 @@ void VexExec::glibcLocaleCheat(void)
 
 void VexExec::run(void)
 {
+	struct sigaction sa;
+
+	VexExec::exec_context = this;
+	memset(&sa, 0, sizeof(struct sigaction));
+	sa.sa_sigaction = &VexExec::signalHandler;
+	sa.sa_flags = SA_SIGINFO;
+	sigemptyset(&sa.sa_mask);
+   	sigaction(SIGSEGV, &sa, NULL);
+   
 	loadExitFuncAddrs();
 	glibcLocaleCheat();
 
@@ -258,6 +291,37 @@ void VexExec::runAddrStack(void)
 
 void VexExec::dumpLogs(std::ostream& os) const
 {
-	jit_cache->dumpLog(os);
 	sc->print(os);
+}
+
+#define MAX_CODE_BYTES 1024
+void VexExec::flushTamperedCode(void* begin, void* end)
+{
+	/* XXX flush code between begin and end */
+	assert (0 == 1 && "STUB: FIXME FIXME");
+}
+
+void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
+{
+	// struct ucontext* context = (ucontext*)raw_context;
+	VexMem::Mapping m;
+	bool found = exec_context->mappings.lookupMapping(si->si_addr, m);
+	if(!found) {
+		std::cerr << "Caught SIGSEGV but couldn't " 
+			<< "find a mapping to tweak @ \n" 
+			<< si->si_addr << std::endl;
+		exit(1);
+	}
+
+	if((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
+		m.cur_prot = m.req_prot & ~PROT_EXEC;
+		mprotect(m.offset, m.length, m.cur_prot);
+		exec_context->mappings.recordMapping(m);
+		exec_context->flushTamperedCode(m.offset, m.end());
+	} else {
+		std::cerr << "Caught SIGSEGV but the mapping was" 
+			<< "a normal one... die! @ \n" 
+			<< si->si_addr << std::endl;
+		exit(1);
+	}
 }

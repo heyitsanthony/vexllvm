@@ -34,7 +34,7 @@ public:
 	
 	llvm::Value* readCtx(unsigned int byteOff, IRType ty);
 	llvm::Value* readCtx(
-		unsigned int byteOff, int bias, int len, llvm::Value* ix);
+		unsigned int byteOff, int bias, int len, llvm::Value* ix, const llvm::Type* t);
 	llvm::Value* writeCtx(unsigned int byteOff, llvm::Value* v);
 	llvm::Value* writeCtx(
 		unsigned int byteOff, int bias, int len,

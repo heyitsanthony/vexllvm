@@ -2,16 +2,18 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <sys/mman.h>
 #include "syscalls.h"
 #include <errno.h>
 
 #include "Sugar.h"
 
-Syscalls::Syscalls() : sc_seen_c(0), exited(false) {}
+Syscalls::Syscalls(VexMem& _mappings, const std::string& _binary) 
+: sc_seen_c(0), exited(false), mappings(_mappings), binary(_binary) {}
 Syscalls::~Syscalls() {}
 
 /* pass through */
-uint64_t Syscalls::apply(const SyscallParams& args)
+uint64_t Syscalls::apply(SyscallParams& args)
 {
 	uint64_t	sys_nr;
 
@@ -33,6 +35,9 @@ uint64_t Syscalls::apply(const SyscallParams& args)
 		sc_trace.push_back(args);
 	}
 
+	/* this will hold any memory mapping state across the call */
+	VexMem::Mapping m;
+	
 	if (sys_nr == SYS_exit_group) {
 		exited = true;
 		return args.getArg(0);
@@ -43,6 +48,42 @@ uint64_t Syscalls::apply(const SyscallParams& args)
 	} else if (sys_nr == SYS_brk) {
 		/* don't let the app pull the rug from under us */
 		return -1;
+	} else if (sys_nr == SYS_mmap || sys_nr == SYS_mprotect) {
+		m.offset = (void*)args.getArg(0);
+		m.length = args.getArg(1);
+		m.req_prot = args.getArg(2);
+		m.cur_prot = m.req_prot;
+		/* mask out write permission so we can play with JITs */
+		if(m.req_prot & PROT_EXEC) {
+			m.cur_prot &= ~PROT_WRITE;
+			args.setArg(2, m.cur_prot);
+		}
+	} else if (sys_nr == SYS_munmap) {
+		m.offset = (void*)args.getArg(0);
+		m.length = args.getArg(1);
+	} else if (sys_nr == SYS_readlink) {
+		std::string path = (char*)args.getArg(0);
+		if(path == "/proc/self/exe") {
+			path = binary;
+			char* buf = (char*)args.getArg(1);
+			ssize_t res, last_res = 0;
+			/* repeatedly deref, because exe running does it */
+			for(;;) {
+				res = readlink(
+					path.c_str(), 
+					buf, 
+					args.getArg(2));
+				if(res < 0) {
+					return last_res ? last_res : -errno;
+				}
+				std::string new_path(buf, res);
+				if(path == new_path)
+					break;
+				path = new_path;
+				last_res = res;
+			}
+			return res;
+		}
 	}
 
 	unsigned long ret = syscall(
@@ -53,13 +94,24 @@ uint64_t Syscalls::apply(const SyscallParams& args)
 			args.getArg(3),
 			args.getArg(4),
 			args.getArg(5));
+	
 	//the low level sycall interface actually returns the error code
 	//so we have to extract it from errno
 	if(ret >= 0xfffffffffffff001ULL) {
 		return -errno;
-	} else {
-		return ret;
 	}
+	
+	/* track dynamic memory mappings */
+	if(sys_nr == SYS_mmap) {
+		m.offset = (void*)ret;
+		mappings.recordMapping(m);
+	} else if(sys_nr == SYS_mprotect) {
+		mappings.recordMapping(m);
+	} else if(sys_nr == SYS_munmap) {
+		mappings.removeMapping(m);
+	}
+
+	return ret;
 }
 
 void Syscalls::print(std::ostream& os) const

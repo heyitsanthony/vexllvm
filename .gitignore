@@ -1,0 +1,3 @@
+tests/opcodes/x86_64/OP*
+src/._*
+bitcode/vexops.bc
