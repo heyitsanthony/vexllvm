@@ -6,6 +6,8 @@
 
 #include "syscallparams.h"
 
+#define MAX_SC_TRACE	1000
+
 class Syscalls
 {
 public:
@@ -15,7 +17,8 @@ public:
 	void print(std::ostream& os) const;
 	bool isExit(void) const { return exited; }
 private:
-	std::list<SyscallParams>	call_trace;
+	std::list<SyscallParams>	sc_trace;
+	uint64_t			sc_seen_c; /* list.size can be O(n) */
 	bool				exited;
 };
 
