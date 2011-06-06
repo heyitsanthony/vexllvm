@@ -18,6 +18,7 @@ OBJDEPS=	vexxlate.o		\
 		vexstmt.o		\
 		vexsb.o			\
 		vexexpr.o		\
+		vexmem.o		\
 		vexop.o			\
 		genllvm.o		\
 		guestcpustate.o		\
