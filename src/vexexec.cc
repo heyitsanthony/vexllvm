@@ -52,7 +52,7 @@ VexExec::~VexExec()
 	delete sc;
 }
 
-VexExec::VexExec(GuestState* in_gs, const std::string& binary)
+VexExec::VexExec(GuestState* in_gs)
 : gs(in_gs), sb_executed_c(0), trace_c(0), exited(false)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
@@ -67,7 +67,7 @@ VexExec::VexExec(GuestState* in_gs, const std::string& binary)
 	theVexHelpers->bindToExeEngine(exeEngine);
 
 	jit_cache = new VexJITCache(new VexXlate(), exeEngine);
-	sc = new Syscalls(mappings, binary);
+	sc = new Syscalls(mappings, gs->getBinaryPath());
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 }

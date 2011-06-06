@@ -86,7 +86,7 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 
 PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 : 	GuestStatePTImg(argc, argv, envp),
-	binary(argv[0]), steps(0), bp_steps(0), blocks(0),
+	steps(0), bp_steps(0), blocks(0),
 	hit_syscall(false)
 {
 	const char	*step_gauge;
@@ -554,7 +554,7 @@ void PTImgChk::waitForSingleStep(void)
 
 void PTImgChk::stackTraceSubservient(std::ostream& os, void* begin, void* end)
 {
-	stackTrace(os, binary, child_pid, begin, end);
+	stackTrace(os, getBinaryPath(), child_pid, begin, end);
 }
 
 void PTImgChk::printUserRegs(

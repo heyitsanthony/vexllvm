@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "Sugar.h"
 #include "dllib.h"
@@ -37,6 +38,8 @@ ElfImg* ElfImg::createUnlinked(const char* fname)
 
 ElfImg::~ElfImg(void)
 {
+	delete [] img_path;
+
 	if (fd < 0) return;
 	
 	munmap(img_mmap, img_bytes_c);
@@ -46,6 +49,8 @@ ElfImg::~ElfImg(void)
 ElfImg::ElfImg(const char* fname, bool linked)
 {
 	struct stat	st;
+
+	img_path = strdup(fname);
 
 	fd = open(fname, O_RDONLY);
 	if (fd == -1) goto err_open;

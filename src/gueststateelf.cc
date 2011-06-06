@@ -14,7 +14,8 @@ using namespace llvm;
 #define STACK_BYTES	(64*1024)
 
 GuestStateELF::GuestStateELF(const ElfImg* in_img)
-: img(in_img)
+: GuestState(in_img->getFilePath()),
+  img(in_img)
 {
 	stack = new uint8_t[STACK_BYTES];
 	memset(stack, 0x32, STACK_BYTES);	/* bogus data */

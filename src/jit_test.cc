@@ -59,7 +59,7 @@ uint64_t doFunc(GuestState* gs, Function* f)
 class GuestStateIdent : public GuestState
 {
 public:
-	GuestStateIdent() {}
+	GuestStateIdent() : GuestState("ident") {}
 	virtual ~GuestStateIdent() {}
 	Value* addrVal2Host(Value* v) const { return v; }
 	uint64_t addr2Host(guestptr_t p) const { return p; }

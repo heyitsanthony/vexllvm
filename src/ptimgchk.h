@@ -76,7 +76,6 @@ private:
 
 	void copyIn(void* dst, const void* src, unsigned int bytes);
 
-	const char	*binary;
 	pid_t		child_pid;
 	
 	uint64_t	steps;

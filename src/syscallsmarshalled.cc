@@ -17,16 +17,19 @@ SyscallPtrBuf::SyscallPtrBuf(unsigned int in_len, void* in_ptr)
 		len = 0;
 	}
 }
-SyscallsMarshalled::SyscallsMarshalled(VexMem& mappings, 
-	const std::string& binary)
-: Syscalls(mappings, binary), last_sc_ptrbuf(NULL)
-, log_syscalls(getenv("VEXLLVM_XCHK_SYSCALLS") ? true : false)
+SyscallsMarshalled::SyscallsMarshalled(
+	VexMem& mappings,
+	const char* binary)
+: Syscalls(mappings, binary),
+  last_sc_ptrbuf(NULL),
+  log_syscalls(getenv("VEXLLVM_XCHK_SYSCALLS") ? true : false)
 {
 }
+
 bool SyscallsMarshalled::isSyscallMarshalled(int sys_nr) const
 {
-	return (sys_nr == SYS_clock_gettime || 
-		sys_nr == SYS_gettimeofday || 
+	return (sys_nr == SYS_clock_gettime ||
+		sys_nr == SYS_gettimeofday ||
 		sys_nr == SYS_rt_sigaction);
 }
 
@@ -41,12 +44,13 @@ uint64_t SyscallsMarshalled::apply(SyscallParams& args)
 	sys_nr = args.getSyscall();
 
 	if(log_syscalls) {
-		std::cerr << "syscall(" << sys_nr << ", " 
-			<< (void*)args.getArg(0) << ", " 
-			<< (void*)args.getArg(1) << ", " 
-			<< (void*)args.getArg(2) << ", " 
-			<< (void*)args.getArg(3) << ", " 
-			<< (void*)args.getArg(4) << ", ...) => " << (void*)ret << std::endl;
+		std::cerr << "syscall(" << sys_nr << ", "
+			<< (void*)args.getArg(0) << ", "
+			<< (void*)args.getArg(1) << ", "
+			<< (void*)args.getArg(2) << ", "
+			<< (void*)args.getArg(3) << ", "
+			<< (void*)args.getArg(4) << ", ...) => "
+			<< (void*)ret << std::endl;
 	}
 
 	/* store write-out data from syscall */
@@ -64,7 +68,7 @@ uint64_t SyscallsMarshalled::apply(SyscallParams& args)
 		break;
 	case SYS_rt_sigaction:
 		last_sc_ptrbuf = new SyscallPtrBuf(
-			sizeof(struct sigaction), 
+			sizeof(struct sigaction),
 			(void*)args.getArg(2));
 		break;
 	}

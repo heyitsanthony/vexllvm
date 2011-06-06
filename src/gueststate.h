@@ -40,7 +40,6 @@ private:
 class GuestState
 {
 public:
-	GuestState(void);
 	virtual ~GuestState(void);
 	virtual llvm::Value* addrVal2Host(llvm::Value* addr_v) const = 0;
 	virtual uint64_t addr2Host(guestptr_t guestptr) const = 0;
@@ -57,8 +56,13 @@ public:
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
 
+	const char* getBinaryPath(void) const { return bin_path; }
+
 protected:
+	GuestState(const char* bin_path);
+
 	GuestCPUState	*cpu_state;
+	char		*bin_path;
 };
 
 #endif

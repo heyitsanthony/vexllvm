@@ -30,6 +30,7 @@ static bool dump_maps;
 
 GuestStatePTImg::GuestStatePTImg(
 	int argc, char *const argv[], char *const envp[])
+: GuestState(argv[0])
 {
 	ElfImg		*img;
 	

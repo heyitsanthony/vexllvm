@@ -7,13 +7,15 @@
 
 using namespace llvm;
 
-GuestState::GuestState(void)
+GuestState::GuestState(const char* in_bin_path)
 {
 	cpu_state = new GuestCPUState();
+	bin_path = strdup(in_bin_path);
 }
 
 GuestState::~GuestState(void)
 {
+	delete [] bin_path;
 	delete cpu_state;
 }
 

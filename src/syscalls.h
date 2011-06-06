@@ -12,7 +12,7 @@
 class Syscalls
 {
 public:
-	Syscalls(VexMem& mappings, const std::string& binary);
+	Syscalls(VexMem& mappings, const char* binary);
 	virtual ~Syscalls();
 	virtual uint64_t apply(SyscallParams& args);
 	void print(std::ostream& os) const;
@@ -21,7 +21,7 @@ private:
 	std::list<SyscallParams>	sc_trace;
 	uint64_t			sc_seen_c; /* list.size can be O(n) */
 	bool				exited;
-	VexMem& mappings;
+	VexMem&				mappings;
 	const std::string		binary;
 };
 

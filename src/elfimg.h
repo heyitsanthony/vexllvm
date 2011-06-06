@@ -29,6 +29,7 @@ public:
 	elfptr_t getEntryPoint(void) const { return (void*)hdr->e_entry; }
 	bool isDirectMapped(void) const { return direct_mapped; } 
 	elfptr_t getSymAddr(const char* symname) const;
+	const char* getFilePath(void) const { return img_path; }
 private:
 	ElfImg(const char* fname, bool linked);
 	bool verifyHeader(void) const;
@@ -48,6 +49,8 @@ private:
 	void linkWithLibs(std::vector<std::string>& needed);
 	void linkWith(DLLib* lib);
 	void* getLinkValue(const char* symname) const;
+
+	char			*img_path;
 
 	PtrList<ElfSegment>	segments;
 	void			*img_mmap;
