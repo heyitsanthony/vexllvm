@@ -70,9 +70,21 @@ void VexJITCache::evict(uint64_t guest_addr)
 void VexJITCache::flush(void)
 {
 	foreach (it, funcBegin(), funcEnd()) {
-		exeEngine->freeMachineCodeForFunction((*it).second);
+		Function	*f = it->second;
+		exeEngine->freeMachineCodeForFunction(f);
 	}
 	jit_cache.clear();
 	jit_dc.flush();
 	VexFCache::flush();
+}
+
+void VexJITCache::flush(void* begin, void* end)
+{
+	foreach (it, funcBegin(begin), funcEnd(end)) {
+		Function	*f = it->second;
+		exeEngine->freeMachineCodeForFunction(f);
+		jit_cache.erase((uint64_t)it->first);
+		jit_dc.put(it->first, NULL);
+	}
+	VexFCache::flush(begin, end);
 }

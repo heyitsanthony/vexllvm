@@ -22,6 +22,7 @@ public:
 	vexfunc_t getFPtr(void* host_addr, uint64_t guest_addr);
 	virtual void evict(uint64_t guest_addr);
 	virtual void flush(void);
+	virtual void flush(void* begin, void* end);
 private:
 	llvm::ExecutionEngine	*exeEngine;
 	jit_map			jit_cache;

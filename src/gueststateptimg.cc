@@ -25,7 +25,6 @@
 
 using namespace llvm;
 
-static uint64_t trap_opcode = 0xcccccccccccccccc;
 static bool dump_maps;
 
 GuestStatePTImg::GuestStatePTImg(

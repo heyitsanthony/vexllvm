@@ -163,10 +163,12 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	}
 
 	found = mappings.lookupMapping(hostptr, m);
+
 	/* assuming !found means its ok... but that's not totally true */
+	/* XXX, when is !found bad? */
 	if (found) {
 		if(!(m.req_prot & PROT_EXEC)) {
-			assert(false && "Trying to jump to non-code");
+			assert (false && "Trying to jump to non-code");
 		}
 		if(m.cur_prot & PROT_WRITE) {
 			m.cur_prot = m.req_prot & ~PROT_WRITE;
@@ -301,27 +303,28 @@ void VexExec::dumpLogs(std::ostream& os) const
 #define MAX_CODE_BYTES 1024
 void VexExec::flushTamperedCode(void* begin, void* end)
 {
-	/* TODO: TJ had better code here for flushes;
-	 * add range flush to cache code
-	 */
-	jit_cache->flush();
+	jit_cache->flush(
+		(void*)((uintptr_t)begin - MAX_CODE_BYTES),
+		(void*)((uintptr_t)end + MAX_CODE_BYTES));
 }
 
-/* these only occur while accessing executable mappings-- so it should 
- * be safe to evict anything in the jit cache (mappings only touch ...) */
+/* this happens when executing JITed code. Be careful about not flushing
+ * the code we're currently running... */
 void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 {
 	// struct ucontext* context = (ucontext*)raw_context;
-	VexMem::Mapping m;
-	bool found = exec_context->mappings.lookupMapping(si->si_addr, m);
-	if(!found) {
+	VexMem::Mapping	m;
+	bool		found;
+
+	found = exec_context->mappings.lookupMapping(si->si_addr, m);
+	if (!found) {
 		std::cerr << "Caught SIGSEGV but couldn't " 
 			<< "find a mapping to tweak @ \n" 
 			<< si->si_addr << std::endl;
 		exit(1);
 	}
 
-	if((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
+	if ((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
 		m.cur_prot = m.req_prot & ~PROT_EXEC;
 		mprotect(m.offset, m.length, m.cur_prot);
 		exec_context->mappings.recordMapping(m);

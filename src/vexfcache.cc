@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <list>
 #include "llvm/Function.h"
 
 #include "Sugar.h"
@@ -130,7 +131,7 @@ Function* VexFCache::genFunctionByVSB(VexSB* vsb)
 {
 	Function			*f;
 	char				emitstr[512];
-	
+
 	/* not in caches, generate */
 	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
 	f = vsb->emit(emitstr);
@@ -182,4 +183,37 @@ void VexFCache::flush(void)
 	}
 	func_cache.clear();
 	func_dc.flush();
+}
+
+void VexFCache::flush(void* begin, void* end)
+{
+	std::list<void*>	delete_addrs;
+
+	/* delete VSBs that fall in range */
+	foreach (it,
+		vexsb_cache.lower_bound(begin), vexsb_cache.upper_bound(end))
+	{
+		VexSB*	vsb = it->second;
+		delete_addrs.push_back(it->first);
+		delete vsb;
+	}
+
+	foreach (it, delete_addrs.begin(), delete_addrs.end()) {
+		vexsb_cache.erase(*it);
+		vexsb_dc.put(*it, NULL);
+	}
+	delete_addrs.clear();
+
+	/* delete funcs that fall in range */
+	foreach (it,
+		func_cache.lower_bound(begin), func_cache.upper_bound(end))
+	{
+		delete_addrs.push_back(it->first);
+		it->second->eraseFromParent();
+	}
+
+	foreach (it, delete_addrs.begin(), delete_addrs.end()) {
+		func_cache.erase(*it);
+		func_dc.put(*it, NULL);
+	}
 }

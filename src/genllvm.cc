@@ -44,7 +44,6 @@ GenLLVM::GenLLVM(const GuestState* gs, const char* name)
 
 GenLLVM::~GenLLVM(void)
 {
-	delete guestState;
 	delete mod;
 	delete builder;
 }
