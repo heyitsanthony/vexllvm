@@ -1661,6 +1661,9 @@ OPV_EMIT(Mul32Fx2 , get_vtf(2), FMul )
 OPV_EMIT(Mul32Fx4 , get_vtf(4), FMul )
 OPV_EMIT(Mul64Fx2 , get_vtd(2), FMul )
 
+OPV_EMIT(Div32Fx4 , get_vtf(4), FDiv )
+OPV_EMIT(Div64Fx2 , get_vtd(2), FDiv )
+
 #define TRIOP_EXPAND_EMIT(x,y,z,w)				\
 Value* VexExprTriop##x::emit(void) const			\
 {								\
