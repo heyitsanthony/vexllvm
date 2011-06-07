@@ -1,3 +1,4 @@
+#include <llvm/Type.h>
 #include <llvm/Constants.h>
 #include <llvm/DerivedTypes.h>
 #include "genllvm.h"
@@ -701,16 +702,18 @@ VexExprMux0X::~VexExprMux0X(void)
 	delete expr0;
 	delete exprX;
 }
-inline Value* toIntegerType(IRBuilder<>	*builder, Value* v) {
-	if(isa<VectorType>(v->getType())) {
+
+inline Value* toIntegerType(IRBuilder<>	*builder, Value* v)
+{
+	if (isa<VectorType>(v->getType())) {
 		return builder->CreateBitCast(v, IntegerType::get(
 			getGlobalContext(),
 			static_cast<const VectorType*>(
 				v->getType())->getBitWidth()));
-	} else if(v->getType()->isFloatTy()) {
+	} else if (v->getType()->getTypeID() == Type::FloatTyID) {
 		return builder->CreateBitCast(v, IntegerType::get(
 			getGlobalContext(), 32));
-	} else if(v->getType()->isDoubleTy()) {
+	} else if (v->getType()->getTypeID() == Type::DoubleTyID) {
 		return builder->CreateBitCast(v, IntegerType::get(
 			getGlobalContext(), 64));
 	} else {
@@ -718,6 +721,7 @@ inline Value* toIntegerType(IRBuilder<>	*builder, Value* v) {
 	}
 	
 }
+
 Value* VexExprMux0X::emit(void) const
 {
 	IRBuilder<>	*builder;
