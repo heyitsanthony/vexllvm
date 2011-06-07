@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <iostream>
 #include <string.h>
 
@@ -7,13 +8,15 @@
 
 using namespace llvm;
 
-GuestState::GuestState(void)
+GuestState::GuestState(const char* in_bin_path)
 {
 	cpu_state = new GuestCPUState();
+	bin_path = strdup(in_bin_path);
 }
 
 GuestState::~GuestState(void)
 {
+	free(bin_path);
 	delete cpu_state;
 }
 

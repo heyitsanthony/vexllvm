@@ -40,12 +40,13 @@ int main(int argc, char* argv[], char* envp[])
 	}
 
 	gs = GuestStatePTImg::create<GuestStatePTImg>(argc - 1, argv + 1, envp);
-	vexexec = VexExec::create<VexExec,GuestState>(gs, argv[1]);
+	vexexec = VexExec::create<VexExec,GuestState>(gs);
 	assert (vexexec && "Could not create vexexec");
 	
 	vexexec->run();
 
 	delete vexexec;
+	delete gs;
 
 	return 0;
 }

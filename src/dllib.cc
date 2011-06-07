@@ -11,7 +11,7 @@ DLLib* DLLib::load(const char* libname)
 
 	if (!lib->dl_h)  {
 		delete lib;
-		return 0;
+		return NULL;
 	}
 
 	return lib;

@@ -19,7 +19,7 @@ public:
 	~VexHelpers();
 	std::list<llvm::Module*> getModules(void) const;
 	llvm::Function* getHelper(const char* s) const;
-	void bindToExeEngine(llvm::ExecutionEngine*) const;
+	void bindToExeEngine(llvm::ExecutionEngine*);
 private:
 	llvm::Module*	loadMod(const char* path);
 	llvm::Module	*helper_mod;

@@ -33,6 +33,8 @@
 
 using namespace llvm;
 
+VexExec* VexExec::exec_context = NULL;
+
 #define TRACE_MAX	500
 
 void VexExec::setupStatics(GuestState* in_gs)
@@ -46,20 +48,15 @@ VexExec::~VexExec()
 {
 	if (gs == NULL) return;
 
-	/* free cache */
-	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
-		delete (*it).second;
-	}
-
-	delete vexlate;
-	delete exeEngine;
+	delete jit_cache;
 	delete sc;
 }
 
-VexExec::VexExec(GuestState* in_gs, const std::string& binary)
+VexExec::VexExec(GuestState* in_gs)
 : gs(in_gs), sb_executed_c(0), trace_c(0), exited(false)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
+	ExecutionEngine	*exeEngine;
 	std::string	err_str;
 
 	eb.setErrorStr(&err_str);
@@ -69,11 +66,14 @@ VexExec::VexExec(GuestState* in_gs, const std::string& binary)
 	/* XXX need to fix ownership of module exe engine deletes it now! */
 	theVexHelpers->bindToExeEngine(exeEngine);
 
-	vexlate = new VexXlate();
-	sc = new Syscalls(mappings, binary);
+	jit_cache = new VexJITCache(new VexXlate(), exeEngine);
+	if (getenv("VEXLLVM_VSB_MAXCACHE")) {
+		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
+	}
+
+	sc = new Syscalls(mappings, gs->getBinaryPath());
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
-	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
 }
 
 const VexSB* VexExec::doNextSB(void)
@@ -148,22 +148,13 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	hostptr_t			hostptr;
 	VexSB				*vsb;
 	vexsb_map::const_iterator	it;
-	VexMem::Mapping m;
-	bool found;
+	VexMem::Mapping			m;
+	bool				found;
 
 	hostptr = (void*)(gs->addr2Host((uint64_t)elfptr));
 
 	/* XXX recongnize library ranges */
 	if (hostptr == NULL) hostptr = elfptr;
-
-	vsb = vexsb_dc.get(elfptr);
-	if (vsb) return vsb;
-
-	it = vexsb_cache.find(elfptr);
-	if (it != vexsb_cache.end()) {
-		vsb = (*it).second;
-		goto update_dc;
-	}
 
 	if (exit_addrs.count((elfptr_t)elfptr)) {
 		exited = true;
@@ -172,10 +163,12 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	}
 
 	found = mappings.lookupMapping(hostptr, m);
+
 	/* assuming !found means its ok... but that's not totally true */
-	if(found) {
+	/* XXX, when is !found bad? */
+	if (found) {
 		if(!(m.req_prot & PROT_EXEC)) {
-			assert(false && "Trying to jump to non-code");
+			assert (false && "Trying to jump to non-code");
 		}
 		if(m.cur_prot & PROT_WRITE) {
 			m.cur_prot = m.req_prot & ~PROT_WRITE;
@@ -184,49 +177,16 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 		}
 	}
 
-	vsb = vexlate->xlate(hostptr, (uint64_t)elfptr);
-	vexsb_cache[elfptr] = vsb;
-	
+	/* compile it + get vsb */
+	vsb = jit_cache->getVSB(hostptr, (uint64_t)elfptr);
+	jit_cache->getFPtr(hostptr, (uint64_t)elfptr);
+
+	if (!vsb) fprintf(stderr, "Could not get VSB for %p\n", elfptr);
+	assert (vsb && "Expected VSB");
 	assert((!found || (void*)vsb->getEndAddr() < m.end()) && 
 		"code spanned known page mappings");
-update_dc:
-	vexsb_dc.put(elfptr, vsb);
+
 	return vsb;
-}
-
-vexfunc_t VexExec::getSBFuncPtr(VexSB* vsb)
-{
-	Function			*f;
-	char				emitstr[1024];
-	vexfunc_t 			func_ptr;
-	jit_map::const_iterator		it;
-	
-	func_ptr = (vexfunc_t)jit_dc.get((void*)vsb);
-	if (func_ptr != NULL) goto hit_func;
-
-	it = jit_cache.find(vsb);
-	if (it != jit_cache.end()) {
-		func_ptr = ((*it).second);
-		goto miss_func;
-	}	
-	
-	/* not in caches, generate */
-	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
-	f = vsb->emit(emitstr);
-	assert (f && "FAILED TO EMIT FUNC??");
-
-	if(dump_llvm)
-		f->dump();
-
-	func_ptr = (vexfunc_t)exeEngine->getPointerToFunction(f);
-	assert (func_ptr != NULL && "Could not JIT");
-	jit_cache[vsb] = func_ptr;
-
-miss_func:
-	jit_dc.put((void*)vsb, (vexfunc_t*)func_ptr);
-	
-hit_func:
-	return func_ptr;
 }
 
 uint64_t VexExec::doVexSB(VexSB* vsb)
@@ -235,7 +195,8 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	vexfunc_t	func_ptr;
 	uint64_t	new_ip;
 
-	func_ptr = getSBFuncPtr(vsb);
+	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
+	assert (func_ptr != NULL);
 
 	sb_executed_c++;
 
@@ -336,44 +297,34 @@ void VexExec::runAddrStack(void)
 
 void VexExec::dumpLogs(std::ostream& os) const
 {
-	vexlate->dumpLog(os);
 	sc->print(os);
 }
+
 #define MAX_CODE_BYTES 1024
-void VexExec::flushTamperedCode(void* begin, void* end) {
-	exec_context->jit_dc.flush((char*)begin - MAX_CODE_BYTES, 
-		(char*)end + MAX_CODE_BYTES);
-	exec_context->vexsb_dc.flush((char*)begin - MAX_CODE_BYTES, 
-		(char*)end + MAX_CODE_BYTES);
-	for(vexsb_map::iterator i = 
-		vexsb_cache.lower_bound((char*)begin - MAX_CODE_BYTES); 
-		i != vexsb_cache.upper_bound((char*)end + MAX_CODE_BYTES);) {
-		VexSB* vsb = i->second;
-		bool in_range = (void*)vsb->getGuestAddr() < end && 
-			(void*)vsb->getEndAddr() > begin;
-		if(in_range) {
-			vexsb_map::iterator to_delete = i++;
-			/* TODO: how do we free the generated code? */
-			jit_cache.erase(vsb);
-			vexsb_cache.erase(to_delete);
-			delete vsb;
-		} else {
-			++i;
-		}
-	}
-	
+void VexExec::flushTamperedCode(void* begin, void* end)
+{
+	jit_cache->flush(
+		(void*)((uintptr_t)begin - MAX_CODE_BYTES),
+		(void*)((uintptr_t)end + MAX_CODE_BYTES));
 }
-void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context) {
+
+/* this happens when executing JITed code. Be careful about not flushing
+ * the code we're currently running... */
+void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
+{
 	// struct ucontext* context = (ucontext*)raw_context;
-	VexMem::Mapping m;
-	bool found = exec_context->mappings.lookupMapping(si->si_addr, m);
-	if(!found) {
+	VexMem::Mapping	m;
+	bool		found;
+
+	found = exec_context->mappings.lookupMapping(si->si_addr, m);
+	if (!found) {
 		std::cerr << "Caught SIGSEGV but couldn't " 
 			<< "find a mapping to tweak @ \n" 
 			<< si->si_addr << std::endl;
 		exit(1);
 	}
-	if((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
+
+	if ((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
 		m.cur_prot = m.req_prot & ~PROT_EXEC;
 		mprotect(m.offset, m.length, m.cur_prot);
 		exec_context->mappings.recordMapping(m);
@@ -385,4 +336,3 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context) {
 		exit(1);
 	}
 }
-VexExec* VexExec::exec_context = NULL;

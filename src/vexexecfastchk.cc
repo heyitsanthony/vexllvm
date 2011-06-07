@@ -5,8 +5,8 @@
 #include "vexsb.h"
 #include "ptimgchk.h"
 
-VexExecFastChk::VexExecFastChk(PTImgChk* gs, const std::string& binary)
-: VexExecChk(gs, binary),
+VexExecFastChk::VexExecFastChk(PTImgChk* gs)
+: VexExecChk(gs),
   pt_sc_req_c(0),
   pt_sc_done_c(0)
 {

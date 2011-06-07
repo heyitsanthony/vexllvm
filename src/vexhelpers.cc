@@ -112,7 +112,7 @@ Function* VexHelpers::getHelper(const char* s) const
 	return NULL;
 }
 
-void VexHelpers::bindToExeEngine(ExecutionEngine* exe) const
+void VexHelpers::bindToExeEngine(ExecutionEngine* exe)
 {
 /* XXX. Kill when KLEE is updated */
 #if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)

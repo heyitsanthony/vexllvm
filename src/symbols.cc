@@ -1,10 +1,11 @@
 #include "Sugar.h"
+#include <stdio.h>
 #include "symbols.h"
 
 Symbols::~Symbols()
 {
 	/* free all allocated symbols */
-	foreach (it, name_map.begin(), name_map.end())
+	foreach (it, addr_map.begin(), addr_map.end())
 		delete (*it).second;
 }
 

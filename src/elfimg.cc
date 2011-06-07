@@ -6,6 +6,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "Sugar.h"
 #include "dllib.h"
@@ -37,6 +39,8 @@ ElfImg* ElfImg::createUnlinked(const char* fname)
 
 ElfImg::~ElfImg(void)
 {
+	free(img_path);
+
 	if (fd < 0) return;
 	
 	munmap(img_mmap, img_bytes_c);
@@ -46,6 +50,8 @@ ElfImg::~ElfImg(void)
 ElfImg::ElfImg(const char* fname, bool linked)
 {
 	struct stat	st;
+
+	img_path = strdup(fname);
 
 	fd = open(fname, O_RDONLY);
 	if (fd == -1) goto err_open;
@@ -356,18 +362,20 @@ void* ElfImg::getLinkValue(const char* symname) const
 #include <iostream>
 /* pull the symbols we want to instrument into the symbol table */
 #define INST_CALL_NUM	6
-void ElfImg::pullInstrumented(DLLib* lib)
+static 	const char* calls[INST_CALL_NUM] = 
 {
-	const char* calls[INST_CALL_NUM] = {
-		"exit",
-		"abort",
-		"_exit",
-		"fork",
-		"kill",
-		"uselocale"
+	"exit",
+	"abort",
+	"_exit",
+	"fork",
+	"kill",
+	"uselocale"
 //		,
 //		"exit_group"
-		};
+};
+
+void ElfImg::pullInstrumented(DLLib* lib)
+{
 	/* XXX does this belong here? */
 	for (unsigned int i = 0; i < INST_CALL_NUM; i++) {
 		void	*fptr;
