@@ -1217,21 +1217,25 @@ OPF0X_SEL_EMIT(Min32F0x4, get_vtf(4), FCmpULT);
 OPF0X_SEL_EMIT(Max64F0x2, get_vtd(2), FCmpUGT);
 OPF0X_SEL_EMIT(Min64F0x2, get_vtd(2), FCmpULT);
 
-Value* VexExprUnopSqrt64F0x2::emit(void) const
-{
-	Value		*lo_op, *result;
-	Function	*f;
-	UNOP_SETUP
-	v1 = builder->CreateBitCast(v1, get_vtd(2));
-	lo_op = builder->CreateExtractElement(v1, get_32i(0));
-	std::vector<const Type*> sqrtArgs;
-	sqrtArgs.push_back(get_d());
-	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), Intrinsic::sqrt,
-		&sqrtArgs[0], 1);
-	assert (f != NULL);
-	result = builder->CreateCall(f, lo_op);
-	return builder->CreateInsertElement(v1, result, get_32i(0));
+#define OPF0X_1INTR_EMIT(x, y, z)					\
+Value* VexExprUnop##x::emit(void) const					\
+{									\
+	Value		*a1, *result;					\
+	Function	*f;						\
+	UNOP_SETUP							\
+	v1 = builder->CreateBitCast(v1, y);				\
+	a1 = builder->CreateExtractElement(v1, get_32i(0));		\
+	std::vector<const Type*> call_args;				\
+	call_args.push_back(y->getScalarType());			\
+	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), 		\
+		Intrinsic::z, &call_args[0], 1);			\
+	assert (f != NULL);						\
+	result = builder->CreateCall(f, a1);				\
+	return builder->CreateInsertElement(v1, result, get_32i(0));	\
 }
+
+OPF0X_1INTR_EMIT(Sqrt64F0x2, get_vtd(2), sqrt);
+OPF0X_1INTR_EMIT(Sqrt32F0x4, get_vtf(4), sqrt);
 
 Value* VexExprBinopSetV128lo64::emit(void) const
 {
