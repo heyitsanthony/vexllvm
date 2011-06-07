@@ -1524,41 +1524,6 @@ OPNRW_EMIT(Narrow32x4, get_vt(8, 16));
 //LLVM is busted and doesnt work properly with a vector SELECT opcode...
 
 // name, srcTy, destTy, compare const, 
-#define OPNRWUS_EMIT(x, y, w, c)				\
-Value* VexExprBinop##x::emit(void) const			\
-{								\
-	BINOP_SETUP						\
-	v1 = builder->CreateBitCast(v1, y);			\
-	v2 = builder->CreateBitCast(v2, y);			\
-	Value* result = builder->CreateBitCast(			\
-		get_c(w->getBitWidth(), 0), w);			\
-	for(unsigned i = 0; i < y->getNumElements(); ++i) {	\
-		Value* elem = builder->CreateExtractElement(	\
-			v1, get_32i(i));			\
-		elem = builder->CreateSelect(			\
-			builder->CreateICmpUGT(elem, c),	\
-			c, elem);				\
-		elem = builder->CreateTrunc(elem, 		\
-			w->getScalarType());			\
-		result = builder->CreateInsertElement(		\
-			result, elem, get_32i(i));		\
-	}							\
-	for(unsigned i = 0; i < y->getNumElements(); ++i) {	\
-		Value* elem = builder->CreateExtractElement(	\
-			v2, get_32i(i));			\
-		elem = builder->CreateSelect(			\
-			builder->CreateICmpUGT(elem, c),	\
-			c, elem);				\
-		elem = builder->CreateTrunc(elem, 		\
-			w->getScalarType());			\
-		result = builder->CreateInsertElement(		\
-			result, elem, 				\
-			get_32i(i + y->getNumElements()));	\
-	}							\
-	return result;						\
-}
-
-// name, srcTy, destTy, compare const, 
 #define OPNRWSS_EMIT(x, y, w, c, neg_c)				\
 Value* VexExprBinop##x::emit(void) const			\
 {								\
@@ -1599,10 +1564,10 @@ Value* VexExprBinop##x::emit(void) const			\
 	return result;						\
 }
 
-OPNRWUS_EMIT(QNarrow16Ux4, get_vt(4, 16), get_vt(8 , 8 ), get_c(16, 0x00FF));
-OPNRWUS_EMIT(QNarrow16Ux8, get_vt(8, 16), get_vt(16, 8 ), get_c(16, 0x00FF));
-OPNRWUS_EMIT(QNarrow32Ux4, get_vt(4, 32), get_vt(8 , 16), get_c(32, 0xFFFF));
-                                 
+OPNRWSS_EMIT(QNarrow16Ux4, get_vt(4, 16), get_vt(8 , 8 ), get_c(16, 0x00FF), get_c(16, 0));
+OPNRWSS_EMIT(QNarrow16Ux8, get_vt(8, 16), get_vt(16, 8 ), get_c(16, 0x00FF), get_c(16, 0));
+OPNRWSS_EMIT(QNarrow32Ux4, get_vt(4, 32), get_vt(8 , 16), get_c(32, 0xFFFF), get_c(32, 0));
+
 OPNRWSS_EMIT(QNarrow16Sx4, get_vt(4, 16), get_vt(8 , 8 ), get_c(16, 0x7F)  , get_c(16, 0xFF80    ));
 OPNRWSS_EMIT(QNarrow16Sx8, get_vt(8, 16), get_vt(16, 8 ), get_c(16, 0x7F)  , get_c(16, 0xFF80    ));
 OPNRWSS_EMIT(QNarrow32Sx2, get_vt(2, 32), get_vt(4 , 16), get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
