@@ -55,6 +55,8 @@ int main(int argc, char* argv[])
 	vexexec->run();
 
 	delete vexexec;
+	delete gs;
+	delete img;
 
 	return 0;
 }

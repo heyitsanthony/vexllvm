@@ -108,6 +108,8 @@ int main(int argc, char* argv[])
 	dump_data();
 
 	delete vexexec;
+	delete gs;
+	delete img;
 
 	return 0;
 }

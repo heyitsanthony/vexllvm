@@ -2,6 +2,7 @@
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
+#include "Sugar.h"
 #include "vexjitcache.h"
 
 using namespace llvm;
@@ -54,7 +55,6 @@ vexfunc_t VexJITCache::getFPtr(void* host_addr, uint64_t guest_addr)
 	return ret_f;
 }
 
-
 void VexJITCache::evict(uint64_t guest_addr)
 {
 	Function	*f;
@@ -64,4 +64,14 @@ void VexJITCache::evict(uint64_t guest_addr)
 	jit_cache.erase(guest_addr);
 	jit_dc.put((void*)guest_addr, NULL);
 	VexFCache::evict(guest_addr);
+}
+
+void VexJITCache::flush(void)
+{
+	foreach (it, funcBegin(), funcEnd()) {
+		exeEngine->freeMachineCodeForFunction((*it).second);
+	}
+	jit_cache.clear();
+	jit_dc.flush();
+	VexFCache::flush();
 }

@@ -11,14 +11,15 @@
 using namespace llvm;
 
 VexFCache::VexFCache(void)
-: xlate(new VexXlate())
+: xlate(new VexXlate()),
+  max_cache_ents(~0) /* don't evict by default */
 {
 	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
 }
 
-
 VexFCache::VexFCache(VexXlate* in_xlate)
-: xlate(in_xlate)
+: xlate(in_xlate),
+  max_cache_ents(~0)
 {
 	assert (xlate != NULL);
 	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
@@ -26,12 +27,14 @@ VexFCache::VexFCache(VexXlate* in_xlate)
 
 VexFCache::~VexFCache(void)
 {
-	/* free cache */
-	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
-		delete (*it).second;
-	}
-
+	flush();
 	delete xlate;
+}
+
+void VexFCache::setMaxCache(unsigned int x)
+{
+	if (x < max_cache_ents) flush();
+	max_cache_ents = x;
 }
 
 VexSB* VexFCache::getVSB(void* hostptr, uint64_t guest_addr)
@@ -93,7 +96,6 @@ Function* VexFCache::getFunc(void* hostptr, uint64_t guest_addr)
 	return ret_f;
 }
 
-
 Function* VexFCache::genFunctionByVSB(VexSB* vsb)
 {
 	Function			*f;
@@ -133,4 +135,17 @@ void VexFCache::evict(uint64_t guest_addr)
 void VexFCache::dumpLog(std::ostream& os) const
 {
 	xlate->dumpLog(os);
+}
+
+void VexFCache::flush(void)
+{
+	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
+		delete (*it).second;
+	}
+
+	vexsb_cache.clear();
+	vexsb_dc.flush();
+
+	func_cache.clear();
+	func_dc.flush();
 }

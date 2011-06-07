@@ -301,6 +301,8 @@ void VexExec::flushTamperedCode(void* begin, void* end)
 	assert (0 == 1 && "STUB: FIXME FIXME");
 }
 
+/* these only occur while accessing executable mappings-- so it should 
+ * be safe to evict anything in the jit cache (mappings only touch ...) */
 void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 {
 	// struct ucontext* context = (ucontext*)raw_context;

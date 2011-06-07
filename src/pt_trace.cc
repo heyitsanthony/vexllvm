@@ -99,6 +99,7 @@ int main(int argc, char* argv[], char* envp[])
 	dump_data();
 
 	delete vexexec;
+	delete gs;
 
 	return 0;
 }

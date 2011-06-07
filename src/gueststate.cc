@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <iostream>
 #include <string.h>
 
@@ -15,7 +16,7 @@ GuestState::GuestState(const char* in_bin_path)
 
 GuestState::~GuestState(void)
 {
-	delete [] bin_path;
+	free(bin_path);
 	delete cpu_state;
 }
 

@@ -22,7 +22,7 @@ class VexFCache
 {
 public:
 	/* makes own vexxlate */
-	VexFCache(void); 
+	VexFCache(void);
 	/* claims ownership of vexxlate */
 	VexFCache(VexXlate* vexxlate);
 
@@ -39,10 +39,18 @@ public:
 
 	virtual void evict(uint64_t guest_addr);
 	void dumpLog(std::ostream& os) const;
+	virtual void setMaxCache(unsigned int x);
+	virtual void flush(void);
+protected:
+	unsigned int getMaxCache(void) const { return max_cache_ents; }
+	func_map::iterator funcBegin() { return func_cache.begin(); }
+	func_map::iterator funcEnd() { return func_cache.end(); }
 private:
+
 	bool			dump_llvm;
 
 	VexXlate*		xlate;
+	unsigned int		max_cache_ents;
 
 	vexsb_map		vexsb_cache;
 	DirectCache<VexSB>	vexsb_dc;
