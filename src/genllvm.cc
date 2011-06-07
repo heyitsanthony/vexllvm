@@ -114,6 +114,7 @@ Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len,
 {
 	Value		*ret, *addr;
 
+	assert(byteOff % (accessTy->getPrimitiveSizeInBits() / 8) == 0);
 	const Type* offset_type = IntegerType::get(
 		getGlobalContext(), sizeof(int)*8);
 	Value* bias_v = ConstantInt::get(
@@ -125,7 +126,8 @@ Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len,
 		bias_v);
 	Value* base_v = ConstantInt::get(
 		getGlobalContext(),
-		APInt(sizeof(unsigned int) * 8, byteOff));
+		APInt(sizeof(unsigned int) * 8, byteOff /
+		(accessTy->getPrimitiveSizeInBits() / 8)));
 	offset = builder->CreateURem(offset, len_v);
 	offset = builder->CreateAdd(offset, base_v);
 	addr = getCtxGEP(
@@ -184,6 +186,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len,
 	Value		*ret, *addr;
 	StoreInst	*si;
 
+	assert(byteOff % (v->getType()->getPrimitiveSizeInBits() / 8) == 0);
 	const Type* offset_type = IntegerType::get(
 		getGlobalContext(), sizeof(int)*8);
 	Value* bias_v = ConstantInt::get(
@@ -195,7 +198,8 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len,
 		bias_v);
 	Value* base_v = ConstantInt::get(
 		getGlobalContext(),
-		APInt(sizeof(unsigned int) * 8, byteOff));
+		APInt(sizeof(unsigned int) * 8, byteOff / 
+		(v->getType()->getPrimitiveSizeInBits() / 8)));
 	offset = builder->CreateURem(offset, len_v);
 	offset = builder->CreateAdd(offset, base_v);
 	addr = getCtxGEP(offset, v->getType());

@@ -210,6 +210,15 @@ bool PTImgChk::fixup(const void* ip_begin, const void* ip_end)
 	return false;
 }
 
+inline bool ldeqd(void* ld, long d) {
+	long double* real = (long double*)ld;
+	union {
+		double d;
+		long l;
+	} alias;
+	alias.d = *real;
+	return alias.l == d;
+}
 bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 {
 	user_regs_struct	regs;
@@ -250,7 +259,8 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 			*(ULong*)&fpregs.st_space[4 * i] &&
 			(fpregs.st_space[4 * i + 2] == 0 ||
 			fpregs.st_space[4 * i + 2] == 0xFFFF) &&
-			fpregs.st_space[4 * i + 3] == 0;
+			fpregs.st_space[4 * i + 3] == 0 ||
+			ldeqd(&fpregs.st_space[4 * i], state.guest_FPREG[i]);
 		if(!is_ok) {
 			x87_ok = false;
 			break;

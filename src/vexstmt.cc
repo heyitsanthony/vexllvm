@@ -51,7 +51,7 @@ void VexStmtPut::print(std::ostream& os) const
 VexStmtPutI::VexStmtPutI(VexSB* in_parent, const IRStmt* in_stmt)
 : VexStmt(in_parent, in_stmt),
   base(in_stmt->Ist.PutI.descr->base),
-  len(VexSB::getTypeBitWidth(in_stmt->Ist.PutI.descr->elemTy) / 8 * in_stmt->Ist.PutI.descr->nElems),
+  len(in_stmt->Ist.PutI.descr->nElems),
   ix_expr(VexExpr::create(this, in_stmt->Ist.PutI.ix)),
   bias(in_stmt->Ist.PutI.bias),
   data_expr(VexExpr::create(this, in_stmt->Ist.PutI.data))

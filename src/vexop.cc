@@ -1661,6 +1661,20 @@ OPV_EMIT(Mul32Fx2 , get_vtf(2), FMul )
 OPV_EMIT(Mul32Fx4 , get_vtf(4), FMul )
 OPV_EMIT(Mul64Fx2 , get_vtd(2), FMul )
 
+#define TRIOP_EXPAND_EMIT(x,y,z,w)				\
+Value* VexExprTriop##x::emit(void) const			\
+{								\
+	TRIOP_SETUP						\
+	v2 = builder->Create##y(v2, z);				\
+	v3 = builder->Create##y(v3, z);				\
+	return builder->Create##w(v2, v3);			\
+}
+
+TRIOP_EXPAND_EMIT(AddF64, BitCast, get_d(), FAdd)
+TRIOP_EXPAND_EMIT(SubF64, BitCast, get_d(), FSub)
+TRIOP_EXPAND_EMIT(DivF64, BitCast, get_d(), FDiv)
+TRIOP_EXPAND_EMIT(MulF64, BitCast, get_d(), FMul)
+
 //note max vector elements of 16
 #define OPVS_EMIT(x, y, z)			\
 Value* VexExprBinop##x::emit(void) const	\

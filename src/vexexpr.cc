@@ -391,6 +391,11 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Mul32Fx4);
 	BINOP_TAGOP(Mul64Fx2);
 
+	TRIOP_TAGOP(AddF64);
+	TRIOP_TAGOP(SubF64);
+	TRIOP_TAGOP(MulF64);
+	TRIOP_TAGOP(DivF64);
+
 	BINOP_TAGOP(CmpEQ8x8);
 	BINOP_TAGOP(CmpEQ8x16);
 	BINOP_TAGOP(CmpEQ16x4);
@@ -543,8 +548,7 @@ void VexExprGet::print(std::ostream& os) const
 VexExprGetI::VexExprGetI(VexStmt* in_parent, const IRExpr* in_expr)
   : VexExpr(in_parent),
   base(in_expr->Iex.GetI.descr->base),
-  len(VexSB::getTypeBitWidth(
-  	in_expr->Iex.GetI.descr->elemTy) / 8 * in_expr->Iex.GetI.descr->nElems),
+  len(in_expr->Iex.GetI.descr->nElems),
   ix_expr(VexExpr::create(in_parent, in_expr->Iex.GetI.ix)),
   bias(in_expr->Iex.GetI.bias),
   bits(VexSB::getTypeBitWidth(in_expr->Iex.GetI.descr->elemTy))
