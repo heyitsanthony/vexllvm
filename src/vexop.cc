@@ -1052,6 +1052,22 @@ BINCMP_EMIT(Max32Fx4, get_vtf(4), FCmpUGT);
 BINCMP_EMIT(Max64Fx2, get_vtd(2), FCmpUGT);
 BINCMP_EMIT(Min64Fx2, get_vtd(2), FCmpULT);
 
+#define OP_1INTR_EMIT(x, y, z)						\
+Value* VexExprUnop##x::emit(void) const					\
+{									\
+	Function	*f;						\
+	UNOP_SETUP							\
+	v1 = builder->CreateBitCast(v1, y);				\
+	std::vector<const Type*> call_args;				\
+	call_args.push_back(y);						\
+	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), 		\
+		Intrinsic::z, &call_args[0], 1);			\
+	assert (f != NULL);						\
+	return builder->CreateCall(f, v1);				\
+}
+OP_1INTR_EMIT(Sqrt64Fx2, get_vtd(2), sqrt);
+OP_1INTR_EMIT(Sqrt32Fx4, get_vtf(4), sqrt);
+
 
 BINOP_EMIT(Or8, Or)
 BINOP_EMIT(Or16, Or)

@@ -187,6 +187,9 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Max64Fx2);
 	BINOP_TAGOP(Min64Fx2);
 
+	UNOP_TAGOP(Sqrt32Fx4);
+	UNOP_TAGOP(Sqrt64Fx2);
+
 	BINOP_TAGOP(Or8);
 	BINOP_TAGOP(Or16);
 	BINOP_TAGOP(Or32);
