@@ -37,11 +37,44 @@ void VexFCache::setMaxCache(unsigned int x)
 	max_cache_ents = x;
 }
 
+/* XXX: be smarter; random eviction is stupid */
+uint64_t VexFCache::selectVictimAddress(void) const
+{
+	int		choice = rand() % vexsb_cache.size();
+	uint64_t	evict_addr = 0;
+
+	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
+		if (!choice) {
+			evict_addr = it->second->getGuestAddr();
+			break;
+		}
+		choice--;
+	}
+
+	assert (evict_addr && "0 evict addr?");
+	return evict_addr;
+}
+
 VexSB* VexFCache::getVSB(void* hostptr, uint64_t guest_addr)
 {
 	VexSB*	vsb;
 
+	vsb = getCachedVSB(guest_addr);
+	if (vsb) return vsb;
+
+	return allocCacheVSB(hostptr, guest_addr);
+}
+
+VexSB* VexFCache::allocCacheVSB(void* hostptr, uint64_t guest_addr)
+{
+	VexSB*	vsb;
+
 	vsb = xlate->xlate(hostptr, (uint64_t)guest_addr);
+
+	if (vexsb_cache.size() == max_cache_ents)
+		evict(selectVictimAddress());
+	assert (vexsb_cache.size() < max_cache_ents);
+
 	vexsb_cache[(void*)guest_addr] = vsb;
 	vexsb_dc.put((void*)guest_addr, vsb);
 	return vsb;
@@ -87,10 +120,7 @@ Function* VexFCache::getFunc(void* hostptr, uint64_t guest_addr)
 	ret_f = getCachedFunc(guest_addr);
 	if (ret_f) return ret_f;
 
-	vsb = getCachedVSB(guest_addr);
-	if (!vsb) {
-		vsb = getVSB(hostptr, guest_addr);	
-	}
+	vsb = getVSB(hostptr, guest_addr);
 
 	ret_f = genFunctionByVSB(vsb);
 	return ret_f;
@@ -116,13 +146,13 @@ Function* VexFCache::genFunctionByVSB(VexSB* vsb)
 
 void VexFCache::evict(uint64_t guest_addr)
 {
-	Function	*func;
 	VexSB		*vsb;
+	Function	*func;
 
 	if ((func = getCachedFunc(guest_addr)) != NULL) {
 		func_cache.erase((void*)guest_addr);
 		func_dc.put((void*)guest_addr, NULL);
-		delete func;
+		func->eraseFromParent();
 	}
 
 	if ((vsb = getCachedVSB(guest_addr)) != NULL) {
@@ -140,12 +170,16 @@ void VexFCache::dumpLog(std::ostream& os) const
 void VexFCache::flush(void)
 {
 	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
-		delete (*it).second;
+		VexSB*	vsb = it->second;
+		delete vsb;
 	}
 
 	vexsb_cache.clear();
 	vexsb_dc.flush();
 
+	foreach (it, func_cache.begin(), func_cache.end()) {
+		it->second->eraseFromParent();
+	}
 	func_cache.clear();
 	func_dc.flush();
 }

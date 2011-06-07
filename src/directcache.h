@@ -38,8 +38,7 @@ private:
 	unsigned int ptr2slot(void* p) const
 	{
 		uintptr_t	n;
-//		n = (((uintptr_t)p) >> 1);
-		n = ((uintptr_t)p);
+		n = (((uintptr_t)p) >> 2); /* who cares about the lowest bits */
 		return n % DC_SIZE;
 	}
 

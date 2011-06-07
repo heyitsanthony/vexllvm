@@ -15,6 +15,7 @@ VexJITCache::VexJITCache(VexXlate* xlate, ExecutionEngine *in_exe)
 
 VexJITCache::~VexJITCache(void)
 {
+	flush();
 	delete exeEngine;
 }
 

@@ -67,6 +67,10 @@ VexExec::VexExec(GuestState* in_gs)
 	theVexHelpers->bindToExeEngine(exeEngine);
 
 	jit_cache = new VexJITCache(new VexXlate(), exeEngine);
+	if (getenv("VEXLLVM_VSB_MAXCACHE")) {
+		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
+	}
+
 	sc = new Syscalls(mappings, gs->getBinaryPath());
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
@@ -171,12 +175,12 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 		}
 	}
 
-	/* compile it */
+	/* compile it + get vsb */
+	vsb = jit_cache->getVSB(hostptr, (uint64_t)elfptr);
 	jit_cache->getFPtr(hostptr, (uint64_t)elfptr);
 
-	/* vsb should be cached still */
-	vsb = jit_cache->getCachedVSB((uint64_t)elfptr);
-
+	if (!vsb) fprintf(stderr, "Could not get VSB for %p\n", elfptr);
+	assert (vsb && "Expected VSB");
 	assert((!found || (void*)vsb->getEndAddr() < m.end()) && 
 		"code spanned known page mappings");
 
@@ -297,8 +301,10 @@ void VexExec::dumpLogs(std::ostream& os) const
 #define MAX_CODE_BYTES 1024
 void VexExec::flushTamperedCode(void* begin, void* end)
 {
-	/* XXX flush code between begin and end */
-	assert (0 == 1 && "STUB: FIXME FIXME");
+	/* TODO: TJ had better code here for flushes;
+	 * add range flush to cache code
+	 */
+	jit_cache->flush();
 }
 
 /* these only occur while accessing executable mappings-- so it should 

@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <vector>
 #include "directcache.h"
 
 
@@ -45,7 +46,10 @@ protected:
 	unsigned int getMaxCache(void) const { return max_cache_ents; }
 	func_map::iterator funcBegin() { return func_cache.begin(); }
 	func_map::iterator funcEnd() { return func_cache.end(); }
+
+	uint64_t selectVictimAddress(void) const;
 private:
+	VexSB* allocCacheVSB(void* hostptr, uint64_t guest_addr);
 
 	bool			dump_llvm;
 
