@@ -738,8 +738,8 @@ CASE_OP(Rsqrte32x4)
 #define get_vt(w, b) VectorType::get(get_i(b), w)
 #define get_c(b, v) ConstantInt::get(getGlobalContext(), APInt(b, v))
 #define get_32i(v)	get_c(32, v)
-#define get_f() builder->getFloatTy()
-#define get_d() builder->getDoubleTy()
+#define get_f() Type::getFloatTy(getGlobalContext())
+#define get_d() Type::getDoubleTy(getGlobalContext())
 #define get_vtf(w) VectorType::get(builder->getFloatTy(), w)
 #define get_vtd(w) VectorType::get(builder->getDoubleTy(), w)
 
@@ -1052,21 +1052,53 @@ BINCMP_EMIT(Max32Fx4, get_vtf(4), FCmpUGT);
 BINCMP_EMIT(Max64Fx2, get_vtd(2), FCmpUGT);
 BINCMP_EMIT(Min64Fx2, get_vtd(2), FCmpULT);
 
-#define OP_1INTR_EMIT(x, y, z)						\
-Value* VexExprUnop##x::emit(void) const					\
-{									\
+#define DBL_1 ConstantFP::get(get_d(), 1.0)
+#define FLT_1 ConstantFP::get(get_f(), 1.0)
+
+Constant* const g_dbl_1x2[] = { DBL_1, DBL_1 };
+Constant* const g_flt_1x4[] = { FLT_1, FLT_1, FLT_1, FLT_1 };
+#define DBL_1x2 ConstantVector::get(					\
+	std::vector<Constant*>(g_dbl_1x2, g_dbl_1x2 + 2))
+#define FLT_1x4 ConstantVector::get(					\
+	std::vector<Constant*>(g_flt_1x4, g_flt_1x4 + 4))
+
+#define VINT(y,z)							\
 	Function	*f;						\
-	UNOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, y);				\
 	std::vector<const Type*> call_args;				\
 	call_args.push_back(y);						\
 	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), 		\
 		Intrinsic::z, &call_args[0], 1);			\
 	assert (f != NULL);						\
-	return builder->CreateCall(f, v1);				\
+	v1 = builder->CreateCall(f, v1);				
+
+#define VRCP(o) v1 = builder->CreateFDiv(o, v1);
+
+#define NONE
+
+#define OPV_RSQ(x, y, z, a, b)						\
+Value* VexExprUnop##x::emit(void) const					\
+{									\
+	UNOP_SETUP							\
+	v1 = builder->CreateBitCast(v1, y);				\
+	a								\
+	b								\
+	return v1;							\
 }
-OP_1INTR_EMIT(Sqrt64Fx2, get_vtd(2), sqrt);
-OP_1INTR_EMIT(Sqrt32Fx4, get_vtf(4), sqrt);
+
+OPV_RSQ(Sqrt64Fx2 , get_vtd(2), sqrt, NONE, VINT(get_vtd(2), sqrt))
+OPV_RSQ(Recip64Fx2, get_vtd(2), sqrt, NONE, VRCP(DBL_1x2))
+OPV_RSQ(RSqrt64Fx2, get_vtd(2), sqrt, VINT(get_vtd(2), sqrt), VRCP(DBL_1x2))
+
+OPV_RSQ(Sqrt32Fx4 , get_vtf(4), sqrt, NONE, VINT(get_vtf(4), sqrt))
+OPV_RSQ(Recip32Fx4, get_vtf(4), sqrt, NONE, VRCP(FLT_1x4))
+OPV_RSQ(RSqrt32Fx4, get_vtf(4), sqrt, VINT(get_vtf(4), sqrt), VRCP(FLT_1x4))
+
+
+// UNOP_TAGOP(RSqrt32Fx4);
+// UNOP_TAGOP(RSqrt64Fx2);
+// 
+// UNOP_TAGOP(Recip32Fx4);
+// UNOP_TAGOP(Recip64Fx2);
 
 
 BINOP_EMIT(Or8, Or)
@@ -1228,30 +1260,41 @@ Value* VexExprBinop##x::emit(void) const				\
 	return builder->CreateInsertElement(v1, result, get_32i(0));	\
 }
 
-OPF0X_SEL_EMIT(Max32F0x4, get_vtf(4), FCmpUGT);
-OPF0X_SEL_EMIT(Min32F0x4, get_vtf(4), FCmpULT);
-OPF0X_SEL_EMIT(Max64F0x2, get_vtd(2), FCmpUGT);
-OPF0X_SEL_EMIT(Min64F0x2, get_vtd(2), FCmpULT);
+OPF0X_SEL_EMIT(Max32F0x4, get_vtf(4), FCmpUGT)
+OPF0X_SEL_EMIT(Min32F0x4, get_vtf(4), FCmpULT)
+OPF0X_SEL_EMIT(Max64F0x2, get_vtd(2), FCmpUGT)
+OPF0X_SEL_EMIT(Min64F0x2, get_vtd(2), FCmpULT)
 
-#define OPF0X_1INTR_EMIT(x, y, z)					\
-Value* VexExprUnop##x::emit(void) const					\
-{									\
-	Value		*a1, *result;					\
+#define F0XINT(y,z)							\
 	Function	*f;						\
-	UNOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, y);				\
-	a1 = builder->CreateExtractElement(v1, get_32i(0));		\
 	std::vector<const Type*> call_args;				\
 	call_args.push_back(y->getScalarType());			\
 	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), 		\
 		Intrinsic::z, &call_args[0], 1);			\
 	assert (f != NULL);						\
-	result = builder->CreateCall(f, a1);				\
-	return builder->CreateInsertElement(v1, result, get_32i(0));	\
+	a1 = builder->CreateCall(f, a1);				
+
+#define F0XRCP(o) a1 = builder->CreateFDiv(o, a1);
+
+#define OPF0X_RSQ(x, y, z, a, b)					\
+Value* VexExprUnop##x::emit(void) const					\
+{									\
+	Value		*a1;						\
+	UNOP_SETUP							\
+	v1 = builder->CreateBitCast(v1, y);				\
+	a1 = builder->CreateExtractElement(v1, get_32i(0));		\
+	a								\
+	b								\
+	return builder->CreateInsertElement(v1, a1, get_32i(0));	\
 }
 
-OPF0X_1INTR_EMIT(Sqrt64F0x2, get_vtd(2), sqrt);
-OPF0X_1INTR_EMIT(Sqrt32F0x4, get_vtf(4), sqrt);
+OPF0X_RSQ(Sqrt64F0x2 , get_vtd(2), sqrt, NONE, F0XINT(get_d(), sqrt))
+OPF0X_RSQ(Recip64F0x2, get_vtd(2), sqrt, NONE, F0XRCP(DBL_1))
+OPF0X_RSQ(RSqrt64F0x2, get_vtd(2), sqrt, F0XINT(get_d(), sqrt), F0XRCP(DBL_1))
+
+OPF0X_RSQ(Sqrt32F0x4 , get_vtf(4), sqrt, NONE, F0XINT(get_f(), sqrt))
+OPF0X_RSQ(Recip32F0x4, get_vtf(4), sqrt, NONE, F0XRCP(FLT_1))
+OPF0X_RSQ(RSqrt32F0x4, get_vtf(4), sqrt, F0XINT(get_f(), sqrt), F0XRCP(FLT_1))
 
 Value* VexExprBinopSetV128lo64::emit(void) const
 {

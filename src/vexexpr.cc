@@ -129,7 +129,12 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Sub32F0x4);
 
 	UNOP_TAGOP(Sqrt32F0x4);
+	UNOP_TAGOP(Recip32F0x4);
+	UNOP_TAGOP(RSqrt32F0x4);
 	UNOP_TAGOP(Sqrt64F0x2);
+	UNOP_TAGOP(Recip64F0x2);
+	UNOP_TAGOP(RSqrt64F0x2);
+
 	BINOP_TAGOP(Min64F0x2);
 	BINOP_TAGOP(Max32F0x4);
 	BINOP_TAGOP(Min32F0x4);
@@ -190,6 +195,12 @@ return new VexExprUnop##x(in_parent, expr)
 
 	UNOP_TAGOP(Sqrt32Fx4);
 	UNOP_TAGOP(Sqrt64Fx2);
+
+	UNOP_TAGOP(RSqrt32Fx4);
+	UNOP_TAGOP(RSqrt64Fx2);
+
+	UNOP_TAGOP(Recip32Fx4);
+	UNOP_TAGOP(Recip64Fx2);
 
 	BINOP_TAGOP(Or8);
 	BINOP_TAGOP(Or16);
