@@ -411,6 +411,9 @@ return new VexExprUnop##x(in_parent, expr)
 	TRIOP_TAGOP(MulF64);
 	TRIOP_TAGOP(DivF64);
 
+	BINOP_TAGOP(RoundF32toInt);
+	BINOP_TAGOP(RoundF64toInt);
+
 	BINOP_TAGOP(CmpEQ8x8);
 	BINOP_TAGOP(CmpEQ8x16);
 	BINOP_TAGOP(CmpEQ16x4);

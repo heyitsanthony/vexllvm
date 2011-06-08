@@ -1721,6 +1721,27 @@ TRIOP_EXPAND_EMIT(SubF64, BitCast, get_d(), FSub)
 TRIOP_EXPAND_EMIT(DivF64, BitCast, get_d(), FDiv)
 TRIOP_EXPAND_EMIT(MulF64, BitCast, get_d(), FMul)
 
+Value* VexExprBinopRoundF32toInt::emit(void) const
+{
+	/* TODO: rounding mode */
+	BINOP_SETUP
+	v2 = builder->CreateBitCast(v2, get_f());
+	return builder->CreateSIToFP(
+		builder->CreateFPToSI(v2, get_i(32)), 
+		get_f());
+}
+
+Value* VexExprBinopRoundF64toInt::emit(void) const
+{
+	/* TODO: rounding mode */
+	BINOP_SETUP
+	v2 = builder->CreateBitCast(v2, get_d());
+	return builder->CreateSIToFP(
+		builder->CreateFPToSI(v2, get_i(64)), 
+		get_d());
+}
+
+
 //note max vector elements of 16
 #define OPVS_EMIT(x, y, z)			\
 Value* VexExprBinop##x::emit(void) const	\
