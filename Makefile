@@ -4,6 +4,7 @@ CFLAGS=-g -O3
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
 endif
+TRACE_CFLAGS+= -lm
 ifndef TRACECC
 TRACECC=gcc
 endif
@@ -55,7 +56,8 @@ TRACEDEPS= nested_call strlen strrchr 	\
 	sscanf time gettimeofday	\
 	rand gettext uselocale		\
 	getopt errno strerror strchrnul	\
-	cmdline-many dlsym
+	cmdline-many dlsym		\
+	fp-test
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
