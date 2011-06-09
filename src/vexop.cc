@@ -781,10 +781,11 @@ Value* VexExprUnop##x::emit(void) const		\
 }
 
 /* XXX probably wrong to discard rounding info, but who cares */
-#define X_TO_Y_EMIT_ROUND(x,y,z)		\
+#define X_TO_Y_EMIT_ROUND(x,y,w,z)		\
 Value* VexExprBinop##x::emit(void) const	\
 {						\
 	BINOP_SETUP				\
+	v2 = builder->CreateBitCast(v2, w);	\
 	return builder->y(v2, z);		\
 }
 
@@ -826,12 +827,12 @@ X_TO_Y_EMIT(F32toF64, CreateFPExt, get_d())
 
 X_TO_Y_EMIT(I32StoF64, CreateSIToFP, get_d())
 
-X_TO_Y_EMIT_ROUND(F64toF32, CreateFPTrunc, get_f())
-X_TO_Y_EMIT_ROUND(I64StoF64, CreateSIToFP, get_d())
-X_TO_Y_EMIT_ROUND(I64UtoF64, CreateSIToFP, get_d())
-X_TO_Y_EMIT_ROUND(F64toI32S, CreateFPToSI, get_i(32))
-X_TO_Y_EMIT_ROUND(F64toI32U, CreateFPToSI, get_i(32))
-X_TO_Y_EMIT_ROUND(F64toI64S, CreateFPToSI, get_i(64))
+X_TO_Y_EMIT_ROUND(F64toF32, CreateFPTrunc, get_d(), get_f())
+X_TO_Y_EMIT_ROUND(I64StoF64, CreateSIToFP, get_i(64), get_d())
+X_TO_Y_EMIT_ROUND(I64UtoF64, CreateSIToFP, get_i(64), get_d())
+X_TO_Y_EMIT_ROUND(F64toI32S, CreateFPToSI, get_d(), get_i(32))
+X_TO_Y_EMIT_ROUND(F64toI32U, CreateFPToSI, get_d(), get_i(32))
+X_TO_Y_EMIT_ROUND(F64toI64S, CreateFPToSI, get_d(), get_i(64))
 
 UNOP_EMIT(Not1, CreateNot)
 UNOP_EMIT(Not8, CreateNot)
