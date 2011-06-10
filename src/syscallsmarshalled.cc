@@ -3,6 +3,7 @@
 #include <sys/syscall.h>
 #include <string.h>
 #include <sys/signal.h>
+#include <sys/times.h>
 #include <stdlib.h>
 #include "syscallsmarshalled.h"
 
@@ -30,7 +31,8 @@ bool SyscallsMarshalled::isSyscallMarshalled(int sys_nr) const
 {
 	return (sys_nr == SYS_clock_gettime ||
 		sys_nr == SYS_gettimeofday ||
-		sys_nr == SYS_rt_sigaction);
+		sys_nr == SYS_rt_sigaction ||
+		sys_nr == SYS_times);
 }
 
 #include <stdio.h>
@@ -70,6 +72,11 @@ uint64_t SyscallsMarshalled::apply(SyscallParams& args)
 		last_sc_ptrbuf = new SyscallPtrBuf(
 			sizeof(struct sigaction),
 			(void*)args.getArg(2));
+		break;
+	case SYS_times:
+		last_sc_ptrbuf = new SyscallPtrBuf(
+			sizeof(struct tms),
+			(void*)args.getArg(0));
 		break;
 	}
 

@@ -125,7 +125,7 @@ int PTImgMapEntry::getProt(void) const
 	return prot;
 }
 
-#define STACK_EXTEND_BYTES 0x100000
+#define STACK_EXTEND_BYTES 0x200000
 
 void PTImgMapEntry::mapStack(pid_t pid)
 {

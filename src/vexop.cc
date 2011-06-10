@@ -1209,40 +1209,31 @@ OPF0X_EMIT(Div32F0x4, get_vtf(4), FDiv)
 OPF0X_EMIT(Add32F0x4, get_vtf(4), FAdd)
 OPF0X_EMIT(Sub32F0x4, get_vtf(4), FSub)
 
-Value* VexExprBinopCmpLT32F0x4::emit(void) const
-{
-	Value	*lo_op_lhs, *lo_op_rhs, *result;
-	BINOP_SETUP
-	v1 = builder->CreateBitCast(v1, get_vtf(4));
-	v2 = builder->CreateBitCast(v2, get_vtf(4));
-	lo_op_lhs = builder->CreateExtractElement(v1, get_32i(0));
-	lo_op_rhs = builder->CreateExtractElement(v2, get_32i(0));
-	result = builder->CreateFCmpOLT(lo_op_lhs, lo_op_rhs);
-	result = builder->CreateSExt(result, get_i(32));
-	result = builder->CreateBitCast(result, get_f());
-
-	return builder->CreateInsertElement(
-		builder->CreateBitCast(v1, get_vt(4, 32)),
-		result,
-		get_32i(0));
+#define OPF0X_CMP_EMIT(x, y, z)						\
+Value* VexExprBinop##x::emit(void) const				\
+{									\
+	Value	*a1, *a2, *result;					\
+	BINOP_SETUP							\
+	v1 = builder->CreateBitCast(v1, y);				\
+	v2 = builder->CreateBitCast(v2, y);				\
+	a1 = builder->CreateExtractElement(v1, get_32i(0));		\
+	a2 = builder->CreateExtractElement(v2, get_32i(0));		\
+	result = builder->Create##z(a1, a2);				\
+	result = builder->CreateSExt(result, 				\
+		get_i(y->getScalarType()->getPrimitiveSizeInBits()));	\
+	result = builder->CreateBitCast(result, y->getScalarType());	\
+	return builder->CreateInsertElement(v1, result, get_32i(0));	\
 }
 
-Value* VexExprBinopCmpEQ64F0x2::emit(void) const
-{
-	Value	*lo_op_lhs, *lo_op_rhs, *result;
-	BINOP_SETUP
-	v1 = builder->CreateBitCast(v1, get_vtd(2));
-	v2 = builder->CreateBitCast(v2, get_vtd(2));
-	lo_op_lhs = builder->CreateExtractElement(v1, get_32i(0));
-	lo_op_rhs = builder->CreateExtractElement(v2, get_32i(0));
-	result = builder->CreateFCmpOEQ(lo_op_lhs, lo_op_rhs);
-	result = builder->CreateSExt(result, get_i(64));
+OPF0X_CMP_EMIT(CmpLT32F0x4, get_vtf(4), FCmpOLT);
+OPF0X_CMP_EMIT(CmpLE32F0x4, get_vtf(4), FCmpOLT);
+OPF0X_CMP_EMIT(CmpEQ32F0x4, get_vtf(4), FCmpOEQ);
+OPF0X_CMP_EMIT(CmpUN32F0x4, get_vtf(4), FCmpUNO);
 
-	return builder->CreateInsertElement(
-		builder->CreateBitCast(v1, get_vt(2, 64)), 
-		result,
-		get_32i(0));
-}
+OPF0X_CMP_EMIT(CmpLT64F0x2, get_vtd(2), FCmpOLT);
+OPF0X_CMP_EMIT(CmpLE64F0x2, get_vtd(2), FCmpOLE);
+OPF0X_CMP_EMIT(CmpEQ64F0x2, get_vtd(2), FCmpOEQ);
+OPF0X_CMP_EMIT(CmpUN64F0x2, get_vtd(2), FCmpUNO);
 
 #define OPF0X_SEL_EMIT(x, y, z)						\
 Value* VexExprBinop##x::emit(void) const				\
