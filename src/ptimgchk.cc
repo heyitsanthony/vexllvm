@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <sys/syscall.h>
 #include <sys/mman.h>
 
@@ -557,7 +559,7 @@ void PTImgChk::waitForSingleStep(void)
 
 	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
 		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
-		fprintf(stderr, "STEPS %0#8d %c %0#8d BLOCKS\r",
+		fprintf(stderr, "STEPS %09"PRIu64" %c %09"PRIu64" BLOCKS\r",
 			steps, c, blocks);
 	}
 }

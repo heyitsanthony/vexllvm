@@ -48,6 +48,7 @@ void VexStmtPut::print(std::ostream& os) const
 	os << "Put(" << offset << ") <- ";
 	data_expr->print(os);
 }
+
 VexStmtPutI::VexStmtPutI(VexSB* in_parent, const IRStmt* in_stmt)
 : VexStmt(in_parent, in_stmt),
   base(in_stmt->Ist.PutI.descr->base),

@@ -240,6 +240,9 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Not32);
 	UNOP_TAGOP(Not64);
 	UNOP_TAGOP(NotV128);
+	UNOP_TAGOP(NegF32);
+	UNOP_TAGOP(NegF64);
+
 
 	UNOP_TAGOP(1Uto8);
 	UNOP_TAGOP(1Uto64);
@@ -513,8 +516,6 @@ EMIT_CONST_INT(U8, 8)
 EMIT_CONST_INT(U16, 16)
 EMIT_CONST_INT(U32, 32)
 EMIT_CONST_INT(U64, 64)
-//EMIT_CONST_INT(F32i, 32) 3.7.0
-EMIT_CONST_INT(F64i, 64)
 
 static uint64_t bitmask8_to_bytemask64 ( uint8_t w8 )
 {
@@ -552,6 +553,11 @@ Value* VexExprConstF32::emit(void) const {
 		APFloat(F32)); }
 #endif
 
+Value* VexExprConstF64i::emit(void) const
+{
+	return ConstantFP::get(getGlobalContext(), APFloat(x));
+}
+
 Value* VexExprConstF64::emit(void) const
 {
 	return ConstantFP::get(getGlobalContext(), APFloat(F64));
@@ -568,9 +574,9 @@ VexExprGetI::VexExprGetI(VexStmt* in_parent, const IRExpr* in_expr)
   base(in_expr->Iex.GetI.descr->base),
   len(in_expr->Iex.GetI.descr->nElems),
   ix_expr(VexExpr::create(in_parent, in_expr->Iex.GetI.ix)),
-  bias(in_expr->Iex.GetI.bias),
-  bits(VexSB::getTypeBitWidth(in_expr->Iex.GetI.descr->elemTy))
+  bias(in_expr->Iex.GetI.bias)
 {
+	elem_type = theGenLLVM->vexTy2LLVM(in_expr->Iex.GetI.descr->elemTy);
 }
 
 VexExprGetI::~VexExprGetI(void)
@@ -582,18 +588,16 @@ llvm::Value* VexExprGetI::emit(void) const
 {
 	Value	*ix_v;
 	ix_v = ix_expr->emit();
-	return theGenLLVM->readCtx(base, bias, len, ix_v, 
-		IntegerType::get(getGlobalContext(), bits));
+	return theGenLLVM->readCtx(base, bias, len, ix_v, elem_type);
 }
 
 void VexExprGetI::print(std::ostream& os) const
 {
-	os << "GettI(" << base << ", " 
+	os << "GetI(" << base << ", "
 		<< bias << ", ";
 	ix_expr->print(os);
 	os << ", " << len << ")";
 }
-
 
 void VexExprRdTmp::print(std::ostream& os) const
 {
@@ -720,23 +724,16 @@ VexExprMux0X::~VexExprMux0X(void)
 	delete exprX;
 }
 
-inline Value* toIntegerType(IRBuilder<>	*builder, Value* v)
+inline Value* flattenType(IRBuilder<> *builder, Value* v)
 {
 	if (isa<VectorType>(v->getType())) {
 		return builder->CreateBitCast(v, IntegerType::get(
 			getGlobalContext(),
 			static_cast<const VectorType*>(
 				v->getType())->getBitWidth()));
-	} else if (v->getType()->getTypeID() == Type::FloatTyID) {
-		return builder->CreateBitCast(v, IntegerType::get(
-			getGlobalContext(), 32));
-	} else if (v->getType()->getTypeID() == Type::DoubleTyID) {
-		return builder->CreateBitCast(v, IntegerType::get(
-			getGlobalContext(), 64));
-	} else {
-		return v;
 	}
-	
+
+	return v;
 }
 
 Value* VexExprMux0X::emit(void) const
@@ -774,13 +771,13 @@ Value* VexExprMux0X::emit(void) const
 
 	builder->SetInsertPoint(bb_nonzero);
 	nonzero_val = exprX->emit();
-	nonzero_val = toIntegerType(builder, nonzero_val);
+	nonzero_val = flattenType(builder, nonzero_val);
 	bb_nz = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 
 	builder->SetInsertPoint(bb_zero);
 	zero_val = expr0->emit();
-	zero_val = toIntegerType(builder, zero_val);
+	zero_val = flattenType(builder, zero_val);
 	bb_z = builder->GetInsertBlock();
 	builder->CreateBr(bb_merge);
 

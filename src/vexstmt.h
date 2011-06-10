@@ -98,9 +98,9 @@ public:
 private:
 	int base;
 	int len;
-	VexExpr*     ix_expr;    /* Variable part of index into array */
-	int         bias;  /* Constant offset part of index into array */
-	VexExpr*     data_expr;  /* The value to write */
+	VexExpr*	ix_expr;    /* Variable part of index into array */
+	int		bias;  /* Constant offset part of index into array */
+	VexExpr*	data_expr;  /* The value to write */
 };
 
 class VexStmtWrTmp : public VexStmt

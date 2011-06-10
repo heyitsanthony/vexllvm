@@ -18,6 +18,7 @@ namespace llvm
 {
 class Value;
 class Function;
+class Type;
 }
 
 class VexExpr
@@ -26,7 +27,7 @@ public:
 	virtual ~VexExpr(void) {}
 	virtual void print(std::ostream& os) const = 0;
 	virtual llvm::Value* emit(void) const
-	{ 
+	{
 		std::cerr << "OOPS emitting: ";
 		print(std::cerr);
 		std::cerr << "\n";
@@ -36,7 +37,7 @@ public:
 	static VexExpr* create(VexStmt* in_parent, const IRExpr* expr);
 	const VexStmt* getParent(void) const { return parent; }
 	static unsigned int getOpCount(IROp irop)
-	{ 
+	{
 		return vex_expr_op_count[irop - Iop_INVALID];
 	}
 protected:
@@ -44,7 +45,7 @@ protected:
 	: parent(in_parent) {}
 
 	/* no way more than 2K ops (at 713 now)! if more, assert thrown*/
-	#define VEX_MAX_OP	2048	
+	#define VEX_MAX_OP	2048
 	static unsigned int vex_expr_op_count[VEX_MAX_OP];
 private:
 	const VexStmt* parent;
@@ -55,7 +56,7 @@ class VexExprGet : public VexExpr
 {
 public:
 	VexExprGet(VexStmt* in_parent, const IRExpr* expr)
-	:VexExpr(in_parent), 
+	:VexExpr(in_parent),
 	 offset(expr->Iex.Get.offset),
 	 ty(expr->Iex.Get.ty) {}
 
@@ -63,7 +64,7 @@ public:
 	virtual llvm::Value* emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
-	int	offset; 
+	int	offset;
 	IRType	ty;
 };
 
@@ -76,11 +77,11 @@ public:
 	virtual void print(std::ostream& os) const;
 	virtual llvm::Value* emit(void) const;
 private:
-	int		base;
-	int		len;
-	VexExpr		*ix_expr; /* Variable part of index into array */
-	int		bias;  /* Constant offset part of index into array */
-	int		bits;
+	int			base;
+	int			len;
+	VexExpr			*ix_expr; /* Variable part of index into array */
+	int			bias;  /* Const offset part of index into array */
+	const llvm::Type	*elem_type;
 };
 
 class VexExprRdTmp : public VexExpr
@@ -160,7 +161,26 @@ CONST_CLASS(U16, uint16_t);
 CONST_CLASS(U32, uint32_t);
 CONST_CLASS(U64, uint64_t);
 CONST_CLASS(F64, double);
-CONST_CLASS(F64i, uint64_t);
+class VexExprConstF64i : public VexExprConst
+{
+public:
+	VexExprConstF64i(VexStmt* in_parent, const IRExpr* expr)
+	: VexExprConst(in_parent),
+	x(expr->Iex.Const.con->Ico.F64i)
+	{
+		uint64_t	iex_f64i;
+		iex_f64i = expr->Iex.Const.con->Ico.F64i;
+		memcpy(&x, &iex_f64i, sizeof(iex_f64i));
+	}
+	VexExprConstF64i(VexStmt* in_parent, double v)
+	: VexExprConst(in_parent), x(v) {}
+
+	void print(std::ostream& os) const { os << x  << ":F64i"; }
+	llvm::Value* emit(void) const;
+	virtual uint64_t toValue(void) const { return x; }
+private:
+	double	x;
+};
 CONST_CLASS(V128, uint16_t);
 /* wait for 3.7.0 */
 //CONST_CLASS(F32, float);
