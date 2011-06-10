@@ -240,9 +240,6 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Not32);
 	UNOP_TAGOP(Not64);
 	UNOP_TAGOP(NotV128);
-	UNOP_TAGOP(NegF32);
-	UNOP_TAGOP(NegF64);
-
 
 	UNOP_TAGOP(1Uto8);
 	UNOP_TAGOP(1Uto64);

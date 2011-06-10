@@ -844,9 +844,6 @@ UNOP_EMIT(Not8, CreateNot)
 UNOP_EMIT(Not16, CreateNot)
 UNOP_EMIT(Not32, CreateNot)
 UNOP_EMIT(Not64, CreateNot)
-UNOP_EMIT(NegF64, CreateFNeg)
-UNOP_EMIT(NegF32, CreateFNeg)
-
 
 X_TO_Y_EMIT(ReinterpF64asI64, CreateBitCast, get_d(), get_i(64))
 X_TO_Y_EMIT(ReinterpI64asF64, CreateBitCast, get_i(64), get_d())
