@@ -212,7 +212,7 @@ bool PTImgChk::fixup(const void* ip_begin, const void* ip_end)
 	return false;
 }
 
-inline bool ldeqd(void* ld, long d) {
+static inline bool ldeqd(void* ld, long d) {
 	long double* real = (long double*)ld;
 	union {
 		double d;
@@ -220,6 +220,12 @@ inline bool ldeqd(void* ld, long d) {
 	} alias;
 	alias.d = *real;
 	return alias.l == d;
+}
+static inline bool fcompare(unsigned int* a, long d) {
+	return *(long*)&d == a[0] &&
+		(a[2] == 0 || a[2] == 0xFFFF) && 
+		a[3] == 0 || 
+		ldeqd(&a[0], d);
 }
 bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 {
@@ -257,12 +263,10 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 	//operations, like a real x86 cpu
 	x87_ok = true;
 	for(int i = 0; i < 8; ++i) {
-		bool is_ok = state.guest_FPREG[i] ==
-			*(ULong*)&fpregs.st_space[4 * i] &&
-			(fpregs.st_space[4 * i + 2] == 0 ||
-			fpregs.st_space[4 * i + 2] == 0xFFFF) &&
-			fpregs.st_space[4 * i + 3] == 0 ||
-			ldeqd(&fpregs.st_space[4 * i], state.guest_FPREG[i]);
+		int r  = (state.guest_FTOP + i) & 0x7;
+		bool is_ok = fcompare(
+			&fpregs.st_space[4 * i],  
+			state.guest_FPREG[r]);
 		if(!is_ok) {
 			x87_ok = false;
 			break;
@@ -623,10 +627,10 @@ void PTImgChk::printFPRegs(
 	//FPTAG?
 
 	for(int i = 0; i < 8; ++i) {
-		if (memcmp(
+		int r  = (ref.guest_FTOP + i) & 0x7;
+		if (!fcompare(
 			&fpregs.st_space[i * 4],
-			&ref.guest_FPREG[i],
-			sizeof(ref.guest_FPREG[0])))
+			ref.guest_FPREG[r]))
 		{
 			os << "***";
 		}

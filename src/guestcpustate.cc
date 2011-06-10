@@ -246,9 +246,10 @@ void GuestCPUState::print(std::ostream& os) const
 	}
 
 	for (int i = 0; i < 8; i++) {
+		int r  = (state2amd64()->guest_FTOP + i) & 0x7;
 		os
 		<< "ST" << i << ": "
-		<< (void*)state2amd64()->guest_FPREG[i] << std::endl;
+		<< (void*)state2amd64()->guest_FPREG[r] << std::endl;
 	}
 
 	const uint64_t*	tls_data = (const uint64_t*)tls->getBase();
