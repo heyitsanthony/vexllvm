@@ -107,23 +107,22 @@ TRACEDEPS_PATH=$(TRACEDEPS:%=tests/traces-bin/%)
 test-traces: all $(TRACEDEPS_PATH)
 	tests/traces.sh
 
-
 test-built-traces: all $(TRACEDEPS_PATH)
 	ONLY_BUILTIN=1 tests/traces.sh
-
 
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
 
 tests-fastxchk: all $(TRACEDEPS_PATH)
-	VEXLLVM_FASTCHK=1 RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
-
+	VEXLLVM_FASTCHK=1 RUNCMD=bin/pt_xchk OUTPATH=tests/traces-fastxchk-out tests/traces.sh
 
 tests-xchk_opcode: all $(TRACEDEPS_PATH)
 	tests/opcodes.sh
 
 tests-oprof: all
 	TRACES_OPROFILE=1 tests/traces.sh
+
+tests-web: test-traces tests-pt_xchk tests-fastxchk
 
 bin/pt_xchk: $(OBJDIRDEPS) obj/pt_xchk.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
