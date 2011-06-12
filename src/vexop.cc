@@ -1226,7 +1226,7 @@ Value* VexExprBinop##x::emit(void) const				\
 }
 
 OPF0X_CMP_EMIT(CmpLT32F0x4, get_vtf(4), FCmpOLT);
-OPF0X_CMP_EMIT(CmpLE32F0x4, get_vtf(4), FCmpOLT);
+OPF0X_CMP_EMIT(CmpLE32F0x4, get_vtf(4), FCmpOLE);
 OPF0X_CMP_EMIT(CmpEQ32F0x4, get_vtf(4), FCmpOEQ);
 OPF0X_CMP_EMIT(CmpUN32F0x4, get_vtf(4), FCmpUNO);
 
