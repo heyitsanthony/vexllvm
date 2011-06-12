@@ -28,7 +28,7 @@ GenLLVM::GenLLVM(const GuestState* gs, const char* name)
 	mod = new Module(name, getGlobalContext());
 
 	// *any* data layout *should* work, but klee will horribly fail
-	// if not LE and the vexllvm loads/stores would fail since it 
+	// if not LE and the vexllvm loads/stores would fail since it
 	// ignores the ordering suffixes. Everything is broken; support
 	// BE if/when it finally matters. Right now, force LE.
 	//
@@ -56,7 +56,7 @@ void GenLLVM::beginBB(const char* name)
 		Function::ExternalLinkage,
 		name,
 		mod);
-			
+
 	cur_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
 	builder->SetInsertPoint(cur_bb);
 	cur_guest_ctx = cur_f->arg_begin();
@@ -108,7 +108,7 @@ Value* GenLLVM::readCtx(unsigned int byteOff, IRType ty)
 	return ret;
 }
 
-Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len, 
+Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len,
 	Value* ix, const Type* accessTy)
 {
 	Value		*ret, *addr;
@@ -155,15 +155,25 @@ Value* GenLLVM::getCtxGEP(Value* off, const Type* accessTy)
 {
 	const Type	*ptrTy;
 	Value		*addr_ptr, *ret; /* XXX assuming access are aligned */
+	const char	*gep_name;
 
 	ptrTy = PointerType::get(accessTy, 0);
 
-	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "accessCtxPtr");
+	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "regCtxPtr");
 
-	ret = builder->CreateGEP(
-		addr_ptr,
-		off,
-		"accessCtx");
+	gep_name = NULL;
+	if (isa<ConstantInt>(off)) {
+		ConstantInt*	c_off = dyn_cast<ConstantInt>(off);
+		uint64_t	off_u64;
+
+		off_u64 = c_off->getZExtValue();
+		gep_name = guestState->getCPUState()->off2Name(
+			(accessTy->getPrimitiveSizeInBits()/8) * off_u64);
+	}
+
+	if (gep_name == NULL) gep_name = "unkCtxPtr";
+
+	ret = builder->CreateGEP(addr_ptr, off, gep_name);
 	return ret;
 }
 
@@ -179,7 +189,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, Value* v)
 	return ret;
 }
 
-Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len, 
+Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len,
 	Value* ix, Value* v)
 {
 	Value		*ret, *addr;
@@ -197,7 +207,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len,
 		bias_v);
 	Value* base_v = ConstantInt::get(
 		getGlobalContext(),
-		APInt(sizeof(unsigned int) * 8, byteOff / 
+		APInt(sizeof(unsigned int) * 8, byteOff /
 		(v->getType()->getPrimitiveSizeInBits() / 8)));
 	offset = builder->CreateURem(offset, len_v);
 	offset = builder->CreateAdd(offset, base_v);

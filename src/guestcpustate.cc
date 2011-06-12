@@ -30,14 +30,14 @@ struct guest_ctx_field
 GuestCPUState::GuestCPUState()
 {
 	mkRegCtx();
-	
+
 	state_data = new uint8_t[state_byte_c+1];
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
 	state2amd64()->guest_DFLAG = 1;
 
 	tls = new GuestTLS();
-	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) = 
+	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) =
 		(uintptr_t)tls->getBase();
 }
 
@@ -51,7 +51,7 @@ void GuestCPUState::setTLS(GuestTLS* in_tls)
 {
 	delete tls;
 	tls = in_tls;
-	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) = 
+	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) =
 		(uintptr_t)tls->getBase();
 }
 
@@ -103,7 +103,7 @@ Type* GuestCPUState::mkFromFields(
 }
 
 /* ripped from libvex_guest_amd64 */
-static struct guest_ctx_field amd64_fields[] = 
+static struct guest_ctx_field amd64_fields[] =
 {
 	{64, 16, "GPR"},	/* 0-15, 8*16 = 128*/
 	{64, 1, "CC_OP"},	/* 16, 128 */
@@ -124,7 +124,7 @@ static struct guest_ctx_field amd64_fields[] =
 	{32, 1, "FTOP"},
 	{64, 8, "FPREG"},
 	{8, 8, "FPTAG"},
-	
+
 	{64, 1, "FPROUND"},
 	{64, 1, "FC3210"},
 
@@ -148,13 +148,67 @@ static struct guest_ctx_field amd64_fields[] =
 	{0}	/* time to stop */
 };
 
-void GuestCPUState::mkRegCtx(void) 
+void GuestCPUState::mkRegCtx(void)
 {
 	/* XXX only support AMD64 right now. Update for other archs */
 	guestCtxTy = mkFromFields(amd64_fields, off2ElemMap);
 }
 
 extern void dumpIRSBs(void);
+
+
+const char* GuestCPUState::off2Name(unsigned int off) const
+{
+	switch (off) {
+#define CASE_OFF2NAME(x)	\
+	case offsetof(VexGuestAMD64State, guest_##x) ... 7+offsetof(VexGuestAMD64State, guest_##x): \
+	return #x;
+
+	CASE_OFF2NAME(RAX)
+	CASE_OFF2NAME(RCX)
+	CASE_OFF2NAME(RDX)
+	CASE_OFF2NAME(RBX)
+	CASE_OFF2NAME(RSP)
+	CASE_OFF2NAME(RBP)
+	CASE_OFF2NAME(RSI)
+	CASE_OFF2NAME(RDI)
+	CASE_OFF2NAME(R8)
+	CASE_OFF2NAME(R9)
+	CASE_OFF2NAME(R10)
+	CASE_OFF2NAME(R11)
+	CASE_OFF2NAME(R12)
+	CASE_OFF2NAME(R13)
+	CASE_OFF2NAME(R14)
+	CASE_OFF2NAME(R15)
+	CASE_OFF2NAME(CC_OP)
+	CASE_OFF2NAME(CC_DEP1)
+	CASE_OFF2NAME(CC_DEP2)
+	CASE_OFF2NAME(CC_NDEP)
+	CASE_OFF2NAME(DFLAG)
+	CASE_OFF2NAME(RIP)
+	CASE_OFF2NAME(ACFLAG)
+	CASE_OFF2NAME(IDFLAG)
+	CASE_OFF2NAME(XMM0)
+	CASE_OFF2NAME(XMM1)
+	CASE_OFF2NAME(XMM2)
+	CASE_OFF2NAME(XMM3)
+	CASE_OFF2NAME(XMM4)
+	CASE_OFF2NAME(XMM5)
+	CASE_OFF2NAME(XMM6)
+	CASE_OFF2NAME(XMM7)
+	CASE_OFF2NAME(XMM8)
+	CASE_OFF2NAME(XMM9)
+	CASE_OFF2NAME(XMM10)
+	CASE_OFF2NAME(XMM11)
+	CASE_OFF2NAME(XMM12)
+	CASE_OFF2NAME(XMM13)
+	CASE_OFF2NAME(XMM14)
+	CASE_OFF2NAME(XMM15)
+	CASE_OFF2NAME(XMM16)
+	default: return NULL;
+	}
+	return NULL;
+}
 
 /* gets the element number so we can do a GEP */
 unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
@@ -259,7 +313,7 @@ void GuestCPUState::print(std::ostream& os) const
 #if 0
 	for (unsigned int i = 0; i < tls_bytes / sizeof(uint64_t); i++) {
 		if (!tls_data[i]) continue;
-		os	<< "fs+" << (void*)(i*8)  << ":" 
+		os	<< "fs+" << (void*)(i*8)  << ":"
 			<< (void*)tls_data[i]
 			<< std::endl;
 	}
@@ -279,6 +333,7 @@ void GuestCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 	assert (arg_num <= 3);
 	*((uint64_t*)((uintptr_t)state_data + arg2reg[arg_num])) = arg_val;
 }
+
 void GuestCPUState::setRegs(const user_regs_struct& regs, const user_fpregs_struct& fpregs) {
 	state2amd64()->guest_RAX = regs.rax;
 	state2amd64()->guest_RCX = regs.rcx;
@@ -312,7 +367,7 @@ void GuestCPUState::setRegs(const user_regs_struct& regs, const user_fpregs_stru
 	// /* Bit 18 (AC) of eflags stored here, as either 0 or 1. */
 	// /* ... */ ULong  guest_ACFLAG;
 	// /* Bit 21 (ID) of eflags stored here, as either 0 or 1. */
-	
+
 	//TODO: segments? but valgrind/vex seems to not really fully handle them, how sneaky
 	state2amd64()->guest_FS_ZERO = regs.fs_base;
 
@@ -325,7 +380,7 @@ void GuestCPUState::setRegs(const user_regs_struct& regs, const user_fpregs_stru
 	// /* FPU */
 	// /* 456 */UInt  guest_FTOP;
 	//FPTAG?
-	
+
 	//TODO: this is surely wrong, the sizes don't even match...
 	memcpy(&state2amd64()->guest_FPREG[0], &fpregs.st_space[0], sizeof(state2amd64()->guest_FPREG));
 
@@ -343,5 +398,5 @@ void GuestCPUState::setRegs(const user_regs_struct& regs, const user_fpregs_stru
 	// ULong guest_GS_0x60;
 	// ULong guest_IP_AT_SYSCALL;
 	// ULong padding;
-	
+
 }
