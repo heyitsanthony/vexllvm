@@ -222,9 +222,9 @@ static inline bool ldeqd(void* ld, long d) {
 	return alias.l == d;
 }
 static inline bool fcompare(unsigned int* a, long d) {
-	return *(long*)&d == a[0] &&
+	return (*(long*)&d == *(long*)&a[0] &&
 		(a[2] == 0 || a[2] == 0xFFFF) && 
-		a[3] == 0 || 
+		a[3] == 0) || 
 		ldeqd(&a[0], d);
 }
 bool PTImgChk::isMatch(const VexGuestAMD64State& state) const

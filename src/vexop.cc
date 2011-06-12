@@ -1620,6 +1620,61 @@ OPNRWSS_EMIT(QNarrow16Sx8, get_vt(8, 16), get_vt(16, 8 ), get_c(16, 0x7F)  , get
 OPNRWSS_EMIT(QNarrow32Sx2, get_vt(2, 32), get_vt(4 , 16), get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
 OPNRWSS_EMIT(QNarrow32Sx4, get_vt(4, 32), get_vt(8 , 16), get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
 
+#define OPSAT_EMIT(x, y, ext, w, op, c, neg_c)			\
+Value* VexExprBinop##x::emit(void) const			\
+{								\
+	BINOP_SETUP						\
+	v1 = builder->CreateBitCast(v1, y);			\
+	v2 = builder->CreateBitCast(v2, y);			\
+	v1 = builder->Create##ext(v1, w);			\
+	v2 = builder->Create##ext(v2, w);			\
+	Value* result = builder->CreateBitCast(			\
+		get_c(y->getBitWidth(), 0), y);			\
+	Value* partial = builder->Create##op(v1, v2);		\
+	for(unsigned i = 0; i < y->getNumElements(); ++i) {	\
+		Value* elem = builder->CreateExtractElement(	\
+			partial, get_32i(i));			\
+		elem = builder->CreateSelect(			\
+			builder->CreateICmpSGT(elem, c),	\
+			c, elem);				\
+		elem = builder->CreateSelect(			\
+			builder->CreateICmpSLT(elem, neg_c),	\
+			neg_c, elem);				\
+		elem = builder->CreateTrunc(elem, 		\
+			y->getScalarType());			\
+		result = builder->CreateInsertElement(		\
+			result, elem, get_32i(i));		\
+	}							\
+	return result;						\
+}
+
+OPSAT_EMIT(QAdd16Sx2, get_vt(2, 16), SExt, get_vt(2, 32), Add, get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
+OPSAT_EMIT(QAdd16Sx4, get_vt(4, 16), SExt, get_vt(4, 32), Add, get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
+OPSAT_EMIT(QAdd16Sx8, get_vt(8, 16), SExt, get_vt(8, 32), Add, get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
+OPSAT_EMIT(QAdd16Ux2, get_vt(2, 16), ZExt, get_vt(2, 32), Add, get_c(32, 0xFFFF), get_c(32, 0));
+OPSAT_EMIT(QAdd16Ux4, get_vt(4, 16), ZExt, get_vt(4, 32), Add, get_c(32, 0xFFFF), get_c(32, 0));
+OPSAT_EMIT(QAdd16Ux8, get_vt(8, 16), ZExt, get_vt(8, 32), Add, get_c(32, 0xFFFF), get_c(32, 0));
+
+OPSAT_EMIT(QAdd8Sx4,  get_vt(4 , 8), SExt, get_vt(4 ,16), Add, get_c(16, 0x7F)  , get_c(16, 0xFF80));
+OPSAT_EMIT(QAdd8Sx8,  get_vt(8 , 8), SExt, get_vt(8 ,16), Add, get_c(16, 0x7F)  , get_c(16, 0xFF80));
+OPSAT_EMIT(QAdd8Sx16, get_vt(16, 8), SExt, get_vt(16,16), Add, get_c(16, 0x7F)  , get_c(16, 0xFF80));
+OPSAT_EMIT(QAdd8Ux4,  get_vt(4 , 8), ZExt, get_vt(4 ,16), Add, get_c(16, 0xFF)  , get_c(16, 0));
+OPSAT_EMIT(QAdd8Ux8,  get_vt(8 , 8), ZExt, get_vt(8 ,16), Add, get_c(16, 0xFF)  , get_c(16, 0));
+OPSAT_EMIT(QAdd8Ux16, get_vt(16, 8), ZExt, get_vt(16,16), Add, get_c(16, 0xFF)  , get_c(16, 0));
+
+OPSAT_EMIT(QSub16Sx2, get_vt(2, 16), SExt, get_vt(2, 32), Sub, get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
+OPSAT_EMIT(QSub16Sx4, get_vt(4, 16), SExt, get_vt(4, 32), Sub, get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
+OPSAT_EMIT(QSub16Sx8, get_vt(8, 16), SExt, get_vt(8, 32), Sub, get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
+OPSAT_EMIT(QSub16Ux2, get_vt(2, 16), ZExt, get_vt(2, 32), Sub, get_c(32, 0xFFFF), get_c(32, 0));
+OPSAT_EMIT(QSub16Ux4, get_vt(4, 16), ZExt, get_vt(4, 32), Sub, get_c(32, 0xFFFF), get_c(32, 0));
+OPSAT_EMIT(QSub16Ux8, get_vt(8, 16), ZExt, get_vt(8, 32), Sub, get_c(32, 0xFFFF), get_c(32, 0));
+
+OPSAT_EMIT(QSub8Sx4,  get_vt(4 , 8), SExt, get_vt(4 ,16), Sub, get_c(16, 0x7F)  , get_c(16, 0xFF80));
+OPSAT_EMIT(QSub8Sx8,  get_vt(8 , 8), SExt, get_vt(8 ,16), Sub, get_c(16, 0x7F)  , get_c(16, 0xFF80));
+OPSAT_EMIT(QSub8Sx16, get_vt(16, 8), SExt, get_vt(16,16), Sub, get_c(16, 0x7F)  , get_c(16, 0xFF80));
+OPSAT_EMIT(QSub8Ux4,  get_vt(4 , 8), ZExt, get_vt(4 ,16), Sub, get_c(16, 0xFF)  , get_c(16, 0));
+OPSAT_EMIT(QSub8Ux8,  get_vt(8 , 8), ZExt, get_vt(8 ,16), Sub, get_c(16, 0xFF)  , get_c(16, 0));
+OPSAT_EMIT(QSub8Ux16, get_vt(16, 8), ZExt, get_vt(16,16), Sub, get_c(16, 0xFF)  , get_c(16, 0));
 
 #define OPV_CMP_T_EMIT(x, y, z, w)			\
 Value* VexExprBinop##x::emit(void) const		\

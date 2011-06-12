@@ -18,8 +18,17 @@ void VexMem::recordMapping(Mapping& mapping) {
 	if(i != maps.begin()) 
 		--i;
 	if(i != maps.end() && i->second.offset < mapping.offset) {
-		/* we are cutting off someone before us*/
+		/* we are cutting off someone before us */
 		if(i->second.end() > mapping.offset) {
+			/* we are completely inside the old block */
+			if(mapping.end() < i->second.end()) {
+				Mapping smaller;
+				smaller.offset = mapping.end();
+				smaller.length = (long)i->second.end() - (long)mapping.end();
+				smaller.req_prot = i->second.req_prot;
+				smaller.cur_prot = i->second.cur_prot;
+				maps.insert(std::make_pair(smaller.offset, smaller));
+			}
 			long lost = (char*)i->second.end() - 
 				(char*)mapping.offset;
 			i->second.length -= lost;
