@@ -21,7 +21,7 @@ public:
 	}
 	void* getBase(void) const { return mem_begin; }
 	int getProt(void) const;
-
+	bool isStack(void) const { return is_stack; }
 private:
 	void ptraceCopy(pid_t pid, int prot);
 	void ptraceCopyRange(pid_t pid, int prot, void* m_beg, void* m_end);
@@ -38,6 +38,8 @@ private:
 
 	void		*mmap_base;
 	int		mmap_fd;
+
+	bool		is_stack;
 };
 
 class PTImgTLS : public GuestTLS

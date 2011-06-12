@@ -20,15 +20,17 @@ typedef uint64_t guestptr_t;
 class GuestMemoryRange
 {
 public:
-	GuestMemoryRange(void* in_base, unsigned int in_sz)
-	: base(in_base), sz(in_sz) {}
+	GuestMemoryRange(void* in_base, unsigned int in_sz, bool in_is_stack)
+	: base(in_base), sz(in_sz), is_stack(in_is_stack) {}
 	virtual ~GuestMemoryRange(void) {}
 	const void* getData(void) const { return base; }
 	const void* getGuestAddr(void) const { return base; }
 	unsigned int getBytes(void) { return sz; }
+	bool isStack(void) const { return is_stack; }
 private:
 	void		*base;
 	unsigned int	sz;
+	bool		is_stack;
 };
 
 

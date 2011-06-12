@@ -188,8 +188,11 @@ void PTImgMapEntry::mapLib(pid_t pid)
 
 	if (strcmp(libname, "[vsyscall]") == 0) 
 		return;
-	if (strcmp(libname, "[stack]") == 0)
+	if (strcmp(libname, "[stack]") == 0) {
+		is_stack = true;
 		mapStack(pid);
+		return;
+	}
 
 	mmap_fd = open(libname, O_RDONLY);
 	if (mmap_fd == -1) {
@@ -260,7 +263,7 @@ void PTImgMapEntry::ptraceCopy(pid_t pid, int prot)
 }
 
 PTImgMapEntry::PTImgMapEntry(pid_t pid, const char* mapline)
- : mmap_base(NULL), mmap_fd(-1)
+ : mmap_base(NULL), mmap_fd(-1), is_stack(false)
 {
 	int                     rc;
 
@@ -450,7 +453,8 @@ std::list<GuestMemoryRange*> GuestStatePTImg::getMemoryMap(void) const
 			continue;
 		ret.push_back(new GuestMemoryRange(
 			ptm->getBase(),
-			ptm->getByteCount()));
+			ptm->getByteCount(),
+			ptm->isStack()));
 	}
 
 	return ret;

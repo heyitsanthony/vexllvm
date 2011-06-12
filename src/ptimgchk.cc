@@ -533,7 +533,7 @@ void* PTImgChk::stepToBreakpoint(void)
 		user_regs_struct regs;
 		fprintf(stderr,
 			"OOPS. status: stopped=%d sig=%d status=%p\n",
-			WIFSTOPPED(status), WSTOPSIG(status), status);
+			WIFSTOPPED(status), WSTOPSIG(status), (void*)status);
 		getRegs(regs);
 		stackTraceSubservient(std::cerr, NULL,  NULL);
 		assert (0 == 1 && "bad wait from breakpoint");
