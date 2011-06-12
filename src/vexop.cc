@@ -1831,9 +1831,8 @@ Value* VexExprBinopRoundF32toInt::emit(void) const
 	/* TODO: rounding mode */
 	BINOP_SETUP
 	v2 = builder->CreateBitCast(v2, get_f());
-	return builder->CreateSIToFP(
-		builder->CreateFPToSI(v2, get_i(32)), 
-		get_f());
+	return builder->CreateFSub(v2,
+		builder->CreateFRem(v2, FLT_1));
 }
 
 Value* VexExprBinopRoundF64toInt::emit(void) const
@@ -1841,9 +1840,8 @@ Value* VexExprBinopRoundF64toInt::emit(void) const
 	/* TODO: rounding mode */
 	BINOP_SETUP
 	v2 = builder->CreateBitCast(v2, get_d());
-	return builder->CreateSIToFP(
-		builder->CreateFPToSI(v2, get_i(64)), 
-		get_d());
+	return builder->CreateFSub(v2,
+		builder->CreateFRem(v2, DBL_1));
 }
 
 
