@@ -43,7 +43,6 @@ void VexExec::setupStatics(GuestState* in_gs)
 	if (!theVexHelpers) theVexHelpers = new VexHelpers();
 }
 
-
 VexExec::~VexExec()
 {
 	if (gs == NULL) return;
@@ -53,11 +52,12 @@ VexExec::~VexExec()
 }
 
 VexExec::VexExec(GuestState* in_gs)
-: gs(in_gs), sb_executed_c(0), trace_c(0), exited(false)
+: gs(in_gs), sb_executed_c(0), exited(false), trace_c(0)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
 	ExecutionEngine	*exeEngine;
 	std::string	err_str;
+	const char	*env_str;
 
 	eb.setErrorStr(&err_str);
 	exeEngine = eb.create();
@@ -74,6 +74,14 @@ VexExec::VexExec(GuestState* in_gs)
 	sc = new Syscalls(mappings, gs->getBinaryPath());
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
+
+	env_str = getenv("VEXLLVM_DISPATCH_TRACE");
+	if (env_str != NULL) {
+		if (strcmp(env_str, "stderr") == 0)  trace_conf = TRACE_STDERR;
+		else if (strcmp(env_str, "log") == 0) trace_conf = TRACE_LOG;
+	} else {
+		trace_conf = TRACE_OFF;
+	}
 }
 
 const VexSB* VexExec::doNextSB(void)
@@ -84,12 +92,23 @@ const VexSB* VexExec::doNextSB(void)
 	GuestExitType	exit_type;
 
 	elfptr = addr_stack.top();
-	
-	if (trace_c > TRACE_MAX)
-		trace.pop_front();
-	else
-		trace_c++;
-	trace.push_back(std::pair<void*, int>(elfptr, addr_stack.size()));
+
+	if (trace_conf != TRACE_OFF) {
+		if (trace_conf == TRACE_LOG) {
+			if (trace_c > TRACE_MAX)
+				trace.pop_front();
+			else
+				trace_c++;
+			trace.push_back(std::pair<void*, int>(
+				elfptr, addr_stack.size()));
+		} else {
+			std::cerr
+				<< "[VEXLLVM] dispatch: "
+				<< elfptr
+				<< " (depth=" << addr_stack.size()
+				<< ")\n";
+		}
+	}
 
 	addr_stack.pop();
 
@@ -103,7 +122,7 @@ const VexSB* VexExec::doNextSB(void)
 	if (exit_type != GE_IGNORE) {
 		gs->getCPUState()->setExitType(GE_IGNORE);
 		if (exit_type == GE_EMWARN) {
-			std::cerr << "[VEXLLVM] VEX Emulation warning!?" 
+			std::cerr << "[VEXLLVM] VEX Emulation warning!?"
 				<< std::endl;
 			addr_stack.push(new_jmpaddr);
 			return vsb;
@@ -183,7 +202,7 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 
 	if (!vsb) fprintf(stderr, "Could not get VSB for %p\n", elfptr);
 	assert (vsb && "Expected VSB");
-	assert((!found || (void*)vsb->getEndAddr() < m.end()) && 
+	assert((!found || (void*)vsb->getEndAddr() < m.end()) &&
 		"code spanned known page mappings");
 
 	return vsb;
@@ -261,7 +280,7 @@ void VexExec::run(void)
 	sa.sa_flags = SA_SIGINFO;
 	sigemptyset(&sa.sa_mask);
    	sigaction(SIGSEGV, &sa, NULL);
-   
+
 	loadExitFuncAddrs();
 	glibcLocaleCheat();
 
@@ -279,7 +298,7 @@ void VexExec::runAddrStack(void)
 		top_addr = addr_stack.top();
 		if (dump_current_state) {
 			std::cerr << "================BEFORE DOING "
-				<< top_addr 
+				<< top_addr
 				<< std::endl;
 			gs->print(std::cerr);
 		}
@@ -318,8 +337,8 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 
 	found = exec_context->mappings.lookupMapping(si->si_addr, m);
 	if (!found) {
-		std::cerr << "Caught SIGSEGV but couldn't " 
-			<< "find a mapping to tweak @ \n" 
+		std::cerr << "Caught SIGSEGV but couldn't "
+			<< "find a mapping to tweak @ \n"
 			<< si->si_addr << std::endl;
 		exit(1);
 	}
@@ -330,8 +349,8 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 		exec_context->mappings.recordMapping(m);
 		exec_context->flushTamperedCode(m.offset, m.end());
 	} else {
-		std::cerr << "Caught SIGSEGV but the mapping was" 
-			<< "a normal one... die! @ \n" 
+		std::cerr << "Caught SIGSEGV but the mapping was"
+			<< "a normal one... die! @ \n"
 			<< si->si_addr << std::endl;
 		exit(1);
 	}

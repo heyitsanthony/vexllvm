@@ -79,7 +79,6 @@ private:
 	void flushTamperedCode(void* start, void* end);
 
 	vexexec_addrs	addr_stack;
-	vexexec_traces	trace;
 
 	/* stats */
 	unsigned int	sb_executed_c;
@@ -90,9 +89,13 @@ private:
 	/* defined by env var VEXLLVM_DUMP_STATES */
 	bool		dump_current_state;
 
-	unsigned int	trace_c;
 	bool		exited;
 	int		exit_code;
+
+	enum TraceConf { TRACE_OFF, TRACE_LOG, TRACE_STDERR };
+	TraceConf	trace_conf;
+	vexexec_traces	trace;
+	unsigned int	trace_c;
 };
 
 #endif
