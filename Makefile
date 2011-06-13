@@ -189,5 +189,5 @@ tests-oprof: all
 	TRACES_OPROFILE=1 tests/traces.sh
 
 tests-web: test-traces tests-pt_xchk tests-fastxchk
-tests-softfloat-web: test-softfloat-traces tests-softfloat-pt_xchk tests-softfloat-fastxchk
+tests-softfloat-web: tests-softfloat-traces tests-softfloat-pt_xchk tests-softfloat-fastxchk
 
