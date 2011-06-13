@@ -155,6 +155,7 @@ tests/traces-obj/%.o: tests/traces-src/%.c
  #  ### ###  #  ###
 
 tests: test-traces
+tests-softfloat: tests-softfloat-traces
 
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/*
@@ -175,7 +176,18 @@ tests-fastxchk: all $(TRACEDEPS_PATH)
 tests-xchk_opcode: all $(TRACEDEPS_PATH)
 	tests/opcodes.sh
 
+tests-softfloat-traces: all $(TRACEDEPS_PATH)
+	RUNCMD=bin/softfloat/pt_trace tests/traces.sh
+
+tests-softfloat-pt_xchk:
+	RUNCMD=bin/softfloat/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
+
+tests-softfloat-fastxchk: all $(TRACEDEPS_PATH)
+	VEXLLVM_FASTCHK=1 RUNCMD=bin/softfloat/pt_xchk OUTPATH=tests/traces-fastxchk-out tests/traces.sh
+
 tests-oprof: all
 	TRACES_OPROFILE=1 tests/traces.sh
 
 tests-web: test-traces tests-pt_xchk tests-fastxchk
+tests-softfloat-web: test-softfloat-traces tests-softfloat-pt_xchk tests-softfloat-fastxchk
+
