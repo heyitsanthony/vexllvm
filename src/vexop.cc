@@ -2,6 +2,7 @@
 #include <iostream>
 #include "genllvm.h"
 #include "vexop.h"
+#include "vexop_macros.h"
 #include "vexhelpers.h"
 #include <llvm/Intrinsics.h>
 
@@ -734,75 +735,6 @@ CASE_OP(Rsqrte32x4)
 	return "???Op???";
 }
 
-#define get_i(b) IntegerType::get(getGlobalContext(), b)
-#define get_vt(w, b) VectorType::get(get_i(b), w)
-#define get_c(b, v) ConstantInt::get(getGlobalContext(), APInt(b, v))
-#define get_32i(v)	get_c(32, v)
-#define get_f() Type::getFloatTy(getGlobalContext())
-#define get_d() Type::getDoubleTy(getGlobalContext())
-#define get_vtf(w) VectorType::get(builder->getFloatTy(), w)
-#define get_vtd(w) VectorType::get(builder->getDoubleTy(), w)
-#define get_cvl(var, l) 						\
-	ConstantVector::get(std::vector<Constant*>(			\
-		var, var + l))	
-#define get_cv(var) get_cvl(var, sizeof(var)/sizeof(Constant*))
-
-
-#define UNOP_SETUP				\
-	Value		*v1;			\
-	IRBuilder<>	*builder;		\
-	builder = theGenLLVM->getBuilder();	\
-	v1 = args[0]->emit();
-
-#define BINOP_SETUP				\
-	Value		*v1, *v2;		\
-	IRBuilder<>	*builder;		\
-	v1 = args[0]->emit();			\
-	v2 = args[1]->emit();			\
-	builder = theGenLLVM->getBuilder();
-
-#define TRIOP_SETUP				\
-	Value		*v1, *v2, *v3;		\
-	IRBuilder<>	*builder;		\
-	v1 = args[0]->emit();			\
-	v2 = args[1]->emit();			\
-	v3 = args[2]->emit();			\
-	builder = theGenLLVM->getBuilder();
-
-#define UNOP_EMIT(x,y)				\
-Value* VexExprUnop##x::emit(void) const	\
-{						\
-	UNOP_SETUP				\
-	return builder->y(v1);			\
-}
-
-#define X_TO_Y_EMIT(x,y,w,z)			\
-Value* VexExprUnop##x::emit(void) const		\
-{						\
-	UNOP_SETUP				\
-	v1 = builder->CreateBitCast(v1, w);	\
-	return builder->y(v1, z);		\
-}
-
-/* XXX probably wrong to discard rounding info, but who cares */
-#define X_TO_Y_EMIT_ROUND(x,y,w,z)		\
-Value* VexExprBinop##x::emit(void) const	\
-{						\
-	BINOP_SETUP				\
-	v2 = builder->CreateBitCast(v2, w);	\
-	return builder->y(v2, z);		\
-}
-
-#define XHI_TO_Y_EMIT(x,y,w,z)				\
-Value* VexExprUnop##x::emit(void) const			\
-{							\
-	UNOP_SETUP					\
-	v1 = builder->CreateBitCast(v1, w);		\
-	return builder->CreateTrunc(			\
-		builder->CreateLShr(v1, get_c(y*2,y)),	\
-		z);					\
-}							\
-
 XHI_TO_Y_EMIT(64HIto32, 32, get_i(64), get_i(32))
 XHI_TO_Y_EMIT(32HIto16, 16, get_i(32), get_i(16))
 
@@ -828,16 +760,6 @@ X_TO_Y_EMIT(8Sto32,   CreateSExt,  get_i(8),  get_i(32))
 X_TO_Y_EMIT(8Uto64,   CreateZExt,  get_i(8),  get_i(64))
 X_TO_Y_EMIT(8Sto64,   CreateSExt,  get_i(8),  get_i(64))
 X_TO_Y_EMIT(128to64,  CreateTrunc, get_i(128), get_i(64))
-X_TO_Y_EMIT(F32toF64, CreateFPExt, get_f(),    get_d())
-
-X_TO_Y_EMIT(I32StoF64, CreateSIToFP, get_i(32), get_d())
-
-X_TO_Y_EMIT_ROUND(F64toF32, CreateFPTrunc, get_d(), get_f())
-X_TO_Y_EMIT_ROUND(I64StoF64, CreateSIToFP, get_i(64), get_d())
-X_TO_Y_EMIT_ROUND(I64UtoF64, CreateSIToFP, get_i(64), get_d())
-X_TO_Y_EMIT_ROUND(F64toI32S, CreateFPToSI, get_d(), get_i(32))
-X_TO_Y_EMIT_ROUND(F64toI32U, CreateFPToSI, get_d(), get_i(32))
-X_TO_Y_EMIT_ROUND(F64toI64S, CreateFPToSI, get_d(), get_i(64))
 
 UNOP_EMIT(Not1, CreateNot)
 UNOP_EMIT(Not8, CreateNot)
@@ -871,6 +793,7 @@ Value* VexExprUnopV128to64::emit(void) const
 		get_i(64), 
 		"V128to64");
 }
+
 Value* VexExprUnopV128HIto64::emit(void) const
 {
 	UNOP_SETUP
@@ -1015,28 +938,6 @@ BINOP_EXPAND_EMIT(MullU32, ZExt, get_i(64), Mul)
 BINOP_EXPAND_EMIT(MullU64, ZExt, get_i(128), Mul)
 
 
-#define BINCMP_EMIT(x,y,z)					\
-Value* VexExprBinop##x::emit(void) const			\
-{								\
-	BINOP_SETUP						\
-	v1 = builder->CreateBitCast(v1, y);			\
-	v2 = builder->CreateBitCast(v2, y);			\
-	Value* result = builder->CreateBitCast(			\
-		get_c(y->getBitWidth(), 0), y);			\
-	for(unsigned i = 0; i < y->getNumElements(); ++i) {	\
-		Value* e1 = builder->CreateExtractElement(	\
-			v1, get_32i(i));			\
-		Value* e2 = builder->CreateExtractElement(	\
-			v2, get_32i(i));			\
-		Value* elem = builder->CreateSelect(		\
-			builder->Create##z(e1, e2),		\
-			e1, e2);				\
-		result = builder->CreateInsertElement(		\
-			result, elem, get_32i(i));		\
-	}							\
-	return result;						\
-}
-
 BINCMP_EMIT(Max8Ux8 , get_vt(8 , 8 ), ICmpUGT);
 BINCMP_EMIT(Max8Ux16, get_vt(16, 8 ), ICmpUGT);
 BINCMP_EMIT(Max16Sx4, get_vt(4 , 16), ICmpSGT);
@@ -1046,61 +947,6 @@ BINCMP_EMIT(Min8Ux8 , get_vt(8 , 8 ), ICmpULT);
 BINCMP_EMIT(Min8Ux16, get_vt(16, 8 ), ICmpULT);
 BINCMP_EMIT(Min16Sx4, get_vt(4 , 16), ICmpSLT);
 BINCMP_EMIT(Min16Sx8, get_vt(8 , 16), ICmpSLT);
-
-BINCMP_EMIT(Min32Fx2, get_vtf(2), FCmpULT);
-BINCMP_EMIT(Max32Fx2, get_vtf(2), FCmpUGT);
-BINCMP_EMIT(Min32Fx4, get_vtf(4), FCmpULT);
-BINCMP_EMIT(Max32Fx4, get_vtf(4), FCmpUGT);
-
-BINCMP_EMIT(Max64Fx2, get_vtd(2), FCmpUGT);
-BINCMP_EMIT(Min64Fx2, get_vtd(2), FCmpULT);
-
-#define DBL_1 ConstantFP::get(get_d(), 1.0)
-#define FLT_1 ConstantFP::get(get_f(), 1.0)
-
-Constant* const g_dbl_1x2[] = { DBL_1, DBL_1 };
-Constant* const g_flt_1x4[] = { FLT_1, FLT_1, FLT_1, FLT_1 };
-#define DBL_1x2 get_cv(g_dbl_1x2)
-#define FLT_1x4 get_cv(g_flt_1x4)
-
-#define VINT(y,z)							\
-	Function	*f;						\
-	std::vector<const Type*> call_args;				\
-	call_args.push_back(y);						\
-	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), 		\
-		Intrinsic::z, &call_args[0], 1);			\
-	assert (f != NULL);						\
-	v1 = builder->CreateCall(f, v1);				
-
-#define VRCP(o) v1 = builder->CreateFDiv(o, v1);
-
-#define NONE
-
-#define OPV_RSQ(x, y, z, a, b)						\
-Value* VexExprUnop##x::emit(void) const					\
-{									\
-	UNOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, y);				\
-	a								\
-	b								\
-	return v1;							\
-}
-
-OPV_RSQ(Sqrt64Fx2 , get_vtd(2), sqrt, NONE, VINT(get_vtd(2), sqrt))
-OPV_RSQ(Recip64Fx2, get_vtd(2), sqrt, NONE, VRCP(DBL_1x2))
-OPV_RSQ(RSqrt64Fx2, get_vtd(2), sqrt, VINT(get_vtd(2), sqrt), VRCP(DBL_1x2))
-
-OPV_RSQ(Sqrt32Fx4 , get_vtf(4), sqrt, NONE, VINT(get_vtf(4), sqrt))
-OPV_RSQ(Recip32Fx4, get_vtf(4), sqrt, NONE, VRCP(FLT_1x4))
-OPV_RSQ(RSqrt32Fx4, get_vtf(4), sqrt, VINT(get_vtf(4), sqrt), VRCP(FLT_1x4))
-
-
-// UNOP_TAGOP(RSqrt32Fx4);
-// UNOP_TAGOP(RSqrt64Fx2);
-// 
-// UNOP_TAGOP(Recip32Fx4);
-// UNOP_TAGOP(Recip64Fx2);
-
 
 BINOP_EMIT(Or8, Or)
 BINOP_EMIT(Or16, Or)
@@ -1187,104 +1033,6 @@ DIVMOD_EMIT(DivModS128to64, S, S, 128)
 DIVMOD_EMIT(DivModU64to32, U, Z, 64)
 DIVMOD_EMIT(DivModS64to32, S, S, 64)
 
-#define OPF0X_EMIT(x, y, z)			\
-Value* VexExprBinop##x::emit(void) const	\
-{	\
-	Value	*lo_op_lhs, *lo_op_rhs, *result;	\
-	BINOP_SETUP					\
-	v1 = builder->CreateBitCast(v1, y);		\
-	v2 = builder->CreateBitCast(v2, y);		\
-	lo_op_lhs = builder->CreateExtractElement(v1, get_32i(0));	\
-	lo_op_rhs = builder->CreateExtractElement(v2, get_32i(0));	\
-	result = builder->Create##z(lo_op_lhs, lo_op_rhs);		\
-	return builder->CreateInsertElement(v1, result, get_32i(0));	\
-}
-
-OPF0X_EMIT(Mul64F0x2, get_vtd(2), FMul)
-OPF0X_EMIT(Div64F0x2, get_vtd(2), FDiv)
-OPF0X_EMIT(Add64F0x2, get_vtd(2), FAdd)
-OPF0X_EMIT(Sub64F0x2, get_vtd(2), FSub)
-OPF0X_EMIT(Mul32F0x4, get_vtf(4), FMul)
-OPF0X_EMIT(Div32F0x4, get_vtf(4), FDiv)
-OPF0X_EMIT(Add32F0x4, get_vtf(4), FAdd)
-OPF0X_EMIT(Sub32F0x4, get_vtf(4), FSub)
-
-#define OPF0X_CMP_EMIT(x, y, z)						\
-Value* VexExprBinop##x::emit(void) const				\
-{									\
-	Value	*a1, *a2, *result;					\
-	BINOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, y);				\
-	v2 = builder->CreateBitCast(v2, y);				\
-	a1 = builder->CreateExtractElement(v1, get_32i(0));		\
-	a2 = builder->CreateExtractElement(v2, get_32i(0));		\
-	result = builder->Create##z(a1, a2);				\
-	result = builder->CreateSExt(result, 				\
-		get_i(y->getScalarType()->getPrimitiveSizeInBits()));	\
-	result = builder->CreateBitCast(result, y->getScalarType());	\
-	return builder->CreateInsertElement(v1, result, get_32i(0));	\
-}
-
-OPF0X_CMP_EMIT(CmpLT32F0x4, get_vtf(4), FCmpOLT);
-OPF0X_CMP_EMIT(CmpLE32F0x4, get_vtf(4), FCmpOLE);
-OPF0X_CMP_EMIT(CmpEQ32F0x4, get_vtf(4), FCmpOEQ);
-OPF0X_CMP_EMIT(CmpUN32F0x4, get_vtf(4), FCmpUNO);
-
-OPF0X_CMP_EMIT(CmpLT64F0x2, get_vtd(2), FCmpOLT);
-OPF0X_CMP_EMIT(CmpLE64F0x2, get_vtd(2), FCmpOLE);
-OPF0X_CMP_EMIT(CmpEQ64F0x2, get_vtd(2), FCmpOEQ);
-OPF0X_CMP_EMIT(CmpUN64F0x2, get_vtd(2), FCmpUNO);
-
-#define OPF0X_SEL_EMIT(x, y, z)						\
-Value* VexExprBinop##x::emit(void) const				\
-{									\
-	Value	*result, *a, *b;					\
-	BINOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, y);				\
-	v2 = builder->CreateBitCast(v2, y);				\
-	a = builder->CreateExtractElement(v1, get_32i(0));		\
-	b = builder->CreateExtractElement(v2, get_32i(0));		\
-	result = builder->CreateSelect(					\
-		builder->Create##z(a, b), a, b);			\
-	return builder->CreateInsertElement(v1, result, get_32i(0));	\
-}
-
-OPF0X_SEL_EMIT(Max32F0x4, get_vtf(4), FCmpUGT)
-OPF0X_SEL_EMIT(Min32F0x4, get_vtf(4), FCmpULT)
-OPF0X_SEL_EMIT(Max64F0x2, get_vtd(2), FCmpUGT)
-OPF0X_SEL_EMIT(Min64F0x2, get_vtd(2), FCmpULT)
-
-#define F0XINT(y,z)							\
-	Function	*f;						\
-	std::vector<const Type*> call_args;				\
-	call_args.push_back(y->getScalarType());			\
-	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), 		\
-		Intrinsic::z, &call_args[0], 1);			\
-	assert (f != NULL);						\
-	a1 = builder->CreateCall(f, a1);				
-
-#define F0XRCP(o) a1 = builder->CreateFDiv(o, a1);
-
-#define OPF0X_RSQ(x, y, z, a, b)					\
-Value* VexExprUnop##x::emit(void) const					\
-{									\
-	Value		*a1;						\
-	UNOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, y);				\
-	a1 = builder->CreateExtractElement(v1, get_32i(0));		\
-	a								\
-	b								\
-	return builder->CreateInsertElement(v1, a1, get_32i(0));	\
-}
-
-OPF0X_RSQ(Sqrt64F0x2 , get_vtd(2), sqrt, NONE, F0XINT(get_d(), sqrt))
-OPF0X_RSQ(Recip64F0x2, get_vtd(2), sqrt, NONE, F0XRCP(DBL_1))
-OPF0X_RSQ(RSqrt64F0x2, get_vtd(2), sqrt, F0XINT(get_d(), sqrt), F0XRCP(DBL_1))
-
-OPF0X_RSQ(Sqrt32F0x4 , get_vtf(4), sqrt, NONE, F0XINT(get_f(), sqrt))
-OPF0X_RSQ(Recip32F0x4, get_vtf(4), sqrt, NONE, F0XRCP(FLT_1))
-OPF0X_RSQ(RSqrt32F0x4, get_vtf(4), sqrt, F0XINT(get_f(), sqrt), F0XRCP(FLT_1))
-
 Value* VexExprBinopSetV128lo64::emit(void) const
 {
 	BINOP_SETUP
@@ -1303,20 +1051,6 @@ Value* VexExprBinopSetV128lo32::emit(void) const
 		get_32i(0));
 }
 
-#define EMIT_HELPER_BINOP(x,y,z)		\
-Value* VexExprBinop##x::emit(void) const	\
-{						\
-	llvm::Function	*f;			\
-	BINOP_SETUP				\
-	f = theVexHelpers->getHelper(y);	\
-	assert (f != NULL);			\
-	v1 = builder->CreateBitCast(v1, z);	\
-	v2 = builder->CreateBitCast(v2, z);	\
-	return builder->CreateCall2(f, v1, v2);	\
-}
-
-EMIT_HELPER_BINOP(CmpF64, "vexop_cmpf64", get_d())
-
 BINOP_EMIT(CmpLE64S, ICmpSLE)
 BINOP_EMIT(CmpLE64U, ICmpULE)
 BINOP_EMIT(CmpLT64S, ICmpSLT)
@@ -1325,18 +1059,6 @@ BINOP_EMIT(CmpLE32S, ICmpSLE)
 BINOP_EMIT(CmpLE32U, ICmpULE)
 BINOP_EMIT(CmpLT32S, ICmpSLT)
 BINOP_EMIT(CmpLT32U, ICmpULT)
-
-#define EMIT_HELPER_UNOP(x,y)			\
-Value* VexExprUnop##x::emit(void) const	\
-{						\
-	IRBuilder<>     *builder = theGenLLVM->getBuilder();	\
-	llvm::Function	*f;	\
-	llvm::Value	*v;	\
-	v = args[0]->emit();	\
-	f = theVexHelpers->getHelper(y);	\
-	assert (f != NULL);	\
-	return builder->CreateCall(f, v);	\
-}
 
 /* count number of zeros (from bit0) leading up to first 1. */
 /* 0x0 -> undef */
@@ -1431,21 +1153,10 @@ Value* VexExprUnop##x::emit(void) const	\
 	return builder->Create##z(v1);		\
 }
 
-#define OPV_EMIT(x, y, z)			\
-Value* VexExprBinop##x::emit(void) const	\
-{	\
-	BINOP_SETUP					\
-	v1 = builder->CreateBitCast(v1, y);		\
-	v2 = builder->CreateBitCast(v2, y);		\
-	return builder->Create##z(v1, v2);		\
-}
-
 OPV_EMIT(OrV128, get_i(128), Or)
 OPV_EMIT(XorV128, get_i(128), Xor)
 OPV_EMIT(AndV128, get_i(128), And)
 UNOPV_EMIT(NotV128, get_i(128), Not)
-
-
 
 OPV_EMIT(Shl8x8 , get_vt(8, 8), Shl )
 OPV_EMIT(Shr8x8 , get_vt(8, 8), LShr)
@@ -1504,7 +1215,6 @@ OPV_EMIT(Mul16x4 , get_vt(4, 16), Mul )
 OPV_EMIT(Mul16x8 , get_vt(8, 16), Mul )
 OPV_EMIT(Mul32x2 , get_vt(2, 32), Mul )
 OPV_EMIT(Mul32x4 , get_vt(4, 32), Mul )
-
 
 // name, dstTy, ext type, intermediate type, shift bits, op
 #define OPV_EXT_EMIT(x, y, z, w, s, o)				\
@@ -1731,19 +1441,6 @@ OPAVG_EMIT(Avg16Sx8, get_vt(8 , 16), SExt, get_vt(8 , 32));
 OPAVG_EMIT(Avg32Ux4, get_vt(4 , 32), ZExt, get_vt(4 , 64));
 OPAVG_EMIT(Avg32Sx4, get_vt(4 , 32), SExt, get_vt(4 , 64));
 
-#define OPV_CMP_T_EMIT(x, y, z, w)			\
-Value* VexExprBinop##x::emit(void) const		\
-{							\
-	BINOP_SETUP					\
-	v1 = builder->CreateBitCast(v1, y);		\
-	v2 = builder->CreateBitCast(v2, y);		\
-	return builder->CreateSExt(			\
-		builder->Create##z(v1, v2),		\
-		w);					\
-}
-
-#define OPV_CMP_EMIT(x, y, z)	OPV_CMP_T_EMIT(x, y, z, y)
-
 OPV_CMP_EMIT(CmpEQ8x8 , get_vt(8, 8) , ICmpEQ)
 OPV_CMP_EMIT(CmpEQ8x16, get_vt(16, 8), ICmpEQ)
 OPV_CMP_EMIT(CmpEQ16x4, get_vt(4, 16), ICmpEQ)
@@ -1765,100 +1462,6 @@ OPV_CMP_EMIT(CmpGT16Ux4, get_vt(4, 16), ICmpUGT)
 OPV_CMP_EMIT(CmpGT16Ux8, get_vt(8, 16), ICmpUGT)
 OPV_CMP_EMIT(CmpGT32Ux2, get_vt(2, 32), ICmpUGT)
 OPV_CMP_EMIT(CmpGT32Ux4, get_vt(4, 32), ICmpUGT)
-
-OPV_CMP_T_EMIT(CmpEQ32Fx2, get_vtf(2), FCmpOEQ, get_vt(2, 32))
-OPV_CMP_T_EMIT(CmpEQ32Fx4, get_vtf(4), FCmpOEQ, get_vt(4, 32))
-OPV_CMP_T_EMIT(CmpEQ64Fx2, get_vtd(2), FCmpOEQ, get_vt(2, 64))
-
-OPV_CMP_T_EMIT(CmpGT32Fx2, get_vtf(2), FCmpOGT, get_vt(2, 32))
-OPV_CMP_T_EMIT(CmpGT32Fx4, get_vtf(4), FCmpOGT, get_vt(4, 32))
-
-OPV_CMP_T_EMIT(CmpGE32Fx2, get_vtf(2), FCmpOGE, get_vt(2, 32))
-OPV_CMP_T_EMIT(CmpGE32Fx4, get_vtf(4), FCmpOGE, get_vt(4, 32))
-
-OPV_CMP_T_EMIT(CmpLT32Fx4, get_vtf(4), FCmpOLT, get_vt(4, 32))
-OPV_CMP_T_EMIT(CmpLT64Fx2, get_vtd(2), FCmpOLT, get_vt(2, 64))
-
-OPV_CMP_T_EMIT(CmpLE32Fx4, get_vtf(4), FCmpOLE, get_vt(4, 32))
-OPV_CMP_T_EMIT(CmpLE64Fx2, get_vtd(2), FCmpOLE, get_vt(2, 64))
-
-OPV_CMP_T_EMIT(CmpUN32Fx4, get_vtf(4), FCmpUNO, get_vt(4, 32))
-OPV_CMP_T_EMIT(CmpUN64Fx2, get_vtd(2), FCmpUNO, get_vt(2, 64))
-
-
-OPV_EMIT(Add32Fx2 , get_vtf(2), FAdd )
-OPV_EMIT(Add32Fx4 , get_vtf(4), FAdd )
-OPV_EMIT(Add64Fx2 , get_vtd(2), FAdd )
-
-OPV_EMIT(Sub32Fx2 , get_vtf(2), FSub )
-OPV_EMIT(Sub32Fx4 , get_vtf(4), FSub )
-OPV_EMIT(Sub64Fx2 , get_vtd(2), FSub )
-
-OPV_EMIT(Mul32Fx2 , get_vtf(2), FMul )
-OPV_EMIT(Mul32Fx4 , get_vtf(4), FMul )
-OPV_EMIT(Mul64Fx2 , get_vtd(2), FMul )
-
-OPV_EMIT(Div32Fx4 , get_vtf(4), FDiv )
-OPV_EMIT(Div64Fx2 , get_vtd(2), FDiv )
-
-#define DBL_0 ConstantFP::get(get_d(), 0.0)
-#define FLT_0 ConstantFP::get(get_f(), 0.0)
-
-// Constant* const g_dbl_0x2[] = { DBL_0, DBL_0 };
-Constant* const g_flt_0x2[] = { FLT_0, FLT_0 };
-Constant* const g_flt_0x4[] = { FLT_0, FLT_0, FLT_0, FLT_0 };
-
-#define UNOP_NEG_EMIT(x, y, c)  \
-Value* VexExprUnop##x::emit(void) const		\
-{						\
-	UNOP_SETUP				\
-	v1 = builder->CreateBitCast(v1, y);	\
-	return builder->CreateFSub(c, v1);	\
-}
-
-UNOP_NEG_EMIT(NegF32, get_f(), FLT_0)
-UNOP_NEG_EMIT(NegF64, get_d(), DBL_0)
-UNOP_NEG_EMIT(Neg32Fx2, get_vtf(2), get_cv(g_flt_0x2))
-UNOP_NEG_EMIT(Neg32Fx4, get_vtf(4), get_cv(g_flt_0x4))
-
-
-#define TRIOP_EXPAND_EMIT(x,y,z,w)				\
-Value* VexExprTriop##x::emit(void) const			\
-{								\
-	TRIOP_SETUP						\
-	v2 = builder->Create##y(v2, z);				\
-	v3 = builder->Create##y(v3, z);				\
-	return builder->Create##w(v2, v3);			\
-}
-
-TRIOP_EXPAND_EMIT(AddF64, BitCast, get_d(), FAdd)
-TRIOP_EXPAND_EMIT(SubF64, BitCast, get_d(), FSub)
-TRIOP_EXPAND_EMIT(DivF64, BitCast, get_d(), FDiv)
-TRIOP_EXPAND_EMIT(MulF64, BitCast, get_d(), FMul)
-
-TRIOP_EXPAND_EMIT(AddF32, BitCast, get_f(), FAdd)
-TRIOP_EXPAND_EMIT(SubF32, BitCast, get_f(), FSub)
-TRIOP_EXPAND_EMIT(DivF32, BitCast, get_f(), FDiv)
-TRIOP_EXPAND_EMIT(MulF32, BitCast, get_f(), FMul)
-
-Value* VexExprBinopRoundF32toInt::emit(void) const
-{
-	/* TODO: rounding mode */
-	BINOP_SETUP
-	v2 = builder->CreateBitCast(v2, get_f());
-	return builder->CreateFSub(v2,
-		builder->CreateFRem(v2, FLT_1));
-}
-
-Value* VexExprBinopRoundF64toInt::emit(void) const
-{
-	/* TODO: rounding mode */
-	BINOP_SETUP
-	v2 = builder->CreateBitCast(v2, get_d());
-	return builder->CreateFSub(v2,
-		builder->CreateFRem(v2, DBL_1));
-}
-
 
 //note max vector elements of 16
 #define OPVS_EMIT(x, y, z)				\
@@ -1939,47 +1542,3 @@ Value* VexExprBinop##x::emit(void) const				\
 
 OPSHUF_EMIT(Perm8x8, get_vt(8, 8), get_vt(8, 8))
 OPSHUF_EMIT(Perm8x16, get_vt(16, 8), get_vt(16, 8))
-
-Value* VexExprTriopPRemF64::emit(void) const
-{
-	/* ignoring rounding mode etc */
-	TRIOP_SETUP
-	v2 = builder->CreateBitCast(v2, get_d());
-	v3 = builder->CreateBitCast(v3, get_d());
-	return builder->CreateFRem(v2, v3);
-}
-Value* VexExprTriopPRemC3210F64::emit(void) const
-{
-	/* aside from the exception codes:
-	C0 = bit2 of the quotient (Q2) 
-	C1 = bit0 of the quotient (Q0) 
-	C3 = bit1 of the quotient (Q1)
-	*/
-	TRIOP_SETUP
-	v2 = builder->CreateBitCast(v2, get_d());
-	v3 = builder->CreateBitCast(v3, get_d());
-	Value *quotient = builder->CreateFDiv(v2, v3);
-	quotient = builder->CreateFPToSI(quotient, get_i(32));
-	Value *result = get_32i(0);
-	result = builder->CreateOr(
-		result,
-		builder->CreateSelect(
-			builder->CreateTrunc(quotient, get_i(1)),
-			get_32i(0x200), get_32i(0)));
-	result = builder->CreateOr(
-		result,
-		builder->CreateSelect(
-			builder->CreateTrunc(
-				builder->CreateLShr(quotient, get_32i(1)),
-				get_i(1)),
-			get_32i(0x4000), get_32i(0)));
-	result = builder->CreateOr(
-		result,
-		builder->CreateSelect(
-			builder->CreateTrunc(
-				builder->CreateLShr(quotient, get_32i(2)),
-				get_i(1)),
-			get_32i(0x100), get_32i(0)));
-	return result;
-}
-

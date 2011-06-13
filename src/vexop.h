@@ -3,8 +3,6 @@
 
 #include "vexexpr.h"
 
-
-
 extern "C" {
 #include <valgrind/libvex.h>
 #include <valgrind/libvex_ir.h>

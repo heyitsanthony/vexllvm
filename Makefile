@@ -27,7 +27,6 @@ OBJDEPS=	vexxlate.o		\
 		vex_dispatch.o		\
 		syscalls.o		\
 		syscallsmarshalled.o	\
-		vexhelpers.o		\
 		vexfcache.o		\
 		vexjitcache.o		\
 		vexexec.o		\
@@ -42,11 +41,18 @@ OBJDEPS=	vexxlate.o		\
 		ptimgchk.o		\
 		elfsegment.o		\
 #		libvex_amd64_helpers.o	\
+#
 
-ELFTRACEDEPS=	elf_trace.o
+FPDEPS=		vexhelpers.o		\
+		vexop_fp.o
+
+SOFTDPDEPS=	vexhelpers-softfp.o	\
+		vexop_softfp.o
+
 
 BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
-		bitcode/vexops.bc
+		bitcode/vexops.bc		\
+		bitcode/softfloat.bc
 
 TRACEDEPS= nested_call strlen strrchr 	\
 	print cmdline getenv 		\
@@ -60,7 +66,7 @@ TRACEDEPS= nested_call strlen strrchr 	\
 	fp-test
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
-ELFTRACEDIRDEPS=$(ELFTRACEDEPS:%=obj/%)
+FPDIRDEPS=$(FPDEPS:%=obj/%)
 
 #TODO: use better config options
 
@@ -83,7 +89,7 @@ bitcode: $(BITCODE_FILES)
 clean:
 	rm -f obj/* bin/*
 
-bin/vexllvm.a: $(OBJDIRDEPS)
+bin/vexllvm.a: $(OBJDIRDEPS) $(FPDIRDEPS)
 	ar r $@ $^
 
 tests/traces-bin/dlsym : tests/traces-obj/dlsym.o
@@ -124,29 +130,13 @@ tests-oprof: all
 
 tests-web: test-traces tests-pt_xchk tests-fastxchk
 
-bin/pt_xchk: $(OBJDIRDEPS) obj/pt_xchk.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+#bin/pt_run-softfloat: $(OBJDIRDEPS) obj/pt_run.o
+#	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
 
-bin/elf_trace: $(OBJDIRDEPS) $(ELFTRACEDIRDEPS)
-	g++ -o $@ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) $(LDRELOC)
-
-bin/elf_run: $(OBJDIRDEPS) obj/elf_run.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
-
-bin/pt_run_rebase: $(OBJDIRDEPS) obj/pt_run.o
+bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
 
-bin/pt_xchk_rebase: $(OBJDIRDEPS) obj/pt_xchk.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
-
-bin/pt_run: $(OBJDIRDEPS) obj/pt_run.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
-
-bin/pt_trace: $(OBJDIRDEPS) obj/pt_trace.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
-
-
-bin/jit_test: $(OBJDIRDEPS) obj/jit_test.o
+bin/%: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
 	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 #obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
@@ -154,6 +144,10 @@ bin/jit_test: $(OBJDIRDEPS) obj/jit_test.o
 
 #obj/libvex_amd64_helpers.o:   obj/libvex_amd64_helpers.s
 #	g++ $(CFLAGS)$(LLVMFLAGS)  -o $@ -c $<
+
+SOFTFLOATDIR=support/softfloat/softfloat/bits64
+bitcode/softfloat.bc: $(SOFTFLOATDIR)/softfloat.c
+	cd $(SOFTFLOATDIR)/SPARC-Solaris-GCC/ && llvm-gcc -emit-llvm -I. -I.. -O3 -c ../softfloat.c -o ../../../../../$@
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<
