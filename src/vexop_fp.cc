@@ -6,6 +6,9 @@
 
 using namespace llvm;
 
+/* FP already handled with default helper modules */
+void vexop_setup_fp(VexHelpers* vh) {}
+
 #define VINT(y,z)							\
 	Function	*f;						\
 	std::vector<const Type*> call_args;				\

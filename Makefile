@@ -13,7 +13,19 @@ endif
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
 LDRELOC2="-Wl,-Ttext-segment=$(BIN_BASE2)"
 #LDFLAGS=
+VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
+#LLVMCONFIG_PATH="/home/chz/src/llvm/llvm-2.6/Release/bin/llvm-config"
+#CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=6
+LLVMCONFIG_PATH=llvm-config
+LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
+LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
+LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
 
+
+##  ### ### ###
+# # # #  #  # #
+# # ###  #  ###
+##  # #  #  # #
 
 OBJDEPS=	vexxlate.o		\
 		vexstmt.o		\
@@ -32,6 +44,7 @@ OBJDEPS=	vexxlate.o		\
 		vexexec.o		\
 		vexexecchk.o		\
 		vexexecfastchk.o	\
+		vexhelpers.o		\
 		symbols.o		\
 		elfimg.o		\
 		dllib.o			\
@@ -43,17 +56,78 @@ OBJDEPS=	vexxlate.o		\
 #		libvex_amd64_helpers.o	\
 #
 
-FPDEPS=		vexhelpers.o		\
-		vexop_fp.o
-
-SOFTDPDEPS=	vexhelpers-softfp.o	\
-		vexop_softfp.o
+FPDEPS= vexop_fp.o
+SOFTFLOATDEPS=vexop_softfloat.o
 
 
 BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/vexops.bc		\
 		bitcode/softfloat.bc
 
+OBJDIRDEPS=$(OBJDEPS:%=obj/%)
+FPDIRDEPS=$(FPDEPS:%=obj/%)
+SOFTFLOATDIRDEPS=$(SOFTFLOATDEPS:%=obj/%)
+
+#TODO: use better config options
+BINTARGETS=	elf_trace elf_run jit_test	\
+		pt_run pt_trace pt_xchk
+
+BINTARGETSFP=$(BINTARGETS:%=bin/%)
+BINTARGETSSOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
+
+
+all:	bitcode 				\
+	$(BINTARGETSFP)				\
+	$(BINTARGETSSOFTFLOAT)			\
+	bin/vexllvm.a bin/vexllvm-softfloat.a
+
+clean:
+	rm -f obj/* $(BINTARGETSFP) $(BINTARGETSSOFTFLOAT)
+
+bitcode: $(BITCODE_FILES)
+
+bin/vexllvm.a: $(OBJDIRDEPS) $(FPDIRDEPS)
+	ar r $@ $^
+
+bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
+	ar r $@ $^
+
+bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
+
+bin/%: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+
+bin/softfloat/%_rebase: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
+
+bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
+	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+
+#obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
+#	llc  $< -o $@
+
+#obj/libvex_amd64_helpers.o:   obj/libvex_amd64_helpers.s
+#	g++ $(CFLAGS)$(LLVMFLAGS)  -o $@ -c $<
+
+bitcode/%.bc: support/%.c
+	llvm-gcc -emit-llvm -O3 -c $< -o $@
+
+
+SOFTFLOATDIR=support/softfloat/softfloat/bits64
+bitcode/softfloat.bc: $(SOFTFLOATDIR)/softfloat.c
+	cd $(SOFTFLOATDIR)/SPARC-Solaris-GCC/ && llvm-gcc -emit-llvm -I. -I.. -O3 -c ../softfloat.c -o ../../../../../$@
+
+obj/%.o: src/%.s
+	gcc $(CFLAGS) -c -o $@ $<
+
+obj/%.o: src/%.cc src/%.h
+	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
+
+obj/%.o: src/%.cc
+	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
+
+# TEST DATA
 TRACEDEPS= nested_call strlen strrchr 	\
 	print cmdline getenv 		\
 	fwrite malloc memset 		\
@@ -65,33 +139,6 @@ TRACEDEPS= nested_call strlen strrchr 	\
 	cmdline-many dlsym		\
 	fp-test
 
-OBJDIRDEPS=$(OBJDEPS:%=obj/%)
-FPDIRDEPS=$(FPDEPS:%=obj/%)
-
-#TODO: use better config options
-
-VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
-#LLVMCONFIG_PATH="/home/chz/src/llvm/llvm-2.6/Release/bin/llvm-config"
-#CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=6
-LLVMCONFIG_PATH=llvm-config
-LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
-LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
-LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
-
-all:	bin/elf_trace bin/elf_run bin/jit_test \
-	bitcode \
-	bin/pt_run bin/pt_trace bin/pt_xchk \
-	bin/pt_run_rebase bin/pt_xchk_rebase \
-	bin/vexllvm.a
-
-bitcode: $(BITCODE_FILES)
-
-clean:
-	rm -f obj/* bin/*
-
-bin/vexllvm.a: $(OBJDIRDEPS) $(FPDIRDEPS)
-	ar r $@ $^
-
 tests/traces-bin/dlsym : tests/traces-obj/dlsym.o
 	$(TRACECC) $(TRACE_CFLAGS) -ldl $< -o $@
 
@@ -101,8 +148,11 @@ tests/traces-bin/% : tests/traces-obj/%.o
 tests/traces-obj/%.o: tests/traces-src/%.c
 	$(TRACECC) $(TRACE_CFLAGS) -c -o $@ $<
 
-bitcode/%.bc: support/%.c
-	llvm-gcc -emit-llvm -O3 -c $< -o $@
+### ### ### ### ###
+ #  #   #    #  #
+ #  ### ###  #  ###
+ #  #     #  #    #
+ #  ### ###  #  ###
 
 tests: test-traces
 
@@ -129,31 +179,3 @@ tests-oprof: all
 	TRACES_OPROFILE=1 tests/traces.sh
 
 tests-web: test-traces tests-pt_xchk tests-fastxchk
-
-#bin/pt_run-softfloat: $(OBJDIRDEPS) obj/pt_run.o
-#	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
-
-bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
-
-bin/%: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
-
-#obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
-#	llc  $< -o $@
-
-#obj/libvex_amd64_helpers.o:   obj/libvex_amd64_helpers.s
-#	g++ $(CFLAGS)$(LLVMFLAGS)  -o $@ -c $<
-
-SOFTFLOATDIR=support/softfloat/softfloat/bits64
-bitcode/softfloat.bc: $(SOFTFLOATDIR)/softfloat.c
-	cd $(SOFTFLOATDIR)/SPARC-Solaris-GCC/ && llvm-gcc -emit-llvm -I. -I.. -O3 -c ../softfloat.c -o ../../../../../$@
-
-obj/%.o: src/%.s
-	gcc $(CFLAGS) -c -o $@ $<
-
-obj/%.o: src/%.cc src/%.h
-	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
-
-obj/%.o: src/%.cc
-	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<

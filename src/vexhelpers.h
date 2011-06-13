@@ -12,18 +12,23 @@ class Function;
 class ExecutionEngine;
 }
 
+typedef std::list<llvm::Module*>	mod_list;
+
 class VexHelpers
 {
 public:
 	VexHelpers();
 	~VexHelpers();
-	std::list<llvm::Module*> getModules(void) const;
+	mod_list getModules(void) const;
 	llvm::Function* getHelper(const char* s) const;
 	void bindToExeEngine(llvm::ExecutionEngine*);
+	void loadUserMod(const char* path);
 private:
 	llvm::Module*	loadMod(const char* path);
-	llvm::Module	*helper_mod;
-	llvm::Module	*vexop_mod;
+	llvm::Module*	helper_mod;
+	llvm::Module*	vexop_mod;
+	mod_list	user_mods;
+	const char	*bc_dirpath;
 };
 
 extern VexHelpers* theVexHelpers;

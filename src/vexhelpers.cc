@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include <stdio.h>
+#include "Sugar.h"
 #include "genllvm.h"
 
 #include "vexhelpers.h"
@@ -25,13 +26,13 @@
 using namespace llvm;
 
 VexHelpers* theVexHelpers;
+extern void vexop_setup_fp(VexHelpers* vh);
 
 VexHelpers::VexHelpers()
 : helper_mod(0), vexop_mod(0)
 {
 	char		path_buf[512];
-	const char	*bc_dirpath;
-	
+
 	/* env not set => assume running from git root */
 	bc_dirpath = getenv("VEXLLVM_HELPER_PATH");
 	if (bc_dirpath == NULL) bc_dirpath = "bitcode";
@@ -42,6 +43,7 @@ VexHelpers::VexHelpers()
 	vexop_mod = loadMod(path_buf);
 
 	assert (helper_mod && vexop_mod);
+	vexop_setup_fp(this);
 }
 
 Module* VexHelpers::loadMod(const char* path)
@@ -87,12 +89,25 @@ Module* VexHelpers::loadMod(const char* path)
 	return ret_mod;
 }
 
-std::list<llvm::Module*> VexHelpers::getModules(void) const
+mod_list VexHelpers::getModules(void) const
 {
-	std::list<llvm::Module*>	l;
+	mod_list	l = user_mods;
 	l.push_back(helper_mod);
 	l.push_back(vexop_mod);
 	return l;
+}
+
+void VexHelpers::loadUserMod(const char* path)
+{
+	Module*	m;
+	char	pathbuf[512];
+
+	assert ((strlen(path)+strlen(bc_dirpath)) < 512);
+	snprintf(pathbuf, 512, "%s/%s", bc_dirpath, path);
+
+	m = loadMod(pathbuf);
+	assert (m != NULL && "Could not load user module");
+	user_mods.push_back(m);
 }
 
 VexHelpers::~VexHelpers()
@@ -107,8 +122,15 @@ VexHelpers::~VexHelpers()
 Function* VexHelpers::getHelper(const char* s) const
 {
 	Function	*f;
+
+	/* TODO why not start using a better algorithm sometime */
 	if ((f = helper_mod->getFunction(s))) return f;
 	if ((f = vexop_mod->getFunction(s))) return f;
+	foreach (it, user_mods.begin(), user_mods.end()) {
+		if ((f = (*it)->getFunction(s)))
+			return f;
+	}
+
 	return NULL;
 }
 

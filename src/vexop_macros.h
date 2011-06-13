@@ -4,6 +4,8 @@
 #ifndef VEXOP_MACROS_H
 #define VEXOP_MACROS_H
 
+#include <assert.h>
+
 #define NONE
 #define get_i(b)	IntegerType::get(getGlobalContext(), b)
 #define get_f()		Type::getFloatTy(getGlobalContext())
@@ -211,5 +213,12 @@ Value* VexExprBinop##x::emit(void) const	\
 	v2 = builder->CreateBitCast(v2, y);		\
 	return builder->Create##z(v1, v2);		\
 }
+
+#define UNOP_UNIMPL(x)	\
+Value* VexExprUnop##x::emit(void) const { assert (0 == 1 && "UNIMPL"); }
+#define BINOP_UNIMPL(x)	\
+Value* VexExprBinop##x::emit(void) const { assert (0 == 1 && "UNIMPL"); }
+#define TRIOP_UNIMPL(x)	\
+Value* VexExprTriop##x::emit(void) const { assert (0 == 1 && "UNIMPL"); }
 
 #endif
