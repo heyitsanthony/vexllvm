@@ -73,13 +73,16 @@ SOFTFLOATDIRDEPS=$(SOFTFLOATDEPS:%=obj/%)
 BINTARGETS=	elf_trace elf_run jit_test	\
 		pt_run pt_trace pt_xchk
 
-BINTARGETSFP=$(BINTARGETS:%=bin/%)
-BINTARGETSSOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
-
+BINTARGETS_FP=$(BINTARGETS:%=bin/%)
+BINTARGETS_FP_REBASE=$(BINTARGETS:%=bin/%_rebase)
+BINTARGETS_SOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
+BINTARGETS_SOFTFLOAT_REBASE=$(BINTARGETS:%=bin/softfloat/%_rebase)
 
 all:	bitcode 				\
-	$(BINTARGETSFP)				\
-	$(BINTARGETSSOFTFLOAT)			\
+	$(BINTARGETS_FP)			\
+	$(BINTARGETS_FP_REBASE)			\
+	$(BINTARGETS_SOFTFLOAT)			\
+	$(BINTARGETS_SOFTFLOAT_REBASE)		\
 	bin/vexllvm.a bin/vexllvm-softfloat.a
 
 clean:
