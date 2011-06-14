@@ -58,6 +58,7 @@ Value* VexExprBinop##x::emit(void) const	\
 	return builder->y(v2, z);		\
 }
 
+// (name, cast type, op)
 #define BINCMP_EMIT(x,y,z)					\
 Value* VexExprBinop##x::emit(void) const			\
 {								\
@@ -80,16 +81,26 @@ Value* VexExprBinop##x::emit(void) const			\
 	return result;						\
 }
 
-#define OPF0X_EMIT(x, y, z)			\
-Value* VexExprBinop##x::emit(void) const	\
+/* (vex op, cast-to type, LLVM instruction)*/
+#define OPF0X_EMIT(x, y, z)	OPF0X_EMIT_BEGIN(x,y,z);	\
+				OPF0X_EMIT_OP(x,y,z);		\
+				OPF0X_EMIT_END(x,y,z)
+
+
+#define OPF0X_EMIT_BEGIN(x, y, z)			\
+Value* VexExprBinop##x::emit(void) const		\
 {	\
 	Value	*lo_op_lhs, *lo_op_rhs, *result;	\
 	BINOP_SETUP					\
 	v1 = builder->CreateBitCast(v1, y);		\
 	v2 = builder->CreateBitCast(v2, y);		\
 	lo_op_lhs = builder->CreateExtractElement(v1, get_32i(0));	\
-	lo_op_rhs = builder->CreateExtractElement(v2, get_32i(0));	\
-	result = builder->Create##z(lo_op_lhs, lo_op_rhs);		\
+	lo_op_rhs = builder->CreateExtractElement(v2, get_32i(0));
+
+#define OPF0X_EMIT_OP(x,y,z)	\
+	result = builder->Create##z(lo_op_lhs, lo_op_rhs); \
+
+#define OPF0X_EMIT_END(x,y,z)						\
 	return builder->CreateInsertElement(v1, result, get_32i(0));	\
 }
 

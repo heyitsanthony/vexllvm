@@ -85,7 +85,10 @@ Module* VexHelpers::loadMod(const char* path)
 	}
 
 #endif
-
+	if (ret_mod == NULL) {
+		std::cerr << "OOPS: " << ErrorMsg
+			<< " (path=" << path << ")\n";
+	}
 	return ret_mod;
 }
 
