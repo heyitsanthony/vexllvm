@@ -32,7 +32,7 @@ OBJDEPS=	vexxlate.o		\
 		vexstmt.o		\
 		vexsb.o			\
 		vexexpr.o		\
-		vexmem.o		\
+		guestmem.o		\
 		vexop.o			\
 		genllvm.o		\
 		guestcpustate.o		\
@@ -73,12 +73,14 @@ SOFTFLOATDIRDEPS=$(SOFTFLOATDEPS:%=obj/%)
 BINTARGETS=	elf_trace elf_run jit_test	\
 		pt_run pt_trace pt_xchk dump_loader
 
+BINOBJS=$(BINTARGETS:%=obj/%.o)
 BINTARGETS_FP=$(BINTARGETS:%=bin/%)
 BINTARGETS_FP_REBASE=$(BINTARGETS:%=bin/%_rebase)
 BINTARGETS_SOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
 BINTARGETS_SOFTFLOAT_REBASE=$(BINTARGETS:%=bin/softfloat/%_rebase)
 
 all:	bitcode 				\
+	$(BINOBJS)				\
 	$(BINTARGETS_FP)			\
 	$(BINTARGETS_FP_REBASE)			\
 	$(BINTARGETS_SOFTFLOAT)			\

@@ -18,7 +18,6 @@
 #include "Sugar.h"
 
 #include "elfimg.h"
-#include "vexmem.h"
 
 #include "ptimgchk.h"
 #include "guestptimg.h"
@@ -95,6 +94,10 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* slurp brains after trap code is removed so that we don't 
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
+
+	/* and store the mapping */
+	setupMem();
+
 	return pid;
 }
 
@@ -443,31 +446,20 @@ void GuestPTImg::resetBreakpoint(pid_t pid, void* addr)
 	breakpoints.erase(addr);
 }
 
-std::list<GuestMemoryRange*> GuestPTImg::getMemoryMap(void) const
+void GuestPTImg::setupMem(void)
 {
-	std::list<GuestMemoryRange*>	ret;
+	assert (mem == NULL);
+	mem = new GuestMem();
 
 	foreach (it, mappings.begin(), mappings.end()) {
-		PTImgMapEntry	*ptm = *it;
-
-		if ((ptm->getProt() & PROT_READ) == 0)
-			continue;
-		ret.push_back(new GuestMemoryRange(
+		PTImgMapEntry		*ptm = *it;
+		GuestMem::Mapping	s(
 			ptm->getBase(),
 			ptm->getByteCount(),
-			ptm->isStack()));
-	}
+			ptm->getProt(),
+			ptm->isStack());
 
-	return ret;
-}
-void GuestPTImg::recordInitialMappings(VexMem& maps) {
-	foreach (it, mappings.begin(), mappings.end()) {
-		PTImgMapEntry	*ptm = *it;
-		VexMem::Mapping s;
-		s.offset = ptm->getBase();
-		s.length = ptm->getByteCount();
-		s.cur_prot = s.req_prot = ptm->getProt();
-		maps.recordMapping(s);
+		mem->recordMapping(s);
 	}	
 	//TODO: guess the brk? maybe not necessary for ptimg
 }

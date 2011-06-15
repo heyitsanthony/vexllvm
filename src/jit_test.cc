@@ -65,11 +65,6 @@ public:
 	uint64_t addr2Host(guestptr_t p) const { return p; }
 	guestptr_t name2guest(const char*) const { return 0; }
 	void* getEntryPoint(void) const { return NULL; }
-	std::list<GuestMemoryRange*> getMemoryMap(void) const
-	{
-		return std::list<GuestMemoryRange*>();
-	}
-	void recordInitialMappings(VexMem&) {}
 };
 
 /* XXX use offsetof references to valgrind */

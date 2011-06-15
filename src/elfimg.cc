@@ -112,7 +112,6 @@ void ElfImg::setupSegments(void)
 {
 	Elf64_Phdr	*phdr;
 
-	elfptr_t last_end = 0;
 	direct_mapped = true;
 	phdr = (Elf64_Phdr*)(((char*)hdr) + hdr->e_phoff);
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
@@ -444,12 +443,14 @@ elfptr_t ElfImg::getSymAddr(const char* symname) const
 	const Symbol	*sym = syms.findSym(symname);
 	return (elfptr_t)((sym) ? sym->getBaseAddr() : (symaddr_t)NULL);
 }
-void ElfImg::addAllSegments(std::list<ElfSegment*>& r) const {
+
+void ElfImg::getSegments(std::list<ElfSegment*>& r) const
+{
 	/* for now i am cheating... the last segment added here will be
 	   the value brk returns when it is first called... so order
 	   sadly matters... :-( */
-	if(interp)
-		interp->addAllSegments(r);
+	if (interp) interp->getSegments(r);
+
 	foreach (it, segments.begin(), segments.end()) {
 		r.push_back(*it);
 	}	

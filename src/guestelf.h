@@ -20,22 +20,21 @@ public:
 	void setArgv(unsigned int argc, const char* argv[],
 		int envc, const char* envp[]);
 
-	virtual std::list<GuestMemoryRange*> getMemoryMap(void) const;
-	virtual void recordInitialMappings(VexMem& mappings);
-private:	
+private:
+	void setupMem(void);
 	void setupArgPages();
 	void createElfTables(int argc, int envc);
 	void copyElfStrings(int argc, const char **argv);
 	void loaderBuildArgptr(int envc, int argc,
 		guestptr_t stringp, int push_ptr);
 
-	ElfImg	*img;
-	uint8_t		*stack;
+	ElfImg			*img;
+	uint8_t			*stack;
 	std::vector<void*>	arg_pages;
-	guestptr_t	arg_stack;
-	guestptr_t	stack_base;
-	guestptr_t	stack_limit;
-	guestptr_t	exe_string;
+	guestptr_t		arg_stack;
+	guestptr_t		stack_base;
+	guestptr_t		stack_limit;
+	guestptr_t		exe_string;
 };
 
 #endif

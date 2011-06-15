@@ -13,7 +13,6 @@
 #include "elfsegment.h"
 #include "guestelf.h"
 #include "guestcpustate.h"
-#include "vexmem.h"
 #include "Sugar.h"
 
 using namespace llvm;
@@ -47,11 +46,6 @@ GuestELF::GuestELF(ElfImg* in_img)
 }
 
 GuestELF::~GuestELF(void) { delete [] stack; }
-
-std::list<GuestMemoryRange*> GuestELF::getMemoryMap(void) const
-{
-	assert (0 == 1 && "STUB");
-}
 
 Value* GuestELF::addrVal2Host(Value* addr_v) const
 {
@@ -164,7 +158,6 @@ void GuestELF::copyElfStrings(int argc, const char **argv)
 		}
 	}
 }
-
 
 //borrowed liberally from qemu
 void GuestELF::setupArgPages()
@@ -374,9 +367,11 @@ void GuestELF::loaderBuildArgptr(int envc, int argc,
 void GuestELF::setArgv(unsigned int argc, const char* argv[],
 	int envc, const char* envp[])
 {
+	const char* filename;
+
 	arg_stack = TARGET_PAGE_SIZE*MAX_ARG_PAGES-sizeof(void*);
-	
-	const char* filename = getBinaryPath();
+	filename = getBinaryPath();
+
 	copyElfStrings(1, &filename);
 	// blank environ for now
 	copyElfStrings(envc, envp);
@@ -388,7 +383,7 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 	
 	if(getenv("VEXLLVM_DUMP_MAPS")) {
 		std::list<ElfSegment*> m;
-		img->addAllSegments(m);
+		img->getSegments(m);
 		foreach(it, m.begin(), m.end()) {
 			std::ostringstream save_fname;
 			save_fname << argv[0] << "." << getpid() 
@@ -397,30 +392,39 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 			o.write((char*)(*it)->base(), (*it)->length());
 		}
 	}
+
 	cpu_state->setStackPtr((void*)arg_stack);
+	setupMem();
 }
 
-void GuestELF::recordInitialMappings(VexMem& mappings)
+void GuestELF::setupMem(void)
 {
-	std::list<ElfSegment*> m;
-	img->addAllSegments(m);
-	void* top_brick = NULL;
+	std::list<ElfSegment*>	m;
+	void			*top_brick;
+
+	assert (mem == NULL);
+	mem = new GuestMem();
+
+	img->getSegments(m);
+
+	top_brick = NULL;
 	foreach(it, m.begin(), m.end()) {
-		VexMem::Mapping s;
-		s.offset = (*it)->base();
-		s.length = (*it)->length();
-		s.cur_prot = s.req_prot = (*it)->protection();
-		mappings.recordMapping(s);
+		GuestMem::Mapping s(
+			(*it)->base(),
+			(*it)->length(),
+			(*it)->protection());
+		mem->recordMapping(s);
 		top_brick = s.end();
 	}
+
 	/* is this actually computed properly? */
-	mappings.sbrk(top_brick);
+	mem->sbrk(top_brick);
 
 	/* also record the stack */
-	VexMem::Mapping s;
-	s.offset = (void*)stack_limit;
-	s.length = stack_base - stack_limit;
-	s.cur_prot = s.req_prot = PROT_READ | PROT_WRITE;
-	mappings.recordMapping(s);
-
+	GuestMem::Mapping s(
+		(void*)stack_limit,
+		stack_base - stack_limit,
+		PROT_READ | PROT_WRITE,
+		true);
+	mem->recordMapping(s);
 }

@@ -5,7 +5,7 @@
 #include <list>
 
 #include "syscallparams.h"
-#include "vexmem.h"
+#include "guestmem.h"
 
 #define MAX_SC_TRACE	1000
 
@@ -15,7 +15,7 @@ class GuestCPUState;
 class Syscalls
 {
 public:
-	Syscalls(Guest*, VexMem& mappings);
+	Syscalls(Guest*);
 	virtual ~Syscalls();
 	virtual uint64_t apply(SyscallParams& args);
 	uint64_t apply(void); /* use guest params */
@@ -24,7 +24,7 @@ public:
 private:
 	bool interceptSyscall(
 		SyscallParams& args,
-		VexMem::Mapping& m, 
+		GuestMem::Mapping& m, 
 		unsigned long& sc_ret);
 
 	Guest				*guest;
@@ -32,7 +32,7 @@ private:
 	uint64_t			sc_seen_c; /* list.size can be O(n) */
 	bool				exited;
 	GuestCPUState			*cpu_state;
-	VexMem&				mappings;
+	GuestMem*			mappings;
 	const std::string		binary;
 	bool				log_syscalls;
 };

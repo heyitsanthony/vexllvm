@@ -37,7 +37,7 @@ public:
 	celfptr_t getHeader() const;
 	celfptr_t getBase() const;
 	ElfSegment* getFirstSegment() const { return segments.front(); }
-	void addAllSegments(std::list<ElfSegment*>& r) const;
+	void getSegments(std::list<ElfSegment*>& r) const;
 private:
 	ElfImg(const char* fname, bool linked);
 	bool verifyHeader(void) const;

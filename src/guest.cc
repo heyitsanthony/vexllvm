@@ -9,6 +9,7 @@
 using namespace llvm;
 
 Guest::Guest(const char* in_bin_path)
+: mem(NULL)
 {
 	cpu_state = new GuestCPUState();
 	bin_path = strdup(in_bin_path);
@@ -16,6 +17,10 @@ Guest::Guest(const char* in_bin_path)
 
 Guest::~Guest(void)
 {
+	if (mem) {
+		delete mem;
+		mem = NULL;
+	}
 	free(bin_path);
 	delete cpu_state;
 }
@@ -38,3 +43,9 @@ uint64_t Guest::getExitCode(void) const
 }
 
 void Guest::print(std::ostream& os) const { cpu_state->print(os); }
+
+std::list<GuestMem::Mapping> Guest::getMemoryMap(void) const
+{
+	assert (mem != NULL);
+	return mem->getMaps();
+}

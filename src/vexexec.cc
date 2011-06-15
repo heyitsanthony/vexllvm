@@ -74,7 +74,7 @@ VexExec::VexExec(Guest* in_gs)
 		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
 	}
 
-	sc = new Syscalls(gs, mappings);
+	sc = new Syscalls(gs);
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 
@@ -86,7 +86,6 @@ VexExec::VexExec(Guest* in_gs)
 		trace_conf = TRACE_OFF;
 	}
 
-	gs->recordInitialMappings(mappings);
 	//TODO: apply the protection changes to guard against code patches
 }
 
@@ -180,7 +179,7 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	hostptr_t			hostptr;
 	VexSB				*vsb;
 	vexsb_map::const_iterator	it;
-	VexMem::Mapping			m;
+	GuestMem::Mapping		m;
 	bool				found;
 
 	hostptr = (void*)(gs->addr2Host((uint64_t)elfptr));
@@ -194,7 +193,7 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 		return NULL;
 	}
 
-	found = mappings.lookupMapping(hostptr, m);
+	found = gs->getMem()->lookupMapping(hostptr, m);
 
 	/* assuming !found means its ok... but that's not totally true */
 	/* XXX, when is !found bad? */
@@ -205,7 +204,7 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 		if(m.cur_prot & PROT_WRITE) {
 			m.cur_prot = m.req_prot & ~PROT_WRITE;
 			mprotect(m.offset, m.length, m.cur_prot);
-			mappings.recordMapping(m);
+			gs->getMem()->recordMapping(m);
 		}
 	}
 
@@ -227,15 +226,18 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	vexfunc_t		func_ptr;
 	uint64_t		new_ip;
 
+	fprintf(stderr, "DOING ADDR %p\n", vsb->getGuestAddr());
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);
 
+	fprintf(stderr, "WOOOO GET IT %p\n", func_ptr);
 	sb_executed_c++;
 
 	/* TODO: pull out x86-ism */
 	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	new_ip = func_ptr(state);
 	state->guest_RIP = new_ip;
+	fprintf(stderr, "DONE WITH %p\n", vsb->getGuestAddr());
 
 	return new_ip;
 }
@@ -345,10 +347,12 @@ void VexExec::flushTamperedCode(void* begin, void* end)
 void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 {
 	// struct ucontext* context = (ucontext*)raw_context;
-	VexMem::Mapping	m;
-	bool		found;
+	GuestMem		*mem;
+	GuestMem::Mapping	m;
+	bool			found;
 
-	found = exec_context->mappings.lookupMapping(si->si_addr, m);
+	mem = exec_context->gs->getMem();
+	found = mem->lookupMapping(si->si_addr, m);
 	if (!found) {
 		std::cerr << "Caught SIGSEGV but couldn't "
 			<< "find a mapping to tweak @ \n"
@@ -359,7 +363,7 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 	if ((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
 		m.cur_prot = m.req_prot & ~PROT_EXEC;
 		mprotect(m.offset, m.length, m.cur_prot);
-		exec_context->mappings.recordMapping(m);
+		mem->recordMapping(m);
 		exec_context->flushTamperedCode(m.offset, m.end());
 	} else {
 		std::cerr << "Caught SIGSEGV but the mapping was"

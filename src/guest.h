@@ -4,9 +4,9 @@
 #include <iostream>
 #include <stdint.h>
 #include <list>
+#include "guestmem.h"
 #include "syscallparams.h"
 
-class VexMem;
 class GuestCPUState;
 
 namespace llvm
@@ -15,24 +15,6 @@ namespace llvm
 }
 
 typedef uint64_t guestptr_t;
-
-/* extent of guest memory range; may need to extend later so 
- * getData works on non-identity mappings */
-class GuestMemoryRange
-{
-public:
-	GuestMemoryRange(void* in_base, unsigned int in_sz, bool in_is_stack)
-	: base(in_base), sz(in_sz), is_stack(in_is_stack) {}
-	virtual ~GuestMemoryRange(void) {}
-	const void* getData(void) const { return base; }
-	const void* getGuestAddr(void) const { return base; }
-	unsigned int getBytes(void) { return sz; }
-	bool isStack(void) const { return is_stack; }
-private:
-	void		*base;
-	unsigned int	sz;
-	bool		is_stack;
-};
 
 
 /* ties together all state information for guest.
@@ -48,7 +30,7 @@ public:
 	virtual uint64_t addr2Host(guestptr_t guestptr) const = 0;
 	virtual guestptr_t name2guest(const char*) const = 0;
 	virtual void* getEntryPoint(void) const = 0;
-	virtual std::list<GuestMemoryRange*> getMemoryMap(void) const = 0;
+	std::list<GuestMem::Mapping> getMemoryMap(void) const;
 
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
 	GuestCPUState* getCPUState(void) { return cpu_state; }
@@ -60,11 +42,13 @@ public:
 	void print(std::ostream& os) const;
 
 	const char* getBinaryPath(void) const { return bin_path; }
-	virtual void recordInitialMappings(VexMem& mappings) = 0;
+	const GuestMem* getMem(void) const { assert (mem != NULL); return mem; }
+	GuestMem* getMem(void) { assert (mem != NULL); return mem; }
 protected:
 	Guest(const char* bin_path);
 
 	GuestCPUState	*cpu_state;
+	GuestMem	*mem;
 	char		*bin_path;
 };
 

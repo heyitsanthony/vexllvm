@@ -13,12 +13,12 @@
 #include "guestcpustate.h"
 #include "Sugar.h"
 
-Syscalls::Syscalls(Guest* g, VexMem& in_mappings)
+Syscalls::Syscalls(Guest* g)
 : guest(g)
 , sc_seen_c(0)
 , exited(false)
 , cpu_state(g->getCPUState())
-, mappings(in_mappings)
+, mappings(g->getMem())
 , binary(g->getBinaryPath())
 , log_syscalls(getenv("VEXLLVM_SYSCALLS") ? true : false)
 {}
@@ -34,10 +34,10 @@ uint64_t Syscalls::apply(void)
 /* pass through */
 uint64_t Syscalls::apply(SyscallParams& args)
 {
-	VexMem::Mapping m;
-	bool		fakedSyscall;
-	uint64_t	sys_nr;
-	unsigned long	sc_ret;
+	GuestMem::Mapping	m;
+	bool			fakedSyscall;
+	uint64_t		sys_nr;
+	unsigned long		sc_ret;
 
 	sys_nr = args.getSyscall();
 	switch (sys_nr) {
@@ -92,13 +92,13 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	switch (sys_nr) {
 	case SYS_mmap:
 		m.offset = (void*)sc_ret;
-		mappings.recordMapping(m);
+		mappings->recordMapping(m);
 		break;
 	case SYS_mprotect:
-		mappings.recordMapping(m);
+		mappings->recordMapping(m);
 		break;
 	case SYS_munmap:
-		mappings.removeMapping(m);
+		mappings->removeMapping(m);
 		break;
 	}
 
@@ -107,7 +107,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 
 bool Syscalls::interceptSyscall(
 	SyscallParams&		args,
-	VexMem::Mapping&	m,
+	GuestMem::Mapping&	m,
 	unsigned long&		sc_ret)
 {
 	sc_ret = 0;
@@ -138,14 +138,14 @@ bool Syscalls::interceptSyscall(
 		}
 		return true;
 	case SYS_brk:
-		if(mappings.brk()) {
+		if(mappings->brk()) {
 			if(args.getArg(0) == 0) {
 				/* if your just asking, i can tell you */
-				sc_ret = (unsigned long)mappings.brk();
+				sc_ret = (unsigned long)mappings->brk();
 			} else {
-				bool r = mappings.sbrk((void*)args.getArg(0));
+				bool r = mappings->sbrk((void*)args.getArg(0));
 				if(r) {
-					sc_ret = (uintptr_t)mappings.brk();
+					sc_ret = (uintptr_t)mappings->brk();
 				} else {
 					sc_ret = -ENOMEM;
 				}
@@ -158,10 +158,11 @@ bool Syscalls::interceptSyscall(
 
 	case SYS_mmap:
 	case SYS_mprotect:
-		m.offset = (void*)args.getArg(0);
-		m.length = args.getArg(1);
-		m.req_prot = args.getArg(2);
-		m.cur_prot = m.req_prot;
+		m = GuestMem::Mapping(
+			(void*)args.getArg(0),	/* offset */
+			args.getArg(1),		/* length */
+			args.getArg(2));
+
 		/* mask out write permission so we can play with JITs */
 		if(m.req_prot & PROT_EXEC) {
 			m.cur_prot &= ~PROT_WRITE;

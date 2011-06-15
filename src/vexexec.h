@@ -10,7 +10,7 @@
 #include <vector>
 #include <iostream>
 #include "vexjitcache.h"
-#include "vexmem.h"
+#include "guestmem.h"
 
 class Guest;
 class Syscalls;
@@ -60,10 +60,9 @@ protected:
 	virtual void doSysCall(VexSB* vsb);
 	static void setupStatics(Guest* in_gs);
 
-	Guest	*gs;
-	Syscalls		*sc;
-	VexFCache		*f_cache;
-	VexMem			mappings;
+	Guest		*gs;
+	Syscalls	*sc;
+	VexFCache	*f_cache;
 
 private:
 	VexSB* getSBFromGuestAddr(void* elfptr);

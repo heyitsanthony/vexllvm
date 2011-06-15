@@ -91,9 +91,6 @@ public:
 		std::ostream& os, const char* binname, pid_t pid,
 		void* range_begin = 0, void* range_end = 0);
 
-
-	virtual std::list<GuestMemoryRange*> getMemoryMap(void) const;
-	void recordInitialMappings(VexMem&);
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
@@ -104,7 +101,7 @@ protected:
 	void resetBreakpoint(pid_t pid, void* addr);
 	void* undoBreakpoint(pid_t pid);
 private:
-
+	void setupMem(void);
 	void dumpSelfMap(void) const;
 
 	pid_t createSlurpedChild(
