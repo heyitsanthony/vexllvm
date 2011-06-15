@@ -18,6 +18,7 @@ VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
 #CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=6
 LLVMCONFIG_PATH=llvm-config
 LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
+LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
 LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
 
@@ -72,17 +73,20 @@ SOFTFLOATDIRDEPS=$(SOFTFLOATDEPS:%=obj/%)
 BINTARGETS=	elf_trace elf_run jit_test	\
 		pt_run pt_trace pt_xchk dump_loader
 
-BINTARGETSFP=$(BINTARGETS:%=bin/%)
-BINTARGETSSOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
-
+BINTARGETS_FP=$(BINTARGETS:%=bin/%)
+BINTARGETS_FP_REBASE=$(BINTARGETS:%=bin/%_rebase)
+BINTARGETS_SOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
+BINTARGETS_SOFTFLOAT_REBASE=$(BINTARGETS:%=bin/softfloat/%_rebase)
 
 all:	bitcode 				\
-	$(BINTARGETSFP)				\
-	$(BINTARGETSSOFTFLOAT)			\
+	$(BINTARGETS_FP)			\
+	$(BINTARGETS_FP_REBASE)			\
+	$(BINTARGETS_SOFTFLOAT)			\
+	$(BINTARGETS_SOFTFLOAT_REBASE)		\
 	bin/vexllvm.a bin/vexllvm-softfloat.a
 
 clean:
-	rm -f obj/* $(BINTARGETSFP) $(BINTARGETSSOFTFLOAT)
+	rm -f obj/* $(BINTARGETSFP) $(BINTARGETSSOFTFLOAT) bitcode/*softfloat*
 
 bitcode: $(BITCODE_FILES)
 
@@ -110,13 +114,17 @@ bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
 #obj/libvex_amd64_helpers.o:   obj/libvex_amd64_helpers.s
 #	g++ $(CFLAGS)$(LLVMFLAGS)  -o $@ -c $<
 
+SOFTFLOATDIR=support/softfloat/softfloat/bits64
+bitcode/softfloat_lib.bc: $(SOFTFLOATDIR)/softfloat.c
+	cd $(SOFTFLOATDIR)/SPARC-Solaris-GCC/ && llvm-gcc -emit-llvm -I. -I.. -O3 -c  \
+		../softfloat.c \
+		-o ../../../../../$@
+
+bitcode/softfloat.bc: bitcode/softfloat_lib.bc bitcode/vexops_softfloat.bc
+	$(LLVMLINK) -o $@ $^
+
 bitcode/%.bc: support/%.c
 	llvm-gcc -emit-llvm -O3 -c $< -o $@
-
-
-SOFTFLOATDIR=support/softfloat/softfloat/bits64
-bitcode/softfloat.bc: $(SOFTFLOATDIR)/softfloat.c
-	cd $(SOFTFLOATDIR)/SPARC-Solaris-GCC/ && llvm-gcc -emit-llvm -I. -I.. -O3 -c ../softfloat.c -o ../../../../../$@
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<
