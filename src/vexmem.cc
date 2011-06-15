@@ -1,25 +1,29 @@
-#include "vexmem.h"
 #include <assert.h>
 #include <iostream>
+#include <stdint.h>
 #include <sys/mman.h>
 #include <errno.h>
 
-/* other archs */
+#include "vexmem.h"
+
+/* XXX other archs? */
 #define PAGE_SIZE 4096
 
-VexMem::VexMem(void) 
+VexMem::VexMem(void)
 : top_brick(NULL)
 {
-	
 }
-VexMem::~VexMem(void) {
-	
+
+VexMem::~VexMem(void)
+{
 }
-void* VexMem::brk() 
+
+void* VexMem::brk()
 {
 	return top_brick;
 }
-bool VexMem::sbrk(void* new_top) 
+
+bool VexMem::sbrk(void* new_top)
 {
 	void* old = brk();
 	if(!old) {
@@ -33,13 +37,13 @@ bool VexMem::sbrk(void* new_top)
 		return false;
 	size_t new_len = (char*)new_top - (char*)m.offset;
 	new_len = (new_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
-	
+
 	void *addr;
 	for(;;) {
 		addr = mremap(m.offset, m.length, new_len, 0);
 		if(addr != MAP_FAILED)
 			break;
-		if(addr == MAP_FAILED && errno != EFAULT 
+		if((addr == MAP_FAILED && errno != EFAULT)
 			|| m.length <= PAGE_SIZE) {
 			return false;
 		}
@@ -48,18 +52,21 @@ bool VexMem::sbrk(void* new_top)
 		   messing with the address to see if it will eventually work
 		*/
 		m.length -= PAGE_SIZE;
-		m.offset += PAGE_SIZE;
-	} 
+		m.offset = (void*)((uintptr_t)m.offset + PAGE_SIZE);
+	}
+
 	m.length = new_len;
 	recordMapping(m);
 	top_brick = new_top;
+	return true;
 }
+
 void VexMem::recordMapping(Mapping& mapping) {
 	assert(((long)mapping.offset & (PAGE_SIZE - 1)) == 0);
 	mapping.length += (PAGE_SIZE - 1);
 	mapping.length &= ~(PAGE_SIZE - 1);
 	mapmap_t::iterator i = maps.lower_bound(mapping.offset);
-	if(i != maps.begin()) 
+	if(i != maps.begin())
 		--i;
 	if(i != maps.end() && i->second.offset < mapping.offset) {
 		/* we are cutting off someone before us */
@@ -73,7 +80,7 @@ void VexMem::recordMapping(Mapping& mapping) {
 				smaller.cur_prot = i->second.cur_prot;
 				maps.insert(std::make_pair(smaller.offset, smaller));
 			}
-			long lost = (char*)i->second.end() - 
+			long lost = (char*)i->second.end() -
 				(char*)mapping.offset;
 			i->second.length -= lost;
 		}
@@ -105,7 +112,7 @@ void VexMem::recordMapping(Mapping& mapping) {
 			std::make_pair(mapping.offset, mapping)).first;
 		++i;
 	}
-	
+
 	/* now kill all the ones it overlaps */
 	while(i != maps.end() && mapping.end() > i->second.end()) {
 		mapmap_t::iterator to_erase = i++;
@@ -113,7 +120,7 @@ void VexMem::recordMapping(Mapping& mapping) {
 	}
 	/* now trim the last one if necessary */
 	if(i != maps.end() && mapping.end() > i->second.offset) {
-		long lost = (char*)mapping.end() - 
+		long lost = (char*)mapping.end() -
 			(char*)i->second.offset;
 		i->second.offset = mapping.end();
 		i->second.length -= lost;
@@ -130,8 +137,8 @@ bool VexMem::lookupMapping(void* addr, Mapping& mapping) {
 	if(i != maps.end() && i->first == addr) {
 		mapping = i->second;
 		return true;
-	} 
-	if(i == maps.begin()) 
+	}
+	if(i == maps.begin())
 		return false;
 	--i;
 	if(i->second.end() > addr) {

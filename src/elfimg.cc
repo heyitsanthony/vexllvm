@@ -92,7 +92,7 @@ void ElfImg::linkIt(void) {
 	   arg tables for the dynamic linker to setup ANY
 	   elf binary, however, we have a hack to jump into the
 	   libc start instead of the dynamic linker setup code
-	   if interp == NULL, then GuestStateElf will fall back
+	   if interp == NULL, then GuestElf will fall back
 	   to the old behavior */
 	loadDyn();
 	applyRelocs();

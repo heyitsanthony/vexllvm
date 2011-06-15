@@ -8,7 +8,7 @@
 #include <vector>
 #include <iostream>
 
-#include "gueststate.h"
+#include "guest.h"
 #include "guestcpustate.h"
 
 #include "genllvm.h"
@@ -17,8 +17,8 @@ GenLLVM* theGenLLVM;
 
 using namespace llvm;
 
-GenLLVM::GenLLVM(const GuestState* gs, const char* name)
-: guestState(gs),
+GenLLVM::GenLLVM(const Guest* gs, const char* name)
+: guest(gs),
   funcTy(NULL),
   cur_guest_ctx(NULL),
   cur_f(NULL),
@@ -38,7 +38,7 @@ GenLLVM::GenLLVM(const GuestState* gs, const char* name)
 		"32-i64:64:64-f32:3232-f64:64:64-v64:64:64-v128:128:"
 		"128-a0:0:64-s0:64:64-f80:128:128");
 
-	mod->addTypeName("guestCtxTy", guestState->getCPUState()->getTy());
+	mod->addTypeName("guestCtxTy", guest->getCPUState()->getTy());
 	mkFuncTy();
 }
 
@@ -167,7 +167,7 @@ Value* GenLLVM::getCtxGEP(Value* off, const Type* accessTy)
 		uint64_t	off_u64;
 
 		off_u64 = c_off->getZExtValue();
-		gep_name = guestState->getCPUState()->off2Name(
+		gep_name = guest->getCPUState()->off2Name(
 			(accessTy->getPrimitiveSizeInBits()/8) * off_u64);
 	}
 
@@ -225,7 +225,7 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 	StoreInst	*si;
 
 	ptrTy = PointerType::get(data_v->getType(), 0);
-	addr_v = guestState->addrVal2Host(addr_v);
+	addr_v = guest->addrVal2Host(addr_v);
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "storePtr");
 	si = builder->CreateStore(data_v, addr_ptr);
 	si->setAlignment(8);
@@ -238,7 +238,7 @@ Value* GenLLVM::load(Value* addr_v, const Type* ty)
 	LoadInst	*loadInst;
 
 	ptrTy = PointerType::get(ty, 0);
-	addr_v = guestState->addrVal2Host(addr_v);
+	addr_v = guest->addrVal2Host(addr_v);
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "loadPtr");
 	loadInst = builder->CreateLoad(addr_ptr);
 	loadInst->setAlignment(8);
@@ -260,7 +260,7 @@ Value* GenLLVM::getCtxBase(void)
 	intptr_v = ConstantInt::get(
 		getGlobalContext(),
 		APInt(	sizeof(intptr_t)*8,
-			(uintptr_t)guestState->getCPUState()->getStateData()));
+			(uintptr_t)guest->getCPUState()->getStateData()));
 
 	return builder->CreateIntToPtr(intptr_v, ptrty, "ctxbaseptr");
 }
@@ -268,19 +268,19 @@ Value* GenLLVM::getCtxBase(void)
 void GenLLVM::setExitType(uint8_t exit_type)
 {
 	writeCtx(
-		guestState->getCPUState()->getExitTypeOffset(),
+		guest->getCPUState()->getExitTypeOffset(),
 		ConstantInt::get(
 			getGlobalContext(),
 			APInt(8, exit_type)));
 }
 
 /* llvm-ized VexSB functions take form of
- * guestaddr_t f(gueststate*) {  ...bullshit...; return ctrl_xfer_addr; } */
+ * guestaddr_t f(guest*) {  ...bullshit...; return ctrl_xfer_addr; } */
 void GenLLVM::mkFuncTy(void)
 {
 	std::vector<const Type*>	f_args;
 	f_args.push_back(PointerType::get(
-		guestState->getCPUState()->getTy(), 0));
+		guest->getCPUState()->getTy(), 0));
 	funcTy = FunctionType::get(
 		builder->getInt64Ty(),
 		f_args,

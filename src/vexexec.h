@@ -12,7 +12,7 @@
 #include "vexjitcache.h"
 #include "vexmem.h"
 
-class GuestState;
+class Guest;
 class Syscalls;
 class VexXlate;
 class VexSB;
@@ -38,7 +38,7 @@ public:
 
 		setupStatics(in_gs);
 		ve = new T(in_gs);
-		if (ve->getGuestState() == NULL) {
+		if (ve->getGuest() == NULL) {
 			delete ve;
 			return NULL;
 		}
@@ -47,7 +47,7 @@ public:
 	}
 
 	virtual ~VexExec(void);
-	const GuestState* getGuestState(void) const { return gs; }
+	const Guest* getGuest(void) const { return gs; }
 	const vexexec_addrs& getAddrStack(void) const { return addr_stack; }
 	const vexexec_traces& getTraces(void) const { return trace; }
 	void run(void);
@@ -55,12 +55,12 @@ public:
 	unsigned int getSBExecutedCount(void) const { return sb_executed_c; }
 
 protected:
-	VexExec(GuestState* gs);
+	VexExec(Guest* gs);
 	virtual uint64_t doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);
-	static void setupStatics(GuestState* in_gs);
+	static void setupStatics(Guest* in_gs);
 
-	GuestState		*gs;
+	Guest	*gs;
 	Syscalls		*sc;
 	VexFCache		*f_cache;
 	VexMem			mappings;

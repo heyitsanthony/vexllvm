@@ -1,23 +1,23 @@
 #ifndef GUESTSTATEELF_H
 #define GUESTSTATEELF_H
 
-#include "gueststate.h"
+#include "guest.h"
 #include <vector>
 
 class ElfImg;
 
-class GuestStateELF : public GuestState
+class GuestELF : public Guest
 {
 public:
-	GuestStateELF(ElfImg* in_img);
-	virtual ~GuestStateELF(void);
+	GuestELF(ElfImg* in_img);
+	virtual ~GuestELF(void);
 	const ElfImg* getExeImage(void) const { return img; }
 	llvm::Value* addrVal2Host(llvm::Value* addr_v) const;
 	uint64_t addr2Host(guestptr_t guestptr) const;
 	guestptr_t name2guest(const char* symname) const;
 	void* getEntryPoint(void) const;
 	/* copy command line state into state */
-	void setArgv(unsigned int argc, const char* argv[], 
+	void setArgv(unsigned int argc, const char* argv[],
 		int envc, const char* envp[]);
 
 	virtual std::list<GuestMemoryRange*> getMemoryMap(void) const;

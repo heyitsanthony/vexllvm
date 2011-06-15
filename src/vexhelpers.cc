@@ -115,10 +115,12 @@ void VexHelpers::loadUserMod(const char* path)
 
 VexHelpers::~VexHelpers()
 {
-/* XXX. Kill when KLEE is updated */
+/* XXX. Kill when KLEE is updated; modules are deleted with builder */
 #if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
 	delete helper_mod;
 	delete vexop_mod;
+	foreach (it, user_mods.begin(), user_mods.end())
+		delete (*it);
 #endif
 }
 

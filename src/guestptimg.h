@@ -4,7 +4,7 @@
 
 #include <map>
 #include "collection.h"
-#include "gueststate.h"
+#include "guest.h"
 #include "guesttls.h"
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
@@ -57,10 +57,10 @@ public:
 protected:
 };
 
-class GuestStatePTImg : public GuestState
+class GuestPTImg : public Guest
 {
 public:
-	virtual ~GuestStatePTImg(void) {}
+	virtual ~GuestPTImg(void) {}
 	llvm::Value* addrVal2Host(llvm::Value* addr_v) const { return addr_v; }
 	uint64_t addr2Host(guestptr_t guestptr) const { return guestptr; }
 	guestptr_t name2guest(const char* symname) const { return 0; }
@@ -70,7 +70,7 @@ public:
 	static T* create(
 		int argc, char* const argv[], char* const envp[])
 	{
-		GuestStatePTImg		*pt_img;
+		GuestPTImg		*pt_img;
 		T			*pt_t;
 		pid_t			slurped_pid;
 
@@ -95,7 +95,7 @@ public:
 	virtual std::list<GuestMemoryRange*> getMemoryMap(void) const;
 	void recordInitialMappings(VexMem&);
 protected:
-	GuestStatePTImg(int argc, char* const argv[], char* const envp[]);
+	GuestPTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
 
 	void slurpRegisters(pid_t pid);

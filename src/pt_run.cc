@@ -15,7 +15,7 @@
 #include "elfimg.h"
 #include "vexexec.h"
 #include "guestcpustate.h"
-#include "gueststateptimg.h"
+#include "guestptimg.h"
 
 using namespace llvm;
 
@@ -29,7 +29,7 @@ void dumpIRSBs(void)
 
 int main(int argc, char* argv[], char* envp[])
 {
-	GuestStatePTImg	*gs;
+	GuestPTImg	*gs;
 
 	/* for the JIT */
 	InitializeNativeTarget();
@@ -39,8 +39,8 @@ int main(int argc, char* argv[], char* envp[])
 		return -1;
 	}
 
-	gs = GuestStatePTImg::create<GuestStatePTImg>(argc - 1, argv + 1, envp);
-	vexexec = VexExec::create<VexExec,GuestState>(gs);
+	gs = GuestPTImg::create<GuestPTImg>(argc - 1, argv + 1, envp);
+	vexexec = VexExec::create<VexExec,Guest>(gs);
 	assert (vexexec && "Could not create vexexec");
 	
 	vexexec->run();

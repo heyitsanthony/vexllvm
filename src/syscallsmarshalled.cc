@@ -18,11 +18,8 @@ SyscallPtrBuf::SyscallPtrBuf(unsigned int in_len, void* in_ptr)
 		len = 0;
 	}
 }
-SyscallsMarshalled::SyscallsMarshalled(
-	GuestCPUState& in_cpu_state, 
-	VexMem& mappings,
-	const char* binary)
-: Syscalls(in_cpu_state, mappings, binary),
+SyscallsMarshalled::SyscallsMarshalled(Guest* g, VexMem& mappings)
+: Syscalls(g, mappings),
   last_sc_ptrbuf(NULL)
 {
 }

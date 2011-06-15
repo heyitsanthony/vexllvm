@@ -20,8 +20,7 @@ private:
 class SyscallsMarshalled : public Syscalls
 {
 public:
-	SyscallsMarshalled(GuestCPUState& in_cpu_state, VexMem& mappings,
-		const char* binary);
+	SyscallsMarshalled(Guest* g, VexMem& mappings);
 	virtual ~SyscallsMarshalled()
 	{
 		if (last_sc_ptrbuf) delete last_sc_ptrbuf;

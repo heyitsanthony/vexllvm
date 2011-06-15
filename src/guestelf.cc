@@ -11,7 +11,7 @@
 
 #include "elfimg.h"
 #include "elfsegment.h"
-#include "gueststateelf.h"
+#include "guestelf.h"
 #include "guestcpustate.h"
 #include "vexmem.h"
 #include "Sugar.h"
@@ -36,8 +36,8 @@ using namespace llvm;
 #define target_strlen(a) strlen((const char*)(a))
 
 
-GuestStateELF::GuestStateELF(ElfImg* in_img)
-: GuestState(in_img->getFilePath())
+GuestELF::GuestELF(ElfImg* in_img)
+: Guest(in_img->getFilePath())
 , img(in_img)
 , arg_pages(MAX_ARG_PAGES)
 {
@@ -46,14 +46,14 @@ GuestStateELF::GuestStateELF(ElfImg* in_img)
 	cpu_state->setStackPtr(stack + STACK_BYTES-256 /*redzone+gunk*/);
 }
 
-GuestStateELF::~GuestStateELF(void) { delete [] stack; }
+GuestELF::~GuestELF(void) { delete [] stack; }
 
-std::list<GuestMemoryRange*> GuestStateELF::getMemoryMap(void) const
+std::list<GuestMemoryRange*> GuestELF::getMemoryMap(void) const
 {
 	assert (0 == 1 && "STUB");
 }
 
-Value* GuestStateELF::addrVal2Host(Value* addr_v) const
+Value* GuestELF::addrVal2Host(Value* addr_v) const
 {
 	const ConstantInt	*ci;
 
@@ -82,17 +82,17 @@ Value* GuestStateELF::addrVal2Host(Value* addr_v) const
 	return addr_v;
 }
 
-uintptr_t GuestStateELF::addr2Host(uintptr_t guestptr) const
+uintptr_t GuestELF::addr2Host(uintptr_t guestptr) const
 {
 	return (uintptr_t)img->xlateAddr((elfptr_t)guestptr);
 }
 
-guestptr_t GuestStateELF::name2guest(const char* symname) const
+guestptr_t GuestELF::name2guest(const char* symname) const
 {
 	return (guestptr_t)img->getSymAddr(symname);
 }
 
-void* GuestStateELF::getEntryPoint(void) const { 
+void* GuestELF::getEntryPoint(void) const { 
 	if(img->getInterp())
 		return img->getInterp()->getFirstSegment()->
 			xlate(img->getInterp()->getEntryPoint()); 
@@ -113,7 +113,7 @@ void* GuestStateELF::getEntryPoint(void) const {
 
 #define TARGET_PAGE_SIZE 4096
 //borrowed liberally from qemu
-void GuestStateELF::copyElfStrings(int argc, const char **argv)
+void GuestELF::copyElfStrings(int argc, const char **argv)
 {
 	const char *tmp, *tmp1;
 	char *pag = NULL;
@@ -130,7 +130,7 @@ void GuestStateELF::copyElfStrings(int argc, const char **argv)
 		while (*tmp++);
 		len = tmp - tmp1;
 		
-		assert(arg_stack >= len);
+		assert(arg_stack >= (unsigned int)len);
 		
 		while (len) {
 			--arg_stack; --tmp; --len;
@@ -167,10 +167,9 @@ void GuestStateELF::copyElfStrings(int argc, const char **argv)
 
 
 //borrowed liberally from qemu
-void GuestStateELF::setupArgPages()
+void GuestELF::setupArgPages()
 {
 	guestptr_t size, error, guard;
-	int i;
 
 	/* Create enough stack to hold everything.	If we don't use
 	it for args, we'll use it for something else.  */
@@ -186,7 +185,7 @@ void GuestStateELF::setupArgPages()
 
 	error = target_mmap(0, size + guard, PROT_READ | PROT_WRITE,
 		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	if (error == -1) {
+	if ((int64_t)error == -1) {
 		perror("mmap stack");
 		exit(-1);
 	}
@@ -212,7 +211,7 @@ void GuestStateELF::setupArgPages()
 	}
 }
 
-void GuestStateELF::createElfTables(int argc, int envc)
+void GuestELF::createElfTables(int argc, int envc)
 {
 	guestptr_t string_stack = arg_stack;
 	guestptr_t& sp = arg_stack;
@@ -324,7 +323,7 @@ void GuestStateELF::createElfTables(int argc, int envc)
 }
 
 /* Construct the envp and argv tables on the target stack.	*/
-void GuestStateELF::loaderBuildArgptr(int envc, int argc,
+void GuestELF::loaderBuildArgptr(int envc, int argc,
 	guestptr_t stringp, int push_ptr)
 {
 	guestptr_t& sp = arg_stack;
@@ -372,7 +371,7 @@ void GuestStateELF::loaderBuildArgptr(int envc, int argc,
 	put_user_ual(0, envp);
 }
 
-void GuestStateELF::setArgv(unsigned int argc, const char* argv[],
+void GuestELF::setArgv(unsigned int argc, const char* argv[],
 	int envc, const char* envp[])
 {
 	arg_stack = TARGET_PAGE_SIZE*MAX_ARG_PAGES-sizeof(void*);
@@ -400,7 +399,9 @@ void GuestStateELF::setArgv(unsigned int argc, const char* argv[],
 	}
 	cpu_state->setStackPtr((void*)arg_stack);
 }
-void GuestStateELF::recordInitialMappings(VexMem& mappings) {
+
+void GuestELF::recordInitialMappings(VexMem& mappings)
+{
 	std::list<ElfSegment*> m;
 	img->addAllSegments(m);
 	void* top_brick = NULL;

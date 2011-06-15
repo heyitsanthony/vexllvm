@@ -21,16 +21,16 @@
 #include "vexmem.h"
 
 #include "ptimgchk.h"
-#include "gueststateptimg.h"
+#include "guestptimg.h"
 #include "guestcpustate.h"
 
 using namespace llvm;
 
 static bool dump_maps;
 
-GuestStatePTImg::GuestStatePTImg(
+GuestPTImg::GuestPTImg(
 	int argc, char *const argv[], char *const envp[])
-: GuestState(argv[0])
+: Guest(argv[0])
 {
 	ElfImg		*img;
 	
@@ -43,13 +43,13 @@ GuestStatePTImg::GuestStatePTImg(
 	delete img;
 }
 
-void GuestStatePTImg::handleChild(pid_t pid)
+void GuestPTImg::handleChild(pid_t pid)
 {
 	ptrace(PTRACE_KILL, pid, NULL, NULL);
 	wait(NULL);
 }
 
-pid_t GuestStatePTImg::createSlurpedChild(
+pid_t GuestPTImg::createSlurpedChild(
 	int argc, char *const argv[], char *const envp[])
 {
 	int			err, status;
@@ -98,7 +98,7 @@ pid_t GuestStatePTImg::createSlurpedChild(
 	return pid;
 }
 
-void* GuestStatePTImg::undoBreakpoint(pid_t pid)
+void* GuestPTImg::undoBreakpoint(pid_t pid)
 {
 	struct user_regs_struct	regs;
 	int			err;
@@ -296,7 +296,7 @@ PTImgMapEntry::~PTImgMapEntry(void)
 	if (mmap_base) munmap(mmap_base, getByteCount());
 }
 
-void GuestStatePTImg::dumpSelfMap(void) const
+void GuestPTImg::dumpSelfMap(void) const
 {
 	FILE	*f_self;
 	char	buf[256];
@@ -310,7 +310,7 @@ void GuestStatePTImg::dumpSelfMap(void) const
 	fclose(f_self);
 }
 
-void GuestStatePTImg::slurpMappings(pid_t pid)
+void GuestPTImg::slurpMappings(pid_t pid)
 {
 	FILE	*f;
 	char	map_fname[256];
@@ -330,7 +330,7 @@ void GuestStatePTImg::slurpMappings(pid_t pid)
 	fclose(f);
 }
 
-void GuestStatePTImg::slurpRegisters(pid_t pid)
+void GuestPTImg::slurpRegisters(pid_t pid)
 {
 	int				err;
 	struct user_regs_struct		regs;
@@ -345,13 +345,13 @@ void GuestStatePTImg::slurpRegisters(pid_t pid)
 	cpu_state->setTLS(new PTImgTLS((void*)regs.fs_base));
 }
 
-void GuestStatePTImg::slurpBrains(pid_t pid)
+void GuestPTImg::slurpBrains(pid_t pid)
 {
 	slurpMappings(pid);
 	slurpRegisters(pid);
 }
 
-void GuestStatePTImg::stackTrace(
+void GuestPTImg::stackTrace(
 	std::ostream& os,
 	const char* binname, pid_t pid,
 	void* range_begin, void* range_end)
@@ -413,7 +413,7 @@ void GuestStatePTImg::stackTrace(
 }
 
 /* TODO: only change a single character */
-void GuestStatePTImg::setBreakpoint(pid_t pid, void* addr)
+void GuestPTImg::setBreakpoint(pid_t pid, void* addr)
 {
 	uint64_t		old_v, new_v;
 	int			err;
@@ -430,7 +430,7 @@ void GuestStatePTImg::setBreakpoint(pid_t pid, void* addr)
 	breakpoints[addr] = old_v;
 }
 
-void GuestStatePTImg::resetBreakpoint(pid_t pid, void* addr)
+void GuestPTImg::resetBreakpoint(pid_t pid, void* addr)
 {
 	uint64_t	old_v;
 	int		err;
@@ -443,7 +443,7 @@ void GuestStatePTImg::resetBreakpoint(pid_t pid, void* addr)
 	breakpoints.erase(addr);
 }
 
-std::list<GuestMemoryRange*> GuestStatePTImg::getMemoryMap(void) const
+std::list<GuestMemoryRange*> GuestPTImg::getMemoryMap(void) const
 {
 	std::list<GuestMemoryRange*>	ret;
 
@@ -460,7 +460,7 @@ std::list<GuestMemoryRange*> GuestStatePTImg::getMemoryMap(void) const
 
 	return ret;
 }
-void GuestStatePTImg::recordInitialMappings(VexMem& maps) {
+void GuestPTImg::recordInitialMappings(VexMem& maps) {
 	foreach (it, mappings.begin(), mappings.end()) {
 		PTImgMapEntry	*ptm = *it;
 		VexMem::Mapping s;

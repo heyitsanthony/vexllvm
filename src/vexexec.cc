@@ -23,13 +23,16 @@
 #include "syscalls.h"
 #include "genllvm.h"
 #include "guestcpustate.h"
-#include "gueststate.h"
+#include "guest.h"
 #include "elfimg.h"
 #include "vexsb.h"
 #include "vexxlate.h"
 #include "vexexec.h"
 #include "vexhelpers.h"
-#include "gueststateptimg.h"
+#include "guest.h"
+extern "C" {
+#include <valgrind/libvex_guest_amd64.h>
+}
 
 using namespace llvm;
 
@@ -37,7 +40,7 @@ VexExec* VexExec::exec_context = NULL;
 
 #define TRACE_MAX	500
 
-void VexExec::setupStatics(GuestState* in_gs)
+void VexExec::setupStatics(Guest* in_gs)
 {
 	if (!theGenLLVM) theGenLLVM = new GenLLVM(in_gs);
 	if (!theVexHelpers) theVexHelpers = new VexHelpers();
@@ -51,7 +54,7 @@ VexExec::~VexExec()
 	delete sc;
 }
 
-VexExec::VexExec(GuestState* in_gs)
+VexExec::VexExec(Guest* in_gs)
 : gs(in_gs), sb_executed_c(0), exited(false), trace_c(0)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
@@ -71,7 +74,7 @@ VexExec::VexExec(GuestState* in_gs)
 		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
 	}
 
-	sc = new Syscalls(*gs->getCPUState(), mappings, gs->getBinaryPath());
+	sc = new Syscalls(gs, mappings);
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 
@@ -82,7 +85,7 @@ VexExec::VexExec(GuestState* in_gs)
 	} else {
 		trace_conf = TRACE_OFF;
 	}
-	
+
 	gs->recordInitialMappings(mappings);
 	//TODO: apply the protection changes to guard against code patches
 }
@@ -143,15 +146,15 @@ const VexSB* VexExec::doNextSB(void)
 	}
 
 	if (vsb->isReturn() && !addr_stack.empty()) {
-		/* why are we tracking the stack like this... seems 
-		   weird to me, plus it means that the sp rewrites the 
+		/* why are we tracking the stack like this... seems
+		   weird to me, plus it means that the sp rewrites the
 		   loader does don't work */
 		addr_stack.pop();
 		if(addr_stack.empty())
 			addr_stack.push(new_jmpaddr);
 	}
 
-	
+
 	/* next address to go to */
 	if (	!(vsb->isReturn() && addr_stack.empty()) &&
 		new_jmpaddr) addr_stack.push(new_jmpaddr);
@@ -220,9 +223,9 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 
 uint64_t VexExec::doVexSB(VexSB* vsb)
 {
-	VexGuestAMD64State* state;
-	vexfunc_t	func_ptr;
-	uint64_t	new_ip;
+	VexGuestAMD64State	*state;
+	vexfunc_t		func_ptr;
+	uint64_t		new_ip;
 
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);

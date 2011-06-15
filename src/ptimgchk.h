@@ -3,11 +3,11 @@
 
 #include <sys/types.h>
 #include <sys/user.h>
-#include "gueststateptimg.h"
+#include "guestptimg.h"
 
 class SyscallsMarshalled;
 
-class PTImgChk : public GuestStatePTImg
+class PTImgChk : public GuestPTImg
 {
 public:
 	PTImgChk(int argc, char* const argv[], char* const envp[]);
@@ -38,9 +38,9 @@ public:
 	void setRegs(const user_regs_struct& regs);
 
 	void resetBreakpoint(void* x) {
-		GuestStatePTImg::resetBreakpoint(child_pid, x); }
+		GuestPTImg::resetBreakpoint(child_pid, x); }
 	void setBreakpoint(void* x) {
-		GuestStatePTImg::setBreakpoint(child_pid, x); }
+		GuestPTImg::setBreakpoint(child_pid, x); }
 protected:
 	virtual void handleChild(pid_t pid);
 	bool filterSysCall(

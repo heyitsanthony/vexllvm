@@ -36,7 +36,7 @@ OBJDEPS=	vexxlate.o		\
 		vexop.o			\
 		genllvm.o		\
 		guestcpustate.o		\
-		gueststate.o		\
+		guest.o			\
 		vex_dispatch.o		\
 		syscalls.o		\
 		syscallsmarshalled.o	\
@@ -49,8 +49,8 @@ OBJDEPS=	vexxlate.o		\
 		symbols.o		\
 		elfimg.o		\
 		dllib.o			\
-		gueststateelf.o		\
-		gueststateptimg.o	\
+		guestelf.o		\
+		guestptimg.o		\
 		guesttls.o		\
 		ptimgchk.o		\
 		elfsegment.o		\

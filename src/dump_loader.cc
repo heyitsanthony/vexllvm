@@ -6,17 +6,51 @@
 #include <unistd.h>
 #include <assert.h>
 #include <stdlib.h>
-#include "gueststateptimg.h"
+#include "guestptimg.h"
 #include <errno.h>
 #include <fstream>
 #include <sstream>
 
 void dumpIRSBs(void) {}
 
+static bool loadEntry(
+	pid_t pid,
+	const char* save_arg,
+	std::istream& is)
+{
+	char		line_buf[256];
+
+	is.get(line_buf, 256, '\n');
+	if(is.fail()) return false;
+	is.get();
+
+	PTImgMapEntry m(pid, line_buf);
+
+	std::cerr << m.getBase()
+		<< " sz: " << (void*)m.getByteCount()
+		<< " prot: " << std::hex << m.getProt()
+		<< " lib: " << m.getLib()
+		<< std::endl;
+
+	std::ostringstream save_fname;
+	save_fname << save_arg << "." << pid << "." << m.getBase();
+
+	char* buffer = (char*)malloc(m.getByteCount());
+	for(unsigned int i = 0; i < m.getByteCount(); i += sizeof(long)) {
+		*(long*)&buffer[i] = ptrace(
+			PTRACE_PEEKTEXT, pid, (char*)m.getBase() + i, NULL);
+	}
+	std::ofstream o(save_fname.str().c_str());
+	o.write(buffer, m.getByteCount());
+	free(buffer);
+
+	return true;
+}
+
 int main(int argc, char *argv[], char *envp[])
 {
 	if(argc < 2) {
-		std::cerr << "Usage: " << argv[0] 
+		std::cerr << "Usage: " << argv[0]
 			<< " prog args ..." << std::endl;
 		exit(1);
 	}
@@ -35,38 +69,10 @@ int main(int argc, char *argv[], char *envp[])
 
 	std::ostringstream map_fname;
 	map_fname << "/proc/" << pid << "/maps";
-	
+
 	std::ifstream i(map_fname.str().c_str());
-	for(;;) {
-		char		line_buf[256];
-		PTImgMapEntry	*mapping;
+	while (loadEntry(pid, argv[1], i));
 
-		i.get(line_buf, 256, '\n');
-		if(i.fail())
-			break;
-		i.get();
-
-		PTImgMapEntry m(pid, line_buf);
-		
-		std::cerr << m.getBase() 
-			<< " sz: " << (void*)m.getByteCount()
-			<< " prot: " << std::hex << m.getProt()
-			<< " lib: " << m.getLib() 
-			<< std::endl;
-			
-		std::ostringstream save_fname;
-		save_fname << argv[1] << "." << pid 
-			<< "." << m.getBase();
-		char* buffer = (char*)malloc(m.getByteCount());
-		for(int i = 0; i < m.getByteCount(); i += sizeof(long)) {
-			*(long*)&buffer[i] = 
-				ptrace(PTRACE_PEEKTEXT, pid, 
-					(char*)m.getBase() + i, NULL);
-		}
-		std::ofstream o(save_fname.str().c_str());
-		o.write(buffer, m.getByteCount());
-		free(buffer);
-	}
 	kill(pid, SIGKILL);
 	return 0;
 }

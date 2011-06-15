@@ -88,7 +88,7 @@ the mechanism really made an impact in how far it can check.
 */
 
 PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
-: 	GuestStatePTImg(argc, argv, envp),
+: 	GuestPTImg(argc, argv, envp),
 	steps(0), bp_steps(0), blocks(0),
 	hit_syscall(false)
 {

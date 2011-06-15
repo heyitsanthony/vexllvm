@@ -17,14 +17,14 @@ extern "C" {
 #include <map>
 #include <stdint.h>
 
-class GuestState;
+class Guest;
 
 struct guest_ctx_field;
 
 class GenLLVM
 {
 public:
-	GenLLVM(const GuestState* gs, const char* modname = "vexllvm");
+	GenLLVM(const Guest* gs, const char* modname = "vexllvm");
 	virtual ~GenLLVM(void);
 
 	llvm::IRBuilder<>* getBuilder(void) { return builder; }
@@ -54,7 +54,7 @@ public:
 private:
 	void mkFuncTy(void);
 
-	const GuestState	*guestState;
+	const Guest		*guest;
 	llvm::IRBuilder<>*	builder;
 	llvm::Module*		mod;
 	const llvm::FunctionType*	funcTy;

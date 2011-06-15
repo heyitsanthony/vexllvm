@@ -9,24 +9,33 @@
 #include <sys/prctl.h>
 #include <asm/prctl.h>
 
+#include "guest.h"
 #include "guestcpustate.h"
 #include "Sugar.h"
 
-Syscalls::Syscalls(GuestCPUState& in_cpu_state, VexMem& in_mappings, 
-	const char* in_binary)
-: sc_seen_c(0)
+Syscalls::Syscalls(Guest* g, VexMem& in_mappings)
+: guest(g)
+, sc_seen_c(0)
 , exited(false)
-, cpu_state(in_cpu_state)
+, cpu_state(g->getCPUState())
 , mappings(in_mappings)
-, binary(in_binary)
+, binary(g->getBinaryPath())
 , log_syscalls(getenv("VEXLLVM_SYSCALLS") ? true : false)
 {}
 
 Syscalls::~Syscalls() {}
 
+uint64_t Syscalls::apply(void)
+{
+	SyscallParams	sp(guest->getSyscallParams());
+	return apply(sp);
+}
+
 /* pass through */
 uint64_t Syscalls::apply(SyscallParams& args)
 {
+	VexMem::Mapping m;
+	bool		fakedSyscall;
 	uint64_t	sys_nr;
 	unsigned long	sc_ret;
 
@@ -49,96 +58,9 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	}
 
 	/* this will hold any memory mapping state across the call */
-	VexMem::Mapping m;
-	
-	bool handled = false;
 
-	switch (sys_nr) {
-	case SYS_exit_group:
-		exited = true;
-		sc_ret = args.getArg(0);
-		handled = true;
-		break;
-	case SYS_close:
-		/* do not close stdin, stdout, stderr! */
-		if (args.getArg(0) < 3) {
-			sc_ret = 0;
-			handled = true;
-		}
-		break;
-	case SYS_arch_prctl:
-		/* arrrrg... this is a little too x86 specific */
-		if(args.getArg(0) == ARCH_GET_FS) {
-			sc_ret = cpu_state.getFSBase();
-		} else if(args.getArg(0) == ARCH_SET_FS) {
-			cpu_state.setFSBase(args.getArg(1));
-			sc_ret = 0;
-		} else {
-			/* nothing else is supported by VEX */
-			sc_ret = -EPERM;
-		}
-		handled = true;
-		break;
-	case SYS_brk:
-		if(mappings.brk()) {
-			if(args.getArg(0) == 0) {
-				/* if your just asking, i can tell you */
-				sc_ret = (unsigned long)mappings.brk();
-			} else {
-				bool r = mappings.sbrk((void*)args.getArg(0));
-				if(r) {
-					sc_ret = (uintptr_t)mappings.brk();
-				} else {
-					sc_ret = -ENOMEM;
-				}
-			}
-		} else {
-			/* don't let the app pull the rug */
-			sc_ret = -ENOMEM;
-		}
-		handled = true;
-		break;
-	case SYS_mmap:
-	case SYS_mprotect:
-		m.offset = (void*)args.getArg(0);
-		m.length = args.getArg(1);
-		m.req_prot = args.getArg(2);
-		m.cur_prot = m.req_prot;
-		/* mask out write permission so we can play with JITs */
-		if(m.req_prot & PROT_EXEC) {
-			m.cur_prot &= ~PROT_WRITE;
-			args.setArg(2, m.cur_prot);
-		}
-		break;
-	case SYS_munmap:
-		m.offset = (void*)args.getArg(0);
-		m.length = args.getArg(1);
-		break;
-	case SYS_readlink:
-		std::string path = (char*)args.getArg(0);
-		if(path != "/proc/self/exe") break;
-
-		path = binary;
-		char* buf = (char*)args.getArg(1);
-		ssize_t res, last_res = 0;
-		/* repeatedly deref, because exe running does it */
-		for(;;) {
-			res = readlink(path.c_str(), buf, args.getArg(2));
-			if(res < 0) {
-				return last_res ? last_res : -errno;
-			}
-			std::string new_path(buf, res);
-			if(path == new_path)
-				break;
-			path = new_path;
-			last_res = res;
-		}
-		sc_ret = res;
-		handled = true;
-		break;
-	}
-
-	if(!handled)
+	fakedSyscall = interceptSyscall(args, m, sc_ret);
+	if(!fakedSyscall)
 		sc_ret = syscall(
 			sys_nr,
 			args.getArg(0),
@@ -158,9 +80,8 @@ uint64_t Syscalls::apply(SyscallParams& args)
 			<< (void*)sc_ret << std::endl;
 	}
 
-	if(handled)
-		return sc_ret;
-		
+	if (fakedSyscall) return sc_ret;
+
 	//the low level sycall interface actually returns the error code
 	//so we have to extract it from errno
 	if(sc_ret >= 0xfffffffffffff001ULL) {
@@ -183,6 +104,102 @@ uint64_t Syscalls::apply(SyscallParams& args)
 
 	return sc_ret;
 }
+
+bool Syscalls::interceptSyscall(
+	SyscallParams&		args,
+	VexMem::Mapping&	m,
+	unsigned long&		sc_ret)
+{
+	sc_ret = 0;
+	switch (args.getSyscall()) {
+	case SYS_exit_group:
+		exited = true;
+		sc_ret = args.getArg(0);
+		return true;
+	case SYS_close:
+		/* do not close stdin, stdout, stderr! */
+		if (args.getArg(0) < 3) {
+			sc_ret = 0;
+			return true;
+		}
+		return false;
+	case SYS_arch_prctl:
+		/* arrrrg... this is a little too x86 specific */
+		/* (but we'll have to worry about syscall shuffling
+		 *  across archs anyway, so it's OK for now) */
+		if(args.getArg(0) == ARCH_GET_FS) {
+			sc_ret = cpu_state->getFSBase();
+		} else if(args.getArg(0) == ARCH_SET_FS) {
+			cpu_state->setFSBase(args.getArg(1));
+			sc_ret = 0;
+		} else {
+			/* nothing else is supported by VEX */
+			sc_ret = -EPERM;
+		}
+		return true;
+	case SYS_brk:
+		if(mappings.brk()) {
+			if(args.getArg(0) == 0) {
+				/* if your just asking, i can tell you */
+				sc_ret = (unsigned long)mappings.brk();
+			} else {
+				bool r = mappings.sbrk((void*)args.getArg(0));
+				if(r) {
+					sc_ret = (uintptr_t)mappings.brk();
+				} else {
+					sc_ret = -ENOMEM;
+				}
+			}
+		} else {
+			/* don't let the app pull the rug */
+			sc_ret = -ENOMEM;
+		}
+		return true;
+
+	case SYS_mmap:
+	case SYS_mprotect:
+		m.offset = (void*)args.getArg(0);
+		m.length = args.getArg(1);
+		m.req_prot = args.getArg(2);
+		m.cur_prot = m.req_prot;
+		/* mask out write permission so we can play with JITs */
+		if(m.req_prot & PROT_EXEC) {
+			m.cur_prot &= ~PROT_WRITE;
+			args.setArg(2, m.cur_prot);
+		}
+		return false;
+
+	case SYS_munmap:
+		m.offset = (void*)args.getArg(0);
+		m.length = args.getArg(1);
+		return false;
+
+	case SYS_readlink:
+		std::string path = (char*)args.getArg(0);
+		if(path != "/proc/self/exe") break;
+
+		path = binary;
+		char* buf = (char*)args.getArg(1);
+		ssize_t res, last_res = 0;
+		/* repeatedly deref, because exe running does it */
+		for(;;) {
+			res = readlink(path.c_str(), buf, args.getArg(2));
+			if(res < 0) {
+				return last_res ? last_res : -errno;
+			}
+			std::string new_path(buf, res);
+			if(path == new_path)
+				break;
+			path = new_path;
+			last_res = res;
+		}
+		sc_ret = res;
+		return true;
+	}
+
+	return false;
+}
+
 
 void Syscalls::print(std::ostream& os) const
 {

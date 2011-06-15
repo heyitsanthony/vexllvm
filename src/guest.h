@@ -1,5 +1,5 @@
-#ifndef GUESTSTATE_H
-#define GUESTSTATE_H
+#ifndef GUEST_H
+#define GUEST_H
 
 #include <iostream>
 #include <stdint.h>
@@ -40,10 +40,10 @@ private:
  * 2. memory mappings
  * 3. syscall param/result access
  */
-class GuestState
+class Guest
 {
 public:
-	virtual ~GuestState(void);
+	virtual ~Guest(void);
 	virtual llvm::Value* addrVal2Host(llvm::Value* addr_v) const = 0;
 	virtual uint64_t addr2Host(guestptr_t guestptr) const = 0;
 	virtual guestptr_t name2guest(const char*) const = 0;
@@ -62,7 +62,7 @@ public:
 	const char* getBinaryPath(void) const { return bin_path; }
 	virtual void recordInitialMappings(VexMem& mappings) = 0;
 protected:
-	GuestState(const char* bin_path);
+	Guest(const char* bin_path);
 
 	GuestCPUState	*cpu_state;
 	char		*bin_path;
