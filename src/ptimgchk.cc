@@ -62,29 +62,30 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 #define get_reg_vex(x,y)	*((uint64_t*)&x[user_regs_desc_tab[y].vex_off])
 #define get_reg_name(y)		user_regs_desc_tab[y].name
 
-//the basic concept here is to single step the subservient copy of the program
-//while the program counter is within a specific range.  that range will
-//correspond to the original range of addresses contained within the translation
-//block.  this will allow things to work properly in cases where the exit from
-//the block at the IR level re-enters the block.  this is nicer than the
-//alternative of injecting breakpoint instructions into the original process
-//because it avoids the need for actually parsing the opcodes at this level of
-//the code.  it's bad from the perspective of performance because a long running
-//loop that could have been entirely contained within a translation block won't
-//be able to fully execute without repeated syscalls to grab the process state
-//
-//a nice alternative style of doing this type of partial checking would be to run
-//until the next system call.  this can happen extremely efficiently as the
-//ptrace api provides a simple call to stop at that point.  identifying the
-//errant code that causes a divergence would be tricker, but the caller of such
-//a utility could track all of the involved translation blocks and produce
-//a summary of the type of instructions included in the IR.  as long as the bug
-//was an instruction misimplementation this would probably catch it rapidly.
-//this approach might be more desirable if we have divergent behavior that
-//happens much later in the execution cycle.  unfortunately, there are probably
-//many other malloc, getpid, gettimeofday type calls that will cause divergence
-//early enough to cause the cross checking technique to fail before the speed of
-//the mechanism really made an impact in how far it can check.
+/*
+the basic concept here is to single step the subservient copy of the program
+while the program counter is within a specific range.  that range will
+correspond to the original range of addresses contained within the translation
+block.  this will allow things to work properly in cases where the exit from
+the block at the IR level re-enters the block.  this is nicer than the
+alternative of injecting breakpoint instructions into the original process
+because it avoids the need for actually parsing the opcodes at this level of
+the code.  it's bad from the perspective of performance because a long running
+loop that could have been entirely contained within a translation block won't
+be able to fully execute without repeated syscalls to grab the process state
+
+a nice alternative style of doing this type of partial checking would be to run until the next system call.  this can happen extremely efficiently as the
+ptrace api provides a simple call to stop at that point.  identifying the
+errant code that causes a divergence would be tricker, but the caller of such
+a utility could track all of the involved translation blocks and produce
+a summary of the type of instructions included in the IR.  as long as the bug
+was an instruction misimplementation this would probably catch it rapidly.
+this approach might be more desirable if we have divergent behavior that
+happens much later in the execution cycle.  unfortunately, there are probably
+many other malloc, getpid, gettimeofday type calls that will cause divergence
+early enough to cause the cross checking technique to fail before the speed of
+the mechanism really made an impact in how far it can check.
+*/
 
 PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 : 	GuestStatePTImg(argc, argv, envp),

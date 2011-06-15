@@ -320,6 +320,14 @@ void GuestCPUState::print(std::ostream& os) const
 #endif
 }
 
+void GuestCPUState::setFSBase(uintptr_t base) {
+	state2amd64()->guest_FS_ZERO = base;
+}
+uintptr_t GuestCPUState::getFSBase() const {
+	return state2amd64()->guest_FS_ZERO;
+}
+
+
 /* set a function argument */
 void GuestCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 {

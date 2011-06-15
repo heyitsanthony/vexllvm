@@ -18,7 +18,7 @@ VexExecChk::VexExecChk(PTImgChk* gs)
 	cross_check = (getGuestState()) ? gs : NULL;
 	if (!cross_check) return;
 
-	sc_marshall = new SyscallsMarshalled(mappings, gs->getBinaryPath());
+	sc_marshall = new SyscallsMarshalled(*gs->getCPUState(), mappings, gs->getBinaryPath());
 	delete sc;
 	sc = sc_marshall;
 }

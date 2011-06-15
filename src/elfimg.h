@@ -13,6 +13,7 @@
 
 typedef void* hostptr_t;
 typedef void* elfptr_t;
+typedef const void* celfptr_t;
 
 class ElfSegment;
 class DLLib;
@@ -26,10 +27,17 @@ public:
 	virtual ~ElfImg(void);
 	bool isValid(void) const { return fd > 0; }
 	hostptr_t xlateAddr(elfptr_t addr) const;
-	elfptr_t getEntryPoint(void) const { return (void*)hdr->e_entry; }
+	elfptr_t getEntryPoint(void) const;
+	int getHeaderCount() const;
+	ElfImg* getInterp(void) const { return interp; }
 	bool isDirectMapped(void) const { return direct_mapped; } 
 	elfptr_t getSymAddr(const char* symname) const;
 	const char* getFilePath(void) const { return img_path; }
+	void linkIt(void);
+	celfptr_t getHeader() const;
+	celfptr_t getBase() const;
+	ElfSegment* getFirstSegment() const { return segments.front(); }
+	void addAllSegments(std::list<ElfSegment*>& r) const;
 private:
 	ElfImg(const char* fname, bool linked);
 	bool verifyHeader(void) const;
@@ -67,6 +75,8 @@ private:
 	PtrList<DLLib>		libs;	/* all libs linked in XXX make obj */
 
 	bool direct_mapped;
+	ElfImg* interp;
+	bool linked;
 };
 
 #endif

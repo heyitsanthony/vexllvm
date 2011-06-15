@@ -6,6 +6,7 @@
 #include <list>
 #include "syscallparams.h"
 
+class VexMem;
 class GuestCPUState;
 
 namespace llvm
@@ -59,7 +60,7 @@ public:
 	void print(std::ostream& os) const;
 
 	const char* getBinaryPath(void) const { return bin_path; }
-
+	virtual void recordInitialMappings(VexMem& mappings) = 0;
 protected:
 	GuestState(const char* bin_path);
 

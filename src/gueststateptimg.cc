@@ -18,6 +18,7 @@
 #include "Sugar.h"
 
 #include "elfimg.h"
+#include "vexmem.h"
 
 #include "ptimgchk.h"
 #include "gueststateptimg.h"
@@ -459,3 +460,15 @@ std::list<GuestMemoryRange*> GuestStatePTImg::getMemoryMap(void) const
 
 	return ret;
 }
+void GuestStatePTImg::recordInitialMappings(VexMem& maps) {
+	foreach (it, mappings.begin(), mappings.end()) {
+		PTImgMapEntry	*ptm = *it;
+		VexMem::Mapping s;
+		s.offset = ptm->getBase();
+		s.length = ptm->getByteCount();
+		s.cur_prot = s.req_prot = ptm->getProt();
+		maps.recordMapping(s);
+	}	
+	//TODO: guess the brk? maybe not necessary for ptimg
+}
+

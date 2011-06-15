@@ -63,6 +63,10 @@ static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
 VexXlate::VexXlate()
 {
 	LibVEX_default_VexControl(&vc);
+	if(getenv("VEXLLVM_SINGLE_STEP")) {
+		vc.guest_max_insns = 1;
+		vc.guest_chase_thresh = 0;
+	}
 	LibVEX_Init(vex_exit, vex_log, VEX_DEBUG_LEVEL, false, &vc);
 
 	LibVEX_default_VexArchInfo(&vai_amd64);

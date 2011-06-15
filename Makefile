@@ -70,7 +70,7 @@ SOFTFLOATDIRDEPS=$(SOFTFLOATDEPS:%=obj/%)
 
 #TODO: use better config options
 BINTARGETS=	elf_trace elf_run jit_test	\
-		pt_run pt_trace pt_xchk
+		pt_run pt_trace pt_xchk dump_loader
 
 BINTARGETSFP=$(BINTARGETS:%=bin/%)
 BINTARGETSSOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
@@ -169,6 +169,9 @@ test-built-traces: all $(TRACEDEPS_PATH)
 
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
+
+tests-elf: all $(TRACEDEPS_PATH)
+	RUNCMD=bin/elf_run tests/traces.sh
 
 tests-fastxchk: all $(TRACEDEPS_PATH)
 	VEXLLVM_FASTCHK=1 RUNCMD=bin/pt_xchk OUTPATH=tests/traces-fastxchk-out tests/traces.sh

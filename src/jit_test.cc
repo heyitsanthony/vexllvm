@@ -69,6 +69,7 @@ public:
 	{
 		return std::list<GuestMemoryRange*>();
 	}
+	void recordInitialMappings(VexMem&) {}
 };
 
 /* XXX use offsetof references to valgrind */

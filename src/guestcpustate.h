@@ -59,6 +59,9 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	const GuestTLS* getTLS(void) const { return tls; }
 	void setTLS(GuestTLS* tls);
 
+	void setFSBase(uintptr_t base);
+	uintptr_t getFSBase() const;
+
 	const char* off2Name(unsigned int off) const;
 protected:
 	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);

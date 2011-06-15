@@ -71,7 +71,7 @@ VexExec::VexExec(GuestState* in_gs)
 		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
 	}
 
-	sc = new Syscalls(mappings, gs->getBinaryPath());
+	sc = new Syscalls(*gs->getCPUState(), mappings, gs->getBinaryPath());
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 
@@ -82,6 +82,9 @@ VexExec::VexExec(GuestState* in_gs)
 	} else {
 		trace_conf = TRACE_OFF;
 	}
+	
+	gs->recordInitialMappings(mappings);
+	//TODO: apply the protection changes to guard against code patches
 }
 
 const VexSB* VexExec::doNextSB(void)
@@ -139,9 +142,16 @@ const VexSB* VexExec::doNextSB(void)
 		if (exited) return NULL;
 	}
 
-	if (vsb->isReturn() && !addr_stack.empty())
+	if (vsb->isReturn() && !addr_stack.empty()) {
+		/* why are we tracking the stack like this... seems 
+		   weird to me, plus it means that the sp rewrites the 
+		   loader does don't work */
 		addr_stack.pop();
+		if(addr_stack.empty())
+			addr_stack.push(new_jmpaddr);
+	}
 
+	
 	/* next address to go to */
 	if (	!(vsb->isReturn() && addr_stack.empty()) &&
 		new_jmpaddr) addr_stack.push(new_jmpaddr);

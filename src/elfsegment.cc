@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -5,6 +6,7 @@
 #include <inttypes.h>
 #include <sys/mman.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "elfsegment.h"
 
@@ -15,17 +17,21 @@
 #define page_round_up(x) PAGE_SZ*(((uintptr_t)(x) + 0xfff)/PAGE_SZ)
 
 
-ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr)
+ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr, 
+	elfptr_t reloc)
 {
 	/* in the future we might care about non-loadable segments */
-	if (phdr.p_type != PT_LOAD) return NULL;
+	if (phdr.p_type != PT_LOAD) 
+		return NULL;
 
-	return new ElfSegment(fd, phdr);
+	return new ElfSegment(fd, phdr, reloc);
 }
 
 /* Always mmap in the segment. We don't give a fuck. 
  * TODO: Efficiently use the address space! */
-ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr)
+ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr, 
+	elfptr_t in_reloc)
+: reloc(in_reloc)
 {
 	statFile(fd);
 	makeMapping(fd, phdr);
@@ -48,7 +54,7 @@ void ElfSegment::makeMapping(int fd, const Elf64_Phdr& phdr)
 	off_t	file_off_pgbase, file_off_pgoff;
 	void	*desired_base, *spill_base;
 	size_t	end_off;
-	int	prot, flags;
+	int	flags;
 
 	/* map in */
 	file_off_pgbase = page_base(phdr.p_offset);
@@ -56,11 +62,19 @@ void ElfSegment::makeMapping(int fd, const Elf64_Phdr& phdr)
 
 	prot = PROT_READ;
 	if (phdr.p_flags & PF_W) prot |= PROT_WRITE;
-	flags = (prot & PROT_WRITE) ? MAP_PRIVATE  : MAP_SHARED;
+	if (phdr.p_flags & PF_X) prot |= PROT_EXEC;
+	flags = MAP_PRIVATE;
+	
+	/* TODO: this really isn't cool, but somehow, when the tests
+	   are lauched, the memory mapping space is completely shot to
+	   hell and it can't manage to map everything at nice addresses! */
+	if(phdr.p_vaddr != 0)
+		flags |= MAP_FIXED;
 
-	desired_base = (void*)page_base(phdr.p_vaddr);
-	es_len = page_round_up(phdr.p_vaddr + phdr.p_memsz);
-	es_len -= page_base(phdr.p_vaddr);
+	uintptr_t reloc_base = phdr.p_vaddr + (uintptr_t)reloc;
+	desired_base = (void*)page_base(reloc_base);
+	es_len = page_round_up(reloc_base + phdr.p_memsz);
+	es_len -= page_base(reloc_base);
 
 	end_off = page_round_up(phdr.p_offset + phdr.p_memsz);
 	if (end_off > page_round_up(elf_file_size))
@@ -69,13 +83,35 @@ void ElfSegment::makeMapping(int fd, const Elf64_Phdr& phdr)
 		spill_pages = 0;
 	file_pages = es_len - spill_pages;
 
-	es_mmapbase = mmap(
-		desired_base, file_pages, prot, flags, fd, file_off_pgbase);
+	es_mmapbase = mmap(desired_base, file_pages, 
+		prot | PROT_WRITE, flags, fd, file_off_pgbase);
+
 	assert (es_mmapbase != MAP_FAILED);
-	direct_mapped = (desired_base == es_mmapbase);
+	uintptr_t filesz = phdr.p_offset - file_off_pgbase + phdr.p_filesz;
+	extra_bytes = file_pages - filesz;
+
+	/*
+	std::cerr << "mapped section @ " << desired_base 
+		<< " to " << es_mmapbase << std::endl;
+	std::cerr << "file base @ " << file_off_pgbase << std::endl;
+	std::cerr << "page_base(reloc_base) " 
+		<< (void*)page_base(reloc_base) << std::endl;
+	std::cerr << "es_mmapbase " << (void*)es_mmapbase << std::endl;
+	std::cerr << "es_len " << (void*)es_len << std::endl;
+	std::cerr << "filesz = " << filesz << std::endl;
+	std::cerr << "extra bytes = " << extra_bytes << std::endl;
+	*/
+
+	direct_mapped = ((void*)page_base(reloc_base) == es_mmapbase 
+		|| desired_base == 0);
+
+	my_end = es_mmapbase + filesz;
+
+	/* protect now that we have zeroed */
+	mprotect(es_mmapbase, file_pages, prot);
 
 	/* declare guest-visible mapping */
-	es_elfbase = (void*)phdr.p_vaddr;
+	es_elfbase = (void*)reloc_base;
 	es_hostbase = (void*)(((char*)es_mmapbase)+file_off_pgoff);
 
 	if (spill_pages == 0)

@@ -1,3 +1,4 @@
+#include <iostream>
 #include <assert.h>
 #include <inttypes.h>
 #include <sys/mman.h>
@@ -17,6 +18,7 @@
 #include <vector>
 
 #define WARNING(x)	fprintf(stderr, "WARNING: "x)
+#define DEFAULT_INTERP	"/lib/ld-linux-x86-64.so.2"
 
 ElfImg* ElfImg::create(const char* fname)
 {
@@ -47,7 +49,8 @@ ElfImg::~ElfImg(void)
 	close(fd);
 }
 
-ElfImg::ElfImg(const char* fname, bool linked)
+ElfImg::ElfImg(const char* fname, bool in_linked)
+: interp(NULL), linked(in_linked)
 {
 	struct stat	st;
 
@@ -68,12 +71,10 @@ ElfImg::ElfImg(const char* fname, bool linked)
 	if (!verifyHeader()) goto err_hdr;
 
 	setupSegments();
-
-	if (linked) {
-		loadDyn();
-		applyRelocs();
-	}
-
+	
+	/* uncomment me to get the pseudo linker behavior from before */
+	// interp = NULL;
+	
 	/* OK. */
 	return;
 	/* ERR */
@@ -86,29 +87,61 @@ err_open:
 	fd = -1;
 	return;
 }
+void ElfImg::linkIt(void) {
+	/* the guest state actually has to construct the special 
+	   arg tables for the dynamic linker to setup ANY
+	   elf binary, however, we have a hack to jump into the
+	   libc start instead of the dynamic linker setup code
+	   if interp == NULL, then GuestStateElf will fall back
+	   to the old behavior */
+	loadDyn();
+	applyRelocs();
+	
+}
+int ElfImg::getHeaderCount() const {
+	return hdr->e_phnum;
+}
+
+celfptr_t ElfImg::getHeader() const {
+	/* this is so janky and will most likely not work other places */
+	return getFirstSegment()->offset(hdr->e_phoff);
+}
 
 /* TODO: do mmapping here */
 void ElfImg::setupSegments(void)
 {
 	Elf64_Phdr	*phdr;
 
+	elfptr_t last_end = 0;
 	direct_mapped = true;
 	phdr = (Elf64_Phdr*)(((char*)hdr) + hdr->e_phoff);
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
 		ElfSegment	*es;
 		
-		es = ElfSegment::load(fd, phdr[i]);
+		if (phdr[i].p_type == PT_INTERP) {
+			//TODO: use the specified interpreter
+			interp = ElfImg::createUnlinked(DEFAULT_INTERP); 
+			continue;
+		}
+		es = ElfSegment::load(fd, phdr[i], 
+			segments.empty() ? 0
+			: getFirstSegment()->relocation());
 		if (!es) continue;
 		if (!es->isDirectMapped()) direct_mapped = false;
 
 		segments.push_back(es);
 	}
+	segments.back()->clearEnd();
 }
 
 static const unsigned char ok_ident[EI_NIDENT] = 
 	"\x7f""ELF\x2\x1\x1\0\0\0\0\0\0\0\0";
 
 #define EXPECTED(x)	fprintf(stderr, "ELF: expected "x"!\n")
+
+elfptr_t ElfImg::getEntryPoint(void) const { 
+	return (void*)hdr->e_entry; 
+}
 
 bool ElfImg::verifyHeader(void) const
 {
@@ -117,7 +150,7 @@ bool ElfImg::verifyHeader(void) const
 			return false;
 	}
 
-	if (hdr->e_type != ET_EXEC) {
+	if (linked && hdr->e_type != ET_EXEC) {
 		EXPECTED("ET_EXEC");
 		return false;
 	}
@@ -410,4 +443,14 @@ elfptr_t ElfImg::getSymAddr(const char* symname) const
 {
 	const Symbol	*sym = syms.findSym(symname);
 	return (elfptr_t)((sym) ? sym->getBaseAddr() : (symaddr_t)NULL);
+}
+void ElfImg::addAllSegments(std::list<ElfSegment*>& r) const {
+	/* for now i am cheating... the last segment added here will be
+	   the value brk returns when it is first called... so order
+	   sadly matters... :-( */
+	if(interp)
+		interp->addAllSegments(r);
+	foreach (it, segments.begin(), segments.end()) {
+		r.push_back(*it);
+	}	
 }

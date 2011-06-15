@@ -19,9 +19,12 @@ public:
 	void recordMapping(Mapping& mapping);
 	void removeMapping(Mapping& mapping);
 	bool lookupMapping(void* addr, Mapping& mapping);
+	void* brk();
+	bool sbrk(void* new_top);
 private:
 	typedef std::map<void*, Mapping> mapmap_t; 
 	mapmap_t maps;
+	void* top_brick;
 };
 
 #endif

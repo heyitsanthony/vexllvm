@@ -72,8 +72,12 @@ void sigbus_handler(int v)
 	dump_data();
 	signal(SIGBUS, SIG_DFL);
 }
-
-int main(int argc, char* argv[])
+static int count(char**v) {
+	int i = 0;
+	for(;v[i]; ++i);
+	return i;
+}
+int main(int argc, char* argv[], char* envp[])
 {
 	GuestStateELF	*gs;
 	ElfImg		*img;
@@ -97,7 +101,8 @@ int main(int argc, char* argv[])
 	}
 
 	gs = new GuestStateELF(img);
-	gs->setArgv(argc-1, const_cast<const char**>(argv+1));
+	gs->setArgv(argc-1, const_cast<const char**>(argv+1), 
+		count(envp), const_cast<const char**>(envp));
 
 	vexexec = VexExec::create<VexExec,GuestState>(gs);
 	assert (vexexec && "Could not create vexexec");

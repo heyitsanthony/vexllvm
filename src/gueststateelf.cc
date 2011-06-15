@@ -4,18 +4,42 @@
 #include <llvm/Module.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/IRBuilder.h>
+#include <sys/mman.h>
+#include <fstream>
+#include <fcntl.h>
+#include <sstream>
 
 #include "elfimg.h"
+#include "elfsegment.h"
 #include "gueststateelf.h"
 #include "guestcpustate.h"
+#include "vexmem.h"
+#include "Sugar.h"
 
 using namespace llvm;
 
-#define STACK_BYTES	(64*1024)
+#define STACK_BYTES (2 * 1024 * 1024)
+/* these macros are largely cheap shortcuts to get something working.
+   eventually, the code in here will do a better job discerning between
+   guest and host addresses, etc */
+#define MAX_ARG_PAGES	32
+#define elf_addr_t	Elf64_Addr
+#define ELF_PLATFORM	"x86_64"
+#define elf_phdr	Elf64_Phdr
+#define ELF_HWCAP	0x000000000febfbff
+#define target_mmap(a, b, c, d, e, f) \
+	(guestptr_t)mmap((void*)(a), b, c, d, e, f)
+#define target_mprotect(a, b, c) (guestptr_t)mprotect((void*)(a), b, c)
+#define memcpy_to_target(a, b, c) memcpy((void*)a, b, c)
+#define put_user_ual(v,a)	*(guestptr_t*)(a) = v;
+#define memcpy_fromfs	memcpy
+#define target_strlen(a) strlen((const char*)(a))
 
-GuestStateELF::GuestStateELF(const ElfImg* in_img)
-: GuestState(in_img->getFilePath()),
-  img(in_img)
+
+GuestStateELF::GuestStateELF(ElfImg* in_img)
+: GuestState(in_img->getFilePath())
+, img(in_img)
+, arg_pages(MAX_ARG_PAGES)
 {
 	stack = new uint8_t[STACK_BYTES];
 	memset(stack, 0x32, STACK_BYTES);	/* bogus data */
@@ -68,56 +92,334 @@ guestptr_t GuestStateELF::name2guest(const char* symname) const
 	return (guestptr_t)img->getSymAddr(symname);
 }
 
-void* GuestStateELF::getEntryPoint(void) const { return img->getEntryPoint(); }
+void* GuestStateELF::getEntryPoint(void) const { 
+	if(img->getInterp())
+		return img->getInterp()->getFirstSegment()->
+			xlate(img->getInterp()->getEntryPoint()); 
+	else
+		return img->getEntryPoint(); 
+}
 
 /* XXX, amd specified */
 #define REDZONE_BYTES	128
 /**
  * From libc _start code ...
  *	popq %rsi		; pop the argument count
- * 	movq %rsp, %rdx		; argv starts just at the current stack top.
+ *	movq %rsp, %rdx		; argv starts just at the current stack top.
  * Align the stack to a 16 byte boundary to follow the ABI. 
  *	andq  $~15, %rsp
  *
  */
-void GuestStateELF::setArgv(unsigned int argc, const char* argv[])
+
+#define TARGET_PAGE_SIZE 4096
+//borrowed liberally from qemu
+void GuestStateELF::copyElfStrings(int argc, const char **argv)
 {
-	unsigned int	argv_data_space = 0;
-	unsigned int	argv_ptr_space;
-	char		*stack_base, *argv_data;
-	char		**argv_tab;
+	const char *tmp, *tmp1;
+	char *pag = NULL;
+	int len, offset = 0;
 
-	stack_base = (char*)stack + STACK_BYTES;
-	stack_base -= REDZONE_BYTES;	/* make room for redzone */
-	assert (((uintptr_t)stack_base & 0x7) == 0 && 
-		"Stack not 8-aligned. Perf bug!");
+	assert(arg_stack);
 
-	/*  */
-	for (unsigned int i = 0; i < argc; i++)
-		argv_data_space += strlen(argv[i]) + 1 /* '\0' */;
+	while (argc-- > 0) {
+		tmp = argv[argc];
 
-	/* number of bytes needed to store points to all argv */
-	argv_ptr_space = sizeof(const char*) * (argc + 1 /* NULL ptr */);
+		assert(tmp && "VFS: argc is wrong");
 
-	/* set s to room for argv strings */
-	stack_base -= argv_data_space;
-	argv_data = (char*)stack_base;
-
-	/* set argv_tab to beginning of string pointer array argv[] */
-	stack_base -= argv_ptr_space;
-	argv_tab = (char**)stack_base;
-	for (unsigned int i = 0; i < argc; i++) {
-		argv_tab[i] = argv_data; /* set argv[i] ptr to stack argv[i] */
-		/* copy argv[i] into stack */
-		strcpy(argv_data, argv[i]);
-		argv_data += strlen(argv[i]);
-		argv_data++;		/* skip '\0' */
+		tmp1 = tmp;
+		while (*tmp++);
+		len = tmp - tmp1;
+		
+		assert(arg_stack >= len);
+		
+		while (len) {
+			--arg_stack; --tmp; --len;
+			if (--offset < 0) {
+				offset = arg_stack % TARGET_PAGE_SIZE;
+				pag = (char *)arg_pages[arg_stack/
+					TARGET_PAGE_SIZE];
+				if (!pag) {
+					pag = (char *)
+						malloc(TARGET_PAGE_SIZE);
+					memset(pag, 0, TARGET_PAGE_SIZE);
+					arg_pages[arg_stack/
+						TARGET_PAGE_SIZE] = pag;
+					if (!pag)
+						return;
+				}
+			}
+			if (len == 0 || offset == 0) {
+				*(pag + offset) = *tmp;
+			}
+			else {
+				int bytes_to_copy = (len > offset) ? 
+					offset : len;
+				tmp -= bytes_to_copy;
+				arg_stack -= bytes_to_copy;
+				offset -= bytes_to_copy;
+				len -= bytes_to_copy;
+				memcpy_fromfs(pag + offset, tmp, 
+					bytes_to_copy + 1);
+			}
+		}
 	}
-	argv_tab[argc] = NULL;
+}
 
-	/* store argc */
-	stack_base -= sizeof(uintptr_t);
-	*((uintptr_t*)stack_base) = argc;
 
-	cpu_state->setStackPtr(stack_base);
+//borrowed liberally from qemu
+void GuestStateELF::setupArgPages()
+{
+	guestptr_t size, error, guard;
+	int i;
+
+	/* Create enough stack to hold everything.	If we don't use
+	it for args, we'll use it for something else.  */
+	size = STACK_BYTES;
+	if (size < MAX_ARG_PAGES*TARGET_PAGE_SIZE) {
+		size = MAX_ARG_PAGES*TARGET_PAGE_SIZE;
+	}
+	/* TODO: this check and math really isn't right */
+	guard = TARGET_PAGE_SIZE;
+	if (guard < PAGE_SIZE) {
+		guard = PAGE_SIZE;
+	}
+
+	error = target_mmap(0, size + guard, PROT_READ | PROT_WRITE,
+		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (error == -1) {
+		perror("mmap stack");
+		exit(-1);
+	}
+
+	/* We reserve one extra page at the top of the stack as guard.	*/
+	target_mprotect(error, guard, PROT_NONE);
+
+	stack_limit = error + guard;
+	stack_base = stack_limit + size -
+		MAX_ARG_PAGES*TARGET_PAGE_SIZE;
+	arg_stack += stack_base;
+
+	foreach(it, arg_pages.begin(), arg_pages.end()) {
+		if (*it) {
+			// info->rss++;
+			/* FIXME - check return value of 
+			   memcpy_to_target() for failure */
+			memcpy_to_target(stack_base, *it, TARGET_PAGE_SIZE);
+			free(*it);
+			*it = NULL;
+		}
+		stack_base += TARGET_PAGE_SIZE;
+	}
+}
+
+void GuestStateELF::createElfTables(int argc, int envc)
+{
+	guestptr_t string_stack = arg_stack;
+	guestptr_t& sp = arg_stack;
+	int size;
+	guestptr_t u_platform;
+	const char *k_platform;
+	const int n = sizeof(elf_addr_t);
+
+#ifdef CONFIG_USE_FDPIC
+	/* Needs to be before we load the env/argc/... */
+	if (elf_is_fdpic(exec)) {
+		/* Need 4 byte alignment for these structs */
+		sp &= ~3;
+		sp = loader_build_fdpic_loadmap(info, sp);
+		info->other_info = interp_info;
+		if (interp_info) {
+			interp_info->other_info = info;
+			sp = loader_build_fdpic_loadmap(interp_info, sp);
+		}
+	}
+#endif
+
+	u_platform = 0;
+	k_platform = ELF_PLATFORM;
+	if (k_platform) {
+		size_t len = strlen(k_platform) + 1;
+		sp -= (len + n - 1) & ~(n - 1);
+		u_platform = sp;
+		/* FIXME - check return value of memcpy_to_target() for failure */
+		memcpy_to_target(sp, k_platform, len);
+	}
+	/* random bytes used for aslr */
+	guestptr_t random_bytes = sp - 16;
+	int rnd = open("/dev/urandom", O_RDONLY);
+	read(rnd, (void*)random_bytes, 16);
+	close(rnd);
+	sp -= 16;
+
+#define DLINFO_ITEMS 14
+	/*
+	 * Force 16 byte _final_ alignment here for generality.
+	 */
+	sp = sp &~ (guestptr_t)16;
+	size = (DLINFO_ITEMS + 1) * 2;
+	if (k_platform)
+		size += 2;
+#ifdef DLINFO_ARCH_ITEMS
+	size += DLINFO_ARCH_ITEMS * 2;
+#endif
+	size += envc + argc + 2;
+	size += 1;	/* argc itself */
+	size *= n;
+	if (size & 15)
+		sp -= 16 - (size & 15);
+
+	/* This is correct because Linux defines
+	 * elf_addr_t as Elf32_Off / Elf64_Off
+	 */
+#define NEW_AUX_ENT(id, val) do {				\
+		sp -= n; put_user_ual(val, sp);			\
+		sp -= n; put_user_ual(id, sp);			\
+	} while(0)
+
+	NEW_AUX_ENT (AT_NULL, 0);
+
+
+	/* There must be exactly DLINFO_ITEMS entries here.	 */
+	if (k_platform)
+		NEW_AUX_ENT(AT_PLATFORM, u_platform);
+	//ptr to filename
+	NEW_AUX_ENT(AT_EXECFN, (guestptr_t)exe_string);
+
+	NEW_AUX_ENT(AT_RANDOM, random_bytes);
+	NEW_AUX_ENT(AT_SECURE, (guestptr_t)0); //not suid
+
+	NEW_AUX_ENT(AT_EGID, (guestptr_t) getegid());
+	NEW_AUX_ENT(AT_GID, (guestptr_t) getgid());
+	NEW_AUX_ENT(AT_EUID, (guestptr_t) geteuid());
+	NEW_AUX_ENT(AT_UID, (guestptr_t) getuid());
+	NEW_AUX_ENT(AT_ENTRY, (guestptr_t)img->getEntryPoint());
+	NEW_AUX_ENT(AT_FLAGS, (guestptr_t)0);
+	NEW_AUX_ENT(AT_BASE, (guestptr_t)(img->getInterp() ?
+	img->getInterp()->getFirstSegment()->relocation()
+	: img->getFirstSegment()->relocation()));
+	NEW_AUX_ENT(AT_PHNUM, (guestptr_t)(img->getHeaderCount()));
+	NEW_AUX_ENT(AT_PHENT, (guestptr_t)(sizeof (elf_phdr)));
+	NEW_AUX_ENT(AT_PHDR, (guestptr_t)(img->getHeader()));
+	NEW_AUX_ENT(AT_CLKTCK, (guestptr_t) sysconf(_SC_CLK_TCK));
+	NEW_AUX_ENT(AT_PAGESZ, (guestptr_t)(TARGET_PAGE_SIZE));
+	NEW_AUX_ENT(AT_HWCAP, (guestptr_t) ELF_HWCAP);
+	//ptr to syscall - need to fetch, or stick a dummy one in?
+	//NEW_AUX_ENT(AT_SYSINFO_EHDR, (guestptr_t)0xffffffffff600000ULL); 
+	// //fd for exe
+	// NEW_AUX_ENT(AT_EXECFD, (guestptr_t)0xbbbbbbbbbbbbbbbbbULL);
+
+#ifdef ARCH_DLINFO
+	/*
+	 * ARCH_DLINFO must come last so platform specific code can enforce
+	 * special alignment requirements on the AUXV if necessary (eg. PPC).
+	 */
+	ARCH_DLINFO;
+#endif
+#undef NEW_AUX_ENT
+
+	/* for completeness we could do something with the note... */
+	// info->saved_auxv = sp;
+
+	loaderBuildArgptr(envc, argc, string_stack, 0);
+}
+
+/* Construct the envp and argv tables on the target stack.	*/
+void GuestStateELF::loaderBuildArgptr(int envc, int argc,
+	guestptr_t stringp, int push_ptr)
+{
+	guestptr_t& sp = arg_stack;
+
+	int n = sizeof(guestptr_t);
+	guestptr_t envp;
+	guestptr_t argv;
+
+	sp -= (envc + 1) * n;
+	envp = sp;
+	sp -= (argc + 1) * n;
+	argv = sp;
+	if (push_ptr) {
+		/* FIXME - handle put_user() failures */
+		sp -= n;
+		put_user_ual(envp, sp);
+		sp -= n;
+		put_user_ual(argv, sp);
+	}
+	sp -= n;
+	/* FIXME - handle put_user() failures */
+	put_user_ual(argc, sp);
+	
+	//ts->info->arg_start = stringp;
+
+	exe_string = stringp;
+	while (argc-- > 0) {
+		/* FIXME - handle put_user() failures */
+		put_user_ual(stringp, argv);
+		argv += n;
+		stringp += target_strlen(stringp) + 1;
+	}
+
+	// ts->info->arg_end = stringp;
+
+	/* FIXME - handle put_user() failures */
+	put_user_ual(0, argv);
+	while (envc-- > 0) {
+		/* FIXME - handle put_user() failures */
+		put_user_ual(stringp, envp);
+		envp += n;
+		stringp += target_strlen(stringp) + 1;
+	}
+	/* FIXME - handle put_user() failures */
+	put_user_ual(0, envp);
+}
+
+void GuestStateELF::setArgv(unsigned int argc, const char* argv[],
+	int envc, const char* envp[])
+{
+	arg_stack = TARGET_PAGE_SIZE*MAX_ARG_PAGES-sizeof(void*);
+	
+	const char* filename = getBinaryPath();
+	copyElfStrings(1, &filename);
+	// blank environ for now
+	copyElfStrings(envc, envp);
+	copyElfStrings(argc, argv);
+	
+	setupArgPages();
+
+	createElfTables(argc, envc);
+	
+	if(getenv("VEXLLVM_DUMP_MAPS")) {
+		std::list<ElfSegment*> m;
+		img->addAllSegments(m);
+		foreach(it, m.begin(), m.end()) {
+			std::ostringstream save_fname;
+			save_fname << argv[0] << "." << getpid() 
+				<< "." << (*it)->base();
+			std::ofstream o(save_fname.str().c_str());
+			o.write((char*)(*it)->base(), (*it)->length());
+		}
+	}
+	cpu_state->setStackPtr((void*)arg_stack);
+}
+void GuestStateELF::recordInitialMappings(VexMem& mappings) {
+	std::list<ElfSegment*> m;
+	img->addAllSegments(m);
+	void* top_brick = NULL;
+	foreach(it, m.begin(), m.end()) {
+		VexMem::Mapping s;
+		s.offset = (*it)->base();
+		s.length = (*it)->length();
+		s.cur_prot = s.req_prot = (*it)->protection();
+		mappings.recordMapping(s);
+		top_brick = s.end();
+	}
+	/* is this actually computed properly? */
+	mappings.sbrk(top_brick);
+
+	/* also record the stack */
+	VexMem::Mapping s;
+	s.offset = (void*)stack_limit;
+	s.length = stack_base - stack_limit;
+	s.cur_prot = s.req_prot = PROT_READ | PROT_WRITE;
+	mappings.recordMapping(s);
+
 }

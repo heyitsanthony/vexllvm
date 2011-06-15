@@ -19,11 +19,11 @@ SyscallPtrBuf::SyscallPtrBuf(unsigned int in_len, void* in_ptr)
 	}
 }
 SyscallsMarshalled::SyscallsMarshalled(
+	GuestCPUState& in_cpu_state, 
 	VexMem& mappings,
 	const char* binary)
-: Syscalls(mappings, binary),
-  last_sc_ptrbuf(NULL),
-  log_syscalls(getenv("VEXLLVM_XCHK_SYSCALLS") ? true : false)
+: Syscalls(in_cpu_state, mappings, binary),
+  last_sc_ptrbuf(NULL)
 {
 }
 
@@ -44,16 +44,6 @@ uint64_t SyscallsMarshalled::apply(SyscallParams& args)
 
 	ret = Syscalls::apply(args);
 	sys_nr = args.getSyscall();
-
-	if(log_syscalls) {
-		std::cerr << "syscall(" << sys_nr << ", "
-			<< (void*)args.getArg(0) << ", "
-			<< (void*)args.getArg(1) << ", "
-			<< (void*)args.getArg(2) << ", "
-			<< (void*)args.getArg(3) << ", "
-			<< (void*)args.getArg(4) << ", ...) => "
-			<< (void*)ret << std::endl;
-	}
 
 	/* store write-out data from syscall */
 	assert (last_sc_ptrbuf == NULL && "Last PtrBuf not taken. Bad Sync");

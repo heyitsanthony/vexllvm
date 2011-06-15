@@ -1,14 +1,58 @@
 #include "vexmem.h"
 #include <assert.h>
 #include <iostream>
+#include <sys/mman.h>
+#include <errno.h>
+
 /* other archs */
 #define PAGE_SIZE 4096
 
-VexMem::VexMem(void) {
+VexMem::VexMem(void) 
+: top_brick(NULL)
+{
 	
 }
 VexMem::~VexMem(void) {
 	
+}
+void* VexMem::brk() 
+{
+	return top_brick;
+}
+bool VexMem::sbrk(void* new_top) 
+{
+	void* old = brk();
+	if(!old) {
+		/* setup by loader phase */
+		top_brick = new_top;
+		return true;
+	}
+	VexMem::Mapping m;
+	bool found = lookupMapping((char*)old - 1, m);
+	if(!found)
+		return false;
+	size_t new_len = (char*)new_top - (char*)m.offset;
+	new_len = (new_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
+	
+	void *addr;
+	for(;;) {
+		addr = mremap(m.offset, m.length, new_len, 0);
+		if(addr != MAP_FAILED)
+			break;
+		if(addr == MAP_FAILED && errno != EFAULT 
+			|| m.length <= PAGE_SIZE) {
+			return false;
+		}
+		/* since we're not keeping close track of how the mappings
+		   with the original segment happened, we just have to try
+		   messing with the address to see if it will eventually work
+		*/
+		m.length -= PAGE_SIZE;
+		m.offset += PAGE_SIZE;
+	} 
+	m.length = new_len;
+	recordMapping(m);
+	top_brick = new_top;
 }
 void VexMem::recordMapping(Mapping& mapping) {
 	assert(((long)mapping.offset & (PAGE_SIZE - 1)) == 0);
