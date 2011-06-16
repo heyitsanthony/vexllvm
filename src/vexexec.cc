@@ -197,11 +197,15 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 
 	/* assuming !found means its ok... but that's not totally true */
 	/* XXX, when is !found bad? */
+	/* Disable writes to a page that is about to be executed.
+	 * If the code is self-modifying, the disabled write will 
+	 * trigger a signal handler which will invalidate the page's
+	 * old code. */
 	if (found) {
-		if(!(m.req_prot & PROT_EXEC)) {
+		if (!(m.req_prot & PROT_EXEC)) {
 			assert (false && "Trying to jump to non-code");
 		}
-		if(m.cur_prot & PROT_WRITE) {
+		if (m.cur_prot & PROT_WRITE) {
 			m.cur_prot = m.req_prot & ~PROT_WRITE;
 			mprotect(m.offset, m.length, m.cur_prot);
 			gs->getMem()->recordMapping(m);
@@ -226,18 +230,15 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	vexfunc_t		func_ptr;
 	uint64_t		new_ip;
 
-	fprintf(stderr, "DOING ADDR %p\n", vsb->getGuestAddr());
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);
 
-	fprintf(stderr, "WOOOO GET IT %p\n", func_ptr);
 	sb_executed_c++;
 
 	/* TODO: pull out x86-ism */
 	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	new_ip = func_ptr(state);
 	state->guest_RIP = new_ip;
-	fprintf(stderr, "DONE WITH %p\n", vsb->getGuestAddr());
 
 	return new_ip;
 }

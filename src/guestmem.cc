@@ -26,28 +26,34 @@ void* GuestMem::brk()
 
 bool GuestMem::sbrk(void* new_top)
 {
-	void* old = brk();
-	if(!old) {
+	GuestMem::Mapping	m;
+	bool			found;
+	size_t			new_len;
+	void			*old_brk;
+
+	old_brk = top_brick;
+	if (old_brk == NULL) {
 		/* setup by loader phase */
 		top_brick = new_top;
 		return true;
 	}
-	GuestMem::Mapping m;
-	bool found = lookupMapping((char*)old - 1, m);
+
+	found = lookupMapping((char*)old_brk - 1, m);
 	if(!found)
 		return false;
-	size_t new_len = (char*)new_top - (char*)m.offset;
+
+	new_len = (char*)new_top - (char*)m.offset;
 	new_len = (new_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
 
-	void *addr;
 	for(;;) {
-		addr = mremap(m.offset, m.length, new_len, 0);
-		if(addr != MAP_FAILED)
-			break;
-		if((addr == MAP_FAILED && errno != EFAULT)
-			|| m.length <= PAGE_SIZE) {
+		void	*addr;
+
+		addr = mremap(m.offset, m.length, new_len, MREMAP_FIXED);
+		if (addr != MAP_FAILED) break;
+
+		if (errno != EFAULT || m.length <= PAGE_SIZE)
 			return false;
-		}
+
 		/* since we're not keeping close track of how the mappings
 		   with the original segment happened, we just have to try
 		   messing with the address to see if it will eventually work
@@ -71,9 +77,9 @@ void GuestMem::recordMapping(Mapping& mapping)
 	mapping.length &= ~(PAGE_SIZE - 1);
 
 	mapmap_t::iterator i = maps.lower_bound(mapping.offset);
-	if(i != maps.begin()) --i;
+	if (i != maps.begin()) --i;
 
-	if(i != maps.end() && i->second.offset < mapping.offset) {
+	if (i != maps.end() && i->second.offset < mapping.offset) {
 		/* we are cutting off someone before us */
 		if(i->second.end() > mapping.offset) {
 			long lost;
@@ -92,6 +98,7 @@ void GuestMem::recordMapping(Mapping& mapping)
 		}
 		++i;
 	}
+
 	/* mapping overlaps completly */
 	if(i != maps.end() && i->first == mapping.offset) {
 		if(i->second.length == mapping.length) {
@@ -123,10 +130,11 @@ void GuestMem::recordMapping(Mapping& mapping)
 		mapmap_t::iterator to_erase = i++;
 		maps.erase(to_erase);
 	}
+
 	/* now trim the last one if necessary */
 	if(i != maps.end() && mapping.end() > i->second.offset) {
 		long lost;
-		
+	
 		lost = (char*)mapping.end() - (char*)i->second.offset;
 		i->second.offset = mapping.end();
 		i->second.length -= lost;
@@ -170,4 +178,11 @@ std::list<GuestMem::Mapping> GuestMem::getMaps(void) const
 	}
 
 	return ret;
+}
+
+void GuestMem::Mapping::print(std::ostream& os) const
+{
+	os	<< "Addr: " << offset << "--" << end() << ". ReqProt="
+		<< std::hex << req_prot << ". CurProt=" << cur_prot
+		<< std::endl;
 }

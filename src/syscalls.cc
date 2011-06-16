@@ -60,7 +60,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	/* this will hold any memory mapping state across the call */
 
 	fakedSyscall = interceptSyscall(args, m, sc_ret);
-	if(!fakedSyscall)
+	if (!fakedSyscall)
 		sc_ret = syscall(
 			sys_nr,
 			args.getArg(0),
@@ -70,7 +70,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 			args.getArg(4),
 			args.getArg(5));
 
-	if(log_syscalls) {
+	if (log_syscalls) {
 		std::cerr << "syscall(" << sys_nr << ", "
 			<< (void*)args.getArg(0) << ", "
 			<< (void*)args.getArg(1) << ", "
@@ -92,8 +92,6 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	switch (sys_nr) {
 	case SYS_mmap:
 		m.offset = (void*)sc_ret;
-		mappings->recordMapping(m);
-		break;
 	case SYS_mprotect:
 		mappings->recordMapping(m);
 		break;
@@ -138,22 +136,22 @@ bool Syscalls::interceptSyscall(
 		}
 		return true;
 	case SYS_brk:
-		if(mappings->brk()) {
-			if(args.getArg(0) == 0) {
-				/* if your just asking, i can tell you */
-				sc_ret = (unsigned long)mappings->brk();
-			} else {
-				bool r = mappings->sbrk((void*)args.getArg(0));
-				if(r) {
-					sc_ret = (uintptr_t)mappings->brk();
-				} else {
-					sc_ret = -ENOMEM;
-				}
-			}
-		} else {
+		if (!mappings->brk()) {
 			/* don't let the app pull the rug */
 			sc_ret = -ENOMEM;
+			return true;
 		}
+
+		if (args.getArg(0) == 0) {
+			/* if you're just asking, i can tell you */
+			sc_ret = (unsigned long)mappings->brk();
+		} else {
+			if (mappings->sbrk((void*)args.getArg(0)))
+				sc_ret = (uintptr_t)mappings->brk();
+			else
+				sc_ret = -ENOMEM;
+		}
+
 		return true;
 
 	case SYS_mmap:
@@ -164,7 +162,7 @@ bool Syscalls::interceptSyscall(
 			args.getArg(2));
 
 		/* mask out write permission so we can play with JITs */
-		if(m.req_prot & PROT_EXEC) {
+		if (m.req_prot & PROT_EXEC) {
 			m.cur_prot &= ~PROT_WRITE;
 			args.setArg(2, m.cur_prot);
 		}

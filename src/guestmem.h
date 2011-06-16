@@ -1,6 +1,7 @@
 #ifndef GUESTMEM_H
 #define GUESTMEM_H
 
+#include <iostream>
 #include <list>
 #include <map>
 
@@ -29,6 +30,7 @@ public:
 	bool isStack(void) const { return is_stack; }
 	int getReqProt(void) const { return req_prot; }
 	int getCurProt(void) const { return cur_prot; }
+	void print(std::ostream& os) const;
 
 	void* 		offset;
 	size_t		length;

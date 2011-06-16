@@ -51,8 +51,10 @@ int main(int argc, char* argv[], char* envp[])
 		return -2;
 	}
 	gs = new GuestELF(img);
+
 	gs->setArgv(argc-1, const_cast<const char**>(argv+1),
 		count(envp), const_cast<const char**>(envp));
+
 	vexexec = VexExec::create<VexExec, Guest>(gs);
 	assert (vexexec && "Could not create vexexec");
 	
