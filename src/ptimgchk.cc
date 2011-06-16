@@ -649,7 +649,7 @@ void PTImgChk::getRegs(user_regs_struct& regs) const
 	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
 	if(err < 0) {
 		perror("PTImgChk::getRegs");
-		exit(1);
+		_exit(1);
 	}
 }
 
