@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -419,7 +420,7 @@ bool PTImgChk::filterSysCall(
 {
 	switch (regs.rax) {
 	case SYS_brk:
-		regs.rax = -1;
+		regs.rax = -ENOMEM;
 		return true;
 
 	case SYS_exit_group:

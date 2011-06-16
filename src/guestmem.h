@@ -47,11 +47,11 @@ public:
 	void* brk();
 	bool sbrk(void* new_top);
 	std::list<Mapping> getMaps(void) const;
-	
+
 private:
 	typedef std::map<void*, Mapping> mapmap_t; 
-	mapmap_t maps;
-	void* top_brick;
+	mapmap_t	maps;
+	void		*top_brick;
 };
 
 #endif
