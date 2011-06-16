@@ -70,7 +70,6 @@ private:
 	
 	void runAddrStack(void);
 	void loadExitFuncAddrs(void);
-	void glibcLocaleCheat(void);
 
 	VexJITCache		*jit_cache;
 	static VexExec		*exec_context;

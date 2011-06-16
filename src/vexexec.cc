@@ -263,29 +263,6 @@ void VexExec::loadExitFuncAddrs(void)
 	if (exit_ptr) exit_addrs.insert((void*)exit_ptr);
 }
 
-/**
- * glibc requires some gettext stuff set, but since we're not using the ELF's
- * interp (because it'd be a lot of work!),  we're not getting some locale var
- * set-- fix = call uselocale and hope everything works out
- */
-void VexExec::glibcLocaleCheat(void)
-{
-	guestptr_t	uselocale_ptr;
-	void		*old_stack;
-
-	uselocale_ptr = gs->name2guest("uselocale");
-	if (!uselocale_ptr) return;
-
-	gs->getCPUState()->setFuncArg(-1, 0);
-	old_stack = gs->getCPUState()->getStackPtr();
-
-	addr_stack.push((void*)uselocale_ptr);
-	runAddrStack();
-	addr_stack = vexexec_addrs();
-
-	gs->getCPUState()->setStackPtr(old_stack);
-}
-
 void VexExec::run(void)
 {
 	struct sigaction sa;
@@ -298,7 +275,6 @@ void VexExec::run(void)
    	sigaction(SIGSEGV, &sa, NULL);
 
 	loadExitFuncAddrs();
-	glibcLocaleCheat();
 
 	/* top of address stack is executed */
 	addr_stack.push(gs->getEntryPoint());
