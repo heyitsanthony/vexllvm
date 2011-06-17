@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "elfsegment.h"
 
@@ -17,7 +18,24 @@
 #define page_round_up(x) PAGE_SZ*(((uintptr_t)(x) + 0xfff)/PAGE_SZ)
 
 
-ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr, 
+template <typename Elf_Phr>
+struct ElfSegmentMapFlags {
+	static const int flags = 0;
+};
+
+template <>
+struct ElfSegmentMapFlags<Elf32_Phdr> {
+	static const int flags = MAP_32BIT;
+};
+template 
+ElfSegment* ElfSegment::load<Elf32_Phdr>(int fd, const Elf32_Phdr& phdr, 
+	elfptr_t reloc);
+template
+ElfSegment* ElfSegment::load<Elf64_Phdr>(int fd, const Elf64_Phdr& phdr, 
+	elfptr_t reloc);
+
+template <typename Elf_Phdr>
+ElfSegment* ElfSegment::load(int fd, const Elf_Phdr& phdr, 
 	elfptr_t reloc)
 {
 	/* in the future we might care about non-loadable segments */
@@ -27,9 +45,17 @@ ElfSegment* ElfSegment::load(int fd, const Elf64_Phdr& phdr,
 	return new ElfSegment(fd, phdr, reloc);
 }
 
+template 
+ElfSegment::ElfSegment<Elf32_Phdr>(int fd, const Elf32_Phdr& phdr, 
+	elfptr_t in_reloc);
+template
+ElfSegment::ElfSegment<Elf64_Phdr>(int fd, const Elf64_Phdr& phdr, 
+	elfptr_t in_reloc);
+
 /* Always mmap in the segment. We don't give a fuck. 
  * TODO: Efficiently use the address space! */
-ElfSegment::ElfSegment(int fd, const Elf64_Phdr& phdr, 
+template <typename Elf_Phdr>
+ElfSegment::ElfSegment(int fd, const Elf_Phdr& phdr, 
 	elfptr_t in_reloc)
 : reloc(in_reloc)
 {
@@ -49,7 +75,13 @@ void ElfSegment::statFile(int fd)
 	elf_file_size = s.st_size;
 }
 
-void ElfSegment::makeMapping(int fd, const Elf64_Phdr& phdr)
+template 
+void ElfSegment::makeMapping<Elf32_Phdr>(int fd, const Elf32_Phdr& phdr);
+template
+void ElfSegment::makeMapping<Elf64_Phdr>(int fd, const Elf64_Phdr& phdr);
+
+template <typename Elf_Phdr>
+void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 {
 	off_t	file_off_pgbase, file_off_pgoff;
 	void	*desired_base, *spill_base;
@@ -64,6 +96,7 @@ void ElfSegment::makeMapping(int fd, const Elf64_Phdr& phdr)
 	if (phdr.p_flags & PF_W) prot |= PROT_WRITE;
 	if (phdr.p_flags & PF_X) prot |= PROT_EXEC;
 	flags = MAP_PRIVATE;
+	flags |= ElfSegmentMapFlags<Elf_Phdr>::flags;
 	
 	/* TODO: this really isn't cool, but somehow, when the tests
 	   are lauched, the memory mapping space is completely shot to
@@ -90,17 +123,19 @@ void ElfSegment::makeMapping(int fd, const Elf64_Phdr& phdr)
 	uintptr_t filesz = phdr.p_offset - file_off_pgbase + phdr.p_filesz;
 	extra_bytes = file_pages - filesz;
 
-	/*
-	std::cerr << "mapped section @ " << desired_base 
-		<< " to " << es_mmapbase << std::endl;
-	std::cerr << "file base @ " << file_off_pgbase << std::endl;
-	std::cerr << "page_base(reloc_base) " 
-		<< (void*)page_base(reloc_base) << std::endl;
-	std::cerr << "es_mmapbase " << (void*)es_mmapbase << std::endl;
-	std::cerr << "es_len " << (void*)es_len << std::endl;
-	std::cerr << "filesz = " << filesz << std::endl;
-	std::cerr << "extra bytes = " << extra_bytes << std::endl;
-	*/
+	if(getenv("VEXLLVM_LOG_MAPPINGS")) {
+		std::cerr << "mapped section @ " << desired_base 
+			<< " to " << es_mmapbase 
+			<< " size " << es_len
+			<< " file base " << file_off_pgbase 
+		<< std::endl;
+		/*
+		std::cerr << "page_base(reloc_base) " 
+			<< (void*)page_base(reloc_base) << std::endl;
+		std::cerr << "filesz = " << filesz << std::endl;
+		std::cerr << "extra bytes = " << extra_bytes << std::endl;
+		*/
+	}
 
 	direct_mapped = ((void*)page_base(reloc_base) == es_mmapbase 
 		|| desired_base == 0);

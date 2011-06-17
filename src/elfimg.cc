@@ -18,23 +18,19 @@
 #include <vector>
 
 #define WARNING(x)	fprintf(stderr, "WARNING: "x)
-#define DEFAULT_INTERP	"/lib/ld-linux-x86-64.so.2"
+// #define DEFAULT_INTERP	"/lib/ld-linux-x86-64.so.2"
+#define DEFAULT_INTERP	"/usr/arm-linux-gnueabi/lib/ld-linux.so.3" 
+
 
 #define ElfImg32 ElfImg
 #define ElfImg64 ElfImg
 
 ElfImg* ElfImg::create(const char* fname, bool linked)
 {
-	switch(readHeader(fname, linked)) {
-	case Arch::X86_64:
-		return new ElfImg64(fname, linked);
-	case Arch::ARM:
-		return new ElfImg32(fname, linked);
-	case Arch::I386:
-		return new ElfImg32(fname, linked);
-	default:
+	Arch::Arch arch = readHeader(fname, linked);
+	if(arch == Arch::Unknown)
 		return NULL;
-	}
+	return new ElfImg(fname, arch, linked);
 }
 
 ElfImg::~ElfImg(void)
@@ -47,7 +43,7 @@ ElfImg::~ElfImg(void)
 	close(fd);
 }
 
-ElfImg::ElfImg(const char* fname, bool in_linked)
+ElfImg::ElfImg(const char* fname, Arch::Arch arch, bool in_linked)
 : interp(NULL), linked(in_linked)
 {
 	struct stat	st;
@@ -65,27 +61,52 @@ ElfImg::ElfImg(const char* fname, bool in_linked)
 	img_mmap = mmap(NULL, img_bytes_c, PROT_READ, MAP_SHARED, fd, 0);
 	assert(img_mmap != MAP_FAILED);
 
-	hdr = (Elf64_Ehdr*)img_mmap;
+	hdr_raw = img_mmap;
 
-	setupSegments();
+	switch(arch) {
+	case Arch::X86_64:
+		address_bits = 64;
+		setupSegments<Elf64_Ehdr, Elf64_Phdr>();
+		break;
+	case Arch::ARM:
+	case Arch::I386:
+		address_bits = 32;
+		setupSegments<Elf32_Ehdr, Elf32_Phdr>();
+		break;
+	default:
+		assert(!"unknown arch type");
+	}
 }
 
 int ElfImg::getHeaderCount() const {
-	return hdr->e_phnum;
+	if(address_bits == 32) {
+		return hdr32->e_phnum; 
+	} else if(address_bits == 64) {
+		return hdr64->e_phnum; 
+	} else {
+		assert(!"address bits corrupted");
+	}
 }
 
 celfptr_t ElfImg::getHeader() const {
 	/* this is so janky and will most likely not work other places */
-	return getFirstSegment()->offset(hdr->e_phoff);
+	if(address_bits == 32) {
+		return getFirstSegment()->offset(hdr32->e_phoff);
+	} else if(address_bits == 64) {
+		return getFirstSegment()->offset(hdr64->e_phoff);
+	} else {
+		assert(!"address bits corrupted");
+	}
 }
 
 /* TODO: do mmapping here */
+template <typename Elf_Ehdr, typename Elf_Phdr>
 void ElfImg::setupSegments(void)
 {
-	Elf64_Phdr	*phdr;
+	Elf_Ehdr *hdr = (Elf_Ehdr*)hdr_raw;
+	Elf_Phdr *phdr = (Elf_Phdr*)(((char*)hdr) + hdr->e_phoff);
 
 	direct_mapped = true;
-	phdr = (Elf64_Phdr*)(((char*)hdr) + hdr->e_phoff);
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
 		ElfSegment	*es;
 		
@@ -121,8 +142,14 @@ static const unsigned char ok_ident_32[] = "\x7f""ELF\x1\x1\x1";
 
 #define EXPECTED(x)	fprintf(stderr, "ELF: expected "x"!\n")
 
-elfptr_t ElfImg::getEntryPoint(void) const { 
-	return (void*)hdr->e_entry; 
+elfptr_t ElfImg::getEntryPoint(void) const {
+	if(address_bits == 32) {
+		return (void*)hdr32->e_entry; 
+	} else if(address_bits == 64) {
+		return (void*)hdr64->e_entry; 
+	} else {
+		assert(!"address bits corrupted");
+	}
 }
 
 Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)

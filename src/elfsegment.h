@@ -7,7 +7,8 @@ class ElfSegment
 {
 public:
 	virtual ~ElfSegment(void);
-	static ElfSegment* load(int fd, const Elf64_Phdr& phdr, 
+	template <typename Elf_Phdr>
+	static ElfSegment* load(int fd, const Elf_Phdr& phdr, 
 		elfptr_t reloc);
 	hostptr_t xlate(elfptr_t elfaddr) const;
 	elfptr_t relocation() const { 
@@ -31,10 +32,12 @@ public:
 	}
 	bool isDirectMapped(void) const { return direct_mapped; }
 protected:
-	ElfSegment(int fd, const Elf64_Phdr& phdr,
+	template <typename Elf_Phdr>
+	ElfSegment(int fd, const Elf_Phdr& phdr,
 		elfptr_t reloc);
 private:
-	void makeMapping(int fd, const Elf64_Phdr& phdr);
+	template <typename Elf_Phdr>
+	void makeMapping(int fd, const Elf_Phdr& phdr);
 	void statFile(int fd);
 
 	elfptr_t	es_elfbase;
