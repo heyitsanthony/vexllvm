@@ -44,15 +44,19 @@ bool GuestMem::sbrk(void* new_top)
 
 	new_len = (char*)new_top - (char*)m.offset;
 	new_len = (new_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
-
+	
 	for(;;) {
 		void	*addr;
 
-		addr = mremap(m.offset, m.length, new_len, MREMAP_FIXED);
+		/* mremap implies keeping the vma region at its current
+		   location, so we don't need any special flags here.  we
+		   especially don't want MREMAP_MAYMOVE */
+		addr = mremap(m.offset, m.length, new_len, 0);
 		if (addr != MAP_FAILED) break;
 
-		if (errno != EFAULT || m.length <= PAGE_SIZE)
+		if (errno != EFAULT || m.length <= PAGE_SIZE) {
 			return false;
+		}
 
 		/* since we're not keeping close track of how the mappings
 		   with the original segment happened, we just have to try
@@ -61,7 +65,7 @@ bool GuestMem::sbrk(void* new_top)
 		m.length -= PAGE_SIZE;
 		m.offset = (void*)((uintptr_t)m.offset + PAGE_SIZE);
 	}
-
+	
 	m.length = new_len;
 	recordMapping(m);
 	top_brick = new_top;
