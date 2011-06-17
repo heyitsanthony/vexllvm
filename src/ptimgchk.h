@@ -12,7 +12,7 @@ class PTImgChk : public GuestPTImg
 {
 public:
 	PTImgChk(int argc, char* const argv[], char* const envp[]);
-	virtual ~PTImgChk() {}
+	virtual ~PTImgChk();
 
 	void stepThroughBounds(
 		uint64_t start, uint64_t end,
@@ -25,13 +25,12 @@ public:
 		const VexGuestAMD64State& state);
 	void printSubservient(
 		std::ostream& os, 
-		const VexGuestAMD64State& ref,
-		MemLog* memory_log) const;
+		const VexGuestAMD64State& ref) const;
 	void stackTraceSubservient(std::ostream& os, void* b = 0, void* e = 0);
 	void printTraceStats(std::ostream& os);
 
-	bool isMatch(const VexGuestAMD64State& state, MemLog* mem_log) const;
-	bool isMatch(MemLog* mem_log) const;
+	bool isMatch(const VexGuestAMD64State& state) const;
+	bool isMatchMemLog() const;
 
 	bool fixup(const void* ip_begin, const void* ip_end);
 
@@ -44,6 +43,8 @@ public:
 		GuestPTImg::resetBreakpoint(child_pid, x); }
 	void setBreakpoint(void* x) {
 		GuestPTImg::setBreakpoint(child_pid, x); }
+
+	MemLog* getMemLog(void) { return mem_log; }
 protected:
 	virtual void handleChild(pid_t pid);
 	bool filterSysCall(
@@ -77,9 +78,7 @@ private:
 		user_fpregs_struct& fpregs,
 		const VexGuestAMD64State& ref) const;
 
-	void printMemory(
-		std::ostream& os,
-		MemLog* memory_log) const;
+	void printMemory(std::ostream& os) const;
 
 	void copyIn(void* dst, const void* src, unsigned int bytes);
 
@@ -97,6 +96,8 @@ private:
 	long		chk_opcode;
 
 	bool		hit_syscall;
+
+	MemLog		*mem_log;
 };
 
 #endif

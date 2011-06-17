@@ -64,7 +64,7 @@ void GenLLVM::beginBB(const char* name)
 	builder->SetInsertPoint(cur_bb);
 	Function::arg_iterator arg = cur_f->arg_begin();
 	cur_guest_ctx = arg++;
-	if(log_last_store) {
+	if (log_last_store) {
 		cur_memory_log = arg++;
 	}
 }

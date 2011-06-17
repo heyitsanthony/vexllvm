@@ -1,6 +1,8 @@
 #ifndef MEMLOG_H
 #define MEMLOG_H
 
+#include <string.h>
+
 namespace llvm {
 	class StructType;
 	class Value;

@@ -3,6 +3,7 @@
 #include "guestcpustate.h"
 #include "vexexecfastchk.h"
 #include "vexsb.h"
+#include "memlog.h"
 #include "ptimgchk.h"
 
 VexExecFastChk::VexExecFastChk(PTImgChk* gs)
@@ -14,9 +15,16 @@ VexExecFastChk::VexExecFastChk(PTImgChk* gs)
 
 uint64_t VexExecFastChk::doVexSB(VexSB* vsb)
 {
+	MemLog	*ml;
+
 	cross_check->breakpointSysCalls(
 		(void*)vsb->getGuestAddr(),
 		(void*)vsb->getEndAddr());
+	if ((ml = cross_check->getMemLog())) {
+		ml->clear();
+		return VexExec::doVexSBAux(vsb, ml);
+	}
+
 	return VexExec::doVexSB(vsb);
 }
 
@@ -48,7 +56,7 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 	cross_check->resetBreakpoint(bp_addr);
 
 	/* OK to check for match now-- fixups done */
-	matched = cross_check->isMatch(*state, memory_log);
+	matched = cross_check->isMatch(*state);
 	if (!matched) {
 		/* instead of dying, we want to be smarter here by
 		 * restarting the process, fastforwarding to last OK
@@ -71,7 +79,7 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 
 	/* now both should be equal and at the instruction immediately following
 	 * the breaking syscall */
-	if (!cross_check->isMatch(*state, memory_log)) {
+	if (!cross_check->isMatch(*state)) {
 		fprintf(stderr, "MISMATCH: END OF SYSCALL.\n");
 		dumpSubservient(vsb);
 	}

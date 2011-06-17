@@ -11,6 +11,7 @@ class VexExecChk : public VexExec
 friend class VexExec;
 public:
 	virtual ~VexExecChk(void) {}
+
 protected:
 	VexExecChk(PTImgChk* gs);
 
@@ -22,8 +23,8 @@ protected:
 
 	PTImgChk		*cross_check;
 	SyscallsMarshalled	*sc_marshall;
-private:
 
+private:
 	bool		hit_syscall;
 	bool		is_deferred;
 	uintptr_t	deferred_bound_start;

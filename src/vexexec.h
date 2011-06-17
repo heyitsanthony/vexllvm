@@ -16,7 +16,6 @@ class Guest;
 class Syscalls;
 class VexXlate;
 class VexSB;
-class MemLog;
 
 namespace llvm
 {
@@ -58,13 +57,14 @@ public:
 protected:
 	VexExec(Guest* gs);
 	virtual uint64_t doVexSB(VexSB* vsb);
+	uint64_t doVexSBAux(VexSB* vsb, void* aux);
+
 	virtual void doSysCall(VexSB* vsb);
 	static void setupStatics(Guest* in_gs);
 
 	Guest		*gs;
 	Syscalls	*sc;
 	VexFCache	*f_cache;
-	MemLog*		memory_log;
 
 private:
 	VexSB* getSBFromGuestAddr(void* elfptr);

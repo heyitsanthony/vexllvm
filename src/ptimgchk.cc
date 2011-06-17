@@ -92,7 +92,8 @@ the mechanism really made an impact in how far it can check.
 PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 : 	GuestPTImg(argc, argv, envp),
 	steps(0), bp_steps(0), blocks(0),
-	hit_syscall(false)
+	hit_syscall(false),
+	mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 {
 	const char	*step_gauge;
 
@@ -106,6 +107,11 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 			"STEPS BETWEEN UPDATE: %d.\n",
 			log_gauge_overflow);
 	}
+}
+
+PTImgChk::~PTImgChk()
+{
+	if (mem_log) delete mem_log;
 }
 
 void PTImgChk::handleChild(pid_t pid)
@@ -226,17 +232,16 @@ static inline bool ldeqd(void* ld, long d) {
 }
 static inline bool fcompare(unsigned int* a, long d) {
 	return (*(long*)&d == *(long*)&a[0] &&
-		(a[2] == 0 || a[2] == 0xFFFF) && 
-		a[3] == 0) || 
+		(a[2] == 0 || a[2] == 0xFFFF) &&
+		a[3] == 0) ||
 		ldeqd(&a[0], d);
 }
-bool PTImgChk::isMatch(const VexGuestAMD64State& state, 
-	MemLog* memory_log) const
+bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 {
 	user_regs_struct	regs;
 	user_fpregs_struct	fpregs;
 	int			err;
-	bool			x86_fail, sse_ok, seg_fail, x87_ok;
+	bool			x86_fail, sse_ok, seg_fail, x87_ok, mem_ok;
 
 	getRegs(regs);
 
@@ -269,7 +274,7 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state,
 	for(int i = 0; i < 8; ++i) {
 		int r  = (state.guest_FTOP + i) & 0x7;
 		bool is_ok = fcompare(
-			&fpregs.st_space[4 * i],  
+			&fpregs.st_space[4 * i],
 			state.guest_FPREG[r]);
 		if(!is_ok) {
 			x87_ok = false;
@@ -284,29 +289,27 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state,
 	//TODO: more stuff that is likely unneeded
 	// other vex internal state (tistart, nraddr, etc)
 
-	bool mem_ok = true;
-	if(memory_log) {
-		mem_ok = isMatch(memory_log);
-	}
+	mem_ok = isMatchMemLog();
 
 	return !x86_fail && x87_ok & sse_ok && !seg_fail && mem_ok;
 }
 
-bool PTImgChk::isMatch(
-	MemLog* memory_log) const
+bool PTImgChk::isMatchMemLog() const
 {
+	if (!mem_log) return true;
+
 	char data[MemLog::MAX_STORE_SIZE / 8 + sizeof(long)];
-	uintptr_t base = (uintptr_t)memory_log->getAddress();
+	uintptr_t base = (uintptr_t)mem_log->getAddress();
 	uintptr_t aligned = base & ~(sizeof(long) - 1);
-	uintptr_t end = base + memory_log->getSize();
+	uintptr_t end = base + mem_log->getSize();
 	unsigned int extra = base - aligned;
-	for(long* mem = (long*)&data[0]; 
+
+	for(long* mem = (long*)&data[0];
 		aligned < end; aligned += sizeof(long), ++mem) {
-		*mem = ptrace(PTRACE_PEEKTEXT, child_pid,
-			aligned, NULL);
+		*mem = ptrace(PTRACE_PEEKTEXT, child_pid, aligned, NULL);
 	}
-	return memcmp(&data[extra], (char*)base,
-		memory_log->getSize()) == 0;
+
+	return memcmp(&data[extra], (char*)base, mem_log->getSize()) == 0;
 }
 
 
@@ -358,7 +361,7 @@ bool PTImgChk::doStep(
 		assert (err != -1 && "Failed to patch pushed flags");
 		return true;
 	}
-	
+
 	if (isOnCPUID(regs)) {
 		/* fake cpuid to match vexhelpers */
 		VexGuestAMD64State	fakeState;
@@ -408,7 +411,7 @@ bool PTImgChk::isOnSysCall(const user_regs_struct& regs)
 {
 	long	cur_opcode;
 	bool	is_chk_addr_syscall;
-	
+
 	cur_opcode = getInsOp(regs);
 
 	is_chk_addr_syscall = ((cur_opcode & 0xffff) == OPCODE_SYSCALL);
@@ -535,7 +538,7 @@ void PTImgChk::copyIn(void* dst, const void* src, unsigned int bytes)
 	in_addr = (const char*)src;
 	out_addr = (char*)dst;
 	end_addr = out_addr + bytes;
-	
+
 	while (out_addr < end_addr) {
 		int	err;
 		err = ptrace(PTRACE_POKEDATA, child_pid, out_addr, *(long*)in_addr);
@@ -666,43 +669,43 @@ void PTImgChk::printFPRegs(
 			<< *(void**)&fpregs.st_space[i * 4 + 0] << std::endl;
 	}
 }
-void PTImgChk::printMemory(
-	std::ostream& os,
-	MemLog* memory_log) const
+
+void PTImgChk::printMemory(std::ostream& os) const
 {
-	if(memory_log) {
-		if(!isMatch(memory_log))
-			os << "***";			
-		os << "last write @ " << (void*)memory_log->getAddress() 
-			<< " size: " << memory_log->getSize();
-			
-		char data[MemLog::MAX_STORE_SIZE / 8 + sizeof(long)];
-		memset(&data[0], 0, sizeof(data));
-		uintptr_t base = (uintptr_t)memory_log->getAddress();
-		uintptr_t aligned = base & ~(sizeof(long) - 1);
-		uintptr_t end = base + memory_log->getSize();
-		unsigned int extra = base - aligned;
-		for(long* mem = (long*)&data[0]; 
-			aligned < end; aligned += sizeof(long), ++mem) {
-			*mem = ptrace(PTRACE_PEEKTEXT, child_pid,
-				aligned, NULL);
-		}
-		memmove(&data[0], &data[extra], memory_log->getSize());
-		os << " data: " << *(void**)&data[sizeof(void*)] << "|" 
-			<< *(void**)&data[0];
+	if (!mem_log) return;
 
-		void* vexdata[2] = {0, 0};
-		memcpy(&vexdata[0], memory_log->getAddress(), 
-			memory_log->getSize());
-		os << " vexdata: " << vexdata[1] << "|" << vexdata[0];
+	if(!isMatchMemLog())
+		os << "***";
+	os << "last write @ " << (void*)mem_log->getAddress()
+		<< " size: " << mem_log->getSize();
 
-		memcpy(&vexdata[0], memory_log->getData(), 
-			memory_log->getSize());
-		os << " logged: " << vexdata[1] << "|" << vexdata[0];
-		
-		os << std::endl;
+	char data[MemLog::MAX_STORE_SIZE / 8 + sizeof(long)];
+	memset(&data[0], 0, sizeof(data));
+	uintptr_t base = (uintptr_t)mem_log->getAddress();
+	uintptr_t aligned = base & ~(sizeof(long) - 1);
+	uintptr_t end = base + mem_log->getSize();
+	unsigned int extra = base - aligned;
+	for(long* mem = (long*)&data[0];
+		aligned < end; aligned += sizeof(long), ++mem) {
+		*mem = ptrace(PTRACE_PEEKTEXT, child_pid,
+			aligned, NULL);
 	}
+	memmove(&data[0], &data[extra], mem_log->getSize());
+	os << " data: " << *(void**)&data[sizeof(void*)] << "|"
+		<< *(void**)&data[0];
+
+	void* vexdata[2] = {0, 0};
+	memcpy(&vexdata[0], mem_log->getAddress(),
+		mem_log->getSize());
+	os << " vexdata: " << vexdata[1] << "|" << vexdata[0];
+
+	memcpy(&vexdata[0], mem_log->getData(),
+		mem_log->getSize());
+	os << " logged: " << vexdata[1] << "|" << vexdata[0];
+
+	os << std::endl;
 }
+
 void PTImgChk::getRegs(user_regs_struct& regs) const
 {
 	int	err;
@@ -715,9 +718,7 @@ void PTImgChk::getRegs(user_regs_struct& regs) const
 }
 
 void PTImgChk::printSubservient(
-	std::ostream& os,
-	const VexGuestAMD64State& ref,
-	MemLog* memory_log) const
+	std::ostream& os, const VexGuestAMD64State& ref) const
 {
 	user_regs_struct	regs;
 	user_fpregs_struct	fpregs;
@@ -733,7 +734,7 @@ void PTImgChk::printSubservient(
 
 	printUserRegs(os, regs, ref);
 	printFPRegs(os, fpregs, ref);
-	printMemory(os, memory_log);
+	printMemory(os);
 }
 
 void PTImgChk::printTraceStats(std::ostream& os)
@@ -749,7 +750,7 @@ bool PTImgChk::breakpointSysCalls(const void* ip_begin, const void* ip_end)
 	bool	set_bp = false;
 
 	rip = (long)(uintptr_t)ip_begin;
-	while ((void*)rip != (void*)ip_end) {
+	while ((const void*)rip != ip_end) {
 		if (((getInsOp(rip) & 0xffff) == 0x050f)) {
 			setBreakpoint((void*)rip);
 			set_bp = true;

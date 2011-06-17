@@ -30,7 +30,6 @@
 #include "vexexec.h"
 #include "vexhelpers.h"
 #include "guest.h"
-#include "memlog.h"
 
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
@@ -58,7 +57,6 @@ VexExec::~VexExec()
 
 VexExec::VexExec(Guest* in_gs)
 : gs(in_gs)
-, memory_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 , sb_executed_c(0)
 , exited(false)
 , trace_c(0)
@@ -230,7 +228,7 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	return vsb;
 }
 
-uint64_t VexExec::doVexSB(VexSB* vsb)
+uint64_t VexExec::doVexSBAux(VexSB* vsb, void* aux)
 {
 	VexGuestAMD64State	*state;
 	vexfunc_t		func_ptr;
@@ -243,13 +241,25 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 
 	/* TODO: pull out x86-ism */
 	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+	new_ip = ((vexauxfunc_t)(func_ptr))(state, aux);
+	state->guest_RIP = new_ip;
 
-	if(memory_log) {
-		memory_log->clear();
-		new_ip = ((vexlogfunc_t)(func_ptr))(state, memory_log);
-	} else {
-		new_ip = func_ptr(state);
-	}
+	return new_ip;
+}
+
+uint64_t VexExec::doVexSB(VexSB* vsb)
+{
+	VexGuestAMD64State	*state;
+	vexfunc_t		func_ptr;
+	uint64_t		new_ip;
+
+	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
+	assert (func_ptr != NULL);
+
+	sb_executed_c++;
+
+	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
+	new_ip = func_ptr(state);
 	state->guest_RIP = new_ip;
 
 	return new_ip;
