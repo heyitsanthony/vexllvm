@@ -147,14 +147,18 @@ TRACEDEPS= nested_call strlen strrchr 	\
 	sscanf time gettimeofday	\
 	rand gettext uselocale		\
 	getopt errno strerror strchrnul	\
-	cmdline-many dlsym		\
-	fp-test
+	cmdline-many 
+
+TRACEDEPS_DYN= dlsym fp-test
 
 tests/traces-bin/dlsym : tests/traces-obj/dlsym.o
 	$(TRACECC) $(TRACE_CFLAGS) -ldl $< -o $@
 
 tests/traces-bin/% : tests/traces-obj/%.o
 	$(TRACECC) $(TRACE_CFLAGS) $< -o $@
+
+tests/traces-bin/%-static : tests/traces-obj/%.o
+	$(TRACECC) $(TRACE_CFLAGS) -static $< -o $@
 
 tests/traces-obj/%.o: tests/traces-src/%.c
 	$(TRACECC) $(TRACE_CFLAGS) -c -o $@ $<
@@ -171,7 +175,11 @@ tests-softfloat: tests-softfloat-traces
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/*
 
-TRACEDEPS_PATH=$(TRACEDEPS:%=tests/traces-bin/%)
+TRACEDEPS_PATH=						\
+	$(TRACEDEPS:%=tests/traces-bin/%)		\
+	$(TRACEDEPS:%=tests/traces-bin/%)		\
+	$(TRACEDEPS:%=tests/traces-bin/%-static)
+
 test-traces: all $(TRACEDEPS_PATH)
 	tests/traces.sh
 
@@ -181,7 +189,7 @@ test-built-traces: all $(TRACEDEPS_PATH)
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
 
-tests-elf: all $(TRACEDEPS_PATH)
+tests-elf: all $(TRACEDEPS_PATH)	
 	RUNCMD=bin/elf_run tests/traces.sh
 
 tests-softfloat-elf: all $(TRACEDEPS_PATH)
