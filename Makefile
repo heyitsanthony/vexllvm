@@ -37,6 +37,7 @@ OBJDEPS=	vexxlate.o		\
 		genllvm.o		\
 		guestcpustate.o		\
 		guest.o			\
+		memlog.o		\
 		vex_dispatch.o		\
 		syscalls.o		\
 		syscallsmarshalled.o	\
