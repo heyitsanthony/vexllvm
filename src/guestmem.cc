@@ -28,8 +28,9 @@ bool GuestMem::sbrk(void* new_top)
 {
 	GuestMem::Mapping	m;
 	bool			found;
-	size_t			new_len;
+	size_t			add_len;
 	void			*old_brk;
+	void			*addr;
 
 	old_brk = top_brick;
 	if (old_brk == NULL) {
@@ -39,34 +40,26 @@ bool GuestMem::sbrk(void* new_top)
 	}
 
 	found = lookupMapping((char*)old_brk - 1, m);
-	if(!found)
+	if (!found)
 		return false;
 
-	new_len = (char*)new_top - (char*)m.offset;
-	new_len = (new_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
-	
-	for(;;) {
-		void	*addr;
+	add_len = (char*)new_top - (char*)m.end();
+	add_len = (add_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
 
-		/* mremap implies keeping the vma region at its current
-		   location, so we don't need any special flags here.  we
-		   especially don't want MREMAP_MAYMOVE */
-		addr = mremap(m.offset, m.length, new_len, 0);
-		if (addr != MAP_FAILED) break;
+	/* update top so it's page aligned */
+	new_top = (char*)m.end() + add_len;
 
-		if (errno != EFAULT || m.length <= PAGE_SIZE) {
-			return false;
-		}
+	/* map in missing data */
+	addr = mmap(
+		m.end(), add_len,
+		PROT_READ | PROT_WRITE,
+		MAP_PRIVATE | MAP_ANON | MAP_FIXED,
+		-1, 0);
 
-		/* since we're not keeping close track of how the mappings
-		   with the original segment happened, we just have to try
-		   messing with the address to see if it will eventually work
-		*/
-		m.length -= PAGE_SIZE;
-		m.offset = (void*)((uintptr_t)m.offset + PAGE_SIZE);
-	}
-	
-	m.length = new_len;
+	if (addr == MAP_FAILED && errno != EFAULT) return false;
+	assert (addr != MAP_FAILED && "sbrk is broken again");
+
+	m.length += add_len;
 	recordMapping(m);
 	top_brick = new_top;
 	return true;
@@ -138,7 +131,7 @@ void GuestMem::recordMapping(Mapping& mapping)
 	/* now trim the last one if necessary */
 	if(i != maps.end() && mapping.end() > i->second.offset) {
 		long lost;
-	
+
 		lost = (char*)mapping.end() - (char*)i->second.offset;
 		i->second.offset = mapping.end();
 		i->second.length -= lost;

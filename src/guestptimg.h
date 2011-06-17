@@ -65,7 +65,7 @@ public:
 	uint64_t addr2Host(guestptr_t guestptr) const { return guestptr; }
 	guestptr_t name2guest(const char* symname) const { return 0; }
 	void* getEntryPoint(void) const { return entry_pt; }
-	
+
 	template <class T>
 	static T* create(
 		int argc, char* const argv[], char* const envp[])
@@ -91,6 +91,8 @@ public:
 		std::ostream& os, const char* binname, pid_t pid,
 		void* range_begin = 0, void* range_end = 0);
 
+	static void dumpSelfMap(void);
+
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
@@ -102,7 +104,6 @@ protected:
 	void* undoBreakpoint(pid_t pid);
 private:
 	void setupMem(void);
-	void dumpSelfMap(void) const;
 
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);

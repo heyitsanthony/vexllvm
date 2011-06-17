@@ -87,6 +87,7 @@ err_open:
 	fd = -1;
 	return;
 }
+
 void ElfImg::linkIt(void) {
 	/* the guest state actually has to construct the special 
 	   arg tables for the dynamic linker to setup ANY
@@ -98,6 +99,7 @@ void ElfImg::linkIt(void) {
 	applyRelocs();
 	
 }
+
 int ElfImg::getHeaderCount() const {
 	return hdr->e_phnum;
 }
@@ -133,8 +135,17 @@ void ElfImg::setupSegments(void)
 	segments.back()->clearEnd();
 }
 
-static const unsigned char ok_ident[EI_NIDENT] = 
-	"\x7f""ELF\x2\x1\x1\0\0\0\0\0\0\0\0";
+/*
+ * Used to use EI_NIDENT here, but the extra data in the ident field
+ * trips things up. On my machine, the OSABI changes from NONE to LINUX on
+ * static binaries. This will matter more when we care about other archs.
+ *
+ * [4] = 2 = ELFCLASS64
+ * [5] = 1 = ELFDATA2LSB
+ * [6] = 1 = EI_VERSION
+ * [7] = 0 = ELFOSABI_NONE / EI_OSABI  XXX
+ */
+static const unsigned char ok_ident[EI_VERSION+2] = "\x7f""ELF\x2\x1\x1";
 
 #define EXPECTED(x)	fprintf(stderr, "ELF: expected "x"!\n")
 
@@ -144,7 +155,7 @@ elfptr_t ElfImg::getEntryPoint(void) const {
 
 bool ElfImg::verifyHeader(void) const
 {
-	for (unsigned int i = 0; i < EI_NIDENT; i++) {
+	for (unsigned int i = 0; i <= EI_VERSION; i++) {
 		if (hdr->e_ident[i] != ok_ident[i])
 			return false;
 	}

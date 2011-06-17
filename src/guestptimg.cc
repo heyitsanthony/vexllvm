@@ -299,7 +299,7 @@ PTImgMapEntry::~PTImgMapEntry(void)
 	if (mmap_base) munmap(mmap_base, getByteCount());
 }
 
-void GuestPTImg::dumpSelfMap(void) const
+void GuestPTImg::dumpSelfMap(void)
 {
 	FILE	*f_self;
 	char	buf[256];
