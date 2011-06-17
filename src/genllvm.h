@@ -61,9 +61,11 @@ private:
 
 	/* current state data */
 	llvm::Value*		cur_guest_ctx;
+	llvm::Value*		cur_memory_log;
 
 	llvm::Function*		cur_f;
 	llvm::BasicBlock*	cur_bb;
+	bool			log_last_store;
 
 };
 

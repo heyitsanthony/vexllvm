@@ -48,7 +48,7 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 	cross_check->resetBreakpoint(bp_addr);
 
 	/* OK to check for match now-- fixups done */
-	matched = cross_check->isMatch(*state);
+	matched = cross_check->isMatch(*state, memory_log);
 	if (!matched) {
 		/* instead of dying, we want to be smarter here by
 		 * restarting the process, fastforwarding to last OK
@@ -71,7 +71,7 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 
 	/* now both should be equal and at the instruction immediately following
 	 * the breaking syscall */
-	if (!cross_check->isMatch(*state)) {
+	if (!cross_check->isMatch(*state, memory_log)) {
 		fprintf(stderr, "MISMATCH: END OF SYSCALL.\n");
 		dumpSubservient(vsb);
 	}

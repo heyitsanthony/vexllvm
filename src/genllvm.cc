@@ -12,17 +12,20 @@
 #include "guestcpustate.h"
 
 #include "genllvm.h"
+#include "memlog.h"
 
 GenLLVM* theGenLLVM;
 
 using namespace llvm;
 
 GenLLVM::GenLLVM(const Guest* gs, const char* name)
-: guest(gs),
-  funcTy(NULL),
-  cur_guest_ctx(NULL),
-  cur_f(NULL),
-  cur_bb(NULL)
+: guest(gs)
+, funcTy(NULL)
+, cur_guest_ctx(NULL)
+, cur_memory_log(NULL)
+, cur_f(NULL)
+, cur_bb(NULL)
+, log_last_store(getenv("VEXLLVM_LAST_STORE"))
 {
 	builder = new IRBuilder<>(getGlobalContext());
 	mod = new Module(name, getGlobalContext());
@@ -59,7 +62,11 @@ void GenLLVM::beginBB(const char* name)
 
 	cur_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
 	builder->SetInsertPoint(cur_bb);
-	cur_guest_ctx = cur_f->arg_begin();
+	Function::arg_iterator arg = cur_f->arg_begin();
+	cur_guest_ctx = arg++;
+	if(log_last_store) {
+		cur_memory_log = arg++;
+	}
 }
 
 Function* GenLLVM::endBB(Value* retVal)
@@ -75,6 +82,7 @@ Function* GenLLVM::endBB(Value* retVal)
 	cur_f = NULL;
 	cur_bb = NULL;
 	cur_guest_ctx = NULL;
+	cur_memory_log = NULL;
 	return ret_f;
 }
 
@@ -224,11 +232,16 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 	Value		*addr_ptr;
 	StoreInst	*si;
 
+	if(cur_memory_log) {
+		MemLog::recordStore(cur_memory_log, addr_v, data_v);
+	}
+
 	ptrTy = PointerType::get(data_v->getType(), 0);
 	addr_v = guest->addrVal2Host(addr_v);
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "storePtr");
 	si = builder->CreateStore(data_v, addr_ptr);
 	si->setAlignment(8);
+	
 }
 
 Value* GenLLVM::load(Value* addr_v, const Type* ty)
@@ -281,6 +294,10 @@ void GenLLVM::mkFuncTy(void)
 	std::vector<const Type*>	f_args;
 	f_args.push_back(PointerType::get(
 		guest->getCPUState()->getTy(), 0));
+	if(log_last_store) {
+		f_args.push_back(PointerType::get(
+			MemLog::getType(), 0));
+	}
 	funcTy = FunctionType::get(
 		builder->getInt64Ty(),
 		f_args,

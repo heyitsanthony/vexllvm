@@ -153,7 +153,11 @@ bool Syscalls::interceptSyscall(
 		}
 
 		return true;
-
+	case SYS_rt_sigaction:
+		/* for now totally lie so that code doesn't get 
+		   executed without us.  we'd rather crash! */
+		sc_ret = 0;
+		return true;
 	case SYS_mmap:
 	case SYS_mprotect:
 		m = GuestMem::Mapping(

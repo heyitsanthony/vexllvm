@@ -35,7 +35,7 @@ uint64_t VexExecChk::doVexSB(VexSB* vsb)
 	/* if we're not deferred we know we're synced up already.
 	 * this fact to be paranoid (make sure the states are ==)*/
 	if (!is_deferred) {
-		if (!cross_check->isMatch(*state)) {
+		if (!cross_check->isMatch(*state, memory_log)) {
 			fprintf(stderr, "MISMATCH PRIOR TO doVexSB. HOW??\n");
 			dumpSubservient(vsb);
 		}
@@ -110,7 +110,9 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 	bool fixed;
 
 	if (cross_check->isMatch(
-		*(const VexGuestAMD64State*)gs->getCPUState()->getStateData()))
+		*(const VexGuestAMD64State*)
+			gs->getCPUState()->getStateData(),
+		memory_log))
 	{
 		 return;
 	}
@@ -151,7 +153,7 @@ void VexExecChk::doSysCall(VexSB* vsb)
 
 	/* now both should be equal and at the instruction immediately following
 	 * the breaking syscall */
-	if (!cross_check->isMatch(*state)) {
+	if (!cross_check->isMatch(*state, memory_log)) {
 		fprintf(stderr, "MISMATCH: END OF SYSCALL. SYSEMU BUG.\n");
 		dumpSubservient(vsb);
 	}
@@ -176,7 +178,7 @@ void VexExecChk::dumpSubservient(VexSB* vsb)
 
 	cross_check->printTraceStats(std::cerr);
 	std::cerr << "PTRACE state" << std::endl;
-	cross_check->printSubservient(std::cerr, *state);
+	cross_check->printSubservient(std::cerr, *state, memory_log);
 	std::cerr << "VEXLLVM state" << std::endl;
 	gs->print(std::cerr);
 
@@ -190,6 +192,7 @@ void VexExecChk::dumpSubservient(VexSB* vsb)
 		std::cerr,
 		(void*)vsb->getGuestAddr(), 
 		(void*)vsb->getEndAddr());
+		
 	//if you want to keep going anyway, stop checking
 	cross_check = NULL;
 	exit(1);

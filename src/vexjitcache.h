@@ -10,6 +10,13 @@ class ExecutionEngine;
 typedef uint64_t(*vexfunc_t)(void* /* guest cpu state */);
 typedef std::map<uint64_t, vexfunc_t> jit_map;
 
+/* kind of lame, but if the auxiliary logging is enabled, then this
+   is the real type of the function.  this allows vexexec to pass
+   the auxiliary memory logging state into the translated code */
+typedef uint64_t(*vexlogfunc_t)(void* /* guest cpu state */, 
+	void* /* auxiliary logging state */);
+
+
 class VexJITCache : public VexFCache
 {
 public:

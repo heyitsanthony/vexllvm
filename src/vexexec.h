@@ -16,6 +16,7 @@ class Guest;
 class Syscalls;
 class VexXlate;
 class VexSB;
+class MemLog;
 
 namespace llvm
 {
@@ -63,6 +64,7 @@ protected:
 	Guest		*gs;
 	Syscalls	*sc;
 	VexFCache	*f_cache;
+	MemLog*		memory_log;
 
 private:
 	VexSB* getSBFromGuestAddr(void* elfptr);

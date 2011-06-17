@@ -5,6 +5,7 @@
 #include <sys/user.h>
 #include "guestptimg.h"
 
+class MemLog;
 class SyscallsMarshalled;
 
 class PTImgChk : public GuestPTImg
@@ -24,11 +25,13 @@ public:
 		const VexGuestAMD64State& state);
 	void printSubservient(
 		std::ostream& os, 
-		const VexGuestAMD64State& ref) const;
+		const VexGuestAMD64State& ref,
+		MemLog* memory_log) const;
 	void stackTraceSubservient(std::ostream& os, void* b = 0, void* e = 0);
 	void printTraceStats(std::ostream& os);
 
-	bool isMatch(const VexGuestAMD64State& state) const;
+	bool isMatch(const VexGuestAMD64State& state, MemLog* mem_log) const;
+	bool isMatch(MemLog* mem_log) const;
 
 	bool fixup(const void* ip_begin, const void* ip_end);
 
@@ -73,6 +76,10 @@ private:
 		std::ostream& os,
 		user_fpregs_struct& fpregs,
 		const VexGuestAMD64State& ref) const;
+
+	void printMemory(
+		std::ostream& os,
+		MemLog* memory_log) const;
 
 	void copyIn(void* dst, const void* src, unsigned int bytes);
 

@@ -30,6 +30,8 @@
 #include "vexexec.h"
 #include "vexhelpers.h"
 #include "guest.h"
+#include "memlog.h"
+
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
 }
@@ -55,7 +57,11 @@ VexExec::~VexExec()
 }
 
 VexExec::VexExec(Guest* in_gs)
-: gs(in_gs), sb_executed_c(0), exited(false), trace_c(0)
+: gs(in_gs)
+, memory_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
+, sb_executed_c(0)
+, exited(false)
+, trace_c(0)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
 	ExecutionEngine	*exeEngine;
@@ -237,7 +243,13 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 
 	/* TODO: pull out x86-ism */
 	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	new_ip = func_ptr(state);
+
+	if(memory_log) {
+		memory_log->clear();
+		new_ip = ((vexlogfunc_t)(func_ptr))(state, memory_log);
+	} else {
+		new_ip = func_ptr(state);
+	}
 	state->guest_RIP = new_ip;
 
 	return new_ip;

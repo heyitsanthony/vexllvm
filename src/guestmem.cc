@@ -86,8 +86,8 @@ void GuestMem::recordMapping(Mapping& mapping)
 			/* we are completely inside the old block */
 			if(mapping.end() < i->second.end()) {
 				Mapping smaller(
-					mapping.end(),
-					(long)i->second.end()-(long)mapping.end(),
+					mapping.end(), (long)i->second.end()-
+						(long)mapping.end(),
 					i->second.req_prot);
 				smaller.cur_prot = i->second.cur_prot;
 				maps.insert(std::make_pair(

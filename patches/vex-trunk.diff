@@ -1,0 +1,456 @@
+Index: test/test-amd64.c
+===================================================================
+--- test/test-amd64.c	(revision 2155)
++++ test/test-amd64.c	(working copy)
+@@ -553,6 +553,20 @@
+     printf("%-10s A=%08x R=%08x %d\n", #op, val, res, resz);\
+ }
+ 
++#define TEST_BSX_EXT(op, size, op0)\
++{\
++    long res, val;\
++    int resz;\
++    val = op0;\
++    asm("movq %0, %%r9; movq $0x09abcdef12345678, %%r8\n"\
++        #op " %%r9" size ", %%r8" size "; setz %b1; mov %%r8, %0" \
++        : "=r" (res), "=q" (resz)\
++        : "0" (val) \
++	: "r9");\
++    printf("%-10s A=%016lx R=%016lx %d\n", #op, val, res, resz);\
++}
++
++
+ void test_bsx(void)
+ {
+     TEST_BSX(bsrw, "w", 0);
+@@ -563,8 +577,41 @@
+     TEST_BSX(bsfw, "w", 0x12340128);
+     TEST_BSX(bsfl, "", 0);
+     TEST_BSX(bsfl, "", 0x00340128);
++
++    TEST_BSX_EXT(bsrw, "w", 0);
++    TEST_BSX_EXT(bsrw, "w", 0xabcdef9012340128UL);
++    TEST_BSX_EXT(bsrl, "d", 0);
++    TEST_BSX_EXT(bsrl, "d", 0xabcdef9000340128UL);
++    TEST_BSX_EXT(bsrq, "", 0);
++    TEST_BSX_EXT(bsrq, "", 0xabcdef9000340128UL);
++    TEST_BSX_EXT(bsfw, "w", 0);
++    TEST_BSX_EXT(bsfw, "w", 0xabcdef9012340128UL);
++    TEST_BSX_EXT(bsfl, "d", 0);
++    TEST_BSX_EXT(bsfl, "d", 0xabcdef9000340128UL);
++    TEST_BSX_EXT(bsfq, "", 0);
++    TEST_BSX_EXT(bsfq, "", 0xabcdef9000340128UL);
+ }
+ 
++char alternate_stack_at_fixed_address[4096];
++void test_btc_rsp(void) {
++    /* technically, new_stack shouldn't need to be a valid
++       address, but the BTC hack forces it to :-( */
++    long orig, repl;
++    asm volatile(
++        "movq %%rsp, %%rax;"
++        "movq %2, %%rsp;"
++        "movq %%rsp, %0;"
++        "movq $0x0, %%rcx;"
++        "btcq %%rcx, %%rsp;"
++        "xorq $0x1, %%rsp;"
++        "movq %%rsp, %1;"
++        "movq %%rax, %%rsp;"
++        : "=r" (orig), "=r" (repl)
++        : "r" (alternate_stack_at_fixed_address + 4096)
++        : "rcx", "rax");
++    printf("btcq o=%016lx r=%016lx\n", orig, repl);
++}
++
+ /**********************************************/
+ 
+ void test_fops(double a, double b)
+@@ -874,17 +921,23 @@
+            #op, op0, op1);\
+ }
+ 
+-#define TEST_CMPXCHG(op, size, opconst, eax)\
++#define TEST_CMPXCHG_EXT(pfx, op, sizea, sizeb, opconst, rax)\
+ {\
+-    int op0, op1;\
+-    op0 = 0x12345678;\
+-    op1 = 0xfbca7654;\
+-    asm(#op " %" size "0, %" size "1" \
+-        : "=q" (op0), opconst (op1) \
+-        : "0" (op0), "1" (op1), "a" (eax));\
+-    printf("%-10s EAX=%08x A=%08x C=%08x\n",\
+-           #op, eax, op0, op1);\
++    long op0, op1, nrax;\
++    op0 = 0xaaaaaaaa12345678UL;\
++    op1 = 0xbbbbbbbbfbca7654UL;\
++    asm(pfx #op " %0" sizea ", %1" sizeb \
++        : "=r" (op0), opconst (op1), "=a" (nrax) \
++        : "b" (0), "c" (0), "d" (0), "S" (0), "D" (0), "0" (op0), "1" (op1), "2" (rax));\
++    printf("%-10s NRAX=%016lx RAX=%016lx A=%016lx C=%016lx\n",\
++           #op, nrax, rax, op0, op1);\
+ }
++#define TEST_CMPXCHG(op, size, opconst, rax) \
++	TEST_CMPXCHG_EXT("", op, size, size, opconst, rax)
++#define TEST_CMPXCHG_M(op, size, opconst, rax) \
++	TEST_CMPXCHG_EXT("", op, size, "", opconst, rax)
++#define TEST_CMPXCHG_AM(op, size, opconst, rax) \
++	TEST_CMPXCHG_EXT("lock ", op, size, "", opconst, rax)
+ 
+ void test_xchg(void)
+ {
+@@ -912,21 +965,36 @@
+     TEST_XCHG(xaddw, "w", "=m");
+     TEST_XCHG(xaddb, "b", "=m");
+ #endif
+-    TEST_CMPXCHG(cmpxchgl, "", "=q", 0xfbca7654);
+-    TEST_CMPXCHG(cmpxchgw, "w", "=q", 0xfbca7654);
+-    TEST_CMPXCHG(cmpxchgb, "b", "=q", 0xfbca7654);
++    TEST_CMPXCHG(cmpxchg, "", "=r", 0xbbbbbbbbfbca7654UL);
++    TEST_CMPXCHG(cmpxchgl, "d", "=r", 0xbbbbbbbbfbca7654UL);
++    TEST_CMPXCHG(cmpxchgw, "w", "=r", 0xbbbbbbbbfbca7654UL);
++    TEST_CMPXCHG(cmpxchgb, "b", "=r", 0xbbbbbbbbfbca7654UL);
+ 
+-    TEST_CMPXCHG(cmpxchgl, "", "=q", 0xfffefdfc);
+-    TEST_CMPXCHG(cmpxchgw, "w", "=q", 0xfffefdfc);
+-    TEST_CMPXCHG(cmpxchgb, "b", "=q", 0xfffefdfc);
++    TEST_CMPXCHG(cmpxchg, "", "=r", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG(cmpxchgl, "d", "=r", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG(cmpxchgw, "w", "=r", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG(cmpxchgb, "b", "=r", 0xccccccccfffefdfcUL);
+ 
+-    TEST_CMPXCHG(cmpxchgl, "", "=m", 0xfbca7654);
+-    TEST_CMPXCHG(cmpxchgw, "w", "=m", 0xfbca7654);
+-    TEST_CMPXCHG(cmpxchgb, "b", "=m", 0xfbca7654);
++    TEST_CMPXCHG_M(cmpxchg, "", "=m", 0xbbbbbbbbfbca7654U);
++    TEST_CMPXCHG_M(cmpxchgl, "d", "=m", 0xbbbbbbbbfbca7654UL);
++    TEST_CMPXCHG_M(cmpxchgw, "w", "=m", 0xbbbbbbbbfbca7654UL);
++    TEST_CMPXCHG_M(cmpxchgb, "b", "=m", 0xbbbbbbbbfbca7654UL);
+ 
+-    TEST_CMPXCHG(cmpxchgl, "", "=m", 0xfffefdfc);
+-    TEST_CMPXCHG(cmpxchgw, "w", "=m", 0xfffefdfc);
+-    TEST_CMPXCHG(cmpxchgb, "b", "=m", 0xfffefdfc);
++    TEST_CMPXCHG_M(cmpxchg, "", "=m", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG_M(cmpxchgl, "d", "=m", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG_M(cmpxchgw, "w", "=m", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG_M(cmpxchgb, "b", "=m", 0xccccccccfffefdfcUL);
++
++    TEST_CMPXCHG_AM(cmpxchg, "", "=m", 0xbbbbbbbbfbca7654U);
++    TEST_CMPXCHG_AM(cmpxchgl, "d", "=m", 0xbbbbbbbbfbca7654UL);
++    TEST_CMPXCHG_AM(cmpxchgw, "w", "=m", 0xbbbbbbbbfbca7654UL);
++    TEST_CMPXCHG_AM(cmpxchgb, "b", "=m", 0xbbbbbbbbfbca7654UL);
++
++    TEST_CMPXCHG_AM(cmpxchg, "", "=m", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG_AM(cmpxchgl, "d", "=m", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG_AM(cmpxchgw, "w", "=m", 0xccccccccfffefdfcUL);
++    TEST_CMPXCHG_AM(cmpxchgb, "b", "=m", 0xccccccccfffefdfcUL);
++
+ #if 0
+     {
+         uint64_t op0, op1, op2;
+@@ -1689,12 +1757,13 @@
+         func();
+     }
+ #endif
+-    test_bsx();  //REINSTATE64
++    test_btc_rsp();
++    test_bsx();  //REINSTATE6
+     test_mul();
+     test_jcc();
+     //    test_floats();  REINSTATE64
+     //test_bcd();
+-    //test_xchg();   REINSTATE64
++    test_xchg();   //REINSTATE64
+     test_string();
+     //test_misc(); // REINSTATE
+     test_lea();
+Index: priv/guest_amd64_toIR.c
+===================================================================
+--- priv/guest_amd64_toIR.c	(revision 2155)
++++ priv/guest_amd64_toIR.c	(working copy)
+@@ -7356,7 +7356,7 @@
+    UChar  modrm;
+    Int    len;
+    IRTemp t_fetched, t_bitno0, t_bitno1, t_bitno2, t_addr0, 
+-     t_addr1, t_rsp, t_mask, t_new;
++     t_addr1, t_rsp, t_mask, t_new, t_src_val, t_dst_val, t_old;
+ 
+    vassert(sz == 2 || sz == 4 || sz == 8);
+ 
+@@ -7392,12 +7392,18 @@
+          this kludge entirely.  */
+       t_rsp = newTemp(Ity_I64);
+       t_addr0 = newTemp(Ity_I64);
++      t_src_val = newTemp(szToITy(sz));
++      t_old = newTemp(szToITy(sz));
+ 
++      /* if the arg is something like *sp then we need a temp */
++      assign(t_src_val, getIRegE(sz, pfx, modrm) );
++
+       vassert(vbi->guest_stack_redzone_size == 128);
+       assign( t_rsp, binop(Iop_Sub64, getIReg64(R_RSP), mkU64(288)) );
+       putIReg64(R_RSP, mkexpr(t_rsp));
+ 
+-      storeLE( mkexpr(t_rsp), getIRegE(sz, pfx, modrm) );
++      assign( t_old, loadLE(szToITy(sz), mkexpr(t_rsp)) );
++      storeLE( mkexpr(t_rsp),  mkexpr(t_src_val) );
+ 
+       /* Make t_addr0 point at it. */
+       assign( t_addr0, mkexpr(t_rsp) );
+@@ -7487,13 +7493,17 @@
+ 
+    /* Move reg operand from stack back to reg */
+    if (epartIsReg(modrm)) {
++      /* use a temp incase *sp is the arg */
++      t_dst_val = newTemp(szToITy(sz));
++      assign( t_dst_val, loadLE(szToITy(sz), mkexpr(t_rsp)) );
+       /* t_rsp still points at it. */
+       /* only write the reg if actually modifying it; doing otherwise
+          zeroes the top half erroneously when doing btl due to
+          standard zero-extend rule */
++      storeLE( mkexpr(t_rsp),  mkexpr(t_old) );
++      putIReg64(R_RSP, binop(Iop_Add64, mkexpr(t_rsp), mkU64(288)) );
+       if (op != BtOpNone)
+-         putIRegE(sz, pfx, modrm, loadLE(szToITy(sz), mkexpr(t_rsp)) );
+-      putIReg64(R_RSP, binop(Iop_Add64, mkexpr(t_rsp), mkU64(288)) );
++         putIRegE(sz, pfx, modrm, mkexpr(t_dst_val) );
+    }
+ 
+    DIP("bt%s%c %s, %s\n",
+@@ -7594,30 +7604,45 @@
+    */
+ 
+    /* The main computation, guarding against zero. */
+-   assign( dst64,
+-           IRExpr_Mux0X( 
+-              mkexpr(src8),
+-              /* src == 0 -- leave dst unchanged */
+-              widenUto64( getIRegG( sz, pfx, modrm ) ),
+-              /* src != 0 */
+-              fwds ? unop(Iop_Ctz64, mkexpr(src64))
+-                   : binop(Iop_Sub64, 
+-                           mkU64(63), 
+-                           unop(Iop_Clz64, mkexpr(src64)))
+-           )
+-         );
++   if (sz == 2 || sz == 8) {
++     assign( dst64,
++             IRExpr_Mux0X( 
++                mkexpr(src8),
++                /* src == 0 -- leave dst unchanged */
++                widenUto64( getIRegG( sz, pfx, modrm ) ),
++                /* src != 0 */
++                fwds ? unop(Iop_Ctz64, mkexpr(src64))
++                     : binop(Iop_Sub64, 
++                             mkU64(63), 
++                             unop(Iop_Clz64, mkexpr(src64)))
++             )
++           );
++    
++     if (sz == 2)
++        assign( dst, unop(Iop_64to16, mkexpr(dst64)) );
++     else
++        assign( dst, mkexpr(dst64) );
++    
++     /* dump result back */
++     putIRegG( sz, pfx, modrm, mkexpr(dst) );
++   } else {
++     /* this case ensures that dword size ops don't clobber the upper part
++        when only zf is set */
++     assign( dst64,
++             IRExpr_Mux0X( 
++                mkexpr(src8),
++                /* src == 0 -- leave dst unchanged */
++                getIRegG( 8, pfx, modrm ),
++                /* src != 0 */
++                fwds ? unop(Iop_Ctz64, mkexpr(src64))
++                     : binop(Iop_Sub64, 
++                             mkU64(63), 
++                             unop(Iop_Clz64, mkexpr(src64)))
++             )
++           );
++     putIRegG( 8, pfx, modrm, mkexpr(dst64) );
++   }
+ 
+-   if (sz == 2)
+-      assign( dst, unop(Iop_64to16, mkexpr(dst64)) );
+-   else
+-   if (sz == 4)
+-      assign( dst, unop(Iop_64to32, mkexpr(dst64)) );
+-   else
+-      assign( dst, mkexpr(dst64) );
+-
+-   /* dump result back */
+-   putIRegG( sz, pfx, modrm, mkexpr(dst) );
+-
+    return delta;
+ }
+ 
+@@ -7714,8 +7739,7 @@
+    IRTemp acc   = newTemp(ty);
+    IRTemp src   = newTemp(ty);
+    IRTemp dest  = newTemp(ty);
+-   IRTemp dest2 = newTemp(ty);
+-   IRTemp acc2  = newTemp(ty);
++   IRTemp dest2, acc2, acc_full, dest_full;
+    IRTemp cond8 = newTemp(Ity_I8);
+    IRTemp addr  = IRTemp_INVALID;
+    UChar  rm    = getUChar(delta0);
+@@ -7739,16 +7763,36 @@
+       assign( acc, getIRegRAX(size) );
+       setFlags_DEP1_DEP2(Iop_Sub8, acc, dest, ty);
+       assign( cond8, unop(Iop_1Uto8, mk_amd64g_calculate_condition(AMD64CondZ)) );
+-      assign( dest2, IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(src)) );
+-      assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(acc)) );
+-      putIRegRAX(size, mkexpr(acc2));
+-      putIRegE(size, pfx, rm, mkexpr(dest2));
++      /* when doing a 4 byte op, the mux operation must not tamper with the high
++         order bits of the 64-bit registers... */
++      if(size == 4) {
++         dest2 = newTemp(Ity_I64);
++         acc2  = newTemp(Ity_I64);
++         dest_full  = newTemp(Ity_I64);
++         acc_full   = newTemp(Ity_I64);
++         assign( dest_full, getIRegE(8, pfx, rm) );
++         assign( acc_full, getIRegRAX(8) );
++         assign( dest2, IRExpr_Mux0X(mkexpr(cond8), 
++            mkexpr(dest_full), unop(Iop_32Uto64, mkexpr(src))) );
++         assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), 
++            unop(Iop_32Uto64, mkexpr(dest)), mkexpr(acc_full)) );
++         putIRegRAX(8, mkexpr(acc2));
++         putIRegE(8, pfx, rm, mkexpr(dest2));
++      } else {
++         dest2 = newTemp(ty);
++         acc2  = newTemp(ty);
++         assign( dest2, IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(src)) );
++         assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(acc)) );
++         putIRegRAX(size, mkexpr(acc2));
++         putIRegE(size, pfx, rm, mkexpr(dest2));
++      }
+       DIP("cmpxchg%c %s,%s\n", nameISize(size),
+                                nameIRegG(size,pfx,rm),
+                                nameIRegE(size,pfx,rm) );
+    } 
+    else if (!epartIsReg(rm) && !(pfx & PFX_LOCK)) {
+       /* case 2 */
++      dest2 = newTemp(ty);
+       addr = disAMode ( &len, vbi, pfx, delta0, dis_buf, 0 );
+       assign( dest, loadLE(ty, mkexpr(addr)) );
+       delta0 += len;
+@@ -7757,8 +7801,20 @@
+       setFlags_DEP1_DEP2(Iop_Sub8, acc, dest, ty);
+       assign( cond8, unop(Iop_1Uto8, mk_amd64g_calculate_condition(AMD64CondZ)) );
+       assign( dest2, IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(src)) );
+-      assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(acc)) );
+-      putIRegRAX(size, mkexpr(acc2));
++      /* when doing a 4 byte op, the mux operation must not tamper with the high
++         order bits of the 64-bit acculumator if assignment occurs */
++      if(size == 4) {
++         acc2  = newTemp(Ity_I64);
++         acc_full   = newTemp(Ity_I64);
++         assign( acc_full, getIRegRAX(8) );
++         assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), 
++            unop(Iop_32Uto64, mkexpr(dest)), mkexpr(acc_full)) );
++         putIRegRAX(8, mkexpr(acc2));
++      } else {
++         acc2  = newTemp(ty);
++         assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(acc)) );
++         putIRegRAX(size, mkexpr(acc2));
++      }
+       storeLE( mkexpr(addr), mkexpr(dest2) );
+       DIP("cmpxchg%c %s,%s\n", nameISize(size), 
+                                nameIRegG(size,pfx,rm), dis_buf);
+@@ -7769,6 +7825,7 @@
+          Compute success from the output of the IRCAS, and steer the
+          new value for RAX accordingly: in case of success, RAX is
+          unchanged. */
++      dest2 = newTemp(ty);
+       addr = disAMode ( &len, vbi, pfx, delta0, dis_buf, 0 );
+       delta0 += len;
+       assign( src, getIRegG(size, pfx, rm) );
+@@ -7779,8 +7836,20 @@
+       ));
+       setFlags_DEP1_DEP2(Iop_Sub8, acc, dest, ty);
+       assign( cond8, unop(Iop_1Uto8, mk_amd64g_calculate_condition(AMD64CondZ)) );
+-      assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(acc)) );
+-      putIRegRAX(size, mkexpr(acc2));
++      /* when doing a 4 byte op, the mux operation must not tamper with the high
++         order bits of the 64-bit acculumator if assignment occurs */
++      if(size == 4) {
++         acc2  = newTemp(Ity_I64);
++         acc_full   = newTemp(Ity_I64);
++         assign( acc_full, getIRegRAX(8) );
++         assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), 
++            unop(Iop_32Uto64, mkexpr(dest)), mkexpr(acc_full)) );
++         putIRegRAX(8, mkexpr(acc2));
++      } else {
++         acc2  = newTemp(ty);
++         assign( acc2,  IRExpr_Mux0X(mkexpr(cond8), mkexpr(dest), mkexpr(acc)) );
++         putIRegRAX(size, mkexpr(acc2));
++      }
+       DIP("cmpxchg%c %s,%s\n", nameISize(size), 
+                                nameIRegG(size,pfx,rm), dis_buf);
+    }
+@@ -8997,7 +9066,7 @@
+           )
+ {
+    IRType    ty;
+-   IRTemp    addr, t0, t1, t2, t3, t4, t5, t6;
++   IRTemp    addr, t0, t1, t2, t3, t4, t5, t6, t7;
+    Int       alen;
+    UChar     opc, modrm, abyte, pre;
+    Long      d64;
+@@ -17160,12 +17229,26 @@
+                               mkU64(1<<18)))
+             );
+ 
++      /* And patch in the the fixed reserved flag. */
++      t6 = newTemp(Ity_I64);
++      assign( t6, binop(Iop_Or64,
++                        mkexpr(t5),
++                        mkU64(1<<1))
++            );
++
++      /* And patch in the the interrupt enable flag which should always be on. */
++      t7 = newTemp(Ity_I64);
++      assign( t7, binop(Iop_Or64,
++                        mkexpr(t6),
++                        mkU64(1<<9))
++            );
++
+       /* if sz==2, the stored value needs to be narrowed. */
+       if (sz == 2)
+         storeLE( mkexpr(t1), unop(Iop_32to16,
+-                             unop(Iop_64to32,mkexpr(t5))) );
++                             unop(Iop_64to32,mkexpr(t7))) );
+       else 
+-        storeLE( mkexpr(t1), mkexpr(t5) );
++        storeLE( mkexpr(t1), mkexpr(t7) );
+ 
+       DIP("pushf%c\n", nameISize(sz));
+       break;
+Index: priv/main_main.c
+===================================================================
+--- priv/main_main.c	(revision 2155)
++++ priv/main_main.c	(working copy)
+@@ -120,7 +120,7 @@
+    vassert(vcon->iropt_unroll_thresh >= 0);
+    vassert(vcon->iropt_unroll_thresh <= 400);
+    vassert(vcon->guest_max_insns >= 1);
+-   vassert(vcon->guest_max_insns <= 100);
++   vassert(vcon->guest_max_insns <= 8192);
+    vassert(vcon->guest_chase_thresh >= 0);
+    vassert(vcon->guest_chase_thresh < vcon->guest_max_insns);
+    vassert(vcon->guest_chase_cond == True 
+Index: priv/guest_generic_bb_to_IR.c
+===================================================================
+--- priv/guest_generic_bb_to_IR.c	(revision 2155)
++++ priv/guest_generic_bb_to_IR.c	(working copy)
+@@ -173,7 +173,7 @@
+    /* check sanity .. */
+    vassert(sizeof(HWord) == sizeof(void*));
+    vassert(vex_control.guest_max_insns >= 1);
+-   vassert(vex_control.guest_max_insns < 100);
++   vassert(vex_control.guest_max_insns <= 8192);
+    vassert(vex_control.guest_chase_thresh >= 0);
+    vassert(vex_control.guest_chase_thresh < vex_control.guest_max_insns);
+    vassert(guest_word_type == Ity_I32 || guest_word_type == Ity_I64);
