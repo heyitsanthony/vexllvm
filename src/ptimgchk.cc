@@ -711,10 +711,19 @@ void PTImgChk::getRegs(user_regs_struct& regs) const
 	int	err;
 
 	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	if(err < 0) {
-		perror("PTImgChk::getRegs");
-		_exit(1);
-	}
+	if (err >= 0) return;
+
+	perror("PTImgChk::getRegs");
+
+	/* The politics of failure have failed.
+	 * It is time to make them work again.
+	 * (this is temporary nonsense to get
+	 *  /usr/bin/make xchk tests not to hang). */
+	waitpid(child_pid, NULL, 0);
+	kill(child_pid, SIGABRT);
+	raise(SIGKILL);
+	_exit(-1);
+	abort();
 }
 
 void PTImgChk::printSubservient(
