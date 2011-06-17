@@ -173,7 +173,7 @@ tests: test-traces
 tests-softfloat: tests-softfloat-traces
 
 tests-clean:
-	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/*
+	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/* tests/meta/*
 
 TRACEDEPS_PATH=						\
 	$(TRACEDEPS:%=tests/traces-bin/%)		\
@@ -212,6 +212,37 @@ tests-softfloat-fastxchk: all $(TRACEDEPS_PATH)
 
 tests-oprof: all
 	TRACES_OPROFILE=1 tests/traces.sh
+
+## ## ### ### ###
+## ## #    #  # #
+# # # ###  #  ###
+#   # #    #  # #
+#   # ###  #  # #
+META_TESTS= 	meta-pt-jit_test		\
+		meta-elf-jit_test		\
+		meta-xchk-jit_test		\
+		meta-fastxchk-jit_test		\
+		meta-pt_run-elf_run-print	\
+		meta-elf_run-pt_run-print	\
+		meta-elf_run-elf_run-print
+
+tests-meta: $(META_TESTS)
+
+meta-pt-jit_test: all
+	bin/pt_run_rebase bin/jit_test >tests/meta/$@.out 2>tests/meta/$@.err; echo $@ done.
+meta-elf-jit_test: all
+	bin/elf_run_rebase bin/jit_test >tests/meta/$@.out 2>tests/meta/$@.err; echo $@ done.
+meta-xchk-jit_test: all
+	bin/pt_xchk_rebase bin/jit_test >tests/meta/$@.out 2>tests/meta/$@.err; echo $@ done.
+meta-fastxchk-jit_test: all
+	VEXLLVM_FASTCHK=1 bin/pt_xchk_rebase bin/jit_test >tests/meta/$@.out 2>tests/meta/$@.err; echo $@ done.
+meta-pt_run-elf_run-print: all
+	bin/pt_run_rebase bin/elf_run tests/traces-bin/print >tests/meta/$@.out 2>tests/meta/$@.err; echo $@ done.
+meta-elf_run-pt_run-print: all
+	bin/elf_run_rebase bin/pt_run tests/traces-bin/print >tests/meta/$@.out 2>tests/meta/$@.err; echo $@ done.
+meta-elf_run-elf_run-print: all
+	bin/elf_run_rebase bin/elf_run tests/traces-bin/print >tests/meta/$@.out 2>tests/meta/$@.err; echo $@ done.
+
 
 tests-web: test-traces tests-pt_xchk tests-fastxchk
 tests-softfloat-web: tests-softfloat-traces tests-softfloat-pt_xchk tests-softfloat-fastxchk
