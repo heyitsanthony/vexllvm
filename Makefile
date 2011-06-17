@@ -184,6 +184,9 @@ tests-pt_xchk: all $(TRACEDEPS_PATH)
 tests-elf: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/elf_run tests/traces.sh
 
+tests-softfloat-elf: all $(TRACEDEPS_PATH)
+	RUNCMD=bin/softfloat/elf_run tests/traces.sh
+
 tests-fastxchk: all $(TRACEDEPS_PATH)
 	VEXLLVM_FASTCHK=1 RUNCMD=bin/pt_xchk OUTPATH=tests/traces-fastxchk-out tests/traces.sh
 
