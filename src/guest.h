@@ -28,7 +28,6 @@ public:
 	virtual ~Guest(void);
 	virtual llvm::Value* addrVal2Host(llvm::Value* addr_v) const = 0;
 	virtual uint64_t addr2Host(guestptr_t guestptr) const = 0;
-	virtual guestptr_t name2guest(const char*) const = 0;
 	virtual void* getEntryPoint(void) const = 0;
 	std::list<GuestMem::Mapping> getMemoryMap(void) const;
 

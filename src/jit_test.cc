@@ -63,7 +63,6 @@ public:
 	virtual ~GuestIdent() {}
 	Value* addrVal2Host(Value* v) const { return v; }
 	uint64_t addr2Host(guestptr_t p) const { return p; }
-	guestptr_t name2guest(const char*) const { return 0; }
 	void* getEntryPoint(void) const { return NULL; }
 };
 

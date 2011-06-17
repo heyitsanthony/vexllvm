@@ -71,7 +71,6 @@ private:
 	const VexSB* doNextSB(void);
 	
 	void runAddrStack(void);
-	void loadExitFuncAddrs(void);
 
 	VexJITCache		*jit_cache;
 	static VexExec		*exec_context;

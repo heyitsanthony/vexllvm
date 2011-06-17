@@ -265,26 +265,6 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	return new_ip;
 }
 
-void VexExec::loadExitFuncAddrs(void)
-{
-	guestptr_t		exit_ptr;
-
-	/* libc hack. if we call the exit function, bail out */
-	exit_ptr = gs->name2guest("exit");
-//	assert (exit_ptr && "Could not find exit pointer. What is this?");
-	exit_addrs.insert((void*)exit_ptr);
-
-	exit_ptr = gs->name2guest("abort");
-//	assert (exit_ptr && "Could not find abort pointer. What is this?");
-	exit_addrs.insert((void*)exit_ptr);
-
-	exit_ptr = gs->name2guest("_exit");
-	if (exit_ptr) exit_addrs.insert((void*)exit_ptr);
-
-	exit_ptr = gs->name2guest("exit_group");
-	if (exit_ptr) exit_addrs.insert((void*)exit_ptr);
-}
-
 void VexExec::run(void)
 {
 	struct sigaction sa;
@@ -295,8 +275,6 @@ void VexExec::run(void)
 	sa.sa_flags = SA_SIGINFO;
 	sigemptyset(&sa.sa_mask);
    	sigaction(SIGSEGV, &sa, NULL);
-
-	loadExitFuncAddrs();
 
 	/* top of address stack is executed */
 	addr_stack.push(gs->getEntryPoint());

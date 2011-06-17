@@ -63,7 +63,6 @@ public:
 	virtual ~GuestPTImg(void) {}
 	llvm::Value* addrVal2Host(llvm::Value* addr_v) const { return addr_v; }
 	uint64_t addr2Host(guestptr_t guestptr) const { return guestptr; }
-	guestptr_t name2guest(const char* symname) const { return 0; }
 	void* getEntryPoint(void) const { return entry_pt; }
 
 	template <class T>

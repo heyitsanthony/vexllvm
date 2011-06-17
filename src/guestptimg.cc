@@ -35,7 +35,7 @@ GuestPTImg::GuestPTImg(
 	
 	dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
 
-	img = ElfImg::createUnlinked(argv[0]);
+	img = ElfImg::create(argv[0], false);
 	assert (img != NULL && "DOES BINARY EXIST?");
 
 	entry_pt = img->getEntryPoint();
