@@ -9,6 +9,7 @@
 #include "syscallparams.h"
 
 class GuestCPUState;
+class GuestSnapshot;
 
 namespace llvm
 {
@@ -19,6 +20,8 @@ namespace llvm
  * 1. register state
  * 2. memory mappings
  * 3. syscall param/result access
+ *
+ * This is basically an anemic operating system process structure.
  */
 class Guest
 {
@@ -41,7 +44,13 @@ public:
 	const GuestMem* getMem(void) const { assert (mem != NULL); return mem; }
 	GuestMem* getMem(void) { assert (mem != NULL); return mem; }
 
+	/* guest has an interface to saving/loading, but all the legwork
+	 * is done by guestsnapshot to keep things tidy */
+	void save(const char* dirpath = NULL) const;
+	static Guest* load(const char* dirpath = NULL);
+
 protected:
+	void setBinPath(const char* b);
 	Guest(const char* bin_path);
 
 	GuestCPUState	*cpu_state;

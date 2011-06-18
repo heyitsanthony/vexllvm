@@ -37,6 +37,7 @@ public:
 		T	*ve;
 
 		setupStatics(in_gs);
+
 		ve = new T(in_gs);
 		if (ve->getGuest() == NULL) {
 			delete ve;

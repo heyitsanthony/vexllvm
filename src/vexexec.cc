@@ -43,8 +43,23 @@ VexExec* VexExec::exec_context = NULL;
 
 void VexExec::setupStatics(Guest* in_gs)
 {
+	const char* saveas;
+
 	if (!theGenLLVM) theGenLLVM = new GenLLVM(in_gs);
 	if (!theVexHelpers) theVexHelpers = new VexHelpers(in_gs->getArch());
+
+	/* stupid hack to save right before execution */
+	if (getenv("VEXLLVM_SAVE")) {
+		fprintf(stderr, "Saving...\n");
+		in_gs->save();
+		exit(0);
+	}
+
+	if ((saveas = getenv("VEXLLVM_SAVEAS"))) {
+		fprintf(stderr, "Saving as %s...\n", saveas);
+		in_gs->save(saveas);
+		exit(0);
+	}
 }
 
 VexExec::~VexExec()
