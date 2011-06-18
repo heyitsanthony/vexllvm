@@ -195,13 +195,13 @@ SyscallParams ARMCPUState::getSyscallParams(void) const
 {
 	/* really figure out what this is... assuming they did the obvious */
 	return SyscallParams(
+		state2arm()->guest_R7,
 		state2arm()->guest_R0,
 		state2arm()->guest_R1,
 		state2arm()->guest_R2,
 		state2arm()->guest_R3,
 		state2arm()->guest_R4,
-		state2arm()->guest_R5,
-		state2arm()->guest_R6);
+		state2arm()->guest_R5);
 }
 
 

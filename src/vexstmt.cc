@@ -297,6 +297,10 @@ VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 	case Ijk_Boring: exit_type = (uint8_t)GE_IGNORE; break;
 	case Ijk_SigSEGV: exit_type = (uint8_t)GE_SIGSEGV; break;
 	case Ijk_EmWarn: exit_type = (uint8_t)GE_EMWARN; break;
+	/* it is allowed to have one of these show up in arm code. it has
+	   something to do with the BLX instruction which calls a function
+	   and switches to THUMB mode */
+	case Ijk_NoDecode: exit_type = (uint8_t)GE_EMWARN; break;
 	default:
 		ppIRJumpKind(jk);
 		assert (0 == 1 && "Unexpected Boring JumpKind");
