@@ -228,7 +228,7 @@ Arch::Arch ElfImg::readHeader32(const Elf32_Ehdr* hdr, bool require_exe) {
 	
 	if(hdr->e_machine == EM_ARM) {
 		return Arch::ARM;
-	} else if(hdr->e_machine != EM_386) {
+	} else if(hdr->e_machine == EM_386) {
 		return Arch::I386;
 	}
 	
