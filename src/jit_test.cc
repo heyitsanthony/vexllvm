@@ -59,7 +59,10 @@ uint64_t doFunc(Guest* gs, Function* f)
 class GuestIdent : public Guest
 {
 public:
-	GuestIdent() : Guest("ident") {}
+	GuestIdent() : Guest("ident")
+	{
+		cpu_state = GuestCPUState::create(Arch::X86_64);
+	}
 	virtual ~GuestIdent() {}
 	void* getEntryPoint(void) const { return NULL; }
 	virtual Arch::Arch getArch() const { return Arch::getHostArch(); }

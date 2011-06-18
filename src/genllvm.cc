@@ -28,7 +28,10 @@ GenLLVM::GenLLVM(const Guest* gs, const char* name)
 , log_last_store(getenv("VEXLLVM_LAST_STORE"))
 {
 	builder = new IRBuilder<>(getGlobalContext());
+	assert (builder != NULL && "Could not create builder");
+
 	mod = new Module(name, getGlobalContext());
+	assert (mod != NULL && "Could not create mod");
 
 	// *any* data layout *should* work, but klee will horribly fail
 	// if not LE and the vexllvm loads/stores would fail since it
@@ -41,6 +44,7 @@ GenLLVM::GenLLVM(const Guest* gs, const char* name)
 		"32-i64:64:64-f32:3232-f64:64:64-v64:64:64-v128:128:"
 		"128-a0:0:64-s0:64:64-f80:128:128");
 
+	assert (guest->getCPUState() && "No CPU state set in Guest");
 	mod->addTypeName("guestCtxTy", guest->getCPUState()->getTy());
 	mkFuncTy();
 }
