@@ -246,11 +246,11 @@ void AMD64CPUState::print(std::ostream& os) const
 		<< (void*)state2amd64()->guest_FPREG[r] << std::endl;
 	}
 
+	os << "fs_base = " << (void*)state2amd64()->guest_FS_ZERO << std::endl;
+#if 0
 	const uint64_t*	tls_data = (const uint64_t*)tls->getBase();
 	unsigned int	tls_bytes = tls->getSize();
 
-	os << "fs_base = " << (void*)state2amd64()->guest_FS_ZERO << std::endl;
-#if 0
 	for (unsigned int i = 0; i < tls_bytes / sizeof(uint64_t); i++) {
 		if (!tls_data[i]) continue;
 		os	<< "fs+" << (void*)(i*8)  << ":"

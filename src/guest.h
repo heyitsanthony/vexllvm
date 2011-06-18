@@ -4,9 +4,9 @@
 #include <iostream>
 #include <stdint.h>
 #include <list>
+#include "arch.h"
 #include "guestmem.h"
 #include "syscallparams.h"
-#include "elfimg.h"
 
 class GuestCPUState;
 

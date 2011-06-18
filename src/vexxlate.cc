@@ -10,7 +10,6 @@
 #include "vexexpr.h"
 #include "vexsb.h"
 #include "vexxlate.h"
-#include "elfimg.h"
 
 #define VEX_DEBUG_LEVEL	0
 #define VEX_TRACE_FLAGS	0

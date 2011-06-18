@@ -9,7 +9,7 @@ extern "C" {
 #include <valgrind/libvex_ir.h>
 extern void dispatch_asm_amd64(void);
 }
-#include "elfimg.h"
+#include "arch.h"
 
 class VexSB;
 

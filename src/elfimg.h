@@ -2,12 +2,12 @@
 #define ELFIMG_H
 
 #include <elf.h>
-#include <stdio.h>
 
 #include <string>
 #include <vector>
 #include <map>
 #include "collection.h"
+#include "arch.h"
 
 #include "symbols.h"
 
@@ -19,14 +19,6 @@ class ElfSegment;
 class DLLib;
 
 
-namespace Arch {
-enum Arch {
-	Unknown,
-	X86_64,
-	ARM,
-	I386,
-};
-}
 class ElfImg
 {
 public:

@@ -24,12 +24,12 @@
 #include "genllvm.h"
 #include "guestcpustate.h"
 #include "guest.h"
-#include "elfimg.h"
 #include "vexsb.h"
 #include "vexxlate.h"
 #include "vexexec.h"
 #include "vexhelpers.h"
 #include "guest.h"
+#include "elfimg.h"
 
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>

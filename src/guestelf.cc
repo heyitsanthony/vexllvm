@@ -179,6 +179,7 @@ void GuestELF::createElfTables(int argc, int envc)
 	guestptr_t u_platform;
 	const char *k_platform;
 	const int n = sizeof(elf_addr_t);
+	ssize_t	rnd_br;
 
 #ifdef CONFIG_USE_FDPIC
 	/* Needs to be before we load the env/argc/... */
@@ -206,7 +207,8 @@ void GuestELF::createElfTables(int argc, int envc)
 	/* random bytes used for aslr */
 	guestptr_t random_bytes = sp - 16;
 	int rnd = open("/dev/urandom", O_RDONLY);
-	read(rnd, (void*)random_bytes, 16);
+	rnd_br = read(rnd, (void*)random_bytes, 16);
+	assert (rnd_br == 16 && "Bad urandom read");
 	close(rnd);
 	sp -= 16;
 
