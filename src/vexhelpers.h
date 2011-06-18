@@ -4,6 +4,7 @@
 #define VEXHELPERS_H
 
 #include <list>
+#include "elfimg.h"
 
 namespace llvm
 {
@@ -17,7 +18,7 @@ typedef std::list<llvm::Module*>	mod_list;
 class VexHelpers
 {
 public:
-	VexHelpers();
+	VexHelpers(Arch::Arch arch);
 	~VexHelpers();
 	mod_list getModules(void) const;
 	llvm::Function* getHelper(const char* s) const;

@@ -44,7 +44,7 @@ VexExec* VexExec::exec_context = NULL;
 void VexExec::setupStatics(Guest* in_gs)
 {
 	if (!theGenLLVM) theGenLLVM = new GenLLVM(in_gs);
-	if (!theVexHelpers) theVexHelpers = new VexHelpers();
+	if (!theVexHelpers) theVexHelpers = new VexHelpers(in_gs->getArch());
 }
 
 VexExec::~VexExec()
