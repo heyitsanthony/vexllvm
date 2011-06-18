@@ -15,5 +15,12 @@ uintptr_t Syscalls::translateARMSyscall(
 			args.getArg(4),
 			args.getArg(5));
 	}	
+	std::cerr << "syscall(" << args.getSyscall() << ", "
+		<< (void*)args.getArg(0) << ", "
+		<< (void*)args.getArg(1) << ", "
+		<< (void*)args.getArg(2) << ", "
+		<< (void*)args.getArg(3) << ", "
+		<< (void*)args.getArg(4) << ", ...) => ???"
+		<< std::endl;
 	assert(!"supporting translation between syscalls for these cpus");
 }

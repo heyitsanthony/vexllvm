@@ -84,7 +84,7 @@ UInt armg_calculate_flag_n ( UInt cc_op, UInt cc_dep1,
          UInt argL = cc_dep1;
          UInt argR = cc_dep2;
          UInt oldC = cc_dep3;
-         vassert((oldC & ~1) == 0);
+         //vassert((oldC & ~1) == 0);
          UInt res  = argL + argR + oldC;
          UInt nf   = res >> 31;
          return nf;
@@ -94,7 +94,7 @@ UInt armg_calculate_flag_n ( UInt cc_op, UInt cc_dep1,
          UInt argL = cc_dep1;
          UInt argR = cc_dep2;
          UInt oldC = cc_dep3;
-         vassert((oldC & ~1) == 0);
+         //vassert((oldC & ~1) == 0);
          UInt res  = argL - argR - (oldC ^ 1);
          UInt nf   = res >> 31;
          return nf;
@@ -161,7 +161,7 @@ UInt armg_calculate_flag_z ( UInt cc_op, UInt cc_dep1,
          UInt argL = cc_dep1;
          UInt argR = cc_dep2;
          UInt oldC = cc_dep3;
-         vassert((oldC & ~1) == 0);
+         //vassert((oldC & ~1) == 0);
          UInt res  = argL + argR + oldC;
          UInt zf   = res == 0;
          return zf;
@@ -171,7 +171,7 @@ UInt armg_calculate_flag_z ( UInt cc_op, UInt cc_dep1,
          UInt argL = cc_dep1;
          UInt argR = cc_dep2;
          UInt oldC = cc_dep3;
-         vassert((oldC & ~1) == 0);
+         //vassert((oldC & ~1) == 0);
          UInt res  = argL - argR - (oldC ^ 1);
          UInt zf   = res == 0;
          return zf;
@@ -238,7 +238,7 @@ UInt armg_calculate_flag_c ( UInt cc_op, UInt cc_dep1,
          UInt argL = cc_dep1;
          UInt argR = cc_dep2;
          UInt oldC = cc_dep3;
-         vassert((oldC & ~1) == 0);
+         //vassert((oldC & ~1) == 0);
          UInt res  = argL + argR + oldC;
          UInt cf   = oldC ? (res <= argL) : (res < argL);
          return cf;
@@ -248,28 +248,28 @@ UInt armg_calculate_flag_c ( UInt cc_op, UInt cc_dep1,
          UInt argL = cc_dep1;
          UInt argR = cc_dep2;
          UInt oldC = cc_dep3;
-         vassert((oldC & ~1) == 0);
+         //vassert((oldC & ~1) == 0);
          UInt cf   = oldC ? (argL >= argR) : (argL > argR);
          return cf;
       }
       case ARMG_CC_OP_LOGIC: {
          /* (res, shco, oldV) */
          UInt shco = cc_dep2;
-         vassert((shco & ~1) == 0);
+         //vassert((shco & ~1) == 0);
          UInt cf   = shco;
          return cf;
       }
       case ARMG_CC_OP_MUL: {
          /* (res, unused, oldC:oldV) */
          UInt oldC = (cc_dep3 >> 1) & 1;
-         vassert((cc_dep3 & ~3) == 0);
+         //vassert((cc_dep3 & ~3) == 0);
          UInt cf   = oldC;
          return cf;
       }
       case ARMG_CC_OP_MULL: {
          /* (resLo32, resHi32, oldC:oldV) */
          UInt oldC    = (cc_dep3 >> 1) & 1;
-         vassert((cc_dep3 & ~3) == 0);
+         //vassert((cc_dep3 & ~3) == 0);
          UInt cf      = oldC;
          return cf;
       }
@@ -317,7 +317,7 @@ UInt armg_calculate_flag_v ( UInt cc_op, UInt cc_dep1,
          UInt argL = cc_dep1;
          UInt argR = cc_dep2;
          UInt oldC = cc_dep3;
-         vassert((oldC & ~1) == 0);
+         //vassert((oldC & ~1) == 0);
          UInt res  = argL + argR + oldC;
          UInt vf   = ((res ^ argL) & (res ^ argR)) >> 31;
          return vf;
@@ -327,7 +327,7 @@ UInt armg_calculate_flag_v ( UInt cc_op, UInt cc_dep1,
          UInt argL = cc_dep1;
          UInt argR = cc_dep2;
          UInt oldC = cc_dep3;
-         vassert((oldC & ~1) == 0);
+         //vassert((oldC & ~1) == 0);
          UInt res  = argL - argR - (oldC ^ 1);
          UInt vf   = ((argL ^ argR) & (argL ^ res)) >> 31;
          return vf;
@@ -335,21 +335,21 @@ UInt armg_calculate_flag_v ( UInt cc_op, UInt cc_dep1,
       case ARMG_CC_OP_LOGIC: {
          /* (res, shco, oldV) */
          UInt oldV = cc_dep3;
-         vassert((oldV & ~1) == 0);
+         //vassert((oldV & ~1) == 0);
          UInt vf   = oldV;
          return vf;
       }
       case ARMG_CC_OP_MUL: {
          /* (res, unused, oldC:oldV) */
          UInt oldV = (cc_dep3 >> 0) & 1;
-         vassert((cc_dep3 & ~3) == 0);
+         //vassert((cc_dep3 & ~3) == 0);
          UInt vf   = oldV;
          return vf;
       }
       case ARMG_CC_OP_MULL: {
          /* (resLo32, resHi32, oldC:oldV) */
          UInt oldV    = (cc_dep3 >> 0) & 1;
-         vassert((cc_dep3 & ~3) == 0);
+         //vassert((cc_dep3 & ~3) == 0);
          UInt vf      = oldV;
          return vf;
       }
@@ -518,7 +518,7 @@ IRExpr* guest_arm_spechelper ( HChar*   function_name,
          replacement IR must produce only the values 0 or 1.  Bits
          31:1 are required to be zero. */
       IRExpr *cond_n_op, *cc_dep1, *cc_dep2, *cc_ndep;
-      vassert(arity == 4);
+      //vassert(arity == 4);
       cond_n_op = args[0]; /* (ARMCondcode << 4)  |  ARMG_CC_OP_* */
       cc_dep1   = args[1];
       cc_dep2   = args[2];
@@ -660,7 +660,7 @@ IRExpr* guest_arm_spechelper ( HChar*   function_name,
          values (from the thunk) are assumed to have bits 31:1
          clear. */
       IRExpr *cc_op, *cc_dep1, *cc_dep2, *cc_ndep;
-      vassert(arity == 4);
+      //vassert(arity == 4);
       cc_op   = args[0]; /* ARMG_CC_OP_* */
       cc_dep1 = args[1];
       cc_dep2 = args[2];
@@ -710,7 +710,7 @@ IRExpr* guest_arm_spechelper ( HChar*   function_name,
          values (from the thunk) are assumed to have bits 31:1
          clear. */
       IRExpr *cc_op, *cc_dep1, *cc_dep2, *cc_ndep;
-      vassert(arity == 4);
+      //vassert(arity == 4);
       cc_op   = args[0]; /* ARMG_CC_OP_* */
       cc_dep1 = args[1];
       cc_dep2 = args[2];
@@ -787,7 +787,7 @@ IRExpr* guest_arm_spechelper ( HChar*   function_name,
 void LibVEX_GuestARM_put_flags ( UInt flags_native,
                                  /*OUT*/VexGuestARMState* vex_state )
 {
-   vassert(0); // FIXME
+   //vassert(0); // FIXME
 
    /* Mask out everything except N Z V C. */
    flags_native
@@ -811,7 +811,7 @@ UInt LibVEX_GuestARM_get_cpsr ( /*IN*/VexGuestARMState* vex_state )
                vex_state->guest_CC_DEP2,
                vex_state->guest_CC_NDEP
             );
-   vassert(0 == (cpsr & 0x0FFFFFFF));
+   //vassert(0 == (cpsr & 0x0FFFFFFF));
    // Q
    if (vex_state->guest_QFLAG32 > 0)
       cpsr |= (1 << 27);

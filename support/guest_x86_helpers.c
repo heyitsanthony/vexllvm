@@ -723,7 +723,7 @@ UInt LibVEX_GuestX86_get_eflags ( /*IN*/VexGuestX86State* vex_state )
                     vex_state->guest_CC_NDEP
                  );
    UInt dflag = vex_state->guest_DFLAG;
-   vassert(dflag == 1 || dflag == 0xFFFFFFFF);
+   //vassert(dflag == 1 || dflag == 0xFFFFFFFF);
    if (dflag == 0xFFFFFFFF)
       eflags |= (1<<10);
    if (vex_state->guest_IDFLAG == 1)
@@ -802,7 +802,7 @@ IRExpr* guest_x86_spechelper ( HChar*   function_name,
    if (vex_streq(function_name, "x86g_calculate_condition")) {
       /* specialise calls to above "calculate condition" function */
       IRExpr *cond, *cc_op, *cc_dep1, *cc_dep2;
-      vassert(arity == 5);
+      //vassert(arity == 5);
       cond    = args[0];
       cc_op   = args[1];
       cc_dep1 = args[2];
@@ -1221,7 +1221,7 @@ IRExpr* guest_x86_spechelper ( HChar*   function_name,
    if (vex_streq(function_name, "x86g_calculate_eflags_c")) {
       /* specialise calls to above "calculate_eflags_c" function */
       IRExpr *cc_op, *cc_dep1, *cc_dep2, *cc_ndep;
-      vassert(arity == 4);
+      //vassert(arity == 4);
       cc_op   = args[0];
       cc_dep1 = args[1];
       cc_dep2 = args[2];
@@ -1295,7 +1295,7 @@ IRExpr* guest_x86_spechelper ( HChar*   function_name,
    if (vex_streq(function_name, "x86g_calculate_eflags_all")) {
       /* specialise calls to above "calculate_eflags_all" function */
       IRExpr *cc_op, *cc_dep1; /*, *cc_dep2, *cc_ndep; */
-      vassert(arity == 4);
+      //vassert(arity == 4);
       cc_op   = args[0];
       cc_dep1 = args[1];
       /* cc_dep2 = args[2]; */
@@ -1373,7 +1373,7 @@ UInt x86g_calculate_FXAM ( UInt tag, ULong dbl )
    UChar  sign;
    UChar* f64;
 
-   vassert(host_is_little_endian());
+   //vassert(host_is_little_endian());
 
    /* vex_printf("calculate_FXAM ( %d, %llx ) .. ", tag, dbl ); */
 
@@ -1734,7 +1734,7 @@ void x86g_dirtyhelper_FXSAVE ( VexGuestX86State* gst, HWord addr )
    /* That's the first 160 bytes of the image done.  Now only %xmm0
       .. %xmm7 remain to be copied.  If the host is big-endian, these
       need to be byte-swapped. */
-   vassert(host_is_little_endian());
+   //vassert(host_is_little_endian());
 
 #  define COPY_U128(_dst,_src)                       \
       do { _dst[0] = _src[0]; _dst[1] = _src[1];     \
@@ -1769,7 +1769,7 @@ VexEmWarn x86g_dirtyhelper_FXRSTOR ( VexGuestX86State* gst, HWord addr )
 
    /* Restore %xmm0 .. %xmm7.  If the host is big-endian, these need
       to be byte-swapped. */
-   vassert(host_is_little_endian());
+   //vassert(host_is_little_endian());
 
 #  define COPY_U128(_dst,_src)                       \
       do { _dst[0] = _src[0]; _dst[1] = _src[1];     \
@@ -2098,7 +2098,8 @@ UInt x86g_calculate_daa_das_aaa_aas ( UInt flags_and_AX, UInt opcode )
          break;
       }
       default:
-         vassert(0);
+         //vassert(0);
+         break;
    }
    result =   ( (r_O & 1) << (16 + X86G_CC_SHIFT_O) )
             | ( (r_S & 1) << (16 + X86G_CC_SHIFT_S) )
@@ -2135,7 +2136,8 @@ UInt x86g_calculate_aad_aam ( UInt flags_and_AX, UInt opcode )
          break;
       }
       default:
-         vassert(0);
+         //vassert(0);
+         break;
    }
 
    r_O = 0; /* let's say (undefined) */
@@ -2576,7 +2578,7 @@ ULong x86g_use_seg_selector ( HWord ldt, HWord gdt,
    Bool verboze = False;
 
    /* If this isn't true, we're in Big Trouble. */
-   vassert(8 == sizeof(VexGuestX86SegDescr));
+   //vassert(8 == sizeof(VexGuestX86SegDescr));
 
    if (verboze) 
       vex_printf("x86h_use_seg_selector: "
@@ -2599,7 +2601,7 @@ ULong x86g_use_seg_selector ( HWord ldt, HWord gdt,
 
    /* Convert the segment selector onto a table index */
    seg_selector >>= 3;
-   vassert(seg_selector >= 0 && seg_selector < 8192);
+   //vassert(seg_selector >= 0 && seg_selector < 8192);
 
    if (tiBit == 0) {
 
