@@ -48,7 +48,7 @@ static void dump_data(void)
 	while (!addr_stack.empty()) {
 		std::cerr
 			<< "[VEXLLVM] ADDR:"
-			<< gs->getName((guestptr_t)addr_stack.top())
+			<< gs->getName(addr_stack.top())
 			<< std::endl;
 		addr_stack.pop();
 	}

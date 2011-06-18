@@ -15,9 +15,6 @@ namespace llvm
 	class Value;
 }
 
-typedef uint64_t guestptr_t;
-
-
 /* ties together all state information for guest.
  * 1. register state
  * 2. memory mappings
@@ -35,7 +32,7 @@ public:
 
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
-	std::string getName(guestptr_t) const;
+	std::string getName(void*) const;
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
 	virtual Arch::Arch getArch() const = 0;

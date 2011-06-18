@@ -23,14 +23,18 @@ private:
 	void createElfTables(int argc, int envc);
 	void copyElfStrings(int argc, const char **argv);
 	void loaderBuildArgptr(int envc, int argc,
-		guestptr_t stringp, int push_ptr);
+		char* stringp, int push_ptr);
+		
+	void pushNative(const void*);
+	void pushNative(uintptr_t);
 
 	ElfImg			*img;
-	std::vector<void*>	arg_pages;
-	guestptr_t		arg_stack;
-	guestptr_t		stack_base;
-	guestptr_t		stack_limit;
-	guestptr_t		exe_string;
+	std::vector<char*>	arg_pages;
+	char*			sp;
+	size_t			arg_stack;
+	char*			stack_base;
+	char*			stack_limit;
+	char*			exe_string;
 };
 
 #endif

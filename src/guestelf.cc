@@ -26,13 +26,7 @@ using namespace llvm;
 #define ELF_PLATFORM	"x86_64"
 #define elf_phdr	Elf64_Phdr
 #define ELF_HWCAP	0x000000000febfbff
-#define target_mmap(a, b, c, d, e, f) \
-	(guestptr_t)mmap((void*)(a), b, c, d, e, f)
-#define target_mprotect(a, b, c) (guestptr_t)mprotect((void*)(a), b, c)
-#define memcpy_to_target(a, b, c) memcpy((void*)a, b, c)
-#define put_user_ual(v,a)	*(guestptr_t*)(a) = v;
-#define memcpy_fromfs	memcpy
-#define target_strlen(a) strlen((const char*)(a))
+#define put_user_ual(v,a)	*(void**)(a) = (void*)v;
 
 
 GuestELF::GuestELF(ElfImg* in_img)
@@ -63,7 +57,8 @@ void* GuestELF::getEntryPoint(void) const {
  *
  */
 
-#define TARGET_PAGE_SIZE 4096
+#define page_num(x) (uintptr_t)(x) / img->getPageSize()
+#define page_off(x) (uintptr_t)(x) % img->getPageSize()
 //borrowed liberally from qemu
 void GuestELF::copyElfStrings(int argc, const char **argv)
 {
@@ -83,19 +78,15 @@ void GuestELF::copyElfStrings(int argc, const char **argv)
 		len = tmp - tmp1;
 		
 		assert(arg_stack >= (unsigned int)len);
-		
 		while (len) {
 			--arg_stack; --tmp; --len;
 			if (--offset < 0) {
-				offset = arg_stack % TARGET_PAGE_SIZE;
-				pag = (char *)arg_pages[arg_stack/
-					TARGET_PAGE_SIZE];
+				offset = page_off(arg_stack);
+				pag = arg_pages[page_num(arg_stack)];
 				if (!pag) {
-					pag = (char *)
-						malloc(TARGET_PAGE_SIZE);
-					memset(pag, 0, TARGET_PAGE_SIZE);
-					arg_pages[arg_stack/
-						TARGET_PAGE_SIZE] = pag;
+					pag = new char[img->getPageSize()];
+					memset(pag, 0, img->getPageSize());
+					arg_pages[page_num(arg_stack)] = pag;
 					if (!pag)
 						return;
 				}
@@ -110,8 +101,7 @@ void GuestELF::copyElfStrings(int argc, const char **argv)
 				arg_stack -= bytes_to_copy;
 				offset -= bytes_to_copy;
 				len -= bytes_to_copy;
-				memcpy_fromfs(pag + offset, tmp, 
-					bytes_to_copy + 1);
+				memcpy(pag + offset, tmp, bytes_to_copy + 1);
 			}
 		}
 	}
@@ -120,16 +110,17 @@ void GuestELF::copyElfStrings(int argc, const char **argv)
 //borrowed liberally from qemu
 void GuestELF::setupArgPages()
 {
-	guestptr_t size, error, guard;
+	std::size_t size, guard; 
+	char *error;
 
 	/* Create enough stack to hold everything.	If we don't use
 	it for args, we'll use it for something else.  */
 	size = STACK_BYTES;
-	if (size < MAX_ARG_PAGES*TARGET_PAGE_SIZE) {
-		size = MAX_ARG_PAGES*TARGET_PAGE_SIZE;
+	if (size < MAX_ARG_PAGES*img->getPageSize()) {
+		size = MAX_ARG_PAGES*img->getPageSize();
 	}
 	/* TODO: this check and math really isn't right */
-	guard = TARGET_PAGE_SIZE;
+	guard = img->getPageSize();
 	if (guard < PAGE_SIZE) {
 		guard = PAGE_SIZE;
 	}
@@ -138,31 +129,25 @@ void GuestELF::setupArgPages()
 	if(img->getAddressBits() == 32)
 		flags |= MAP_32BIT;
 		
-	error = target_mmap(0, size + guard, PROT_READ | PROT_WRITE,
+	error = (char*)mmap(0, size + guard, PROT_READ | PROT_WRITE,
 		flags, -1, 0);
-	if ((int64_t)error == -1) {
-		perror("mmap stack");
-		exit(-1);
-	}
+	assert(error != MAP_FAILED);
 
 	/* We reserve one extra page at the top of the stack as guard.	*/
-	target_mprotect(error, guard, PROT_NONE);
+	mprotect(error, guard, PROT_NONE);
 
 	stack_limit = error + guard;
-	stack_base = stack_limit + size -
-		MAX_ARG_PAGES*TARGET_PAGE_SIZE;
-	arg_stack += stack_base;
+	stack_base = stack_limit + size - MAX_ARG_PAGES*img->getPageSize();
+	sp = stack_base + arg_stack;
 
 	foreach(it, arg_pages.begin(), arg_pages.end()) {
 		if (*it) {
 			// info->rss++;
-			/* FIXME - check return value of 
-			   memcpy_to_target() for failure */
-			memcpy_to_target(stack_base, *it, TARGET_PAGE_SIZE);
-			free(*it);
+			memcpy(stack_base, *it, img->getPageSize());
+			delete [] *it;
 			*it = NULL;
 		}
-		stack_base += TARGET_PAGE_SIZE;
+		stack_base += img->getPageSize();
 	}
 
 	if(getenv("VEXLLVM_LOG_MAPPINGS")) {
@@ -173,10 +158,9 @@ void GuestELF::setupArgPages()
 
 void GuestELF::createElfTables(int argc, int envc)
 {
-	guestptr_t string_stack = arg_stack;
-	guestptr_t& sp = arg_stack;
+	char* string_stack = sp;
 	int size;
-	guestptr_t u_platform;
+	char* u_platform;
 	const char *k_platform;
 	const int n = sizeof(elf_addr_t);
 
@@ -189,7 +173,8 @@ void GuestELF::createElfTables(int argc, int envc)
 		info->other_info = interp_info;
 		if (interp_info) {
 			interp_info->other_info = info;
-			sp = loader_build_fdpic_loadmap(interp_info, sp);
+			sp = loader_build_fdpic_loadmap(
+				interp_info, sp);
 		}
 	}
 #endif
@@ -201,10 +186,10 @@ void GuestELF::createElfTables(int argc, int envc)
 		sp -= (len + n - 1) & ~(n - 1);
 		u_platform = sp;
 		/* FIXME - check return value of memcpy_to_target() for failure */
-		memcpy_to_target(sp, k_platform, len);
+		memcpy(sp, k_platform, len);
 	}
 	/* random bytes used for aslr */
-	guestptr_t random_bytes = sp - 16;
+	void* random_bytes = sp - 16;
 	int rnd = open("/dev/urandom", O_RDONLY);
 	read(rnd, (void*)random_bytes, 16);
 	close(rnd);
@@ -214,7 +199,7 @@ void GuestELF::createElfTables(int argc, int envc)
 	/*
 	 * Force 16 byte _final_ alignment here for generality.
 	 */
-	sp = sp &~ (guestptr_t)16;
+	sp = (char*)((uintptr_t)sp & ~16);
 	size = (DLINFO_ITEMS + 1) * 2;
 	if (k_platform)
 		size += 2;
@@ -231,8 +216,8 @@ void GuestELF::createElfTables(int argc, int envc)
 	 * elf_addr_t as Elf32_Off / Elf64_Off
 	 */
 #define NEW_AUX_ENT(id, val) do {				\
-		sp -= n; put_user_ual(val, sp);			\
-		sp -= n; put_user_ual(id, sp);			\
+		sp -= n; put_user_ual(val, sp);		\
+		sp -= n; put_user_ual(id, sp);		\
 	} while(0)
 
 	NEW_AUX_ENT (AT_NULL, 0);
@@ -242,30 +227,30 @@ void GuestELF::createElfTables(int argc, int envc)
 	if (k_platform)
 		NEW_AUX_ENT(AT_PLATFORM, u_platform);
 	//ptr to filename
-	NEW_AUX_ENT(AT_EXECFN, (guestptr_t)exe_string);
+	NEW_AUX_ENT(AT_EXECFN, (void*)exe_string);
 
 	NEW_AUX_ENT(AT_RANDOM, random_bytes);
-	NEW_AUX_ENT(AT_SECURE, (guestptr_t)0); //not suid
+	NEW_AUX_ENT(AT_SECURE, (void*)0); //not suid
 
-	NEW_AUX_ENT(AT_EGID, (guestptr_t) getegid());
-	NEW_AUX_ENT(AT_GID, (guestptr_t) getgid());
-	NEW_AUX_ENT(AT_EUID, (guestptr_t) geteuid());
-	NEW_AUX_ENT(AT_UID, (guestptr_t) getuid());
-	NEW_AUX_ENT(AT_ENTRY, (guestptr_t)img->getEntryPoint());
-	NEW_AUX_ENT(AT_FLAGS, (guestptr_t)0);
-	NEW_AUX_ENT(AT_BASE, (guestptr_t)(img->getInterp() ?
-	img->getInterp()->getFirstSegment()->relocation()
-	: img->getFirstSegment()->relocation()));
-	NEW_AUX_ENT(AT_PHNUM, (guestptr_t)(img->getHeaderCount()));
-	NEW_AUX_ENT(AT_PHENT, (guestptr_t)(sizeof (elf_phdr)));
-	NEW_AUX_ENT(AT_PHDR, (guestptr_t)(img->getHeader()));
-	NEW_AUX_ENT(AT_CLKTCK, (guestptr_t) sysconf(_SC_CLK_TCK));
-	NEW_AUX_ENT(AT_PAGESZ, (guestptr_t)(TARGET_PAGE_SIZE));
-	NEW_AUX_ENT(AT_HWCAP, (guestptr_t) ELF_HWCAP);
+	NEW_AUX_ENT(AT_EGID, (void*) getegid());
+	NEW_AUX_ENT(AT_GID, (void*) getgid());
+	NEW_AUX_ENT(AT_EUID, (void*) geteuid());
+	NEW_AUX_ENT(AT_UID, (void*) getuid());
+	NEW_AUX_ENT(AT_ENTRY, (void*)img->getEntryPoint());
+	NEW_AUX_ENT(AT_FLAGS, (void*)0);
+	NEW_AUX_ENT(AT_BASE, (void*)(img->getInterp() ?
+		img->getInterp()->getFirstSegment()->relocation()
+		: img->getFirstSegment()->relocation()));
+	NEW_AUX_ENT(AT_PHNUM, (void*)(img->getHeaderCount()));
+	NEW_AUX_ENT(AT_PHENT, (void*)(sizeof (elf_phdr)));
+	NEW_AUX_ENT(AT_PHDR, (const void*)(img->getHeader()));
+	NEW_AUX_ENT(AT_CLKTCK, (void*) sysconf(_SC_CLK_TCK));
+	NEW_AUX_ENT(AT_PAGESZ, (void*)(img->getPageSize()));
+	NEW_AUX_ENT(AT_HWCAP, (void*) ELF_HWCAP);
 	//ptr to syscall - need to fetch, or stick a dummy one in?
-	//NEW_AUX_ENT(AT_SYSINFO_EHDR, (guestptr_t)0xffffffffff600000ULL); 
+	//NEW_AUX_ENT(AT_SYSINFO_EHDR, (void*)0xffffffffff600000ULL); 
 	// //fd for exe
-	// NEW_AUX_ENT(AT_EXECFD, (guestptr_t)0xbbbbbbbbbbbbbbbbbULL);
+	// NEW_AUX_ENT(AT_EXECFD, (void*)0xbbbbbbbbbbbbbbbbbULL);
 
 #ifdef ARCH_DLINFO
 	/*
@@ -284,13 +269,11 @@ void GuestELF::createElfTables(int argc, int envc)
 
 /* Construct the envp and argv tables on the target stack.	*/
 void GuestELF::loaderBuildArgptr(int envc, int argc,
-	guestptr_t stringp, int push_ptr)
+	char* stringp, int push_ptr)
 {
-	guestptr_t& sp = arg_stack;
-
-	int n = sizeof(guestptr_t);
-	guestptr_t envp;
-	guestptr_t argv;
+	int n = sizeof(void*);
+	char* envp;
+	char* argv;
 
 	sp -= (envc + 1) * n;
 	envp = sp;
@@ -314,7 +297,7 @@ void GuestELF::loaderBuildArgptr(int envc, int argc,
 		/* FIXME - handle put_user() failures */
 		put_user_ual(stringp, argv);
 		argv += n;
-		stringp += target_strlen(stringp) + 1;
+		stringp += strlen((char*)stringp) + 1;
 	}
 
 	// ts->info->arg_end = stringp;
@@ -325,7 +308,7 @@ void GuestELF::loaderBuildArgptr(int envc, int argc,
 		/* FIXME - handle put_user() failures */
 		put_user_ual(stringp, envp);
 		envp += n;
-		stringp += target_strlen(stringp) + 1;
+		stringp += strlen((char*)stringp) + 1;
 	}
 	/* FIXME - handle put_user() failures */
 	put_user_ual(0, envp);
@@ -336,7 +319,7 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 {
 	const char* filename;
 
-	arg_stack = TARGET_PAGE_SIZE*MAX_ARG_PAGES-sizeof(void*);
+	arg_stack = img->getPageSize()*MAX_ARG_PAGES-sizeof(void*);
 	filename = getBinaryPath();
 
 	copyElfStrings(1, &filename);
@@ -360,7 +343,7 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 		}
 	}
 
-	cpu_state->setStackPtr((void*)arg_stack);
+	cpu_state->setStackPtr((void*)sp);
 	setupMem();
 }
 
@@ -397,5 +380,21 @@ void GuestELF::setupMem(void)
 }
 Arch::Arch GuestELF::getArch() const {
 	return img->getArch();
+}
+
+void GuestELF::pushNative(const void* v) {
+	pushNative((uintptr_t)v);
+}
+void GuestELF::pushNative(uintptr_t v) {
+	if(img->getAddressBits() == 32) {
+		assert(!(v & ~0xFFFFFFFFULL));
+		*(unsigned*)arg_stack = v;
+		arg_stack += sizeof(unsigned int);
+	} else {
+		/* only other option is 64-bit and that means
+		   we are on a 64-bit host, so smash it in there*/
+		*(uintptr_t*)arg_stack = v;
+		arg_stack += sizeof(uintptr_t);
+	}
 }
 
