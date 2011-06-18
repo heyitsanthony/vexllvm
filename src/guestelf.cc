@@ -22,11 +22,6 @@ using namespace llvm;
    eventually, the code in here will do a better job discerning between
    guest and host addresses, etc */
 #define MAX_ARG_PAGES	32
-#define elf_addr_t	Elf64_Addr
-#define ELF_PLATFORM	"x86_64"
-#define elf_phdr	Elf64_Phdr
-#define ELF_HWCAP	0x000000000febfbff
-#define put_user_ual(v,a)	*(void**)(a) = (void*)v;
 
 
 GuestELF::GuestELF(ElfImg* in_img)
@@ -161,8 +156,7 @@ void GuestELF::createElfTables(int argc, int envc)
 	char* string_stack = sp;
 	int size;
 	char* u_platform;
-	const char *k_platform;
-	const int n = sizeof(elf_addr_t);
+	const char *k_platform = NULL;
 
 #ifdef CONFIG_USE_FDPIC
 	/* Needs to be before we load the env/argc/... */
@@ -178,16 +172,26 @@ void GuestELF::createElfTables(int argc, int envc)
 		}
 	}
 #endif
-
+	/* add a platform string */
 	u_platform = 0;
-	k_platform = ELF_PLATFORM;
+	switch(img->getArch()) {
+	case Arch::X86_64:
+		k_platform = "x86_64";
+		break;
+	case Arch::I386:
+		k_platform = "i386";
+		break;
+	case Arch::ARM:
+		k_platform = "ARM";
+		break;
+	}
 	if (k_platform) {
 		size_t len = strlen(k_platform) + 1;
-		sp -= (len + n - 1) & ~(n - 1);
-		u_platform = sp;
-		/* FIXME - check return value of memcpy_to_target() for failure */
+		sp -= 8;
 		memcpy(sp, k_platform, len);
+		u_platform = sp;
 	}
+	
 	/* random bytes used for aslr */
 	void* random_bytes = sp - 16;
 	int rnd = open("/dev/urandom", O_RDONLY);
@@ -195,74 +199,58 @@ void GuestELF::createElfTables(int argc, int envc)
 	close(rnd);
 	sp -= 16;
 
-#define DLINFO_ITEMS 14
-	/*
-	 * Force 16 byte _final_ alignment here for generality.
-	 */
-	sp = (char*)((uintptr_t)sp & ~16);
-	size = (DLINFO_ITEMS + 1) * 2;
-	if (k_platform)
-		size += 2;
-#ifdef DLINFO_ARCH_ITEMS
-	size += DLINFO_ARCH_ITEMS * 2;
-#endif
-	size += envc + argc + 2;
-	size += 1;	/* argc itself */
-	size *= n;
-	if (size & 15)
-		sp -= 16 - (size & 15);
+	/* align to 16 bytes for shits and giggles */
+	while((uintptr_t)sp & 0xf) 
+		pushPadByte();
 
-	/* This is correct because Linux defines
-	 * elf_addr_t as Elf32_Off / Elf64_Off
-	 */
-#define NEW_AUX_ENT(id, val) do {				\
-		sp -= n; put_user_ual(val, sp);		\
-		sp -= n; put_user_ual(id, sp);		\
-	} while(0)
+	pushNative(0);				pushNative(AT_NULL);
+	pushPointer(u_platform);		pushNative(AT_PLATFORM);
+	pushPointer(exe_string);		pushNative(AT_EXECFN);	
+	pushPointer(random_bytes);		pushNative(AT_RANDOM);	
+	pushNative(0); 				pushNative(AT_SECURE);
+	pushNative(getegid());			pushNative(AT_EGID);
+	pushNative(getgid());			pushNative(AT_GID);
+	pushNative(geteuid());			pushNative(AT_EUID);
+	pushNative(getuid());			pushNative(AT_UID);
+	pushPointer(img->getEntryPoint());	pushNative(AT_ENTRY); 
+	pushNative(0);			 	pushNative(AT_FLAGS); 
 
-	NEW_AUX_ENT (AT_NULL, 0);
-
-
-	/* There must be exactly DLINFO_ITEMS entries here.	 */
-	if (k_platform)
-		NEW_AUX_ENT(AT_PLATFORM, u_platform);
-	//ptr to filename
-	NEW_AUX_ENT(AT_EXECFN, (void*)exe_string);
-
-	NEW_AUX_ENT(AT_RANDOM, random_bytes);
-	NEW_AUX_ENT(AT_SECURE, (void*)0); //not suid
-
-	NEW_AUX_ENT(AT_EGID, (void*) getegid());
-	NEW_AUX_ENT(AT_GID, (void*) getgid());
-	NEW_AUX_ENT(AT_EUID, (void*) geteuid());
-	NEW_AUX_ENT(AT_UID, (void*) getuid());
-	NEW_AUX_ENT(AT_ENTRY, (void*)img->getEntryPoint());
-	NEW_AUX_ENT(AT_FLAGS, (void*)0);
-	NEW_AUX_ENT(AT_BASE, (void*)(img->getInterp() ?
+	pushPointer(img->getInterp() ?
 		img->getInterp()->getFirstSegment()->relocation()
-		: img->getFirstSegment()->relocation()));
-	NEW_AUX_ENT(AT_PHNUM, (void*)(img->getHeaderCount()));
-	NEW_AUX_ENT(AT_PHENT, (void*)(sizeof (elf_phdr)));
-	NEW_AUX_ENT(AT_PHDR, (const void*)(img->getHeader()));
-	NEW_AUX_ENT(AT_CLKTCK, (void*) sysconf(_SC_CLK_TCK));
-	NEW_AUX_ENT(AT_PAGESZ, (void*)(img->getPageSize()));
-	NEW_AUX_ENT(AT_HWCAP, (void*) ELF_HWCAP);
+		: img->getFirstSegment()->relocation());
+	pushNative(AT_BASE);	
+
+	pushNative(img->getHeaderCount());	pushNative(AT_PHNUM);
+	pushNative(img->getElfPhdrSize());	pushNative(AT_PHENT);
+	pushPointer(img->getHeader());		pushNative(AT_PHDR);
+	pushNative(sysconf(_SC_CLK_TCK)); 	pushNative(AT_CLKTCK);
+	pushNative(img->getPageSize());		pushNative(AT_PAGESZ);
+
+	switch(img->getArch()) {
+	case Arch::ARM:
+		/* more? */
+		pushNative(ARM_HWCAP_THUMB | ARM_HWCAP_NEON | 
+			ARM_HWCAP_VFPv3 | ARM_HWCAP_TLS);
+		break;
+	case Arch::I386:
+		/* check me!!! stolen from below*/
+		pushNative(0x000000000febfbff);
+		break;
+	case Arch::X86_64:
+		/* less? */
+		pushNative(0x000000000febfbff);
+		break;
+	case Arch::Unknown:
+		/* less? */
+		pushNative(0);
+		break;
+	}
+	pushNative(AT_HWCAP);
+
 	//ptr to syscall - need to fetch, or stick a dummy one in?
-	//NEW_AUX_ENT(AT_SYSINFO_EHDR, (void*)0xffffffffff600000ULL); 
-	// //fd for exe
-	// NEW_AUX_ENT(AT_EXECFD, (void*)0xbbbbbbbbbbbbbbbbbULL);
-
-#ifdef ARCH_DLINFO
-	/*
-	 * ARCH_DLINFO must come last so platform specific code can enforce
-	 * special alignment requirements on the AUXV if necessary (eg. PPC).
-	 */
-	ARCH_DLINFO;
-#endif
-#undef NEW_AUX_ENT
-
-	/* for completeness we could do something with the note... */
-	// info->saved_auxv = sp;
+	//pushNative(AT_SYSINFO_EHDR); pushPointer(?????); 
+	//fd for exe
+	// pushNative(AT_EXECFD); pushNative(???);
 
 	loaderBuildArgptr(envc, argc, string_stack, 0);
 }
@@ -271,47 +259,39 @@ void GuestELF::createElfTables(int argc, int envc)
 void GuestELF::loaderBuildArgptr(int envc, int argc,
 	char* stringp, int push_ptr)
 {
-	int n = sizeof(void*);
 	char* envp;
 	char* argv;
 
-	sp -= (envc + 1) * n;
+	/* reserve space for the environment string pointers and a null */
+	for(int i = 0; i <= envc; ++i) pushPointer(NULL);
 	envp = sp;
-	sp -= (argc + 1) * n;
+
+	/* reserve space for the argument string pointers and a null */
+	for(int i = 0; i <= argc; ++i) pushPointer(NULL);
 	argv = sp;
+
+	/* our ABI doesn't need this */
 	if (push_ptr) {
-		/* FIXME - handle put_user() failures */
-		sp -= n;
-		put_user_ual(envp, sp);
-		sp -= n;
-		put_user_ual(argv, sp);
+		pushPointer(envp);
+		pushPointer(argv);
 	}
-	sp -= n;
-	/* FIXME - handle put_user() failures */
-	put_user_ual(argc, sp);
 	
-	//ts->info->arg_start = stringp;
-
+	pushNative(argc);
+	
+	/* note where we store the bin path, because the elf tables want it */
 	exe_string = stringp;
+	
+	/* copy all the arg pointers into the table */
 	while (argc-- > 0) {
-		/* FIXME - handle put_user() failures */
-		put_user_ual(stringp, argv);
-		argv += n;
+		putPointer(argv, stringp, 1);
 		stringp += strlen((char*)stringp) + 1;
 	}
 
-	// ts->info->arg_end = stringp;
-
-	/* FIXME - handle put_user() failures */
-	put_user_ual(0, argv);
+	/* copy all the env pointers into the table */
 	while (envc-- > 0) {
-		/* FIXME - handle put_user() failures */
-		put_user_ual(stringp, envp);
-		envp += n;
+		putPointer(envp, stringp, 1);
 		stringp += strlen((char*)stringp) + 1;
 	}
-	/* FIXME - handle put_user() failures */
-	put_user_ual(0, envp);
 }
 
 void GuestELF::setArgv(unsigned int argc, const char* argv[],
@@ -341,6 +321,11 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 			std::ofstream o(save_fname.str().c_str());
 			o.write((char*)(*it)->base(), (*it)->length());
 		}
+		std::ostringstream save_fname;
+		save_fname << argv[0] << "." << getpid() 
+			<< "." << (void*)stack_limit;
+		std::ofstream o(save_fname.str().c_str());
+		o.write(stack_limit, stack_base - stack_limit);
 	}
 
 	cpu_state->setStackPtr((void*)sp);
@@ -382,19 +367,45 @@ Arch::Arch GuestELF::getArch() const {
 	return img->getArch();
 }
 
-void GuestELF::pushNative(const void* v) {
+void GuestELF::pushPointer(const void* v) {
 	pushNative((uintptr_t)v);
 }
 void GuestELF::pushNative(uintptr_t v) {
 	if(img->getAddressBits() == 32) {
 		assert(!(v & ~0xFFFFFFFFULL));
-		*(unsigned*)arg_stack = v;
-		arg_stack += sizeof(unsigned int);
+		sp -= sizeof(unsigned int);
+		*(unsigned*)sp = v;
 	} else {
 		/* only other option is 64-bit and that means
 		   we are on a 64-bit host, so smash it in there*/
-		*(uintptr_t*)arg_stack = v;
-		arg_stack += sizeof(uintptr_t);
+		sp -= sizeof(uintptr_t);
+		*(uintptr_t*)sp = v;
+	}
+}
+void GuestELF::putPointer(char*& p, const void* v, ssize_t inc) {
+	putNative(p, (uintptr_t)v, inc);
+}
+void GuestELF::putNative(char*& p, uintptr_t v, ssize_t inc) {
+	if(img->getAddressBits() == 32) {
+		assert(!(v & ~0xFFFFFFFFULL));
+		*(unsigned*)p = v;
+	} else {
+		/* only other option is 64-bit and that means
+		   we are on a 64-bit host, so smash it in there*/
+		*(uintptr_t*)p = v;
+	}
+	nextNative(p, inc);
+}	
+void GuestELF::nextNative(char*& p, ssize_t num) {
+	if(img->getAddressBits() == 32) {
+		p += num * sizeof(unsigned int);
+	} else {
+		/* only other option is 64-bit and that means
+		   we are on a 64-bit host, so smash it in there*/
+		p += num * sizeof(uintptr_t);
 	}
 }
 
+void GuestELF::pushPadByte() {
+	*--sp = 0;
+}

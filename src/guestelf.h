@@ -25,8 +25,12 @@ private:
 	void loaderBuildArgptr(int envc, int argc,
 		char* stringp, int push_ptr);
 		
-	void pushNative(const void*);
+	void pushPadByte();
+	void pushPointer(const void*);
 	void pushNative(uintptr_t);
+	void putPointer(char*& p, const void* v, ssize_t inc = 0);
+	void putNative(char*& p, uintptr_t v, ssize_t inc = 0);
+	void nextNative(char*& p, ssize_t inc = 1);
 
 	ElfImg			*img;
 	std::vector<char*>	arg_pages;

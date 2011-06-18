@@ -27,6 +27,24 @@ enum Arch {
 	I386,
 };
 }
+
+#define ARM_HWCAP_SWP       1
+#define ARM_HWCAP_HALF      2
+#define ARM_HWCAP_THUMB     4
+#define ARM_HWCAP_26BIT     8       /* Play it safe */
+#define ARM_HWCAP_FAST_MULT 16
+#define ARM_HWCAP_FPA       32
+#define ARM_HWCAP_VFP       64
+#define ARM_HWCAP_EDSP      128
+#define ARM_HWCAP_JAVA      256
+#define ARM_HWCAP_IWMMXT    512
+#define ARM_HWCAP_CRUNCH    1024
+#define ARM_HWCAP_THUMBEE   2048
+#define ARM_HWCAP_NEON      4096
+#define ARM_HWCAP_VFPv3     8192
+#define ARM_HWCAP_VFPv3D16  16384
+#define ARM_HWCAP_TLS       32768
+
 class ElfImg
 {
 public:
@@ -47,6 +65,10 @@ public:
 	unsigned int getPageSize() const { return 4096; }
 	Arch::Arch getArch() const { return arch; }
 	unsigned int getAddressBits() const { return address_bits; }
+	unsigned int getElfPhdrSize() const {
+		return (address_bits == 32) ?
+			sizeof(Elf32_Ehdr) : sizeof(Elf64_Ehdr);
+	}
 private:
 	ElfImg(const char* fname, Arch::Arch arch, bool linked);
 	static Arch::Arch readHeader(const char* fname, 
