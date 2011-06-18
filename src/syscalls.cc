@@ -61,15 +61,21 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	/* this will hold any memory mapping state across the call */
 
 	fakedSyscall = interceptSyscall(args, m, sc_ret);
-	if (!fakedSyscall)
-		sc_ret = syscall(
-			sys_nr,
-			args.getArg(0),
-			args.getArg(1),
-			args.getArg(2),
-			args.getArg(3),
-			args.getArg(4),
-			args.getArg(5));
+	if (!fakedSyscall) {
+		switch(guest->getArch()) {
+		case Arch::X86_64:
+			sc_ret = translateAMD64Syscall(args, m);
+			break;
+		case Arch::ARM:
+			sc_ret = translateARMSyscall(args, m);
+			break;
+		case Arch::I386:
+			sc_ret = translateI386Syscall(args, m);
+			break;
+		default:
+			assert(!"unknown arch type for syscall");
+		}
+	}
 
 	if (log_syscalls) {
 		std::cerr << "syscall(" << sys_nr << ", "

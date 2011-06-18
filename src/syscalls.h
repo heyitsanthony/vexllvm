@@ -26,6 +26,15 @@ private:
 		SyscallParams& args,
 		GuestMem::Mapping& m, 
 		unsigned long& sc_ret);
+	uintptr_t translateARMSyscall(
+		SyscallParams& args,
+		GuestMem::Mapping& m);
+	uintptr_t translateI386Syscall(
+		SyscallParams& args,
+		GuestMem::Mapping& m);
+	uintptr_t translateAMD64Syscall(
+		SyscallParams& args,
+		GuestMem::Mapping& m);
 
 	Guest				*guest;
 	std::list<SyscallParams>	sc_trace;

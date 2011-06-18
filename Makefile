@@ -42,10 +42,14 @@ OBJDEPS=	vexxlate.o		\
 		vexop.o			\
 		genllvm.o		\
 		guestcpustate.o		\
+		amd64cpustate.o		\
 		guest.o			\
 		memlog.o		\
 		vex_dispatch.o		\
 		syscalls.o		\
+		i386syscalls.o		\
+		armsyscalls.o		\
+		amd64syscalls.o		\
 		syscallsmarshalled.o	\
 		vexfcache.o		\
 		vexjitcache.o		\
