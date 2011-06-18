@@ -12,6 +12,7 @@
 #include "guest.h"
 #include "guestcpustate.h"
 #include "Sugar.h"
+#include "amd64cpustate.h"
 
 Syscalls::Syscalls(Guest* g)
 : guest(g)
@@ -122,19 +123,14 @@ bool Syscalls::interceptSyscall(
 		}
 		return false;
 	case SYS_arch_prctl:
-		/* arrrrg... this is a little too x86 specific */
-		/* (but we'll have to worry about syscall shuffling
-		 *  across archs anyway, so it's OK for now) */
-		if(args.getArg(0) == ARCH_GET_FS) {
-			sc_ret = cpu_state->getFSBase();
-		} else if(args.getArg(0) == ARCH_SET_FS) {
-			cpu_state->setFSBase(args.getArg(1));
-			sc_ret = 0;
-		} else {
-			/* nothing else is supported by VEX */
-			sc_ret = -EPERM;
+		switch(guest->getArch()) {
+		case Arch::X86_64:
+			if(AMD64_arch_prctl(args, m, sc_ret))
+				return true;
+			break;
+		default:
+			break;
 		}
-		return true;
 	case SYS_brk:
 		if (!mappings->brk()) {
 			/* don't let the app pull the rug */
@@ -217,4 +213,26 @@ void Syscalls::print(std::ostream& os) const
 			<< (void*)sp.getArg(4) << ", "
 			<< (void*)sp.getArg(5) << "}" << std::endl;
 	}
+}
+
+#define SYSCALL_BODY(arch, call) SYSCALL_BODY_TRICK(arch, call, _)
+
+#define SYSCALL_BODY_TRICK(arch, call, underbar) \
+	bool Syscalls::arch##underbar##call(	\
+		SyscallParams&		args,	\
+		GuestMem::Mapping&	m,	\
+		unsigned long&		sc_ret)
+
+SYSCALL_BODY(AMD64, arch_prctl) {
+	AMD64CPUState* cpu_state = (AMD64CPUState*)this->cpu_state;
+	if(args.getArg(0) == ARCH_GET_FS) {
+		sc_ret = cpu_state->getFSBase();
+	} else if(args.getArg(0) == ARCH_SET_FS) {
+		cpu_state->setFSBase(args.getArg(1));
+		sc_ret = 0;
+	} else {
+		/* nothing else is supported by VEX */
+		sc_ret = -EPERM;
+	}
+	return true;
 }

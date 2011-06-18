@@ -40,6 +40,7 @@ GuestELF::GuestELF(ElfImg* in_img)
 , img(in_img)
 , arg_pages(MAX_ARG_PAGES)
 {
+	cpu_state = GuestCPUState::create(img->getArch());
 	stack = new uint8_t[STACK_BYTES];
 	memset(stack, 0x32, STACK_BYTES);	/* bogus data */
 	cpu_state->setStackPtr(stack + STACK_BYTES-256 /*redzone+gunk*/);

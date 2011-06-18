@@ -11,7 +11,6 @@ using namespace llvm;
 Guest::Guest(const char* in_bin_path)
 : mem(NULL)
 {
-	cpu_state = new GuestCPUState();
 	bin_path = strdup(in_bin_path);
 }
 

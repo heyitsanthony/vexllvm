@@ -35,6 +35,20 @@ private:
 	GuestMem*			mappings;
 	const std::string		binary;
 	bool				log_syscalls;
+	
+/* specific architecture handling of syscall could go in another
+   class if there wasn't the marshalled syscall option.  so we'll
+   dispatch to other functins for platform specific stuff.  these can
+   go into separate files if they get big */
+#define SYSCALL_HANDLER(arch, call) SYSCALL_HANDLER_TRICK(arch, call, _)
+
+#define SYSCALL_HANDLER_TRICK(arch, call, underbar) \
+	bool arch##underbar##call(		\
+		SyscallParams&		args,	\
+		GuestMem::Mapping&	m,	\
+		unsigned long&		sc_ret)
+private:
+	SYSCALL_HANDLER(AMD64, arch_prctl);
 };
 
 #endif

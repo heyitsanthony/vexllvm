@@ -23,6 +23,10 @@
 #include "guestptimg.h"
 #include "guestcpustate.h"
 
+#ifdef __amd64__
+#include "amd64cpustate.h"
+#endif
+
 using namespace llvm;
 
 static bool dump_maps;
@@ -41,6 +45,8 @@ GuestPTImg::GuestPTImg(
 	entry_pt = img->getEntryPoint();
 
 	assert(img->getArch() == getArch());
+
+	cpu_state = GuestCPUState::create(getArch());
 
 	delete img;
 }
@@ -347,8 +353,11 @@ void GuestPTImg::slurpRegisters(pid_t pid)
 	err = ptrace(PTRACE_GETFPREGS, pid, NULL, &fpregs); 
 	assert(err != -1);
 
-	cpu_state->setRegs(regs, fpregs);
-	cpu_state->setTLS(new PTImgTLS((void*)regs.fs_base));
+#ifdef __amd64__
+	AMD64CPUState* amd64_cpu_state = (AMD64CPUState*)cpu_state;
+	amd64_cpu_state->setRegs(regs, fpregs);
+	amd64_cpu_state->setTLS(new PTImgTLS((void*)regs.fs_base));
+#endif
 }
 
 void GuestPTImg::slurpBrains(pid_t pid)
