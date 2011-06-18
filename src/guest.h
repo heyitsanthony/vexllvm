@@ -6,6 +6,7 @@
 #include <list>
 #include "guestmem.h"
 #include "syscallparams.h"
+#include "elfimg.h"
 
 class GuestCPUState;
 
@@ -26,8 +27,6 @@ class Guest
 {
 public:
 	virtual ~Guest(void);
-	virtual llvm::Value* addrVal2Host(llvm::Value* addr_v) const = 0;
-	virtual uint64_t addr2Host(guestptr_t guestptr) const = 0;
 	virtual void* getEntryPoint(void) const = 0;
 	std::list<GuestMem::Mapping> getMemoryMap(void) const;
 
@@ -39,10 +38,12 @@ public:
 	std::string getName(guestptr_t) const;
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
+	virtual Arch::Arch getArch() const = 0;
 
 	const char* getBinaryPath(void) const { return bin_path; }
 	const GuestMem* getMem(void) const { assert (mem != NULL); return mem; }
 	GuestMem* getMem(void) { assert (mem != NULL); return mem; }
+	static Arch::Arch getHostArch();
 protected:
 	Guest(const char* bin_path);
 

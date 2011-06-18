@@ -10,6 +10,7 @@
 #include "vexexpr.h"
 #include "vexsb.h"
 #include "vexxlate.h"
+#include "elfimg.h"
 
 #define VEX_DEBUG_LEVEL	0
 #define VEX_TRACE_FLAGS	0
@@ -60,8 +61,43 @@ static void vex_log(HChar* hc, Int nbytes)
 
 static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
 
-VexXlate::VexXlate()
+VexXlate::VexXlate(Arch::Arch in_arch)
 {
+	LibVEX_default_VexArchInfo(&vai_host);
+#if defined(__amd64__)
+	/* we actually do have some extensions... */
+	vai_host.hwcaps = 0;
+#elif defined(__i386__)
+	/* we actually do have some extensions... */
+	vai_host.hwcaps = 0;
+#elif defined(__arm__)
+	/* pretend we're just arm 7 for now.. */
+	vai_host.hwcaps = 7;
+#else
+	#error Unsupported Host Architecture
+#endif
+
+
+	LibVEX_default_VexArchInfo(&vai_guest);
+	switch(in_arch) {
+	case Arch::X86_64:
+		arch = VexArchAMD64;
+		break;
+	case Arch::ARM:
+		arch = VexArchARM;
+		vai_guest.hwcaps = 
+			VEX_HWCAPS_ARM_NEON | 
+			VEX_HWCAPS_ARM_VFP3 | 
+			VEX_HWCAPS_ARM_VFP2 | 
+			VEX_HWCAPS_ARM_VFP | 
+			7;
+		break;
+	case Arch::I386:
+		arch = VexArchX86;
+		break;
+	default:
+		assert(!"valid VEX architecture");
+	}
 	LibVEX_default_VexControl(&vc);
 	if(getenv("VEXLLVM_SINGLE_STEP")) {
 		vc.guest_max_insns = 1;
@@ -69,8 +105,6 @@ VexXlate::VexXlate()
 	}
 	LibVEX_Init(vex_exit, vex_log, VEX_DEBUG_LEVEL, false, &vc);
 
-	LibVEX_default_VexArchInfo(&vai_amd64);
-	vai_amd64.hwcaps = 0;
 	LibVEX_default_VexAbiInfo(&vbi);
 
 	loadLogType();
@@ -119,10 +153,18 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	uint8_t			b[1024 /* bogus buffer for VX->MC dump */];
 
 	memset(&vta, 0, sizeof(vta));
-	vta.arch_guest = VexArchAMD64;
-	vta.archinfo_guest = vai_amd64;
+	vta.arch_guest = arch;
+	vta.archinfo_guest = vai_guest;
+#if defined(__amd64__)
 	vta.arch_host = VexArchAMD64;
-	vta.archinfo_host = vai_amd64;
+#elif defined(__i386__)
+	vta.arch_host = VexArchX86;
+#elif defined(__arm__)
+	vta.arch_host = VexArchARM;
+#else
+	#error Unsupported Host Architecture
+#endif
+	vta.archinfo_host = vai_host;
 	vbi.guest_stack_redzone_size = 128;		/* I LOVE RED ZONE. BEST ABI BEST.*/
 	vbi.guest_amd64_assume_fs_is_zero = true;	/* XXX LIBVEX FIXME */
 	vta.abiinfo_both = vbi;
@@ -150,6 +192,7 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 #else
 	vta.dispatch_assisted = (void*)dispatch_asm_amd64;
 	vta.dispatch_unassisted = (void*)dispatch_asm_amd64;
+	vta.irsb_only = true;
 #endif
 	res = LibVEX_Translate(&vta);
 	if (res == VexTransAccessFail) return NULL;

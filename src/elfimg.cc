@@ -18,9 +18,6 @@
 #include <vector>
 
 #define WARNING(x)	fprintf(stderr, "WARNING: "x)
-// #define DEFAULT_INTERP	"/lib/ld-linux-x86-64.so.2"
-#define DEFAULT_INTERP	"/usr/arm-linux-gnueabi/lib/ld-linux.so.3" 
-
 
 #define ElfImg32 ElfImg
 #define ElfImg64 ElfImg
@@ -43,8 +40,10 @@ ElfImg::~ElfImg(void)
 	close(fd);
 }
 
-ElfImg::ElfImg(const char* fname, Arch::Arch arch, bool in_linked)
-: interp(NULL), linked(in_linked)
+ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked)
+: interp(NULL)
+, linked(in_linked)
+, arch(in_arch)
 {
 	struct stat	st;
 
@@ -62,6 +61,9 @@ ElfImg::ElfImg(const char* fname, Arch::Arch arch, bool in_linked)
 	assert(img_mmap != MAP_FAILED);
 
 	hdr_raw = img_mmap;
+	
+	if(getenv("VEXLLVM_LIBRARY_ROOT"))
+		library_root.assign(getenv("VEXLLVM_LIBRARY_ROOT"));
 
 	switch(arch) {
 	case Arch::X86_64:
@@ -111,8 +113,9 @@ void ElfImg::setupSegments(void)
 		ElfSegment	*es;
 		
 		if (phdr[i].p_type == PT_INTERP) {
-			//TODO: use the specified interpreter
-			interp = ElfImg::create(DEFAULT_INTERP, false); 
+			std::string path((char*)img_mmap + phdr[i].p_offset);
+			path = library_root + path;
+			interp = ElfImg::create(path.c_str(), false); 
 			continue;
 		}
 		es = ElfSegment::load(fd, phdr[i], 
@@ -143,10 +146,13 @@ static const unsigned char ok_ident_32[] = "\x7f""ELF\x1\x1\x1";
 #define EXPECTED(x)	fprintf(stderr, "ELF: expected "x"!\n")
 
 elfptr_t ElfImg::getEntryPoint(void) const {
+	/* address must be translated in case the region was remapped
+	   as is the case for the interp which specified a load address
+	   base of 0 */
 	if(address_bits == 32) {
-		return (void*)hdr32->e_entry; 
+		return xlateAddr((void*)hdr32->e_entry); 
 	} else if(address_bits == 64) {
-		return (void*)hdr64->e_entry; 
+		return xlateAddr((void*)hdr64->e_entry); 
 	} else {
 		assert(!"address bits corrupted");
 	}

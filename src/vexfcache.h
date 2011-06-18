@@ -4,7 +4,7 @@
 #include <iostream>
 #include <map>
 #include "directcache.h"
-
+#include "elfimg.h"
 
 namespace llvm
 {
@@ -22,7 +22,7 @@ class VexFCache
 {
 public:
 	/* makes own vexxlate */
-	VexFCache(void);
+	VexFCache(Arch::Arch arch);
 	/* claims ownership of vexxlate */
 	VexFCache(VexXlate* vexxlate);
 

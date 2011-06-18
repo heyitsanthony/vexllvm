@@ -39,6 +39,9 @@ GuestPTImg::GuestPTImg(
 	assert (img != NULL && "DOES BINARY EXIST?");
 
 	entry_pt = img->getEntryPoint();
+
+	assert(img->getArch() == getArch());
+
 	delete img;
 }
 
@@ -462,5 +465,8 @@ void GuestPTImg::setupMem(void)
 		mem->recordMapping(s);
 	}	
 	//TODO: guess the brk? maybe not necessary for ptimg
+}
+Arch::Arch GuestPTImg::getArch() const {
+	return getHostArch();
 }
 

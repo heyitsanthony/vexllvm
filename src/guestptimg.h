@@ -61,8 +61,6 @@ class GuestPTImg : public Guest
 {
 public:
 	virtual ~GuestPTImg(void) {}
-	llvm::Value* addrVal2Host(llvm::Value* addr_v) const { return addr_v; }
-	uint64_t addr2Host(guestptr_t guestptr) const { return guestptr; }
 	void* getEntryPoint(void) const { return entry_pt; }
 
 	template <class T>
@@ -91,6 +89,7 @@ public:
 		void* range_begin = 0, void* range_end = 0);
 
 	static void dumpSelfMap(void);
+	virtual Arch::Arch getArch() const;
 
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[]);

@@ -12,13 +12,11 @@ public:
 	GuestELF(ElfImg* in_img);
 	virtual ~GuestELF(void);
 	const ElfImg* getExeImage(void) const { return img; }
-	llvm::Value* addrVal2Host(llvm::Value* addr_v) const;
-	uint64_t addr2Host(guestptr_t guestptr) const;
 	void* getEntryPoint(void) const;
 	/* copy command line state into state */
 	void setArgv(unsigned int argc, const char* argv[],
 		int envc, const char* envp[]);
-
+	virtual Arch::Arch getArch() const;
 private:
 	void setupMem(void);
 	void setupArgPages();

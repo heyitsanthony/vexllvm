@@ -73,7 +73,7 @@ VexExec::VexExec(Guest* in_gs)
 	/* XXX need to fix ownership of module exe engine deletes it now! */
 	theVexHelpers->bindToExeEngine(exeEngine);
 
-	jit_cache = new VexJITCache(new VexXlate(), exeEngine);
+	jit_cache = new VexJITCache(new VexXlate(gs->getArch()), exeEngine);
 	if (getenv("VEXLLVM_VSB_MAXCACHE")) {
 		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
 	}
@@ -186,10 +186,7 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	GuestMem::Mapping		m;
 	bool				found;
 
-	hostptr = (void*)(gs->addr2Host((uint64_t)elfptr));
-
-	/* XXX recongnize library ranges */
-	if (hostptr == NULL) hostptr = elfptr;
+	hostptr = elfptr;
 
 	if (exit_addrs.count((elfptr_t)elfptr)) {
 		exited = true;

@@ -441,6 +441,19 @@ Index: priv/main_main.c
     vassert(vcon->guest_chase_thresh >= 0);
     vassert(vcon->guest_chase_thresh < vcon->guest_max_insns);
     vassert(vcon->guest_chase_cond == True 
+@@ -625,6 +625,12 @@
+       irsb = vta->finaltidy(irsb);
+    }
+ 
++   if(vta->irsb_only) {
++      *(vta->host_bytes_used) = out_used;
++      vexSetAllocModeTEMP_and_clear();
++      return VexTransOK;
++   }
++
+    vexAllocSanityCheck();
+ 
+    if (vex_traceflags & VEX_TRACE_TREES) {
 Index: priv/guest_generic_bb_to_IR.c
 ===================================================================
 --- priv/guest_generic_bb_to_IR.c	(revision 2155)
@@ -454,3 +467,19 @@ Index: priv/guest_generic_bb_to_IR.c
     vassert(vex_control.guest_chase_thresh >= 0);
     vassert(vex_control.guest_chase_thresh < vex_control.guest_max_insns);
     vassert(guest_word_type == Ity_I32 || guest_word_type == Ity_I64);
+Index: pub/libvex.h
+===================================================================
+--- pub/libvex.h	(revision 2155)
++++ pub/libvex.h	(working copy)
+@@ -587,6 +587,11 @@
+       */
+       void* dispatch_unassisted;
+       void* dispatch_assisted;
++
++      /* IN: only generate IRSB so it can be used for other purposes
++         via a dispatch through the final tidy function 
++      */
++      Bool irsb_only;
+    }
+    VexTranslateArgs;
+ 

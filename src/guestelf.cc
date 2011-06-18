@@ -47,44 +47,9 @@ GuestELF::GuestELF(ElfImg* in_img)
 
 GuestELF::~GuestELF(void) { delete [] stack; }
 
-Value* GuestELF::addrVal2Host(Value* addr_v) const
-{
-	const ConstantInt	*ci;
-
-	/* cheat if everything could be mapped into the 
-	 * right spot. */
-	if (img->isDirectMapped()) return addr_v;
-
-	ci = dynamic_cast<const ConstantInt*>(addr_v);
-	if (ci != NULL) {
-		/* Fast path. Can directly resolve */
-		uintptr_t	hostaddr;
-		hostaddr = addr2Host(ci->getZExtValue());
-		addr_v = ConstantInt::get(
-			getGlobalContext(), APInt(64, hostaddr));
-		std::cerr << "FAST PATH LOAD" << std::endl;
-		return addr_v;
-	}
-
-	/* XXX CUT OUT */
-	/* Slow path. Need help resolving */
-	std::cerr << "SLOW PATH LOAD XXX XXX FIXME" << std::endl;
-	assert (0 == 1 && "SLOW PATH LOAD NOT IMPLEMENTED");
-//	addr_v = new  builder->CreateCall(f, , "__addr2Host");
-	addr_v->dump();
-
-	return addr_v;
-}
-
-uintptr_t GuestELF::addr2Host(uintptr_t guestptr) const
-{
-	return (uintptr_t)img->xlateAddr((elfptr_t)guestptr);
-}
-
 void* GuestELF::getEntryPoint(void) const { 
 	if(img->getInterp())
-		return img->getInterp()->getFirstSegment()->
-			xlate(img->getInterp()->getEntryPoint()); 
+		return img->getInterp()->getEntryPoint(); 
 	else
 		return img->getEntryPoint(); 
 }
@@ -423,3 +388,7 @@ void GuestELF::setupMem(void)
 		true);
 	mem->recordMapping(s);
 }
+Arch::Arch GuestELF::getArch() const {
+	return img->getArch();
+}
+

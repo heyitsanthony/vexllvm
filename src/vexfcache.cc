@@ -11,8 +11,8 @@
 
 using namespace llvm;
 
-VexFCache::VexFCache(void)
-: xlate(new VexXlate()),
+VexFCache::VexFCache(Arch::Arch arch)
+: xlate(new VexXlate(arch)),
   max_cache_ents(~0) /* don't evict by default */
 {
 	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;

@@ -9,6 +9,7 @@ extern "C" {
 #include <valgrind/libvex_ir.h>
 extern void dispatch_asm_amd64(void);
 }
+#include "elfimg.h"
 
 class VexSB;
 
@@ -16,7 +17,7 @@ class VexSB;
 class VexXlate
 {
 public:
-	VexXlate();
+	VexXlate(Arch::Arch arch);
 	virtual ~VexXlate();
 	VexSB* xlate(const void* guest_bytes, uint64_t guest_addr);
 	void dumpLog(std::ostream& os) const;
@@ -32,8 +33,10 @@ private:
 	void loadLogType(void);
 
 	VexControl		vc;
-	VexArchInfo		vai_amd64;
+	VexArchInfo		vai_host;
+	VexArchInfo		vai_guest;
 	VexAbiInfo		vbi;
+	VexArch			arch;
 };
 
 #endif

@@ -44,6 +44,8 @@ public:
 	celfptr_t getBase() const;
 	ElfSegment* getFirstSegment() const { return segments.front(); }
 	void getSegments(std::list<ElfSegment*>& r) const;
+	unsigned int getPageSize() const { return 4096; }
+	Arch::Arch getArch() const { return arch; }
 private:
 	ElfImg(const char* fname, Arch::Arch arch, bool linked);
 	static Arch::Arch readHeader(const char* fname, 
@@ -71,6 +73,8 @@ private:
 	ElfImg* interp;
 	bool linked;
 	unsigned		address_bits;
+	std::string		library_root;
+	Arch::Arch		arch;
 };
 
 #endif
