@@ -43,6 +43,8 @@ OBJDEPS=	vexxlate.o		\
 		genllvm.o		\
 		guestcpustate.o		\
 		amd64cpustate.o		\
+		i386cpustate.o		\
+		armcpustate.o		\
 		guest.o			\
 		memlog.o		\
 		vex_dispatch.o		\

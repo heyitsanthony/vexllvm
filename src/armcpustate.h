@@ -1,5 +1,5 @@
-#ifndef AMD64CPUSTATE_H
-#define AMD64CPUSTATE_H
+#ifndef ARMCPUSTATE_H
+#define ARMCPUSTATE_H
 
 #include <iostream>
 #include <stdint.h>
@@ -9,11 +9,11 @@
 #include <map>
 #include "guestcpustate.h"
 
-class AMD64CPUState : public GuestCPUState
+class ARMCPUState : public GuestCPUState
 {
 public:
-	AMD64CPUState();
-	~AMD64CPUState();
+	ARMCPUState();
+	~ARMCPUState();
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 	void setStackPtr(void*);
 	void* getStackPtr(void) const;
@@ -22,24 +22,15 @@ public:
 	uint64_t getExitCode(void) const;
 
 	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
-#ifdef __amd64__
-	void setRegs(const user_regs_struct& regs, 
-		const user_fpregs_struct& fpregs);
+#ifdef __arm__
+	void setRegs(const user& regs, const user_fp& fpregs, 
+		const user_vfp& vfpregs) {
 #endif
 	void print(std::ostream& os) const;
-
-	GuestTLS* getTLS(void) { return tls; }
-	const GuestTLS* getTLS(void) const { return tls; }
-	void setTLS(GuestTLS* tls);
-
-	void setFSBase(uintptr_t base);
-	uintptr_t getFSBase() const;
 
 	const char* off2Name(unsigned int off) const;
 protected:
 	void mkRegCtx(void);
-private:
-	GuestTLS	*tls;
 };
 
 #endif

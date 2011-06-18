@@ -46,6 +46,7 @@ public:
 	void getSegments(std::list<ElfSegment*>& r) const;
 	unsigned int getPageSize() const { return 4096; }
 	Arch::Arch getArch() const { return arch; }
+	unsigned int getAddressBits() const { return address_bits; }
 private:
 	ElfImg(const char* fname, Arch::Arch arch, bool linked);
 	static Arch::Arch readHeader(const char* fname, 

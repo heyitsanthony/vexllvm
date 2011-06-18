@@ -26,7 +26,6 @@ private:
 		guestptr_t stringp, int push_ptr);
 
 	ElfImg			*img;
-	uint8_t			*stack;
 	std::vector<void*>	arg_pages;
 	guestptr_t		arg_stack;
 	guestptr_t		stack_base;

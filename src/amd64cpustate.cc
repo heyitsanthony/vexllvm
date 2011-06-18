@@ -2,9 +2,6 @@
 #include "Sugar.h"
 
 #include <iostream>
-#include <llvm/Intrinsics.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/LLVMContext.h>
 #include <cstring>
 #include <vector>
 
@@ -13,15 +10,6 @@
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
 }
-
-using namespace llvm;
-
-struct guest_ctx_field
-{
-	unsigned char	f_len;
-	unsigned int	f_count;
-	const char*	f_name;
-};
 
 #define state2amd64()	((VexGuestAMD64State*)(state_data))
 
@@ -53,53 +41,6 @@ void AMD64CPUState::setTLS(GuestTLS* in_tls)
 	tls = in_tls;
 	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) =
 		(uintptr_t)tls->getBase();
-}
-
-Type* AMD64CPUState::mkFromFields(
-	struct guest_ctx_field* f, byte2elem_map& offmap)
-{
-	std::vector<const Type*>	types;
-	const Type		*i8ty, *i16ty, *i32ty, *i64ty, *i128ty;
-	LLVMContext		&gctx(getGlobalContext());
-	int			i;
-	unsigned int		cur_byte_off, total_elems;
-
-	i8ty = Type::getInt8Ty(gctx);
-	i16ty = Type::getInt16Ty(gctx);
-	i32ty = Type::getInt32Ty(gctx);
-	i64ty = Type::getInt64Ty(gctx);
-	i128ty = VectorType::get(i16ty, 8);
-
-	/* add all fields to types vector from structure */
-	i = 0;
-	cur_byte_off = 0;
-	total_elems = 0;
-	offmap.clear();
-	while (f[i].f_len != 0) {
-		const Type	*t;
-
-		switch (f[i].f_len) {
-		case 8:		t = i8ty;	break;
-		case 32:	t = i32ty;	break;
-		case 64:	t = i64ty;	break;
-		case 128:	t = i128ty;	break;
-		default:
-		fprintf(stderr, "UGH w=%d\n", f[i].f_len);
-		assert( 0 == 1 && "BAD FIELD WIDTH");
-		}
-
-		for (unsigned int c = 0; c < f[i].f_count; c++) {
-			types.push_back(t);
-			offmap[cur_byte_off] = total_elems;
-			cur_byte_off += f[i].f_len / 8;
-			total_elems++;
-		}
-
-		i++;
-	}
-	state_byte_c = cur_byte_off;
-
-	return StructType::get(gctx, types, "guestCtxTy");
 }
 
 /* ripped from libvex_guest_amd64 */
@@ -150,7 +91,6 @@ static struct guest_ctx_field amd64_fields[] =
 
 void AMD64CPUState::mkRegCtx(void)
 {
-	/* XXX only support AMD64 right now. Update for other archs */
 	guestCtxTy = mkFromFields(amd64_fields, off2ElemMap);
 }
 
@@ -342,7 +282,9 @@ void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 	*((uint64_t*)((uintptr_t)state_data + arg2reg[arg_num])) = arg_val;
 }
 
-void AMD64CPUState::setRegs(const user_regs_struct& regs, const user_fpregs_struct& fpregs) {
+#ifdef __amd64__
+void AMD64CPUState::setRegs(const user_regs_struct& regs, 
+	const user_fpregs_struct& fpregs) {
 	state2amd64()->guest_RAX = regs.rax;
 	state2amd64()->guest_RCX = regs.rcx;
 	state2amd64()->guest_RDX = regs.rdx;
@@ -363,48 +305,17 @@ void AMD64CPUState::setRegs(const user_regs_struct& regs, const user_fpregs_stru
 
 	//TODO: some kind of eflags, checking but i don't yet understand this
 	//mess of broken apart state.
-	//
-	// /* 4-word thunk used to calculate O S Z A C P flags. */
-	// /* 128 */ ULong  guest_CC_OP;
-	// /* 136 */ ULong  guest_CC_DEP1;
-	// /* 144 */ ULong  guest_CC_DEP2;
-	// /* 152 */ ULong  guest_CC_NDEP;
-	// /* The D flag is stored here, encoded as either -1 or +1 */
-	// /* 160 */ ULong  guest_DFLAG;
-	// /* 168 */ ULong  guest_RIP;
-	// /* Bit 18 (AC) of eflags stored here, as either 0 or 1. */
-	// /* ... */ ULong  guest_ACFLAG;
-	// /* Bit 21 (ID) of eflags stored here, as either 0 or 1. */
 
-	//TODO: segments? but valgrind/vex seems to not really fully handle them, how sneaky
+	//valgrind/vex seems to not really fully segments them, how sneaky
 	state2amd64()->guest_FS_ZERO = regs.fs_base;
-
-	//TODO: what is this for? well besides the obvious
-	// /* 192 */ULong guest_SSEROUND;
 
 	memcpy(&state2amd64()->guest_XMM0, &fpregs.xmm_space[0], sizeof(fpregs.xmm_space));
 
-	//TODO: check the top pointer of the floating point stack..
-	// /* FPU */
-	// /* 456 */UInt  guest_FTOP;
-	//FPTAG?
 
 	//TODO: this is surely wrong, the sizes don't even match...
 	memcpy(&state2amd64()->guest_FPREG[0], &fpregs.st_space[0], sizeof(state2amd64()->guest_FPREG));
 
 
-	//TODO: what are these?
-	// /* 536 */ ULong guest_FPROUND;
-	// /* 544 */ ULong guest_FC3210;
-
-	//probably not TODO: more stuff that is likely unneeded
-	// /* 552 */ UInt  guest_EMWARN;
-	// ULong guest_TISTART;
-	// ULong guest_TILEN;
-	// ULong guest_NRADDR;
-	// ULong guest_SC_CLASS;
-	// ULong guest_GS_0x60;
-	// ULong guest_IP_AT_SYSCALL;
-	// ULong padding;
-
+	//TODO: floating point flags and extra fp state, sse  rounding
 }
+#endif

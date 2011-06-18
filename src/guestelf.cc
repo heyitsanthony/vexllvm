@@ -41,12 +41,9 @@ GuestELF::GuestELF(ElfImg* in_img)
 , arg_pages(MAX_ARG_PAGES)
 {
 	cpu_state = GuestCPUState::create(img->getArch());
-	stack = new uint8_t[STACK_BYTES];
-	memset(stack, 0x32, STACK_BYTES);	/* bogus data */
-	cpu_state->setStackPtr(stack + STACK_BYTES-256 /*redzone+gunk*/);
 }
 
-GuestELF::~GuestELF(void) { delete [] stack; }
+GuestELF::~GuestELF(void) {}
 
 void* GuestELF::getEntryPoint(void) const { 
 	if(img->getInterp())
@@ -137,8 +134,12 @@ void GuestELF::setupArgPages()
 		guard = PAGE_SIZE;
 	}
 
+	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+	if(img->getAddressBits() == 32)
+		flags |= MAP_32BIT;
+		
 	error = target_mmap(0, size + guard, PROT_READ | PROT_WRITE,
-		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		flags, -1, 0);
 	if ((int64_t)error == -1) {
 		perror("mmap stack");
 		exit(-1);
@@ -162,6 +163,11 @@ void GuestELF::setupArgPages()
 			*it = NULL;
 		}
 		stack_base += TARGET_PAGE_SIZE;
+	}
+
+	if(getenv("VEXLLVM_LOG_MAPPINGS")) {
+		std::cerr << "stack @ " << (void*)stack_limit << " sz " 
+			<< (void*)size << std::endl;
 	}
 }
 
