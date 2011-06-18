@@ -508,7 +508,7 @@ int main(int argc, char* argv[])
 
 	gs = new GuestIdent();
 	theGenLLVM = new GenLLVM(gs);
-	theVexHelpers = new VexHelpers();
+	theVexHelpers = new VexHelpers(Guest::getHostArch());
 
 	EngineBuilder	eb(theGenLLVM->getModule());
 	std::string	err_str;

@@ -20,7 +20,6 @@
 
 #include "vexhelpers.h"
 
-#define HELPER_BC_FILE "libvex_amd64_helpers.bc"
 #define VEXOP_BC_FILE "vexops.bc"
 
 using namespace llvm;
@@ -28,7 +27,7 @@ using namespace llvm;
 VexHelpers* theVexHelpers;
 extern void vexop_setup_fp(VexHelpers* vh);
 
-VexHelpers::VexHelpers()
+VexHelpers::VexHelpers(Arch::Arch arch)
 : helper_mod(0), vexop_mod(0)
 {
 	char		path_buf[512];
@@ -36,8 +35,23 @@ VexHelpers::VexHelpers()
 	/* env not set => assume running from git root */
 	bc_dirpath = getenv("VEXLLVM_HELPER_PATH");
 	if (bc_dirpath == NULL) bc_dirpath = "bitcode";
+	
+	const char* helper_file = NULL;
+	switch(arch) {
+	case Arch::X86_64:
+		helper_file = "libvex_amd64_helpers.bc";
+		break;
+	case Arch::I386:
+		helper_file = "libvex_x86_helpers.bc";
+		break;
+	case Arch::ARM:
+		helper_file = "libvex_arm_helpers.bc";
+		break;
+	default:
+		assert(!"known arch for helpers");
+	}
 
-	snprintf(path_buf, 512, "%s/%s", bc_dirpath, HELPER_BC_FILE);
+	snprintf(path_buf, 512, "%s/%s", bc_dirpath, helper_file);
 	helper_mod = loadMod(path_buf);
 	snprintf(path_buf, 512, "%s/%s", bc_dirpath, VEXOP_BC_FILE);
 	vexop_mod = loadMod(path_buf);

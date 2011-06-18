@@ -75,6 +75,8 @@ SOFTFLOATDEPS=vexop_softfloat.o
 
 
 BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
+		bitcode/libvex_x86_helpers.bc	\
+		bitcode/libvex_arm_helpers.bc	\
 		bitcode/vexops.bc		\
 		bitcode/softfloat.bc
 
