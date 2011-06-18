@@ -3,8 +3,9 @@
 
 #include <iostream>
 #include <map>
+
+#include "arch.h"
 #include "directcache.h"
-#include "elfimg.h"
 
 namespace llvm
 {

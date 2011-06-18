@@ -140,7 +140,7 @@ void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 	direct_mapped = ((void*)page_base(reloc_base) == es_mmapbase 
 		|| desired_base == 0);
 
-	my_end = es_mmapbase + filesz;
+	my_end = (void*)((uintptr_t)es_mmapbase + filesz);
 
 	/* protect now that we have zeroed */
 	mprotect(es_mmapbase, file_pages, prot);

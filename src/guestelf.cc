@@ -151,6 +151,26 @@ void GuestELF::setupArgPages()
 	}
 }
 
+/* dunno where to get these that i know they will be on 
+   any system, so just stickem here */
+#define ARM_HWCAP_SWP       1
+#define ARM_HWCAP_HALF      2
+#define ARM_HWCAP_THUMB     4
+#define ARM_HWCAP_26BIT     8       /* Play it safe */
+#define ARM_HWCAP_FAST_MULT 16
+#define ARM_HWCAP_FPA       32
+#define ARM_HWCAP_VFP       64
+#define ARM_HWCAP_EDSP      128
+#define ARM_HWCAP_JAVA      256
+#define ARM_HWCAP_IWMMXT    512
+#define ARM_HWCAP_CRUNCH    1024
+#define ARM_HWCAP_THUMBEE   2048
+#define ARM_HWCAP_NEON      4096
+#define ARM_HWCAP_VFPv3     8192
+#define ARM_HWCAP_VFPv3D16  16384
+#define ARM_HWCAP_TLS       32768
+
+
 void GuestELF::createElfTables(int argc, int envc)
 {
 	char* string_stack = sp;
@@ -195,7 +215,8 @@ void GuestELF::createElfTables(int argc, int envc)
 	/* random bytes used for aslr */
 	void* random_bytes = sp - 16;
 	int rnd = open("/dev/urandom", O_RDONLY);
-	read(rnd, (void*)random_bytes, 16);
+	rnd_br = read(rnd, (void*)random_bytes, 16);
+	assert (rnd_br == 16 && "Bad urandom read");
 	close(rnd);
 	sp -= 16;
 

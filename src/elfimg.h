@@ -2,12 +2,12 @@
 #define ELFIMG_H
 
 #include <elf.h>
-#include <stdio.h>
 
 #include <string>
 #include <vector>
 #include <map>
 #include "collection.h"
+#include "arch.h"
 
 #include "symbols.h"
 
@@ -17,33 +17,6 @@ typedef const void* celfptr_t;
 
 class ElfSegment;
 class DLLib;
-
-
-namespace Arch {
-enum Arch {
-	Unknown,
-	X86_64,
-	ARM,
-	I386,
-};
-}
-
-#define ARM_HWCAP_SWP       1
-#define ARM_HWCAP_HALF      2
-#define ARM_HWCAP_THUMB     4
-#define ARM_HWCAP_26BIT     8       /* Play it safe */
-#define ARM_HWCAP_FAST_MULT 16
-#define ARM_HWCAP_FPA       32
-#define ARM_HWCAP_VFP       64
-#define ARM_HWCAP_EDSP      128
-#define ARM_HWCAP_JAVA      256
-#define ARM_HWCAP_IWMMXT    512
-#define ARM_HWCAP_CRUNCH    1024
-#define ARM_HWCAP_THUMBEE   2048
-#define ARM_HWCAP_NEON      4096
-#define ARM_HWCAP_VFPv3     8192
-#define ARM_HWCAP_VFPv3D16  16384
-#define ARM_HWCAP_TLS       32768
 
 class ElfImg
 {

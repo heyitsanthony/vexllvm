@@ -4,6 +4,7 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Intrinsics.h>
+#include <stdio.h>
 
 #include "guestcpustate.h"
 #include "amd64cpustate.h"

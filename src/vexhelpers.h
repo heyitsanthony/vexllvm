@@ -4,7 +4,7 @@
 #define VEXHELPERS_H
 
 #include <list>
-#include "elfimg.h"
+#include "arch.h"
 
 namespace llvm
 {

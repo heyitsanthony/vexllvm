@@ -4,9 +4,9 @@
 #include <iostream>
 #include <stdint.h>
 #include <list>
+#include "arch.h"
 #include "guestmem.h"
 #include "syscallparams.h"
-#include "elfimg.h"
 
 class GuestCPUState;
 
@@ -40,7 +40,7 @@ public:
 	const char* getBinaryPath(void) const { return bin_path; }
 	const GuestMem* getMem(void) const { assert (mem != NULL); return mem; }
 	GuestMem* getMem(void) { assert (mem != NULL); return mem; }
-	static Arch::Arch getHostArch();
+
 protected:
 	Guest(const char* bin_path);
 
