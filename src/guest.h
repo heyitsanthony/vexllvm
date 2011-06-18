@@ -43,7 +43,7 @@ public:
 	const char* getBinaryPath(void) const { return bin_path; }
 	const GuestMem* getMem(void) const { assert (mem != NULL); return mem; }
 	GuestMem* getMem(void) { assert (mem != NULL); return mem; }
-	static Arch::Arch getHostArch();
+
 protected:
 	Guest(const char* bin_path);
 

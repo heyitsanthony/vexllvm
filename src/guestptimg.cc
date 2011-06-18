@@ -475,7 +475,6 @@ void GuestPTImg::setupMem(void)
 	}	
 	//TODO: guess the brk? maybe not necessary for ptimg
 }
-Arch::Arch GuestPTImg::getArch() const {
-	return getHostArch();
-}
+
+Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }
 

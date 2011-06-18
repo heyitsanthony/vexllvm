@@ -5,7 +5,7 @@ uintptr_t Syscalls::translateAMD64Syscall(
 	SyscallParams& args,
 	GuestMem::Mapping& m)
 {
-	if(guest->getArch() == Guest::getHostArch()) {
+	if(guest->getArch() == Arch::getHostArch()) {
 		return syscall(
 			args.getSyscall(),
 			args.getArg(0),

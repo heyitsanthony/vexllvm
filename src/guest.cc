@@ -48,16 +48,3 @@ std::list<GuestMem::Mapping> Guest::getMemoryMap(void) const
 	assert (mem != NULL);
 	return mem->getMaps();
 }
-
-Arch::Arch Guest::getHostArch()
-{
-#if defined(__amd64__)
-	return Arch::X86_64;
-#elif defined(__i386__)
-	return Arch::I386;
-#elif defined(__arm__)
-	return Arch::ARM;
-#else
-	#error Unsupported Host Architecture
-#endif
-}

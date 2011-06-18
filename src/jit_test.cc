@@ -62,7 +62,7 @@ public:
 	GuestIdent() : Guest("ident") {}
 	virtual ~GuestIdent() {}
 	void* getEntryPoint(void) const { return NULL; }
-	virtual Arch::Arch getArch() const { return getHostArch(); };
+	virtual Arch::Arch getArch() const { return Arch::getHostArch(); }
 };
 
 /* XXX use offsetof references to valgrind */
@@ -508,7 +508,7 @@ int main(int argc, char* argv[])
 
 	gs = new GuestIdent();
 	theGenLLVM = new GenLLVM(gs);
-	theVexHelpers = new VexHelpers(Guest::getHostArch());
+	theVexHelpers = new VexHelpers(Arch::getHostArch());
 
 	EngineBuilder	eb(theGenLLVM->getModule());
 	std::string	err_str;
