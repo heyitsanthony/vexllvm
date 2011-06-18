@@ -22,6 +22,12 @@ LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
 LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
 
+VALGRIND_TRUNK=/opt/valgrind-trunk
+HAS_VALGRIND_TRUNK=$(shell [ -d $(VALGRIND_TRUNK) ] && echo \'yes\' )
+ifeq ($(HAS_VALGRIND_TRUNK), 'yes')
+	VEXLIB=$(VALGRIND_TRUNK)/lib/valgrind/libvex-amd64-linux.a
+	CFLAGS += -I$(VALGRIND_TRUNK)/include -DVALGRIND_TRUNK
+endif 
 
 ##  ### ### ###
 # # # #  #  # #
