@@ -206,6 +206,9 @@ test-built-traces: all $(TRACEDEPS_PATH)
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
 
+tests-syscall_xchk: all $(TRACEDEPS_PATH)
+	VEXLLVM_XLATE_SYSCALLS=1 RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
+
 tests-elf: all $(TRACEDEPS_PATH)	
 	RUNCMD=bin/elf_run tests/traces.sh
 
