@@ -242,7 +242,6 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 
 uint64_t VexExec::doVexSBAux(VexSB* vsb, void* aux)
 {
-	VexGuestAMD64State	*state;
 	vexfunc_t		func_ptr;
 	uint64_t		new_ip;
 
@@ -259,7 +258,6 @@ uint64_t VexExec::doVexSBAux(VexSB* vsb, void* aux)
 
 uint64_t VexExec::doVexSB(VexSB* vsb)
 {
-	VexGuestAMD64State	*state;
 	vexfunc_t		func_ptr;
 	uint64_t		new_ip;
 

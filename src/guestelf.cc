@@ -204,6 +204,9 @@ void GuestELF::createElfTables(int argc, int envc)
 	case Arch::ARM:
 		k_platform = "ARM";
 		break;
+	default:
+		assert (0 == 1 && "BAD ARCH");
+		exit(1);
 	}
 	if (k_platform) {
 		size_t len = strlen(k_platform) + 1;
