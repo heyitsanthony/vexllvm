@@ -3467,6 +3467,7 @@ static abi_long read_ldt(abi_ulong ptr, unsigned long bytecount)
     return size;
 }
 
+#if 0
 /* XXX: add locking support */
 static abi_long write_ldt(CPUX86State *env,
                           abi_ulong ptr, unsigned long bytecount, int oldmode)
@@ -3558,9 +3559,8 @@ install:
     lp[1] = tswap32(entry_2);
     return 0;
 }
-
 /* specific and weird i386 syscalls */
-static abi_long do_modify_ldt(CPUX86State *env, int func, abi_ulong ptr,
+static abi_long do_modify_ldt(int func, abi_ulong ptr,
                               unsigned long bytecount)
 {
     abi_long ret;
@@ -3570,10 +3570,10 @@ static abi_long do_modify_ldt(CPUX86State *env, int func, abi_ulong ptr,
         ret = read_ldt(ptr, bytecount);
         break;
     case 1:
-        ret = write_ldt(env, ptr, bytecount, 1);
+        ret = write_ldt(ptr, bytecount, 1);
         break;
     case 0x11:
-        ret = write_ldt(env, ptr, bytecount, 0);
+        ret = write_ldt(ptr, bytecount, 0);
         break;
     default:
         ret = -TARGET_ENOSYS;
@@ -3581,6 +3581,7 @@ static abi_long do_modify_ldt(CPUX86State *env, int func, abi_ulong ptr,
     }
     return ret;
 }
+#endif
 
 #if defined(TARGET_I386) && defined(TARGET_ABI32)
 static abi_long do_set_thread_area(CPUX86State *env, abi_ulong ptr)
@@ -3715,41 +3716,6 @@ static abi_long do_get_thread_area(CPUX86State *env, abi_ulong ptr)
     return 0;
 }
 #endif /* TARGET_I386 && TARGET_ABI32 */
-
-#ifndef TARGET_ABI32
-static abi_long do_arch_prctl(CPUX86State *env, int code, abi_ulong addr)
-{
-    abi_long ret;
-    abi_ulong val;
-    int idx;
-    
-    switch(code) {
-    case TARGET_ARCH_SET_GS:
-    case TARGET_ARCH_SET_FS:
-        if (code == TARGET_ARCH_SET_GS)
-            idx = R_GS;
-        else
-            idx = R_FS;
-        cpu_x86_load_seg(env, idx, 0);
-        env->segs[idx].base = addr;
-        break;
-    case TARGET_ARCH_GET_GS:
-    case TARGET_ARCH_GET_FS:
-        if (code == TARGET_ARCH_GET_GS)
-            idx = R_GS;
-        else
-            idx = R_FS;
-        val = env->segs[idx].base;
-        if (put_user(val, addr, abi_ulong))
-            return -TARGET_EFAULT;
-        break;
-    default:
-        ret = -TARGET_EINVAL;
-        break;
-    }
-    return 0;
-}
-#endif
 
 #endif /* defined(TARGET_I386) */
 
@@ -5974,7 +5940,8 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
         break;
 #ifdef TARGET_I386
     case TARGET_NR_modify_ldt:
-        ret = do_modify_ldt(cpu_env, arg1, arg2, arg3);
+	assert("!ldt modification requires cpu state, move impl");
+        // ret = do_modify_ldt(arg1, arg2, arg3);
         break;
 #if !defined(TARGET_X86_64)
     case TARGET_NR_vm86old:
@@ -6045,7 +6012,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             struct linux_dirent *dirp;
             abi_long count = arg3;
 
-	    dirp = malloc(count);
+	    dirp = (struct linux_dirent *)malloc(count);
 	    if (!dirp) {
                 ret = -TARGET_ENOMEM;
                 goto fail;
@@ -6061,8 +6028,10 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
 
 		count1 = 0;
                 de = dirp;
-                if (!(target_dirp = lock_user(VERIFY_WRITE, arg2, count, 0)))
-                    goto efault;
+                if (!(target_dirp = (struct target_dirent *)
+			lock_user(VERIFY_WRITE, arg2, count, 0))) {
+                    		goto efault;
+		}
 		tde = target_dirp;
                 while (len > 0) {
                     reclen = de->d_reclen;
@@ -6195,7 +6164,8 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
                 }
 
                 if (arg4) {
-                    target_set = lock_user(VERIFY_READ, arg4, sizeof(target_sigset_t), 1);
+                    target_set = (target_sigset_t *)lock_user(VERIFY_READ,
+ 			arg4, sizeof(target_sigset_t), 1);
                     if (!target_set) {
                         unlock_user(target_pfd, arg1, 0);
                         goto efault;
@@ -6413,7 +6383,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
 #ifdef TARGET_NR_arch_prctl
     case TARGET_NR_arch_prctl:
 #if defined(TARGET_I386) && !defined(TARGET_ABI32)
-        ret = do_arch_prctl(cpu_env, arg1, arg2);
+	assert("should be handled in the higher levels of vexllvm");
         break;
 #else
         goto unimplemented;

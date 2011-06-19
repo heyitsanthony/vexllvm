@@ -71,6 +71,7 @@ private:
 	GuestMem*			mappings;
 	const std::string		binary;
 	bool				log_syscalls;
+	bool				force_translation;
 	
 /* specific architecture handling of syscall could go in another
    class if there wasn't the marshalled syscall option.  so we'll
@@ -78,6 +79,7 @@ private:
    go into separate files if they get big */
 private:
 	SYSCALL_HANDLER(AMD64, arch_prctl);
+	SYSCALL_HANDLER(AMD64, arch_modify_ldt);
 };
 
 #endif

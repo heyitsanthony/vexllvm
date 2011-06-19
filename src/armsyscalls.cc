@@ -17,6 +17,7 @@ namespace ARM {
 	   specific interface code goes in the translatedutil.h */
 	#define TARGET_ARM
 	#define TARGET_ABI_BITS 32
+	#define TARGET_ABI32 32
 	#define abi_long 	int
 	#define abi_ulong	unsigned int
 	#define target_ulong 	abi_ulong
@@ -108,7 +109,7 @@ uintptr_t Syscalls::applyARMSyscall(
 	}
 
 	/* if the host and guest are identical, then just pass through */
-	if(guest->getArch() == Arch::getHostArch()) {
+	if(!force_translation && guest->getArch() == Arch::getHostArch()) {
 		return passthroughSyscall(args, m);
 	}
 
@@ -126,16 +127,5 @@ uintptr_t Syscalls::applyARMSyscall(
 		g_syscall_last_mapping = NULL;
 	}
 	
-	return sc_ret;
-
-	std::cerr << "syscall(" << args.getSyscall() << ", "
-		<< (void*)args.getArg(0) << ", "
-		<< (void*)args.getArg(1) << ", "
-		<< (void*)args.getArg(2) << ", "
-		<< (void*)args.getArg(3) << ", "
-		<< (void*)args.getArg(4) << ", ...) => ???"
-		<< std::endl;
-	assert(!"supporting translation between syscalls for these cpus");
-
 	return sc_ret;
 }

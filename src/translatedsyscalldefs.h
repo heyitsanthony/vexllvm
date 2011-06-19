@@ -1,7 +1,7 @@
 /*  FROM
 	qemu.git
 	eb47d7c5d96060040931c42773ee07e61e547af9
-	linux-user/syscall_defs.h
+	linux-user/syscall_def.h
 */
 /* common syscall defines for all architectures */
 

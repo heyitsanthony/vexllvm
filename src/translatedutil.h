@@ -11,8 +11,13 @@
 #define print_syscall_ret(...)
 #define gdb_exit(...)
 
-#define HOST_LONG_SIZE	sizeof(long)
-
+#ifdef __amd64
+	#define HOST_LONG_SIZE	8
+	#define HOST_LONG_BITS	64
+#else
+	#define HOST_LONG_SIZE	4
+	#define HOST_LONG_BITS	32
+#endif
 /* we should do checks here to make it return EFAULT as necessary */
 #define lock_user_struct(m, p, a, ...) (*(void**)&p = (void*)a)
 #define unlock_user_struct(...)
@@ -107,6 +112,14 @@
     }\
     0;\
 })
+#ifdef TARGET_ABI64
+/* icky bastards are doing weird stuff with native size
+   chunks in do_socket call... maybe fix them later */
+static inline bool get_user_ual(socklen_t& v, abi_ulong a) {
+	v = *(socklen_t*)a;
+	return true;
+}
+#endif
 static inline bool get_user_sal(abi_long& v, abi_ulong a) {
 	v = *(abi_long*)a;
 	return true;
@@ -115,11 +128,12 @@ static inline bool get_user_ual(abi_ulong& v, abi_ulong a) {
 	v = *(abi_ulong*)a;
 	return true;
 }
+#ifndef TARGET_ABI64
 static inline bool get_user_ual(size_t& v, abi_ulong a) {
 	v = *(abi_ulong*)a;
 	return true;
 }
-
+#endif
 static inline bool get_user_u8(char& v, abi_ulong a) {
 	v = *(char*)a;
 	return true;
@@ -128,12 +142,18 @@ static inline bool get_user_u8(abi_long& v, abi_ulong a) {
 	v = *(char*)a;
 	return true;
 }
-static inline bool get_user_u32(abi_ulong& v, abi_ulong a) {
-	v = *(abi_ulong*)a;
+#ifdef TARGET_ABI64
+static inline bool get_user_u8(int& v, abi_ulong a) {
+	v = *(char*)a;
 	return true;
 }
-static inline bool get_user_s32(abi_long& v, abi_ulong a) {
-	v = *(abi_long*)a;
+#endif
+static inline bool get_user_u32(unsigned int& v, abi_ulong a) {
+	v = *(unsigned int*)a;
+	return true;
+}
+static inline bool get_user_s32(int& v, abi_ulong a) {
+	v = *(int*)a;
 	return true;
 }
 static inline bool put_user_ual(abi_ulong v, abi_ulong a) {
@@ -144,12 +164,12 @@ static inline bool put_user_sal(abi_long v, abi_ulong a) {
 	*(abi_long*)a = v;
 	return true;
 }
-static inline bool put_user_s32(abi_long v, abi_ulong a) {
-	*(abi_long*)a = v;
+static inline bool put_user_s32(int v, abi_ulong a) {
+	*(int*)a = v;
 	return true;
 }
-static inline bool put_user_u32(abi_ulong v, abi_ulong a) {
-	*(abi_ulong*)a = v;
+static inline bool put_user_u32(unsigned int v, abi_ulong a) {
+	*(unsigned int*)a = v;
 	return true;
 }
 static inline bool put_user_u16(unsigned short v, abi_ulong a) {
@@ -212,5 +232,26 @@ long do_rt_sigreturn() {
 	assert(!"signal rt return not implemented");
 }
 abi_long do_sigaltstack(abi_ulong uss_addr, abi_ulong uoss_addr, abi_ulong sp);
+
+#define unlikely(x)     __builtin_expect((x),false)
+
+/* strcpy isn't good enough for them */
+static inline void pstrcpy(char *buf, int buf_size, const char *str)
+{
+    int c;
+    char *q = buf;
+
+    if (buf_size <= 0)
+        return;
+
+    for(;;) {
+        c = *str++;
+        if (c == 0 || q >= buf + buf_size - 1)
+            break;
+        *q++ = c;
+    }
+    *q = '\0';
+}
+
 
 #endif

@@ -5203,6 +5203,7 @@ long do_rt_sigreturn(CPUState *env)
 
 #else
 
+#if 0
 static void setup_frame(int sig, struct target_sigaction *ka,
 			target_sigset_t *set, CPUState *env)
 {
@@ -5227,7 +5228,7 @@ long do_rt_sigreturn(CPUState *env)
     fprintf(stderr, "do_rt_sigreturn: not implemented\n");
     return -TARGET_ENOSYS;
 }
-
+#endif
 #endif
 
 #if 0
