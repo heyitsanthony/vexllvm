@@ -471,10 +471,8 @@ void GuestPTImg::setupMem(void)
 			ptm->getByteCount(),
 			ptm->getProt(),
 			ptm->isStack());
-
 		mem->recordMapping(s);
 	}	
-	//TODO: guess the brk? maybe not necessary for ptimg
 }
 
 Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }

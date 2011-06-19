@@ -182,10 +182,15 @@ const VexSB* VexExec::doNextSB(void)
 
 void VexExec::doSysCall(VexSB* vsb)
 {
-	SyscallParams	sp(gs->getSyscallParams());
+	SyscallParams sp(gs->getSyscallParams());
+	doSysCall(vsb, sp);
+}
+void VexExec::doSysCall(VexSB* vsb, SyscallParams& sp)
+{
 	uint64_t	sc_ret;
 
 	sc_ret = sc->apply(sp);
+
 	if (sc->isExit()) {
 		exited = true;
 		exit_code = sc_ret;

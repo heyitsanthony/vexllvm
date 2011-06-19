@@ -2,7 +2,7 @@
 #include "guest.h"
 #include <sys/syscall.h>
 
-int Syscalls::translateI386Syscall(int sys_nr) {
+int Syscalls::translateI386Syscall(int sys_nr) const {
 	assert(guest->getArch() == Arch::getHostArch());
 	return sys_nr;
 }

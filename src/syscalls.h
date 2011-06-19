@@ -37,6 +37,8 @@ public:
 	uint64_t apply(void); /* use guest params */
 	void print(std::ostream& os) const;
 	bool isExit(void) const { return exited; }
+	
+	int translateSyscall(int guest) const;
 private:
 	bool interceptSyscall(
 		int sys_nr,
@@ -48,9 +50,9 @@ private:
 		GuestMem::Mapping& m);
 
 	/* map a guest syscall number to the host equivalent */
-	int translateARMSyscall(int guest);
-	int translateI386Syscall(int guest);
-	int translateAMD64Syscall(int guest);
+	int translateARMSyscall(int guest) const;
+	int translateI386Syscall(int guest) const;
+	int translateAMD64Syscall(int guest) const;
 	
 	/* either passthrough or emulate the syscall */
 	uintptr_t applyARMSyscall(

@@ -42,19 +42,8 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	   we can have boiler plate implementations centralized
 	   in this file */
 	sys_nr = args.getSyscall();
-	switch(guest->getArch()) {
-	case Arch::X86_64:
-		sys_nr = translateAMD64Syscall(sys_nr);
-		break;
-	case Arch::ARM:
-		sys_nr = translateARMSyscall(sys_nr);
-		break;
-	case Arch::I386:
-		sys_nr = translateI386Syscall(sys_nr);
-		break;
-	default:
-		assert(!"unknown arch type for syscall");
-	}
+	sys_nr = translateSyscall(sys_nr);
+
 	
 	/* check for syscalls which would mess with the thread or process
 	   state and otherwise render us useless */
@@ -137,6 +126,19 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	return sc_ret;
 }
 
+int Syscalls::translateSyscall(int sys_nr) const {
+	switch(guest->getArch()) {
+	case Arch::X86_64:
+		return translateAMD64Syscall(sys_nr);
+	case Arch::ARM:
+		return translateARMSyscall(sys_nr);
+	case Arch::I386:
+		return translateI386Syscall(sys_nr);
+	default:
+		assert(!"unknown arch type for syscall");
+		return -1;
+	}	
+}
 /* it is disallowed to implement any syscall which requires access to
    data in a structure within this function.  this function does not
    understand the potentially different layout of the guests syscalls
@@ -161,22 +163,10 @@ bool Syscalls::interceptSyscall(
 		}
 		return false;
 	case SYS_brk:
-		if (!mappings->brk()) {
-			/* don't let the app pull the rug */
+		if (mappings->sbrk((void*)args.getArg(0)))
+			sc_ret = (uintptr_t)mappings->brk();
+		else
 			sc_ret = -ENOMEM;
-			return true;
-		}
-
-		if (args.getArg(0) == 0) {
-			/* if you're just asking, i can tell you */
-			sc_ret = (unsigned long)mappings->brk();
-		} else {
-			if (mappings->sbrk((void*)args.getArg(0)))
-				sc_ret = (uintptr_t)mappings->brk();
-			else
-				sc_ret = -ENOMEM;
-		}
-
 		return true;
 	case SYS_rt_sigaction:
 		/* for now totally lie so that code doesn't get 

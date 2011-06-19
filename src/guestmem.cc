@@ -9,9 +9,11 @@
 
 /* XXX other archs? */
 #define PAGE_SIZE 4096
+#define BRK_RESERVE 256 * 1024 * 1024
 
 GuestMem::GuestMem(void)
 : top_brick(NULL)
+, is_32_bit(false)
 {
 }
 
@@ -23,43 +25,98 @@ void* GuestMem::brk()
 {
 	return top_brick;
 }
+bool GuestMem::sbrkInitial() {
+	GuestMem::Mapping m;
+	void *addr;
+	int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
+	int prot = PROT_READ | PROT_WRITE;
+
+	/* we pick it */
+	#ifdef __amd64__
+		if(is_32_bit)
+			flags |= MAP_32BIT;
+	#endif
+	addr = mmap(NULL, BRK_RESERVE, prot, flags, -1, 0);
+	/* hmm, we could shrink the reserve but */
+	assert(addr != MAP_FAILED && "initial sbrk failed");
+	addr = mremap(addr, BRK_RESERVE, PAGE_SIZE, 0);
+	assert(addr != MAP_FAILED && "sbrk shrink assploded");
+	flags &= ~MAP_NORESERVE;
+	flags |= MAP_FIXED;
+	addr = mmap(addr, PAGE_SIZE, prot, flags, -1, 0);
+	assert(addr != MAP_FAILED && "sbrk flags fix kerplunked");
+
+	m.offset = addr;
+	m.length = PAGE_SIZE;
+	m.cur_prot = m.req_prot = prot;
+	recordMapping(m);
+	
+	top_brick = base_brick = m.offset;
+	return true;
+}
+
+bool GuestMem::sbrkInitial(void* new_top) {
+	GuestMem::Mapping m;
+	void *addr;
+	int flags = MAP_PRIVATE | MAP_ANON;
+	int prot = PROT_READ | PROT_WRITE;
+
+	/* they picked it (e.g. xchk), try to make a mapping there. 
+	   note that this initial mapping doesn't reserve any extra
+	   space, so jerks could map over it and screw us.  in this
+	   case you'd eventually see divergence in xchk, manifested
+	   by -ENOMEM being returned for the vex process on brk when
+	   the real process managed to extend the brk */
+	addr = mmap(new_top, PAGE_SIZE, prot, flags, -1, 0);
+	assert(addr == new_top && "initial forced sbrk failed");
+	
+	m.offset = addr;
+	m.length = PAGE_SIZE;
+	m.cur_prot = m.req_prot = prot;
+	recordMapping(m);
+		
+	top_brick = base_brick = m.offset;
+	return true;
+}
 
 bool GuestMem::sbrk(void* new_top)
 {
 	GuestMem::Mapping	m;
 	bool			found;
-	size_t			add_len;
-	void			*old_brk;
+	size_t			new_len;
 	void			*addr;
 
-	old_brk = top_brick;
-	if (old_brk == NULL) {
-		/* setup by loader phase */
-		top_brick = new_top;
-		return true;
+	if (top_brick == NULL) {
+		if(new_top == NULL)
+			return sbrkInitial();
+		else
+			return sbrkInitial(new_top);
 	}
 
-	found = lookupMapping((char*)old_brk - 1, m);
+	found = lookupMapping((char*)base_brick, m);
 	if (!found)
 		return false;
 
-	add_len = (char*)new_top - (char*)m.end();
-	add_len = (add_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
+	new_len = (char*)new_top - (char*)base_brick;
+	new_len = (new_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
 
-	/* update top so it's page aligned */
-	new_top = (char*)m.end() + add_len;
+	/* new_top is not page aligned because its really just
+	   a number the guest will use... we don't ever use it
+	   anymore. */
+	
+	if(new_len == m.length) {
+		top_brick = new_top;
+		return true;
+	}
+		
 
-	/* map in missing data */
-	addr = mmap(
-		m.end(), add_len,
-		PROT_READ | PROT_WRITE,
-		MAP_PRIVATE | MAP_ANON | MAP_FIXED,
-		-1, 0);
+	/* extend the existing mapping... preserving the location */
+	addr = mremap(m.offset, m.length, new_len, 0);
 
 	if (addr == MAP_FAILED && errno != EFAULT) return false;
 	assert (addr != MAP_FAILED && "sbrk is broken again");
 
-	m.length += add_len;
+	m.length = new_len;
 	recordMapping(m);
 	top_brick = new_top;
 	return true;

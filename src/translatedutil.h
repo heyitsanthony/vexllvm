@@ -191,7 +191,7 @@ abi_ulong mmap_find_vma_flags(abi_ulong start, abi_ulong size,
 {
 	/* host page align? */
 	void* res = mmap((void*)(uintptr_t)start, size, PROT_READ, 
-		MAP_NORESERVE | flags, 0, 0);
+		MAP_NORESERVE | flags, -1, 0);
 	if(res != MAP_FAILED) {
 		munmap(res, size);
 		return (abi_ulong)(uintptr_t)res;

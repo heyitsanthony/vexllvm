@@ -16,6 +16,7 @@ class Guest;
 class Syscalls;
 class VexXlate;
 class VexSB;
+class SyscallParams;
 
 namespace llvm
 {
@@ -61,6 +62,7 @@ protected:
 	uint64_t doVexSBAux(VexSB* vsb, void* aux);
 
 	virtual void doSysCall(VexSB* vsb);
+	void doSysCall(VexSB* vsb, SyscallParams& sp);
 	static void setupStatics(Guest* in_gs);
 
 	Guest		*gs;

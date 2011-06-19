@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/syscall.h>
 
 
 #include "vexxlate.h"
@@ -144,21 +145,39 @@ void VexExecChk::stepSysCall(VexSB* vsb)
 	state->guest_R11 = 0;
 }
 
+void VexExecChk::doSysCallCore(VexSB* vsb)
+{
+	/* recall: shadow process <= vexllvm. hence, we must call the 
+	 * syscall for vexllvm prior to the syscall for the shadow process.
+	 * this lets us to fixups to match vexllvm's calls. */
+	SyscallParams sp(gs->getSyscallParams());
+	int sys_nr = sc_marshall->translateSyscall(sp.getSyscall());
+	if(sys_nr != SYS_brk) {
+		VexExec::doSysCall(vsb, sp);
+
+		stepSysCall(vsb);
+	} else {
+		/* but for brk, we really need to copy the state over
+		   from the child process or we would need to fully
+		   emulate brk there by creating memory mappings in the
+		   other process... blek to that... no nice api */
+
+		stepSysCall(vsb);
+		sp.setArg(0, cross_check->getSysCallResult());
+		VexExec::doSysCall(vsb, sp);
+	}
+}
+
 void VexExecChk::doSysCall(VexSB* vsb)
 {
 	VexGuestAMD64State* state;
 
 	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	assert (hit_syscall && !is_deferred);
+		
+	doSysCallCore(vsb);
 
-	/* recall: shadow process <= vexllvm. hence, we must call the 
-	 * syscall for vexllvm prior to the syscall for the shadow process.
-	 * this lets us to fixups to match vexllvm's calls. */
-	VexExec::doSysCall(vsb);
-
-	stepSysCall(vsb);
-
-	/* now both should be equal and at the instruction immediately following
+	/* now both should be equal and at the instruction following
 	 * the breaking syscall */
 	if (!cross_check->isMatch(*state)) {
 		fprintf(stderr, "MISMATCH: END OF SYSCALL. SYSEMU BUG.\n");

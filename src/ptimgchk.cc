@@ -448,8 +448,12 @@ bool PTImgChk::filterSysCall(
 {
 	switch (regs.rax) {
 	case SYS_brk:
-		regs.rax = -ENOMEM;
-		return true;
+		/* hint a better base for sbrk so that we can hang out
+		   with out a rochambeau ensuing */
+		if(regs.rdi == 0) {
+			regs.rdi = 0x800000;
+		}
+		break;
 
 	case SYS_exit_group:
 		regs.rax = state.guest_RAX;
@@ -495,7 +499,9 @@ void PTImgChk::stepSysCall(
 	}
 
 	sys_nr = regs.rax;
-	if (sys_nr == SYS_mmap) syscall_restore_rdi_r10 = true;
+	if (sys_nr == SYS_mmap || sys_nr == SYS_brk) {
+		syscall_restore_rdi_r10 = true;
+	}
 
 	waitForSingleStep();
 
@@ -516,6 +522,12 @@ void PTImgChk::stepSysCall(
 		delete spb;
 	}
 }
+uintptr_t PTImgChk::getSysCallResult() const {
+	user_regs_struct	regs;
+	getRegs(regs);
+	return regs.rax;
+}
+
 
 void PTImgChk::setRegs(const user_regs_struct& regs)
 {

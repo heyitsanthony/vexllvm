@@ -79,7 +79,7 @@ namespace AMD64 {
 }
 
 
-int Syscalls::translateAMD64Syscall(int sys_nr) {
+int Syscalls::translateAMD64Syscall(int sys_nr) const {
 	if(sys_nr > AMD64::g_guest_to_host_syscalls.size())
 		return -1;
 

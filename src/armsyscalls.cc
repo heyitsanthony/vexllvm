@@ -82,7 +82,7 @@ namespace ARM {
 }
 
 
-int Syscalls::translateARMSyscall(int sys_nr) {
+int Syscalls::translateARMSyscall(int sys_nr) const {
 	if(sys_nr > ARM::g_guest_to_host_syscalls.size())
 		return -1;
 

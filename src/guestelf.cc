@@ -370,25 +370,19 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 void GuestELF::setupMem(void)
 {
 	std::list<ElfSegment*>	m;
-	void			*top_brick;
 
 	assert (mem == NULL);
 	mem = new GuestMem();
 
 	img->getSegments(m);
 
-	top_brick = NULL;
 	foreach(it, m.begin(), m.end()) {
 		GuestMem::Mapping s(
 			(*it)->base(),
 			(*it)->length(),
 			(*it)->protection());
 		mem->recordMapping(s);
-		top_brick = s.end();
 	}
-
-	/* is this actually computed properly? */
-	mem->sbrk(top_brick);
 
 	/* also record the stack */
 	GuestMem::Mapping s(
@@ -397,6 +391,10 @@ void GuestELF::setupMem(void)
 		PROT_READ | PROT_WRITE,
 		true);
 	mem->recordMapping(s);
+	
+	if(img->getAddressBits() == 32) {
+		mem->mark32Bit();
+	}
 }
 Arch::Arch GuestELF::getArch() const {
 	return img->getArch();

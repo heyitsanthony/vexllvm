@@ -38,6 +38,7 @@ public:
 
 	void getRegs(user_regs_struct& regs) const;
 	void setRegs(const user_regs_struct& regs);
+	uintptr_t getSysCallResult() const;
 
 	void resetBreakpoint(void* x) {
 		GuestPTImg::resetBreakpoint(child_pid, x); }

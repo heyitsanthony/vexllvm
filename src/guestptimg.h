@@ -20,6 +20,7 @@ public:
 		return ((uintptr_t)mem_end - (uintptr_t)mem_begin);
 	}
 	void* getBase(void) const { return mem_begin; }
+	void* getEnd(void) const { return (char*)getBase() + getByteCount(); }
 	int getProt(void) const;
 	bool isStack(void) const { return is_stack; }
 	std::string getLib() const { return libname; }

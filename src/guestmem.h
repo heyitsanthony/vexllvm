@@ -54,11 +54,17 @@ public:
 	void* brk();
 	bool sbrk(void* new_top);
 	std::list<Mapping> getMaps(void) const;
+	void mark32Bit() { is_32_bit = true; }
 
 private:
+	bool sbrkInitial();
+	bool sbrkInitial(void* new_top);
+
 	typedef std::map<void*, Mapping> mapmap_t; 
 	mapmap_t	maps;
 	void		*top_brick;
+	void		*base_brick;
+	bool		is_32_bit;
 };
 
 #endif

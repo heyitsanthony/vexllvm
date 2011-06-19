@@ -17,6 +17,7 @@ protected:
 
 	virtual uint64_t doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);
+	void doSysCallCore(VexSB* vsb);
 	void verifyBlockRun(VexSB* vsb);
 	void stepSysCall(VexSB* vsb);
 	void dumpSubservient(VexSB* vsb);

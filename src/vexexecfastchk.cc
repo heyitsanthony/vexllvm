@@ -73,12 +73,8 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 	/* restore vexllvm IP to *after* syscall */
 	state->guest_RIP += 2;
 	
-	/* recall: shadow process <= vexllvm. hence, we must call the 
-	 * syscall for vexllvm prior to the syscall for the shadow process.
-	 * this lets us to fixups to match vexllvm's calls. */
-	VexExec::doSysCall(vsb);
-
-	stepSysCall(vsb);
+	doSysCallCore(vsb);
+	
 	pt_sc_done_c++;	
 
 	/* now both should be equal and at the instruction immediately following
