@@ -35,7 +35,9 @@ public:
 	virtual ~Syscalls();
 	virtual uint64_t apply(SyscallParams& args);
 	uint64_t apply(void); /* use guest params */
-	void print(std::ostream& os, uintptr_t *result = NULL) const;
+	void print(std::ostream& os) const;
+	void print(std::ostream& os, const SyscallParams& sp, 
+		uintptr_t *result = NULL) const;
 	bool isExit(void) const { return exited; }
 	std::string getSyscallName(int guest) const;
 	

@@ -115,74 +115,74 @@
 #ifdef TARGET_ABI64
 /* icky bastards are doing weird stuff with native size
    chunks in do_socket call... maybe fix them later */
-static inline bool get_user_ual(socklen_t& v, abi_ulong a) {
+static inline int get_user_ual(socklen_t& v, abi_ulong a) {
 	v = *(socklen_t*)a;
-	return true;
+	return 0;
 }
 #endif
-static inline bool get_user_sal(abi_long& v, abi_ulong a) {
+static inline int get_user_sal(abi_long& v, abi_ulong a) {
 	v = *(abi_long*)a;
-	return true;
+	return 0;
 }
-static inline bool get_user_ual(abi_ulong& v, abi_ulong a) {
+static inline int get_user_ual(abi_ulong& v, abi_ulong a) {
 	v = *(abi_ulong*)a;
-	return true;
+	return 0;
 }
 #ifndef TARGET_ABI64
-static inline bool get_user_ual(size_t& v, abi_ulong a) {
+static inline int get_user_ual(size_t& v, abi_ulong a) {
 	v = *(abi_ulong*)a;
-	return true;
+	return 0;
 }
 #endif
-static inline bool get_user_u8(char& v, abi_ulong a) {
+static inline int get_user_u8(char& v, abi_ulong a) {
 	v = *(char*)a;
-	return true;
+	return 0;
 }
-static inline bool get_user_u8(abi_long& v, abi_ulong a) {
+static inline int get_user_u8(abi_long& v, abi_ulong a) {
 	v = *(char*)a;
-	return true;
+	return 0;
 }
 #ifdef TARGET_ABI64
-static inline bool get_user_u8(int& v, abi_ulong a) {
+static inline int get_user_u8(int& v, abi_ulong a) {
 	v = *(char*)a;
-	return true;
+	return 0;
 }
 #endif
-static inline bool get_user_u32(unsigned int& v, abi_ulong a) {
+static inline int get_user_u32(unsigned int& v, abi_ulong a) {
 	v = *(unsigned int*)a;
-	return true;
+	return 0;
 }
-static inline bool get_user_s32(int& v, abi_ulong a) {
+static inline int get_user_s32(int& v, abi_ulong a) {
 	v = *(int*)a;
-	return true;
+	return 0;
 }
-static inline bool put_user_ual(abi_ulong v, abi_ulong a) {
+static inline int put_user_ual(abi_ulong v, abi_ulong a) {
 	*(abi_ulong*)a = v;
-	return true;
+	return 0;
 }
-static inline bool put_user_sal(abi_long v, abi_ulong a) {
+static inline int put_user_sal(abi_long v, abi_ulong a) {
 	*(abi_long*)a = v;
-	return true;
+	return 0;
 }
-static inline bool put_user_s32(int v, abi_ulong a) {
+static inline int put_user_s32(int v, abi_ulong a) {
 	*(int*)a = v;
-	return true;
+	return 0;
 }
-static inline bool put_user_u32(unsigned int v, abi_ulong a) {
+static inline int put_user_u32(unsigned int v, abi_ulong a) {
 	*(unsigned int*)a = v;
-	return true;
+	return 0;
 }
-static inline bool put_user_u16(unsigned short v, abi_ulong a) {
+static inline int put_user_u16(unsigned short v, abi_ulong a) {
 	*(unsigned short*)a = v;
-	return true;
+	return 0;
 }
-static inline bool put_user_s64(long long v, abi_ulong a) {
+static inline int put_user_s64(long long v, abi_ulong a) {
 	*(long long*)a = v;
-	return true;
+	return 0;
 }
-static inline bool put_user_u8(abi_long v, abi_ulong a) {
+static inline int put_user_u8(abi_long v, abi_ulong a) {
 	*(char*)a = v;
-	return true;
+	return 0;
 	
 }
 static int host_to_target_errno(int err);

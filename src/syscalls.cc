@@ -88,7 +88,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	}
 
 	if (log_syscalls) {
-		print(std::cerr, &sc_ret);
+		print(std::cerr, args, &sc_ret);
 	}
 
 	if (fakedSyscall) {
@@ -241,20 +241,25 @@ uintptr_t Syscalls::passthroughSyscall(
 	return sc_ret;
 }
 
-void Syscalls::print(std::ostream& os, uintptr_t* result) const
+void Syscalls::print(std::ostream& os) const
 {
 	foreach(it, sc_trace.begin(), sc_trace.end()) {
 		SyscallParams	sp = *it;
-		os << "Syscall: " << getSyscallName(sp.getSyscall());
-		os << " {"
-			<< (void*)sp.getArg(0) << ", "
-			<< (void*)sp.getArg(1) << ", "
-			<< (void*)sp.getArg(2) << ", "
-			<< (void*)sp.getArg(3) << ", "
-			<< (void*)sp.getArg(4) << ", "
-			<< (void*)sp.getArg(5) << "}";
-		if(result)
-			os << " => " << (void*)*result;
-		os << std::endl;
+		print(os, sp, NULL);
 	}
+}
+void Syscalls::print(std::ostream& os, const SyscallParams& sp, 
+	uintptr_t* result) const
+{
+	os << "Syscall: " << getSyscallName(sp.getSyscall());
+	os << " {"
+		<< (void*)sp.getArg(0) << ", "
+		<< (void*)sp.getArg(1) << ", "
+		<< (void*)sp.getArg(2) << ", "
+		<< (void*)sp.getArg(3) << ", "
+		<< (void*)sp.getArg(4) << ", "
+		<< (void*)sp.getArg(5) << "}";
+	if(result)
+		os << " => " << (void*)*result;
+	os << std::endl;
 }

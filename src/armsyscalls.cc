@@ -139,7 +139,7 @@ uintptr_t Syscalls::applyARMSyscall(
 		args.getArg(3),
 		args.getArg(4),
 		args.getArg(5));
-		
+
 	if(g_syscall_last_mapping) {
 		m = *g_syscall_last_mapping;
 		g_syscall_last_mapping = NULL;
