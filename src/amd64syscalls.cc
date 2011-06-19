@@ -7,6 +7,7 @@
 #include <asm/prctl.h> 
 #include "guestmem.h"
 #include <vector>
+#include <sstream>
 #include "Sugar.h"
 
 /* this header loads all of the system headers outside of the namespace */
@@ -64,14 +65,24 @@ namespace AMD64 {
 	
 	std::vector<int> g_host_to_guest_syscalls(512);
 	std::vector<int> g_guest_to_host_syscalls(512);
+	std::vector<std::string> g_guest_syscall_names(512);
 	bool syscall_mapping_init() {
 		foreach(it, g_host_to_guest_syscalls.begin(),
 			g_host_to_guest_syscalls.end()) *it = -1;
 		foreach(it, g_guest_to_host_syscalls.begin(),
 			g_guest_to_host_syscalls.end()) *it = -1;
+		for(unsigned sys_nr = 0; 
+			sys_nr < g_guest_syscall_names.size(); ++sys_nr) 
+		{
+			std::ostringstream o;
+			o << sys_nr;
+			g_guest_syscall_names[sys_nr] = o.str();
+		}
 		#define SYSCALL_RELATION(name, host, guest) 	\
 			g_host_to_guest_syscalls[host] = guest;	\
 			g_guest_to_host_syscalls[guest] = host;
+		#define GUEST_SYSCALL(name, guest) 	\
+			g_guest_syscall_names[guest] = #name;
 		#include "syscallsmapping.h"
 		return true;
 	}
@@ -80,14 +91,21 @@ namespace AMD64 {
 
 
 int Syscalls::translateAMD64Syscall(int sys_nr) const {
-	if(sys_nr > AMD64::g_guest_to_host_syscalls.size())
+	if((unsigned)sys_nr > AMD64::g_guest_to_host_syscalls.size())
 		return -1;
 
 	int host_sys_nr = AMD64::g_guest_to_host_syscalls[sys_nr];
-	if(!host_sys_nr) {
-		return -1;
-	}
 	return host_sys_nr;
+}
+
+std::string Syscalls::getAMD64SyscallName(int sys_nr) const {
+	if((unsigned)sys_nr > AMD64::g_guest_syscall_names.size()) {
+		std::ostringstream o;
+		o << sys_nr;
+		return o.str();
+	}
+
+	return AMD64::g_guest_syscall_names[sys_nr];
 }
 
 uintptr_t Syscalls::applyAMD64Syscall(

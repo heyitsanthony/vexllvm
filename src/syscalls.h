@@ -37,6 +37,7 @@ public:
 	uint64_t apply(void); /* use guest params */
 	void print(std::ostream& os) const;
 	bool isExit(void) const { return exited; }
+	std::string getSyscallName(int guest) const;
 	
 	int translateSyscall(int guest) const;
 private:
@@ -50,9 +51,13 @@ private:
 		GuestMem::Mapping& m);
 
 	/* map a guest syscall number to the host equivalent */
-	int translateARMSyscall(int guest) const;
-	int translateI386Syscall(int guest) const;
-	int translateAMD64Syscall(int guest) const;
+	int translateARMSyscall(int sys_nr) const;
+	int translateI386Syscall(int sys_nr) const;
+	int translateAMD64Syscall(int sys_nr) const;
+	
+	std::string getARMSyscallName(int sys_nr) const;
+	std::string getI386SyscallName(int sys_nr) const;
+	std::string getAMD64SyscallName(int sys_nr) const;
 	
 	/* either passthrough or emulate the syscall */
 	uintptr_t applyARMSyscall(

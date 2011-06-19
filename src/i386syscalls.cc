@@ -1,12 +1,18 @@
 #include "syscalls.h"
 #include "guest.h"
 #include <sys/syscall.h>
+#include <sstream>
 
 int Syscalls::translateI386Syscall(int sys_nr) const {
 	assert(guest->getArch() == Arch::getHostArch());
 	return sys_nr;
 }
 
+std::string Syscalls::getI386SyscallName(int sys_nr) const {
+	std::ostringstream o;
+	o << sys_nr;
+	return o.str();
+}
 uintptr_t Syscalls::applyI386Syscall(
 	SyscallParams& args,
 	GuestMem::Mapping& m)
@@ -27,7 +33,8 @@ uintptr_t Syscalls::applyI386Syscall(
 		return passthroughSyscall(args, m);
 	}
 
-	std::cerr << "syscall(" << args.getSyscall() << ", "
+	std::cerr << "syscall(" 
+		<< getI386SyscallName(args.getSyscall()) << ", "
 		<< (void*)args.getArg(0) << ", "
 		<< (void*)args.getArg(1) << ", "
 		<< (void*)args.getArg(2) << ", "

@@ -88,13 +88,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	}
 
 	if (log_syscalls) {
-		std::cerr << "syscall(" << args.getSyscall() << ", "
-			<< (void*)args.getArg(0) << ", "
-			<< (void*)args.getArg(1) << ", "
-			<< (void*)args.getArg(2) << ", "
-			<< (void*)args.getArg(3) << ", "
-			<< (void*)args.getArg(4) << ", ...) => "
-			<< (void*)sc_ret << std::endl;
+		print(std::cerr);
 	}
 
 	if (fakedSyscall) {
@@ -136,9 +130,22 @@ int Syscalls::translateSyscall(int sys_nr) const {
 		return translateI386Syscall(sys_nr);
 	default:
 		assert(!"unknown arch type for syscall");
-		return -1;
 	}	
 }
+
+std::string Syscalls::getSyscallName(int sys_nr) const {
+	switch(guest->getArch()) {
+	case Arch::X86_64:
+		return getAMD64SyscallName(sys_nr);
+	case Arch::ARM:
+		return getARMSyscallName(sys_nr);
+	case Arch::I386:
+		return getI386SyscallName(sys_nr);
+	default:
+		assert(!"unknown arch type for syscall");
+	}
+}
+
 /* it is disallowed to implement any syscall which requires access to
    data in a structure within this function.  this function does not
    understand the potentially different layout of the guests syscalls
@@ -238,7 +245,7 @@ void Syscalls::print(std::ostream& os) const
 {
 	foreach(it, sc_trace.begin(), sc_trace.end()) {
 		SyscallParams	sp = *it;
-		os << "Syscall: NR=" << sp.getSyscall();
+		os << "Syscall: " << getSyscallName(sp.getSyscall());
 		os << " {"
 			<< (void*)sp.getArg(0) << ", "
 			<< (void*)sp.getArg(1) << ", "
