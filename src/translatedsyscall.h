@@ -75,6 +75,20 @@
 #if defined(__NR_mq_open)
 #include <mqueue.h>
 #endif
+/* using the platform one which apparently was prob with qemu
+   for people with older kernels... */
+#include <linux/loop.h>
+/* this one if for the signal handling code */
+#include <sys/ucontext.h>
+
+/* i am bitch! i must include EVERYTHING because of this sycall emulation */
+#include <sys/personality.h>
+#include <sys/file.h>
+#include <sys/fsuid.h>
+#include <grp.h>
+#include <time.h>
+
+
 
 /* Translation table for bitmasks... */
 typedef struct bitmask_transtbl {

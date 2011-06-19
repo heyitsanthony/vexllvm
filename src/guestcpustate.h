@@ -47,6 +47,8 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	unsigned int getStateSize(void) const { return state_byte_c; }
 	virtual void setStackPtr(void*) = 0;
 	virtual void* getStackPtr(void) const = 0;
+	virtual void setPC(void*) = 0;
+	virtual void* getPC(void) const = 0;
 	virtual SyscallParams getSyscallParams(void) const = 0;
 	virtual void setSyscallResult(uint64_t ret) = 0;
 	virtual uint64_t getExitCode(void) const = 0;

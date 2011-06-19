@@ -98,7 +98,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	}
 
 	if (log_syscalls) {
-		std::cerr << "syscall(" << sys_nr << ", "
+		std::cerr << "syscall(" << args.getSyscall() << ", "
 			<< (void*)args.getArg(0) << ", "
 			<< (void*)args.getArg(1) << ", "
 			<< (void*)args.getArg(2) << ", "
@@ -125,6 +125,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 		if(m.wasUnmapped()) {
 			mappings->removeMapping(m);
 		} else {
+			/* mask out write permission for JITs */
 			if (m.req_prot & PROT_EXEC) {
 				m.cur_prot &= ~PROT_WRITE;
 				mprotect(m.offset, m.length, m.cur_prot);
@@ -132,21 +133,20 @@ uint64_t Syscalls::apply(SyscallParams& args)
 			mappings->recordMapping(m);
 		}
 	}
-	/* mask out write permission so we can play with JITs */
-	if (m.req_prot & PROT_EXEC) {
-		m.cur_prot &= ~PROT_WRITE;
-		args.setArg(2, m.cur_prot);
-	}
 	return sc_ret;
 }
 
+/* it is disallowed to implement any syscall which requires access to
+   data in a structure within this function.  this function does not
+   understand the potentially different layout of the guests syscalls
+   so, syscalls with non-raw pointer data must be handled in the 
+   architecture specific code */
 bool Syscalls::interceptSyscall(
 	int sys_nr,
 	SyscallParams&		args,
 	GuestMem::Mapping&	m,
 	unsigned long&		sc_ret)
 {
-	sc_ret = 0;
 	switch (sys_nr) {
 	case SYS_exit_group:
 		exited = true;
@@ -193,6 +193,7 @@ bool Syscalls::interceptSyscall(
 	case SYS_munmap:
 		m.offset = (void*)args.getArg(0);
 		m.length = args.getArg(1);
+		m.markUnmapped();
 		return false;
 
 	case SYS_readlink:

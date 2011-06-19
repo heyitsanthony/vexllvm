@@ -19,6 +19,8 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 	void setStackPtr(void*);
 	void* getStackPtr(void) const;
+	void setPC(void*);
+	void* getPC(void) const;
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
 	uint64_t getExitCode(void) const;

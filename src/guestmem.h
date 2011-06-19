@@ -34,7 +34,7 @@ public:
 	void print(std::ostream& os) const;
 
 	bool isValid() const { return offset && length; }
-	void markUnampped() { unmapped = true; }
+	void markUnmapped() { unmapped = true; }
 	bool wasUnmapped() { return unmapped; }
 
 	void* 		offset;

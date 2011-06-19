@@ -2,18 +2,34 @@
 #define TRANSLATEDUTIL_H
 #include <endian.h>
 
-#define VERIFY_READ	1
-#define VERIFY_WRITE	2
+/* make up an os version */
+#define qemu_uname_release "vex"
+
+/* mask strace */
+#define do_strace false
+#define print_syscall(...)
+#define print_syscall_ret(...)
+#define gdb_exit(...)
+
+#define HOST_LONG_SIZE	sizeof(long)
+
+/* we should do checks here to make it return EFAULT as necessary */
 #define lock_user_struct(...) true
 #define unlock_user_struct(...)
-#define lock_user(a, b, ...) (abi_ulong*)(b)
+#define lock_user_string(b) (char*)(b)
+#define unlock_user_string(...)
+#define lock_user(a, b, ...) (char*)(b)
 #define unlock_user(...)
-#define gemu_log(...)
 #define access_ok(...) true
+/* These are made up numbers... */
+#define VERIFY_READ	1
+#define VERIFY_WRITE	2
 
 /* these imply that the address space mapping is identity */
 #define g2h(x) (void*)(uintptr_t)(x)
 #define h2g(x) (abi_ulong)(uintptr_t)(x)
+
+#define gemu_log(...)
 
 /* same as PROT_xxx */
 #define PAGE_READ      0x0001
@@ -29,15 +45,23 @@
 #define PAGE_RESERVED  0x0020
 #endif
 
+/* oh poo, these need to record mappings... they don't right now */
+#define target_munmap(a, l)		munmap((void*)a, l)
+#define target_mprotect(a, l, p) 	mprotect((void*)a, l, p)
+#define target_mremap(oa, ol, ns, f, na) \
+	(abi_ulong)(uintptr_t)mremap((void*)oa, ol, ns, f, (void*)na)
 
 #define tswapl(s) s
 #define tswap16(s) s
 #define tswap32(s) s
 #define tswap64(s) s
+#define tswap64s(s) *(s) = tswap64(*(s))
+#define tswapls(s) *(s) = tswapl(*(s))
 
 #define mmap_lock()
 #define mmap_unlock()
 
+#define copy_to_user(d, s, l) memcpy((void*)d, s, l)
 #define __put_user(x, hptr)\
 ({\
     int size = sizeof(*hptr);\
@@ -83,6 +107,10 @@
     }\
     0;\
 })
+static inline bool get_user_sal(abi_long& v, abi_ulong a) {
+	v = *(abi_long*)a;
+	return true;
+}
 static inline bool get_user_ual(abi_ulong& v, abi_ulong a) {
 	v = *(abi_ulong*)a;
 	return true;
@@ -108,7 +136,11 @@ static inline bool get_user_s32(abi_long& v, abi_ulong a) {
 	v = *(abi_long*)a;
 	return true;
 }
-static inline bool put_user_ual(abi_ulong& v, abi_ulong a) {
+static inline bool put_user_ual(abi_ulong v, abi_ulong a) {
+	*(abi_ulong*)a = v;
+	return true;
+}
+static inline bool put_user_sal(abi_long v, abi_ulong a) {
 	*(abi_long*)a = v;
 	return true;
 }
@@ -119,29 +151,22 @@ static inline bool put_user_s32(abi_long v, abi_ulong a) {
 static inline bool put_user_u32(abi_ulong v, abi_ulong a) {
 	*(abi_ulong*)a = v;
 	return true;
-	
+}
+static inline bool put_user_u16(unsigned short v, abi_ulong a) {
+	*(unsigned short*)a = v;
+	return true;
+}
+static inline bool put_user_s64(long long v, abi_ulong a) {
+	*(long long*)a = v;
+	return true;
 }
 static inline bool put_user_u8(abi_long v, abi_ulong a) {
 	*(char*)a = v;
 	return true;
 	
 }
-typedef enum argtype {
-    TYPE_NULL,
-    TYPE_CHAR,
-    TYPE_SHORT,
-    TYPE_INT,
-    TYPE_LONG,
-    TYPE_ULONG,
-    TYPE_PTRVOID, /* pointer on unknown data */
-    TYPE_LONGLONG,
-    TYPE_ULONGLONG,
-    TYPE_PTR,
-    TYPE_ARRAY,
-    TYPE_STRUCT,
-} argtype;
 static int host_to_target_errno(int err);
-static inline abi_ulong mmap_find_vma_flags(abi_ulong start, abi_ulong size,
+abi_ulong mmap_find_vma_flags(abi_ulong start, abi_ulong size,
 	int flags) 
 {
 	/* host page align? */
@@ -153,11 +178,39 @@ static inline abi_ulong mmap_find_vma_flags(abi_ulong start, abi_ulong size,
 	}
 	return (abi_ulong)-host_to_target_errno(errno);
 }
-void page_set_flags(target_ulong start, target_ulong end, int flags)
+void page_set_flags(target_ulong start, target_ulong end, 
+	int flags)
 {
 	assert(!g_syscall_last_mapping && "only one map per syscall allowed");
 	g_syscall_last_mapping = new GuestMem::Mapping(
 		(void*)start, end - start, flags);
 }
+
+/* TODO: we should process the path, especially if it is a library */
+#define path(p) (char*)(p)
+
+/* we don't have signal handling and i have no idea if it is really in scope
+   for doing something interesting, so i'm erring on the side of leaving
+   enough of the qemu code here so we can mess with it as needed */
+struct target_siginfo;
+typedef struct target_siginfo target_siginfo_t;
+int queue_signal(int sig, target_siginfo_t *info) {
+	assert(!"signal propagation not implemented");
+}
+abi_ulong get_sp() {
+	assert(!"fetching platform sp not implemented");	
+}
+/* a few signal handling definitions that came from qemu.h */
+void host_to_target_siginfo(target_siginfo_t *tinfo, const siginfo_t *info);
+void target_to_host_siginfo(siginfo_t *info, const target_siginfo_t *tinfo);
+int target_to_host_signal(int sig);
+int host_to_target_signal(int sig);
+long do_sigreturn() {
+	assert(!"signal return not implemented");	
+}
+long do_rt_sigreturn() {
+	assert(!"signal rt return not implemented");
+}
+abi_long do_sigaltstack(abi_ulong uss_addr, abi_ulong uoss_addr, abi_ulong sp);
 
 #endif

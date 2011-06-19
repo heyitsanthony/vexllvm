@@ -34,6 +34,16 @@ ARMCPUState::~ARMCPUState()
 	delete [] state_data;
 }
 
+void ARMCPUState::setPC(void* ip) {
+	state2arm()->guest_R15T = (uintptr_t)ip;
+}
+void* ARMCPUState::getPC(void) const {
+	/* todo is this right, do we need to mask the low
+	   bits that control whether its in thumb mode or not? */
+	return (void*)state2arm()->guest_R15T;
+}
+
+
 /* ripped from libvex_guest_arm */
 static struct guest_ctx_field arm_fields[] =
 {

@@ -16,6 +16,7 @@ VexExecFastChk::VexExecFastChk(PTImgChk* gs)
 uint64_t VexExecFastChk::doVexSB(VexSB* vsb)
 {
 	MemLog	*ml;
+	uint64_t new_ip;
 
 	cross_check->breakpointSysCalls(
 		(void*)vsb->getGuestAddr(),
@@ -23,9 +24,12 @@ uint64_t VexExecFastChk::doVexSB(VexSB* vsb)
 	if ((ml = cross_check->getMemLog())) {
 		ml->clear();
 		return VexExec::doVexSBAux(vsb, ml);
+	} else {
+		new_ip = VexExec::doVexSB(vsb);
 	}
+	gs->getCPUState()->setPC((void*)new_ip);
 
-	return VexExec::doVexSB(vsb);
+	return new_ip;
 }
 
 void VexExecFastChk::doSysCall(VexSB* vsb)

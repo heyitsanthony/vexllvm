@@ -117,16 +117,16 @@ bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
 	ar r $@ $^
 
 bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
+	g++ $(CFLAGS) -ldl -lrt $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
 
 bin/%: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+	g++ $(CFLAGS) -ldl -lrt  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 bin/softfloat/%_rebase: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
+	g++ $(CFLAGS) -ldl -lrt $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
 
 bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+	g++ $(CFLAGS) -ldl -lrt $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
 
 #obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
 #	llc  $< -o $@

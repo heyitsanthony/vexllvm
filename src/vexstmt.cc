@@ -295,6 +295,8 @@ VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 {
 	switch (jk) {
 	case Ijk_Boring: exit_type = (uint8_t)GE_IGNORE; break;
+	/* arm has some conditional calls occasionally */
+	case Ijk_Call: exit_type = (uint8_t)GE_IGNORE; break;
 	case Ijk_SigSEGV: exit_type = (uint8_t)GE_SIGSEGV; break;
 	case Ijk_EmWarn: exit_type = (uint8_t)GE_EMWARN; break;
 	/* it is allowed to have one of these show up in arm code. it has

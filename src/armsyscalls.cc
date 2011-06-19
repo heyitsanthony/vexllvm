@@ -1,6 +1,7 @@
 #include "syscalls.h"
 #include "guest.h"
 #include "guestmem.h"
+#include <vector>
 
 /* this header loads all of the system headers outside of the namespace */
 #include "translatedsyscall.h"
@@ -14,44 +15,69 @@ namespace ARM {
 	/* we have to define a few platform specific types, non platform
 	   specific interface code goes in the translatedutil.h */
 	#define TARGET_ARM
+	#define TARGET_ABI_BITS 32
 	#define abi_long 	int
 	#define abi_ulong	unsigned int
 	#define target_ulong 	abi_ulong
 	#define target_long 	abi_long
-	#define PAGE_SIZE 4096
+	#define PAGE_SIZE 	4096
 	#define HOST_PAGE_ALIGN(x) \
 		((uintptr_t)x + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1)
-	#define TARGET_ABI_BITS 32
+	#define cpu_to_uname_machine(...)	"armv7l"
+	/* apparently, some syscalls depend on if the thing is EABI or not...
+	   i.e. truncate64, so we'll just say we are */
+	#define ARM_EABI 		1
+	#define ARM_SYSCALL_BASE	0x900000
 
 	/* memory mapping requires wrappers based on the host address
 	   space limitations */
 #ifdef __amd64__
+	/* oh poo, this needs to record mappings... they don't right now */
 	#define target_mmap(a, l, p, f, fd, o) \
 		(abi_long)(uintptr_t)mmap((void*)a, l, p, \
 			(f) | MAP_32BIT, fd, o)
 	#define mmap_find_vma(s, l)	mmap_find_vma_flags(s, l, MAP_32BIT)
 #else
+	/* oh poo, this needs to record mappings... they don't right now */
 	#define target_mmap(a, l, p, f, fd, o) \
 		(abi_long)(uintptr_t)mmap((void*)a, l, p, (f), fd, o)
 	#define mmap_find_vma(s, l)	mmap_find_vma_flags(s, l, 0)
-#endif
+#endif	
 
 	/* our implementations of stuff ripped out of the qemu files */
 	#include "translatedutil.h"
+	/* generic type conversion utility routines */
+	#include "translatedthunk.h"
 	/* terminal io definitions that are plaform dependent */
 	#include "armtermbits.h"
+	/* platform dependent signals */
+	#include "armsignal.h"
 	/* structure and flag definitions that are platform independent */
 	#include "translatedsyscalldefs.h"
 	/* we need load our platform specific stuff as well */
 	#include "armsyscallnumbers.h"
 	/* this constructs all of our syscall translation code */
-	/* #include "translatedsyscall.c" */
-
+	#include "translatedsyscall.c"
+	/* this constructs all of our syscall translation code */
+	#include "translatedsignal.c"
+	/* this has some tables and such used for type conversion */
+	#include "translatedthunk.c"
+	
+	std::vector<int> g_host_to_guest_syscalls(512);
+	std::vector<int> g_guest_to_host_syscalls(512);
+	bool syscall_mapping_init() {
+		#define SYSCALL_RELATION(name, host, guest) 	\
+			g_host_to_guest_syscalls[host] = guest;	\
+			g_guest_to_host_syscalls[guest] = host;
+		#include "syscallsmapping.h"
+		return true;
+	}
+	bool dummy_syscall_mapping = syscall_mapping_init();
 }
 
+
 int Syscalls::translateARMSyscall(int sys_nr) {
-	assert(guest->getArch() == Arch::getHostArch());
-	return sys_nr;
+	return ARM::g_guest_to_host_syscalls[sys_nr];
 }
 
 uintptr_t Syscalls::applyARMSyscall(
@@ -74,9 +100,7 @@ uintptr_t Syscalls::applyARMSyscall(
 		return passthroughSyscall(args, m);
 	}
 
-	uintptr_t sc_res;
-	/*
-	uintptr_t sc_res = ARM::do_syscall(NULL,
+	sc_ret = ARM::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),
 		args.getArg(1),
@@ -91,7 +115,6 @@ uintptr_t Syscalls::applyARMSyscall(
 	}
 	
 	return sc_ret;
-	*/
 
 	std::cerr << "syscall(" << args.getSyscall() << ", "
 		<< (void*)args.getArg(0) << ", "

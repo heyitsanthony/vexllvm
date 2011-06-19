@@ -251,11 +251,9 @@ uint64_t VexExec::doVexSBAux(VexSB* vsb, void* aux)
 
 	sb_executed_c++;
 
-	/* TODO: pull out x86-ism */
-	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	new_ip = ((vexauxfunc_t)(func_ptr))(state, aux);
-	state->guest_RIP = new_ip;
-
+	sb_executed_c++;
+	new_ip = ((vexauxfunc_t)(func_ptr))
+		(gs->getCPUState()->getStateData(), aux);
 	return new_ip;
 }
 
@@ -269,11 +267,7 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 	assert (func_ptr != NULL);
 
 	sb_executed_c++;
-
-	state  = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	new_ip = func_ptr(state);
-	state->guest_RIP = new_ip;
-
+	new_ip = func_ptr(gs->getCPUState()->getStateData());
 	return new_ip;
 }
 

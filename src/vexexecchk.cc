@@ -49,6 +49,8 @@ uint64_t VexExecChk::doVexSB(VexSB* vsb)
 	} else
 		new_ip = VexExec::doVexSB(vsb);
 
+	gs->getCPUState()->setPC((void*)new_ip);
+
 	new_ip_in_bounds = 	new_ip >= vsb->getGuestAddr() &&
 				new_ip < vsb->getEndAddr();
 

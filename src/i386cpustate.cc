@@ -33,6 +33,14 @@ I386CPUState::~I386CPUState()
 	delete [] state_data;
 }
 
+void I386CPUState::setPC(void* ip) {
+	state2i386()->guest_EIP = (uintptr_t)ip;
+}
+void* I386CPUState::getPC(void) const {
+	return (void*)state2i386()->guest_EIP;
+}
+
+
 /* ripped from libvex_guest_86 */
 static struct guest_ctx_field x86_fields[] =
 {

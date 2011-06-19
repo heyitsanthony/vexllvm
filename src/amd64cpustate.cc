@@ -35,6 +35,13 @@ AMD64CPUState::~AMD64CPUState()
 	delete tls;
 }
 
+void AMD64CPUState::setPC(void* ip) {
+	state2amd64()->guest_RIP = (uintptr_t)ip;
+}
+void* AMD64CPUState::getPC(void) const {
+	return (void*)state2amd64()->guest_RIP;
+}
+
 void AMD64CPUState::setTLS(GuestTLS* in_tls)
 {
 	delete tls;
