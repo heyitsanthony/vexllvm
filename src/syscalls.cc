@@ -88,7 +88,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	}
 
 	if (log_syscalls) {
-		print(std::cerr);
+		print(std::cerr, &sc_ret);
 	}
 
 	if (fakedSyscall) {
@@ -241,7 +241,7 @@ uintptr_t Syscalls::passthroughSyscall(
 	return sc_ret;
 }
 
-void Syscalls::print(std::ostream& os) const
+void Syscalls::print(std::ostream& os, uintptr_t* result) const
 {
 	foreach(it, sc_trace.begin(), sc_trace.end()) {
 		SyscallParams	sp = *it;
@@ -252,6 +252,9 @@ void Syscalls::print(std::ostream& os) const
 			<< (void*)sp.getArg(2) << ", "
 			<< (void*)sp.getArg(3) << ", "
 			<< (void*)sp.getArg(4) << ", "
-			<< (void*)sp.getArg(5) << "}" << std::endl;
+			<< (void*)sp.getArg(5) << "}";
+		if(result)
+			os << " => " << (void*)*result;
+		os << std::endl;
 	}
 }
