@@ -300,8 +300,10 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(F64toI64S);
 
 
+	UNOP_TAGOP(Ctz32);
 	UNOP_TAGOP(Ctz64);
 	UNOP_TAGOP(Clz64);
+	UNOP_TAGOP(Clz32);
 
 	BINOP_TAGOP(Shl8x8);
 	BINOP_TAGOP(Shr8x8);

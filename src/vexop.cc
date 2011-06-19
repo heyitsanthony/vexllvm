@@ -1070,6 +1070,8 @@ BINOP_EMIT(CmpLT32U, ICmpULT)
 /* 0x4 -> 3 */
 EMIT_HELPER_UNOP(Ctz64, "vexop_ctz64")
 EMIT_HELPER_UNOP(Clz64, "vexop_clz64")
+EMIT_HELPER_UNOP(Ctz32, "vexop_ctz32")
+EMIT_HELPER_UNOP(Clz32, "vexop_clz32")
 
 static Constant* ileave_lo8x16[] =  {
 	/* this was backwards (0,16) instead of (16,0)-- thx xchk! */
