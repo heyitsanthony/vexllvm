@@ -3,7 +3,7 @@
 #include <endian.h>
 
 /* make up an os version */
-#define qemu_uname_release "vex"
+#define qemu_uname_release "2.6.38-8-generic"
 
 /* mask strace */
 #define do_strace false
@@ -14,7 +14,7 @@
 #define HOST_LONG_SIZE	sizeof(long)
 
 /* we should do checks here to make it return EFAULT as necessary */
-#define lock_user_struct(...) true
+#define lock_user_struct(m, p, a, ...) (*(void**)&p = (void*)a)
 #define unlock_user_struct(...)
 #define lock_user_string(b) (char*)(b)
 #define unlock_user_string(...)

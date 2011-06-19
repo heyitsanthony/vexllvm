@@ -39,6 +39,7 @@ private:
 	char*			stack_base;
 	char*			stack_limit;
 	char*			exe_string;
+	std::string		ld_library_path;
 };
 
 #endif

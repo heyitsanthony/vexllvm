@@ -2,6 +2,7 @@
 #include "guest.h"
 #include "guestmem.h"
 #include <vector>
+#include "Sugar.h"
 
 /* this header loads all of the system headers outside of the namespace */
 #include "translatedsyscall.h"
@@ -66,6 +67,10 @@ namespace ARM {
 	std::vector<int> g_host_to_guest_syscalls(512);
 	std::vector<int> g_guest_to_host_syscalls(512);
 	bool syscall_mapping_init() {
+		foreach(it, g_host_to_guest_syscalls.begin(),
+			g_host_to_guest_syscalls.end()) *it = -1;
+		foreach(it, g_guest_to_host_syscalls.begin(),
+			g_guest_to_host_syscalls.end()) *it = -1;
 		#define SYSCALL_RELATION(name, host, guest) 	\
 			g_host_to_guest_syscalls[host] = guest;	\
 			g_guest_to_host_syscalls[guest] = host;
@@ -77,7 +82,13 @@ namespace ARM {
 
 
 int Syscalls::translateARMSyscall(int sys_nr) {
-	return ARM::g_guest_to_host_syscalls[sys_nr];
+	if(sys_nr > ARM::g_guest_to_host_syscalls.size())
+		return -1;
+
+	int host_sys_nr = ARM::g_guest_to_host_syscalls[sys_nr];
+	if(!host_sys_nr) {
+		
+	}
 }
 
 uintptr_t Syscalls::applyARMSyscall(

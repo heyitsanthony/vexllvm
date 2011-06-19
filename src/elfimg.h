@@ -42,6 +42,7 @@ public:
 		return (address_bits == 32) ?
 			sizeof(Elf32_Ehdr) : sizeof(Elf64_Ehdr);
 	}
+	std::string getLibraryRoot() const { return library_root; }
 private:
 	ElfImg(const char* fname, Arch::Arch arch, bool linked);
 	static Arch::Arch readHeader(const char* fname, 

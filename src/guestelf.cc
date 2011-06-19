@@ -326,6 +326,17 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 	copyElfStrings(1, &filename);
 	// blank environ for now
 	copyElfStrings(envc, envp);
+	if(!img->getLibraryRoot().empty()) {
+		ld_library_path = 
+			"LD_LIBRARY_PATH=" + 
+			img->getLibraryRoot() +
+			"/lib";
+		const char* extra_env[] = {
+			ld_library_path.c_str(),
+		};
+		copyElfStrings(1, extra_env);
+		++envc;
+	}
 	copyElfStrings(argc, argv);
 	
 	setupArgPages();

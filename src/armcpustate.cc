@@ -224,7 +224,7 @@ uint64_t ARMCPUState::getExitCode(void) const
 {
 	/* exit code is from call to exit(), which passes the exit
 	 * code through the first argument */
-	return state2arm()->guest_R1;
+	return state2arm()->guest_R0;
 }
 
 void ARMCPUState::print(std::ostream& os) const
