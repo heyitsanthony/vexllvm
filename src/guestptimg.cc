@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <sstream>
 #include <sys/syscall.h>
+#include <sys/time.h>
 #include "Sugar.h"
 
 #include "elfimg.h"
@@ -477,4 +478,3 @@ void GuestPTImg::setupMem(void)
 }
 
 Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }
-

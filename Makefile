@@ -38,14 +38,18 @@ OBJDEPS=	vexxlate.o		\
 		vexstmt.o		\
 		vexsb.o			\
 		vexexpr.o		\
-		guestmem.o		\
 		vexop.o			\
 		genllvm.o		\
+		guest.o			\
+		guestmem.o		\
 		guestcpustate.o		\
+		guestelf.o		\
+		guestptimg.o		\
+		guesttls.o		\
+		guestsnapshot.o		\
 		amd64cpustate.o		\
 		i386cpustate.o		\
 		armcpustate.o		\
-		guest.o			\
 		memlog.o		\
 		vex_dispatch.o		\
 		syscalls.o		\
@@ -62,9 +66,6 @@ OBJDEPS=	vexxlate.o		\
 		symbols.o		\
 		elfimg.o		\
 		dllib.o			\
-		guestelf.o		\
-		guestptimg.o		\
-		guesttls.o		\
 		ptimgchk.o		\
 		elfsegment.o		\
 #		libvex_amd64_helpers.o	\
@@ -86,7 +87,9 @@ SOFTFLOATDIRDEPS=$(SOFTFLOATDEPS:%=obj/%)
 
 #TODO: use better config options
 BINTARGETS=	elf_trace elf_run jit_test	\
-		pt_run pt_trace pt_xchk dump_loader
+		ss_run				\
+		pt_run pt_trace pt_xchk		\
+		dump_loader
 
 BINOBJS=$(BINTARGETS:%=obj/%.o)
 BINTARGETS_FP=$(BINTARGETS:%=bin/%)

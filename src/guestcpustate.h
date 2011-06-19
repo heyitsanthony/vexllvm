@@ -44,7 +44,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	virtual unsigned int byteOffset2ElemIdx(unsigned int off) const = 0;
 	void* getStateData(void) { return state_data; }
 	const void* getStateData(void) const { return state_data; }
-	unsigned int getStateSize(void) { return state_byte_c; }
+	unsigned int getStateSize(void) const { return state_byte_c; }
 	virtual void setStackPtr(void*) = 0;
 	virtual void* getStackPtr(void) const = 0;
 	virtual SyscallParams getSyscallParams(void) const = 0;
