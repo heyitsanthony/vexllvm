@@ -148,19 +148,24 @@ void GuestMem::removeMapping(Mapping& mapping)
 
 bool GuestMem::lookupMapping(void* addr, Mapping& mapping)
 {
+	const GuestMem::Mapping* m = lookupMappingPtr(addr);
+	if(!m)
+		return false;
+	mapping = *m;
+	return true;
+}
+const GuestMem::Mapping* GuestMem::lookupMappingPtr(void* addr) {
 	mapmap_t::iterator i = maps.lower_bound(addr);
 	if(i != maps.end() && i->first == addr) {
-		mapping = i->second;
-		return true;
+		return &i->second;
 	}
 	if(i == maps.begin())
-		return false;
+		return NULL;
 	--i;
 	if(i->second.end() > addr) {
-		mapping = i->second;
-		return true;
+		return &i->second;
 	}
-	return false;
+	return NULL;
 }
 
 std::list<GuestMem::Mapping> GuestMem::getMaps(void) const

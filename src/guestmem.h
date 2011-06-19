@@ -13,13 +13,14 @@ public:
  * getData works on non-identity mappings */
 class Mapping {
 public:
-	Mapping(void) {}
+	Mapping(void) : offset(NULL), length(0) {}
 	Mapping(void* in_off, size_t in_len, int prot, bool in_is_stack=false)
 	: offset(in_off)
 	, length(in_len)
 	, req_prot(prot)
 	, cur_prot(prot)
-	, is_stack(in_is_stack) {}
+	, is_stack(in_is_stack)
+	, unmapped(false){}
 	virtual ~Mapping(void) {}
 
 	void* end() const { return (char*)offset + length; }
@@ -32,16 +33,22 @@ public:
 	int getCurProt(void) const { return cur_prot; }
 	void print(std::ostream& os) const;
 
+	bool isValid() const { return offset && length; }
+	void markUnampped() { unmapped = true; }
+	bool wasUnmapped() { return unmapped; }
+
 	void* 		offset;
 	size_t		length;
 	int		req_prot;
 	int		cur_prot;
 	bool		is_stack;
+	bool		unmapped;
 };
 
 	GuestMem(void);
 	virtual ~GuestMem(void);
 	void recordMapping(Mapping& mapping);
+	const Mapping* lookupMappingPtr(void* addr);
 	void removeMapping(Mapping& mapping);
 	bool lookupMapping(void* addr, Mapping& mapping);
 	void* brk();

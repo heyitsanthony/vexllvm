@@ -6,8 +6,6 @@
 #include "syscalls.h"
 #include <errno.h>
 #include <stdlib.h>
-#include <sys/prctl.h>
-#include <asm/prctl.h>
 
 #include "guest.h"
 #include "guestcpustate.h"
@@ -35,12 +33,30 @@ uint64_t Syscalls::apply(void)
 /* pass through */
 uint64_t Syscalls::apply(SyscallParams& args)
 {
-	GuestMem::Mapping	m;
 	bool			fakedSyscall;
 	uint64_t		sys_nr;
-	unsigned long		sc_ret;
+	uintptr_t 		sc_ret = ~0ULL;
 
+	/* translate the syscall number by architecture so that
+	   we can have boiler plate implementations centralized
+	   in this file */
 	sys_nr = args.getSyscall();
+	switch(guest->getArch()) {
+	case Arch::X86_64:
+		sys_nr = translateAMD64Syscall(sys_nr);
+		break;
+	case Arch::ARM:
+		sys_nr = translateARMSyscall(sys_nr);
+		break;
+	case Arch::I386:
+		sys_nr = translateI386Syscall(sys_nr);
+		break;
+	default:
+		assert(!"unknown arch type for syscall");
+	}
+	
+	/* check for syscalls which would mess with the thread or process
+	   state and otherwise render us useless */
 	switch (sys_nr) {
 #define BAD_SYSCALL(x)	\
 	case x: 	\
@@ -58,19 +74,23 @@ uint64_t Syscalls::apply(SyscallParams& args)
 		sc_trace.push_back(args);
 	}
 
-	/* this will hold any memory mapping state across the call */
+	/* this will hold any memory mapping state across the call.
+	   it will be updated by the code which applies the platform
+	   dependent syscall to provide a mapping update.  this is done
+	   for new mappings, changed mapping, and unmappings */
+	GuestMem::Mapping	m;
 
-	fakedSyscall = interceptSyscall(args, m, sc_ret);
+	fakedSyscall = interceptSyscall(sys_nr, args, m, sc_ret);
 	if (!fakedSyscall) {
 		switch(guest->getArch()) {
 		case Arch::X86_64:
-			sc_ret = translateAMD64Syscall(args, m);
+			sc_ret = applyAMD64Syscall(args, m);
 			break;
 		case Arch::ARM:
-			sc_ret = translateARMSyscall(args, m);
+			sc_ret = applyARMSyscall(args, m);
 			break;
 		case Arch::I386:
-			sc_ret = translateI386Syscall(args, m);
+			sc_ret = applyI386Syscall(args, m);
 			break;
 		default:
 			assert(!"unknown arch type for syscall");
@@ -87,36 +107,47 @@ uint64_t Syscalls::apply(SyscallParams& args)
 			<< (void*)sc_ret << std::endl;
 	}
 
-	if (fakedSyscall) return sc_ret;
-
-	//the low level sycall interface actually returns the error code
-	//so we have to extract it from errno
-	if(sc_ret >= 0xfffffffffffff001ULL) {
-		return -errno;
+	if (fakedSyscall) {
+		/* memory handling code is below, enforce this */
+		assert(!m.isValid());
+		return sc_ret;
 	}
 
-	/* track dynamic memory mappings */
-	switch (sys_nr) {
-	case SYS_mmap:
+	/* record the offset if this was a pass through mapping */
+	if(sys_nr == SYS_mmap && !m.offset && 
+		(sc_ret != (uintptr_t)MAP_FAILED || 
+			(sc_ret != (unsigned)(uintptr_t)MAP_FAILED)))
+	{
 		m.offset = (void*)sc_ret;
-	case SYS_mprotect:
-		mappings->recordMapping(m);
-		break;
-	case SYS_munmap:
-		mappings->removeMapping(m);
-		break;
 	}
 
+	if(m.isValid()) {
+		if(m.wasUnmapped()) {
+			mappings->removeMapping(m);
+		} else {
+			if (m.req_prot & PROT_EXEC) {
+				m.cur_prot &= ~PROT_WRITE;
+				mprotect(m.offset, m.length, m.cur_prot);
+			}
+			mappings->recordMapping(m);
+		}
+	}
+	/* mask out write permission so we can play with JITs */
+	if (m.req_prot & PROT_EXEC) {
+		m.cur_prot &= ~PROT_WRITE;
+		args.setArg(2, m.cur_prot);
+	}
 	return sc_ret;
 }
 
 bool Syscalls::interceptSyscall(
+	int sys_nr,
 	SyscallParams&		args,
 	GuestMem::Mapping&	m,
 	unsigned long&		sc_ret)
 {
 	sc_ret = 0;
-	switch (args.getSyscall()) {
+	switch (sys_nr) {
 	case SYS_exit_group:
 		exited = true;
 		sc_ret = args.getArg(0);
@@ -128,15 +159,6 @@ bool Syscalls::interceptSyscall(
 			return true;
 		}
 		return false;
-	case SYS_arch_prctl:
-		switch(guest->getArch()) {
-		case Arch::X86_64:
-			if(AMD64_arch_prctl(args, m, sc_ret))
-				return true;
-			break;
-		default:
-			break;
-		}
 	case SYS_brk:
 		if (!mappings->brk()) {
 			/* don't let the app pull the rug */
@@ -166,12 +188,6 @@ bool Syscalls::interceptSyscall(
 			(void*)args.getArg(0),	/* offset */
 			args.getArg(1),		/* length */
 			args.getArg(2));
-
-		/* mask out write permission so we can play with JITs */
-		if (m.req_prot & PROT_EXEC) {
-			m.cur_prot &= ~PROT_WRITE;
-			args.setArg(2, m.cur_prot);
-		}
 		return false;
 
 	case SYS_munmap:
@@ -205,6 +221,26 @@ bool Syscalls::interceptSyscall(
 	return false;
 }
 
+uintptr_t Syscalls::passthroughSyscall(
+	SyscallParams& args,
+	GuestMem::Mapping& m)
+{
+	uintptr_t sc_ret = syscall(
+		args.getSyscall(),
+		args.getArg(0),
+		args.getArg(1),
+		args.getArg(2),
+		args.getArg(3),
+		args.getArg(4),
+		args.getArg(5));
+	/* the low level sycall interface actually returns the error code
+	   so we have to extract it from errno if we did blind syscall 
+	   pass through */
+	if(sc_ret >= 0xfffffffffffff001ULL) {
+		return -errno;
+	}
+	return sc_ret;
+}
 
 void Syscalls::print(std::ostream& os) const
 {
@@ -219,26 +255,4 @@ void Syscalls::print(std::ostream& os) const
 			<< (void*)sp.getArg(4) << ", "
 			<< (void*)sp.getArg(5) << "}" << std::endl;
 	}
-}
-
-#define SYSCALL_BODY(arch, call) SYSCALL_BODY_TRICK(arch, call, _)
-
-#define SYSCALL_BODY_TRICK(arch, call, underbar) \
-	bool Syscalls::arch##underbar##call(	\
-		SyscallParams&		args,	\
-		GuestMem::Mapping&	m,	\
-		unsigned long&		sc_ret)
-
-SYSCALL_BODY(AMD64, arch_prctl) {
-	AMD64CPUState* cpu_state = (AMD64CPUState*)this->cpu_state;
-	if(args.getArg(0) == ARCH_GET_FS) {
-		sc_ret = cpu_state->getFSBase();
-	} else if(args.getArg(0) == ARCH_SET_FS) {
-		cpu_state->setFSBase(args.getArg(1));
-		sc_ret = 0;
-	} else {
-		/* nothing else is supported by VEX */
-		sc_ret = -EPERM;
-	}
-	return true;
 }
