@@ -24,6 +24,28 @@ uint64_t vexop_clz64(uint64_t v)
 	return ret;
 }
 
+uint32_t vexop_ctz32(uint32_t v)
+{
+	int	ret = 0;
+	if (v == 0) return 32;
+	while ((v & 1) == 0) {
+		ret++;
+		v >>= 1;
+	}
+	return ret;
+}
+
+uint32_t vexop_clz32(uint32_t v)
+{
+	int	ret = 0;
+	if (v == 0) return 32;
+	while ((v & (1UL << 31UL)) == 0) {
+		ret++;
+		v <<= 1;
+	}
+	return ret;
+}
+
 uint32_t vexop_cmpf64(double f1, double f2)
 {
 	if (f1 == f2) return Ircr_EQ;

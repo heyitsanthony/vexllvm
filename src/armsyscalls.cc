@@ -87,8 +87,9 @@ int Syscalls::translateARMSyscall(int sys_nr) {
 
 	int host_sys_nr = ARM::g_guest_to_host_syscalls[sys_nr];
 	if(!host_sys_nr) {
-		
+		return -1;
 	}
+	return host_sys_nr;
 }
 
 uintptr_t Syscalls::applyARMSyscall(
