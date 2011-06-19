@@ -13,7 +13,9 @@
 
 GuestMem::GuestMem(void)
 : top_brick(NULL)
+, base_brick(NULL)
 , is_32_bit(false)
+, reserve_brick(NULL)
 {
 }
 
@@ -52,6 +54,7 @@ bool GuestMem::sbrkInitial() {
 	recordMapping(m);
 	
 	top_brick = base_brick = m.offset;
+	reserve_brick = (char*)base_brick + BRK_RESERVE;
 	return true;
 }
 
@@ -99,7 +102,7 @@ bool GuestMem::sbrk(void* new_top)
 
 	new_len = (char*)new_top - (char*)base_brick;
 	new_len = (new_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
-
+	
 	/* new_top is not page aligned because its really just
 	   a number the guest will use... we don't ever use it
 	   anymore. */
@@ -110,9 +113,16 @@ bool GuestMem::sbrk(void* new_top)
 	}
 		
 
-	/* extend the existing mapping... preserving the location */
-	addr = mremap(m.offset, m.length, new_len, 0);
+	/* lame we can be more graceful here and try to do it */ 
+	if(reserve_brick && (char*)m.offset + new_len > reserve_brick)
+		return false;
 
+	/* i want to extend the existing mapping... but it seems like
+	   something is not working with that, so do this instead */
+	// addr = mremap(m.offset, m.length, new_len, MREMAP_FIXED);
+	addr = mmap(m.end(), new_len - m.length, PROT_READ | PROT_WRITE,
+		MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0);
+		
 	if (addr == MAP_FAILED && errno != EFAULT) return false;
 	assert (addr != MAP_FAILED && "sbrk is broken again");
 

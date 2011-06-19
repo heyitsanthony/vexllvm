@@ -65,6 +65,7 @@ private:
 	void		*top_brick;
 	void		*base_brick;
 	bool		is_32_bit;
+	void		*reserve_brick;
 };
 
 #endif
