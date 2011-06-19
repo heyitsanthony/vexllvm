@@ -126,7 +126,7 @@ uintptr_t Syscalls::applyAMD64Syscall(
 	default:
 		break;
 	}
-		
+
 	/* if the host and guest are identical, then just pass through */
 	if(!force_translation && guest->getArch() == Arch::getHostArch()) {
 		return passthroughSyscall(args, m);

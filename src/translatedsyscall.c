@@ -3584,6 +3584,7 @@ static abi_long do_modify_ldt(int func, abi_ulong ptr,
 #endif
 
 #if defined(TARGET_I386) && defined(TARGET_ABI32)
+#if 0
 static abi_long do_set_thread_area(CPUX86State *env, abi_ulong ptr)
 {
     uint64_t *gdt_table = g2h(env->gdt.base);
@@ -3715,6 +3716,7 @@ static abi_long do_get_thread_area(CPUX86State *env, abi_ulong ptr)
     unlock_user_struct(target_ldt_info, ptr, 1);
     return 0;
 }
+#endif
 #endif /* TARGET_I386 && TARGET_ABI32 */
 
 #endif /* defined(TARGET_I386) */
@@ -5947,7 +5949,8 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_vm86old:
         goto unimplemented;
     case TARGET_NR_vm86:
-        ret = do_vm86(cpu_env, arg1, arg2);
+	assert(!"vm86 syscall not supported");
+        // ret = do_vm86(cpu_env, arg1, arg2);
         break;
 #endif
 #endif
@@ -7195,7 +7198,8 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
       }
       break;
 #elif defined(TARGET_I386) && defined(TARGET_ABI32)
-      ret = do_set_thread_area(cpu_env, arg1);
+      assert(!"thread area should be set by vexllvm");
+      // ret = do_set_thread_area(cpu_env, arg1);
       break;
 #else
       goto unimplemented_nowarn;
@@ -7204,7 +7208,8 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
 #ifdef TARGET_NR_get_thread_area
     case TARGET_NR_get_thread_area:
 #if defined(TARGET_I386) && defined(TARGET_ABI32)
-        ret = do_get_thread_area(cpu_env, arg1);
+    	assert(!"thread area should be fetched by vexllvm");
+        // ret = do_get_thread_area(cpu_env, arg1);
 #else
         goto unimplemented_nowarn;
 #endif

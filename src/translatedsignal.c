@@ -751,6 +751,7 @@ struct rt_sigframe
  */
 
 /* XXX: save x87 state */
+#if 0
 static int
 setup_sigcontext(struct target_sigcontext *sc, struct target_fpstate *fpstate,
 		 CPUX86State *env, abi_ulong mask, abi_ulong fpstate_addr)
@@ -1073,6 +1074,7 @@ badframe:
         force_sig(TARGET_SIGSEGV);
 	return 0;
 }
+#endif
 #endif
 #elif defined(TARGET_ARM)
 
