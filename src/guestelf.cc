@@ -290,7 +290,6 @@ void GuestELF::createElfTables(int argc, int envc)
 	}
 	
 	loaderBuildArgptr(envc, argc, string_stack, 0);
-	std::cerr << (void*)sp << std::endl;
 }
 
 /* Construct the envp and argv tables on the target stack.	*/
