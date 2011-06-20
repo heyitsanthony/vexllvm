@@ -89,6 +89,8 @@ private:
 private:
 	SYSCALL_HANDLER(AMD64, arch_prctl);
 	SYSCALL_HANDLER(AMD64, arch_modify_ldt);
+	SYSCALL_HANDLER(ARM, cacheflush);
+	SYSCALL_HANDLER(ARM, set_tls);
 };
 
 #endif

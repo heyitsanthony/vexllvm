@@ -271,6 +271,7 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 
 	sb_executed_c++;
 	new_ip = func_ptr(gs->getCPUState()->getStateData());
+	
 	return new_ip;
 }
 

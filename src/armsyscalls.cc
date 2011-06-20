@@ -4,6 +4,7 @@
 #include <vector>
 #include <sstream>
 #include "Sugar.h"
+#include "armcpustate.h"
 
 /* this header loads all of the system headers outside of the namespace */
 #include "translatedsyscall.h"
@@ -30,8 +31,7 @@ namespace ARM {
 	/* apparently, some syscalls depend on if the thing is EABI or not...
 	   i.e. truncate64, so we'll just say we are */
 	#define ARM_EABI 		1
-	#define ARM_SYSCALL_BASE	0x900000
-
+	
 	/* memory mapping requires wrappers based on the host address
 	   space limitations */
 #ifdef __amd64__
@@ -102,6 +102,12 @@ int Syscalls::translateARMSyscall(int sys_nr) const {
 }
 
 std::string Syscalls::getARMSyscallName(int sys_nr) const {
+	switch(sys_nr) {
+	case ARM_NR_cacheflush:
+		return "cacheflush";
+	case ARM_NR_set_tls:
+		return "settls";
+	}
 	if((unsigned)sys_nr > ARM::g_guest_syscall_names.size()) {
 		std::ostringstream o;
 		o << sys_nr;
@@ -122,6 +128,14 @@ uintptr_t Syscalls::applyARMSyscall(
 	   behaviors, but they can just alter the args and let
 	   the other mechanisms finish the job */
 	switch (args.getSyscall()) {
+	case ARM_NR_set_tls:
+		if(ARM_set_tls(args, m, sc_ret))
+			return sc_ret;
+		break;
+	case ARM_NR_cacheflush:
+		if(ARM_cacheflush(args, m, sc_ret))
+			return sc_ret;
+		break;
 	default:
 		break;
 	}
@@ -146,4 +160,13 @@ uintptr_t Syscalls::applyARMSyscall(
 	}
 	
 	return sc_ret;
+}
+SYSCALL_BODY(ARM, cacheflush) {
+	return true;
+}
+SYSCALL_BODY(ARM, set_tls) {
+	ARMCPUState* cpu_state = (ARMCPUState*)this->cpu_state;
+	cpu_state->setThreadPointer(args.getArg(0));
+	sc_ret = 0;
+	return true;
 }

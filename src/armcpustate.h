@@ -28,6 +28,7 @@ public:
 	void setRegs(const user& regs, const user_fp& fpregs, 
 		const user_vfp& vfpregs) {
 #endif
+	void setThreadPointer(uint32_t v);
 	void print(std::ostream& os) const;
 
 	const char* off2Name(unsigned int off) const;

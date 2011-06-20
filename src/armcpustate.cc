@@ -203,7 +203,9 @@ void* ARMCPUState::getStackPtr(void) const
 
 SyscallParams ARMCPUState::getSyscallParams(void) const
 {
-	/* really figure out what this is... assuming they did the obvious */
+	/* its possible that the actual instruction can encode
+	   something in the non-eabi case, but we are restricting
+	   our selves to eabi for now */
 	return SyscallParams(
 		state2arm()->guest_R7,
 		state2arm()->guest_R0,
@@ -225,6 +227,10 @@ uint64_t ARMCPUState::getExitCode(void) const
 	/* exit code is from call to exit(), which passes the exit
 	 * code through the first argument */
 	return state2arm()->guest_R0;
+}
+void ARMCPUState::setThreadPointer(uint32_t v)
+{
+	state2arm()->guest_TPIDRURO = v;
 }
 
 void ARMCPUState::print(std::ostream& os) const

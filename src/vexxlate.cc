@@ -186,6 +186,9 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	vta.host_bytes_used = &host_bytes_used;
 
 	vta.traceflags = VEX_TRACE_FLAGS;
+	if(getenv("VEXLLVM_TRACE_FE")) {
+		vta.traceflags |= (1 << 7);
+	}
 #if !defined(VALGRIND_TRUNK)
 	vta.dispatch = (void*)dispatch_asm_amd64;
 #else

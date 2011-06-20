@@ -147,6 +147,7 @@ class VexStmtLLSC : public VexStmt
 public:
 	VexStmtLLSC(VexSB* in_parent, const IRStmt* in_stmt)
 	 : VexStmt(in_parent, in_stmt) {}
+	virtual void emit(void) const { assert(!"LLSC Statement"); }
 	virtual ~VexStmtLLSC() {}
 	virtual void print(std::ostream& os) const;
 private:
