@@ -16,12 +16,13 @@ extern "C" {
 
 using namespace llvm;
 
-struct ExtVexGuestARMState : VexGuestARMState {
-	unsigned int	guest_LINKED;
+struct ExtVexGuestARMState
+{
+	VexGuestARMState	guest_vex;
+	unsigned int		guest_LINKED;
 };
-#define state2arm()	((ExtVexGuestARMState*)(state_data))
-
-#define FS_SEG_OFFSET	(24*8)
+#define state2arm()	((VexGuestARMState*)(state_data))
+#define state2arm_ext() ((ExtVexGuestARMState*)(state_data))
 
 ARMCPUState::ARMCPUState()
 {
@@ -267,7 +268,7 @@ void ARMCPUState::print(std::ostream& os) const
 	os << "FPCSR: "  << (void*)state2arm()->guest_FPSCR << "\n";
 	/* tls */
 	os << "TPIDRURO: "  << (void*)state2arm()->guest_TPIDRURO << "\n";
-	os << "LINKED: "  << (void*)state2arm()->guest_LINKED << "\n";
+	os << "LINKED: "  << (void*)state2arm_ext()->guest_LINKED << "\n";
 }
 
 /* set a function argument */

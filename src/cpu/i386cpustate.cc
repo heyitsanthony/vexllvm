@@ -8,6 +8,7 @@
 #include <cstring>
 #include <vector>
 
+#include "guest.h"
 #include "guesttls.h"
 #include "i386cpustate.h"
 extern "C" {

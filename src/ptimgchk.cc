@@ -13,7 +13,7 @@
 
 #include <sstream>
 
-#include "syscallsmarshalled.h"
+#include "syscall/syscallsmarshalled.h"
 #include "ptimgchk.h"
 #include "memlog.h"
 
