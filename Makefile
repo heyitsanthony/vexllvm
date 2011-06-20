@@ -96,17 +96,18 @@ BINTARGETS_FP=$(BINTARGETS:%=bin/%)
 BINTARGETS_FP_REBASE=$(BINTARGETS:%=bin/%_rebase)
 BINTARGETS_SOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
 BINTARGETS_SOFTFLOAT_REBASE=$(BINTARGETS:%=bin/softfloat/%_rebase)
+BINTARGETS_ALL=	$(BINTARGETS_FP) $(BINTARGETS_FP_REBASE)		\
+		$(BINTARGETS_SOFTFLOAT) $(BINTARGETS_SOFTFLOAT_REBASE)
+LIBTARGETS=	bin/vexllvm.a 			\
+		bin/vexllvm-softfloat.a
 
 all:	bitcode 				\
 	$(BINOBJS)				\
-	$(BINTARGETS_FP)			\
-	$(BINTARGETS_FP_REBASE)			\
-	$(BINTARGETS_SOFTFLOAT)			\
-	$(BINTARGETS_SOFTFLOAT_REBASE)		\
-	bin/vexllvm.a bin/vexllvm-softfloat.a
+	$(LIBTARGETS)				\
+	$(BINTARGETS_ALL)			\
 
 clean:
-	rm -f $(OBJDIRDEPS) $(BINTARGETSFP) $(BINTARGETSSOFTFLOAT) bitcode/*softfloat*
+	rm -f $(BINOBJS) obj/*vexop*.o $(OBJDIRDEPS) $(BINTARGETS_ALL) $(LIBTARGETS) bitcode/*softfloat*
 
 bitcode: $(BITCODE_FILES)
 
