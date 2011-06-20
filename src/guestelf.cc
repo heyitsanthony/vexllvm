@@ -144,6 +144,7 @@ void GuestELF::setupArgPages()
 		}
 		stack_base += img->getPageSize();
 	}
+	exe_string = sp;
 
 	if(getenv("VEXLLVM_LOG_MAPPINGS")) {
 		std::cerr << "stack @ " << (void*)stack_limit << " sz " 
@@ -170,6 +171,14 @@ void GuestELF::setupArgPages()
 #define ARM_HWCAP_VFPv3D16  16384
 #define ARM_HWCAP_TLS       32768
 
+class ElfTable : public std::vector<std::pair<uintptr_t, uintptr_t> >
+{
+public:
+	template <typename T>
+	void add(uintptr_t t, T v) {
+		push_back(std::make_pair(t, (uintptr_t)v));
+	}
+};
 
 void GuestELF::createElfTables(int argc, int envc)
 {
@@ -223,60 +232,65 @@ void GuestELF::createElfTables(int argc, int envc)
 	close(rnd);
 	sp -= 16;
 
-	/* align to 16 bytes for shits and giggles */
-	while((uintptr_t)sp & 0xf) 
-		pushPadByte();
-
-	pushNative(0);				pushNative(AT_NULL);
-	pushPointer(u_platform);		pushNative(AT_PLATFORM);
-	pushPointer(exe_string);		pushNative(AT_EXECFN);	
-	pushPointer(random_bytes);		pushNative(AT_RANDOM);	
-	pushNative(0); 				pushNative(AT_SECURE);
-	pushNative(getegid());			pushNative(AT_EGID);
-	pushNative(getgid());			pushNative(AT_GID);
-	pushNative(geteuid());			pushNative(AT_EUID);
-	pushNative(getuid());			pushNative(AT_UID);
-	pushPointer(img->getEntryPoint());	pushNative(AT_ENTRY); 
-	pushNative(0);			 	pushNative(AT_FLAGS); 
-
-	pushPointer(img->getInterp() ?
-		img->getInterp()->getFirstSegment()->relocation()
-		: img->getFirstSegment()->relocation());
-	pushNative(AT_BASE);	
-
-	pushNative(img->getHeaderCount());	pushNative(AT_PHNUM);
-	pushNative(img->getElfPhdrSize());	pushNative(AT_PHENT);
-	pushPointer(img->getHeader());		pushNative(AT_PHDR);
-	pushNative(sysconf(_SC_CLK_TCK)); 	pushNative(AT_CLKTCK);
-	pushNative(img->getPageSize());		pushNative(AT_PAGESZ);
+	ElfTable table;
+	/* AT_SYSINFO_EHDR, AT_EXECFD ? */
 
 	switch(img->getArch()) {
 	case Arch::ARM:
 		/* more? */
-		pushNative(ARM_HWCAP_THUMB | ARM_HWCAP_NEON | 
+		table.add(AT_HWCAP, ARM_HWCAP_THUMB | ARM_HWCAP_NEON | 
 			ARM_HWCAP_VFPv3 | ARM_HWCAP_TLS);
 		break;
 	case Arch::I386:
 		/* check me!!! stolen from below*/
-		pushNative(0x000000000febfbff);
+		table.add(AT_HWCAP, 0x000000000febfbff);
 		break;
 	case Arch::X86_64:
 		/* less? */
-		pushNative(0x000000000febfbff);
+		table.add(AT_HWCAP, 0x000000000febfbff);
 		break;
 	case Arch::Unknown:
 		/* less? */
-		pushNative(0);
+		table.add(AT_HWCAP, 0);
 		break;
 	}
-	pushNative(AT_HWCAP);
 
-	//ptr to syscall - need to fetch, or stick a dummy one in?
-	//pushNative(AT_SYSINFO_EHDR); pushPointer(?????); 
-	//fd for exe
-	// pushNative(AT_EXECFD); pushNative(???);
-
+	table.add(AT_PAGESZ, img->getPageSize());
+	table.add(AT_CLKTCK, sysconf(_SC_CLK_TCK));
+	table.add(AT_PHDR, img->getHeader());
+	table.add(AT_PHENT, img->getElfPhdrSize());
+	table.add(AT_PHNUM, img->getHeaderCount());
+	
+	table.add(AT_BASE, img->getInterp() ?
+		img->getInterp()->getFirstSegment()->relocation()
+		: img->getFirstSegment()->relocation());
+	table.add(AT_FLAGS, 0);
+	table.add(AT_ENTRY, img->getEntryPoint());
+	table.add(AT_UID, getuid());
+	table.add(AT_EUID, geteuid());
+	table.add(AT_GID, getgid());
+	table.add(AT_EGID, getegid());
+	table.add(AT_SECURE, 0);
+	table.add(AT_RANDOM, random_bytes);
+	table.add(AT_EXECFN, exe_string);
+	table.add(AT_PLATFORM, u_platform);
+	table.add(AT_NULL, 0);
+	
+	/* align to 16 bytes for the entry point */
+	int items = argc + 1 + envc + 1 + 1 + table.size() * 2 ;
+	int sz = img->getAddressBits() == 32 ? 
+		sizeof(int) * items
+		: sizeof(long) * items;
+	while(((uintptr_t)sp - sz) & 0xf) 
+		pushPadByte();
+		
+	foreach(it, table.rbegin(), table.rend()) {
+		pushNative(it->second);
+		pushNative(it->first);
+	}
+	
 	loaderBuildArgptr(envc, argc, string_stack, 0);
+	std::cerr << (void*)sp << std::endl;
 }
 
 /* Construct the envp and argv tables on the target stack.	*/
@@ -301,10 +315,7 @@ void GuestELF::loaderBuildArgptr(int envc, int argc,
 	}
 	
 	pushNative(argc);
-	
-	/* note where we store the bin path, because the elf tables want it */
-	exe_string = stringp;
-	
+		
 	/* copy all the arg pointers into the table */
 	while (argc-- > 0) {
 		putPointer(argv, stringp, 1);
@@ -327,7 +338,6 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 	filename = getBinaryPath();
 
 	copyElfStrings(1, &filename);
-	// blank environ for now
 	copyElfStrings(envc, envp);
 	if(!img->getLibraryRoot().empty()) {
 		ld_library_path = 
