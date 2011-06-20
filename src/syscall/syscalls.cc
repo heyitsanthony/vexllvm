@@ -10,7 +10,6 @@
 #include "guest.h"
 #include "guestcpustate.h"
 #include "Sugar.h"
-#include "amd64cpustate.h"
 
 Syscalls::Syscalls(Guest* g)
 : guest(g)

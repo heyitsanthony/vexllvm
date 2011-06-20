@@ -20,7 +20,7 @@
 
 #include "Sugar.h"
 
-#include "syscalls.h"
+#include "syscall/syscalls.h"
 #include "genllvm.h"
 #include "guestcpustate.h"
 #include "guest.h"

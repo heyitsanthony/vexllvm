@@ -7,11 +7,9 @@
 #include <stdio.h>
 
 #include "guestcpustate.h"
-#include "amd64cpustate.h"
-#include "armcpustate.h"
-#include "i386cpustate.h"
-
-
+#include "cpu/amd64cpustate.h"
+#include "cpu/armcpustate.h"
+#include "cpu/i386cpustate.h"
 
 using namespace llvm;
 

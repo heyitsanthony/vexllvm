@@ -10,7 +10,7 @@
 #include "guestcpustate.h"
 #include "memlog.h"
 #include "ptimgchk.h"
-#include "syscallsmarshalled.h"
+#include "syscall/syscallsmarshalled.h"
 #include "vexexecchk.h"
 
 VexExecChk::VexExecChk(PTImgChk* gs)

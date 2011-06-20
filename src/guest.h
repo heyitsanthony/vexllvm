@@ -6,7 +6,7 @@
 #include <list>
 #include "arch.h"
 #include "guestmem.h"
-#include "syscallparams.h"
+#include "syscall/syscallparams.h"
 
 class GuestCPUState;
 class GuestSnapshot;

@@ -25,7 +25,7 @@
 #include "guestcpustate.h"
 
 #ifdef __amd64__
-#include "amd64cpustate.h"
+#include "cpu/amd64cpustate.h"
 #endif
 
 using namespace llvm;

@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <stdint.h>
-#include "syscallparams.h"
+#include "syscall/syscallparams.h"
 #include "arch.h"
 #include <sys/user.h>
 #include <assert.h>

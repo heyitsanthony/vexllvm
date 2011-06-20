@@ -1,6 +1,6 @@
 BIN_BASE="0xa000000"
 BIN_BASE2="0xc000000"
-CFLAGS=-g -O3
+CFLAGS=-g -O3 -I`pwd`/src/
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
 endif
@@ -47,16 +47,16 @@ OBJDEPS=	vexxlate.o		\
 		guestptimg.o		\
 		guesttls.o		\
 		guestsnapshot.o		\
-		amd64cpustate.o		\
-		i386cpustate.o		\
-		armcpustate.o		\
+		cpu/amd64cpustate.o	\
+		cpu/i386cpustate.o	\
+		cpu/armcpustate.o	\
+		cpu/i386syscalls.o		\
+		cpu/armsyscalls.o		\
+		cpu/amd64syscalls.o		\
 		memlog.o		\
 		vex_dispatch.o		\
-		syscalls.o		\
-		i386syscalls.o		\
-		armsyscalls.o		\
-		amd64syscalls.o		\
-		syscallsmarshalled.o	\
+		syscall/syscalls.o		\
+		syscall/syscallsmarshalled.o	\
 		vexfcache.o		\
 		vexjitcache.o		\
 		vexexec.o		\
@@ -106,7 +106,7 @@ all:	bitcode 				\
 	bin/vexllvm.a bin/vexllvm-softfloat.a
 
 clean:
-	rm -f obj/* $(BINTARGETSFP) $(BINTARGETSSOFTFLOAT) bitcode/*softfloat*
+	rm -f $(OBJDIRDEPS) $(BINTARGETSFP) $(BINTARGETSSOFTFLOAT) bitcode/*softfloat*
 
 bitcode: $(BITCODE_FILES)
 
