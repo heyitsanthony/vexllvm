@@ -280,6 +280,16 @@ Value* GenLLVM::getCtxBase(void)
 	return builder->CreateIntToPtr(intptr_v, ptrty, "ctxbaseptr");
 }
 
+void GenLLVM::markLinked() {
+	/* DEATH: we need to set linked...
+	   also how to do this in a processor indepent way, because
+	   this is really an ARM problem */
+	return;
+}
+llvm::Value* GenLLVM::getLinked() {
+	return ConstantInt::get(getGlobalContext(), APInt(1, 1));
+}
+
 void GenLLVM::setExitType(uint8_t exit_type)
 {
 	writeCtx(

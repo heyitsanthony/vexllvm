@@ -127,6 +127,80 @@ void VexStmtStore::print(std::ostream& os) const
 	data_expr->print(os);
 }
 
+VexStmtLLSC::VexStmtLLSC(VexSB* in_parent, const IRStmt* in_stmt)
+: VexStmt(in_parent, in_stmt)
+, result(in_stmt->Ist.LLSC.result)
+, addr_expr(VexExpr::create(this, in_stmt->Ist.LLSC.addr))
+, data_expr(NULL)
+{
+	if(in_stmt->Ist.LLSC.storedata) {
+		data_expr = VexExpr::create(this,
+			in_stmt->Ist.LLSC.storedata);
+	}
+}
+void VexStmtLLSC::emitLoad(void) const { 
+	parent->setRegValue(result, 
+		theGenLLVM->load(
+			addr_expr->emit(), 
+			parent->getRegType(result)));
+	theGenLLVM->markLinked();
+}
+void VexStmtLLSC::emitStore(void) const {
+	Value		*v_addr, *v_linked;
+	BasicBlock	*bb_linked, *bb_unlinked, *bb_origin;
+	IRBuilder<>	*builder;
+	
+	builder = theGenLLVM->getBuilder();
+	v_linked = theGenLLVM->getLinked();
+		
+	bb_origin = builder->GetInsertBlock();
+	bb_linked = BasicBlock::Create(
+		getGlobalContext(),
+		"linked",
+		bb_origin->getParent());
+	bb_unlinked = BasicBlock::Create(
+		getGlobalContext(),
+		"unlinked",
+		bb_origin->getParent());
+	
+	builder->SetInsertPoint(bb_origin);
+	builder->CreateCondBr(v_linked, bb_linked, bb_unlinked);
+	
+	/* we're linked still, so write it */
+	builder->SetInsertPoint(bb_linked);
+	v_addr = addr_expr->emit();
+	theGenLLVM->store(v_addr, data_expr->emit());
+	builder->CreateBr(bb_unlinked);
+	
+	/* not linked, skip it */
+	builder->SetInsertPoint(bb_unlinked);	
+	
+	parent->setRegValue(result, v_linked);
+}
+void VexStmtLLSC::emit(void) const { 
+	if(data_expr) {
+		emitStore();
+	} else {
+		emitLoad();
+	}
+}
+VexStmtLLSC::~VexStmtLLSC() {
+	delete addr_expr;
+	delete data_expr;
+}
+void VexStmtLLSC::print(std::ostream& os) const {
+	if(data_expr) {
+		os << "LinkedStore: (";
+		addr_expr->print(os);
+		os << ") <- ";
+		data_expr->print(os);
+	} else {
+		os << "LoadLinked: t" << result << " <- (";
+		addr_expr->print(os);
+		os << ")";
+	}
+}
+
 VexStmtCAS::VexStmtCAS(VexSB* in_parent, const IRStmt* in_stmt)
  :	VexStmt(in_parent, in_stmt),
  	oldVal_tmp(in_stmt->Ist.CAS.details->oldLo),
@@ -194,8 +268,6 @@ void VexStmtCAS::print(std::ostream& os) const
 	new_val->print(os);
 	os << ")" << " tmp=t" << oldVal_tmp;
 }
-
-void VexStmtLLSC::print(std::ostream& os) const { os << "LLSC"; }
 
 VexStmtDirty::VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
   :	VexStmt(in_parent, in_stmt),

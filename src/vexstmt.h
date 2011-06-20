@@ -145,12 +145,16 @@ private:
 class VexStmtLLSC : public VexStmt
 {
 public:
-	VexStmtLLSC(VexSB* in_parent, const IRStmt* in_stmt)
-	 : VexStmt(in_parent, in_stmt) {}
-	virtual void emit(void) const { assert(!"LLSC Statement"); }
-	virtual ~VexStmtLLSC() {}
+	VexStmtLLSC(VexSB* in_parent, const IRStmt* in_stmt);
+	virtual void emit(void) const;
+	virtual ~VexStmtLLSC();
+	void emitLoad(void) const;
+	void emitStore(void) const;
 	virtual void print(std::ostream& os) const;
 private:
+	int		result;
+        VexExpr*   	addr_expr;
+        VexExpr*   	data_expr; /* NULL => LL, non-NULL => SC */
 };
 
 class VexStmtDirty : public VexStmt

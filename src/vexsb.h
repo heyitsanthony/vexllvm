@@ -19,6 +19,7 @@ namespace llvm
 {
 	class Value;
 	class Function;
+	class Type;
 }
 
 class VexSB
@@ -38,6 +39,7 @@ public:
 	unsigned int getNumStmts(void) const { return stmt_c; }
 	void setRegValue(unsigned int reg_idx, llvm::Value* v);
 	llvm::Value* getRegValue(unsigned int reg_idx) const;
+	const llvm::Type* getRegType(unsigned int reg_idx) const;
 	llvm::Function* emit(const char* f_name = "vexsb_f");
 	void print(std::ostream& os) const;
 	void printRegisters(std::ostream& os) const;

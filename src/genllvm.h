@@ -43,6 +43,9 @@ public:
 	llvm::Value* getCtxGEP(llvm::Value* byteOff, const llvm::Type* ty);
 	llvm::Value* getCtxBase(void);
 
+	void markLinked();
+	llvm::Value* getLinked();
+	
 	void store(llvm::Value* addr, llvm::Value* data);
 	llvm::Value* load(llvm::Value* addr_v, IRType vex_type);
 	llvm::Value* load(llvm::Value* addr_v, const llvm::Type* ty);

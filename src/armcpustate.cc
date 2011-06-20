@@ -16,7 +16,10 @@ extern "C" {
 
 using namespace llvm;
 
-#define state2arm()	((VexGuestARMState*)(state_data))
+struct ExtVexGuestARMState : VexGuestARMState {
+	unsigned int	guest_LINKED;
+};
+#define state2arm()	((ExtVexGuestARMState*)(state_data))
 
 #define FS_SEG_OFFSET	(24*8)
 
@@ -80,6 +83,9 @@ static struct guest_ctx_field arm_fields[] =
 
 	{32, 3, "pad"},
 	/* END VEX STRUCTURE */
+	{32, 1, "LINKED"},	/* we set this when load linked happens
+				   clear it when a later store conditional
+				   should fail */
 
 	{0}	/* time to stop */
 };
@@ -167,6 +173,15 @@ const char* ARMCPUState::off2Name(unsigned int off) const
 	CASE_OFF2NAME(FPSCR)
 	CASE_OFF2NAME(TPIDRURO)
 	CASE_OFF2NAME(ITSTATE)
+#undef CASE_OFF2NAME2
+#undef CASE_OFF2NAME
+#define CASE_OFF2NAME2(x,y)	\
+	case offsetof(ExtVexGuestARMState, guest_##y) ... 3+offsetof(VexGuestARMState, guest_##y): \
+	return #x;
+#define CASE_OFF2NAME(x)	\
+	case offsetof(ExtVexGuestARMState, guest_##x) ...	3+offsetof(ExtVexGuestARMState, guest_##x): \
+	return #x;
+	CASE_OFF2NAME(LINKED)
 	default: return NULL;
 	}
 	return NULL;
@@ -252,6 +267,7 @@ void ARMCPUState::print(std::ostream& os) const
 	os << "FPCSR: "  << (void*)state2arm()->guest_FPSCR << "\n";
 	/* tls */
 	os << "TPIDRURO: "  << (void*)state2arm()->guest_TPIDRURO << "\n";
+	os << "LINKED: "  << (void*)state2arm()->guest_LINKED << "\n";
 }
 
 /* set a function argument */

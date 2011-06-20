@@ -202,6 +202,11 @@ Value* VexSB::getRegValue(unsigned int reg_idx) const
 	assert (values[reg_idx] != NULL);
 	return values[reg_idx];
 }
+const Type* VexSB::getRegType(unsigned int reg_idx) const
+{
+	/* DEATH: we need to save the type so we can do this */
+	return IntegerType::get(getGlobalContext(), 32);
+}
 
 void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 {
