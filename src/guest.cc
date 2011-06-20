@@ -98,7 +98,7 @@ void Guest::save(const char* dirpath) const
 	unlink(LAST_SYMLINK);
 
 	/* link symlink to new guest */
-	symlink(dirpath, LAST_SYMLINK);
+	err = symlink(dirpath, LAST_SYMLINK);
 
 	/* dump it */
 	GuestSnapshot::save(this, dirpath);

@@ -174,7 +174,7 @@ void GuestELF::setupArgPages()
 void GuestELF::createElfTables(int argc, int envc)
 {
 	char* string_stack = sp;
-	int size, rnd_br;
+	int rnd_br;
 	char* u_platform;
 	const char *k_platform = NULL;
 
