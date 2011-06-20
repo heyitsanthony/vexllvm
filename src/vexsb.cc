@@ -20,6 +20,8 @@ VexSB::VexSB(uint64_t in_guest_addr, const IRSB* irsb)
 {
 	values = new Value*[reg_c];
 	memset(values, 0, sizeof(Value*)*getNumRegs());
+	types = new IRType[reg_c];
+	memcpy(types, irsb->tyenv->types, reg_c * sizeof(IRType));
 
 	loadInstructions(irsb);
 	loadJump(irsb->jumpkind, VexExpr::create(stmts.back(), irsb->next));
@@ -29,6 +31,7 @@ VexSB::~VexSB(void)
 {
 	delete [] values;
 	delete jump_expr;
+	delete [] types;
 }
 
 VexSB::VexSB(uint64_t in_guest_addr, unsigned int num_regs)
@@ -204,8 +207,7 @@ Value* VexSB::getRegValue(unsigned int reg_idx) const
 }
 const Type* VexSB::getRegType(unsigned int reg_idx) const
 {
-	/* DEATH: we need to save the type so we can do this */
-	return IntegerType::get(getGlobalContext(), 32);
+	return theGenLLVM->vexTy2LLVM(types[reg_idx]);
 }
 
 void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)

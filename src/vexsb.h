@@ -69,6 +69,7 @@ private:
 	VexStmtIMark		*last_imark;
 	PtrList<VexStmt>	stmts;
 	llvm::Value		**values;
+	IRType			*types;
 };
 
 #endif
