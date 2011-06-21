@@ -43,6 +43,8 @@ public:
 	virtual void setMaxCache(unsigned int x);
 	virtual void flush(void);
 	virtual void flush(void* begin, void* end);
+
+	unsigned int size(void) const { return vexsb_cache.size(); }
 protected:
 	unsigned int getMaxCache(void) const { return max_cache_ents; }
 	func_map::iterator funcBegin() { return func_cache.begin(); }
