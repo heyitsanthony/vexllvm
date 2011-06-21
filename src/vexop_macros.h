@@ -41,12 +41,26 @@
 	v3 = args[2]->emit();			\
 	builder = theGenLLVM->getBuilder();
 
-#define X_TO_Y_EMIT(x,y,w,z)			\
-Value* VexExprUnop##x::emit(void) const		\
-{						\
-	UNOP_SETUP				\
-	v1 = builder->CreateBitCast(v1, w);	\
-	return builder->y(v1, z);		\
+#define X_TO_Y_EMIT(x,y,w,z)					\
+Value* VexExprUnop##x::emit(void) const				\
+{								\
+	UNOP_SETUP						\
+	unsigned bits = v1->getType()->getPrimitiveSizeInBits();\
+	if(bits < w->getPrimitiveSizeInBits()) {		\
+		std::cerr << "size mismatch in IR: wanted "	\
+		 	<< w->getPrimitiveSizeInBits()		\
+			<< " got " << bits << std::endl;	\
+		v1 = builder->CreateBitCast(v1, get_i(bits));	\
+		v1 = builder->CreateZExt(v1, w);		\
+	} else if (bits > w->getPrimitiveSizeInBits()) {	\
+		std::cerr << "size mismatch in IR: wanted "	\
+		 	<< w->getPrimitiveSizeInBits()		\
+			<< " got " << bits << std::endl;	\
+		v1 = builder->CreateBitCast(v1, get_i(bits));	\
+		v1 = builder->CreateTrunc(v1, w);		\
+	}							\
+	v1 = builder->CreateBitCast(v1, w);			\
+	return builder->y(v1, z);				\
 }
 
 /* XXX probably wrong to discard rounding info, but who cares */
