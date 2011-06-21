@@ -44,16 +44,27 @@ int main(int argc, char* argv[], char* envp[])
 		return -1;
 	}
 
-	img = ElfImg::create(argv[1]);
+	std::vector<char*> env;
+	for(int i = 0; envp[i]; ++i)
+		env.push_back(envp[i]);
+	int skip = 0;
+	for(;skip < argc - 1; ++skip) {
+		std::string arg = argv[skip + 1];
+		if(arg.find('=') == std::string::npos)
+			break;
+	}
+	for(int i = 0; i < skip; ++i) {
+		env.push_back(argv[i + 1]);
+	}
+	img = ElfImg::create(argv[1+skip]);
 	if (img == NULL) {
 		fprintf(stderr, "%s: Could not open ELF %s\n", 
-			argv[0], argv[1]);
+			argv[0], argv[1+skip]);
 		return -2;
 	}
 	gs = new GuestELF(img);
-
-	gs->setArgv(argc-1, const_cast<const char**>(argv+1),
-		count(envp), const_cast<const char**>(envp));
+	gs->setArgv(argc-1-skip, const_cast<const char**>(argv+1+skip),
+		env.size(), const_cast<const char**>(&env[0]));
 
 	vexexec = VexExec::create<VexExec, Guest>(gs);
 	assert (vexexec && "Could not create vexexec");
