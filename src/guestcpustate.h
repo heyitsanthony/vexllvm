@@ -31,7 +31,7 @@ enum GuestExitType {
 	GE_EMWARN = 4,
 	GE_SYSCALL = 5,
 	GE_CALL = 6,
-	GE_RETURN = 7,
+	GE_RETURN = 7
 	/* XXX ADD MORE */ };
 
 class GuestTLS;

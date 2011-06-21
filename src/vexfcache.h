@@ -61,6 +61,7 @@ private:
 	bool			dump_llvm;
 
 	VexXlate*		xlate;
+	bool			owns_xlate;
 	unsigned int		max_cache_ents;
 
 	vexsb_map		vexsb_cache;

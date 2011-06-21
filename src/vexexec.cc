@@ -68,13 +68,17 @@ VexExec::~VexExec()
 
 	delete jit_cache;
 	delete sc;
+
+	if (owns_xlate) delete xlate;
 }
 
-VexExec::VexExec(Guest* in_gs)
+VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 : gs(in_gs)
 , sb_executed_c(0)
 , exited(false)
 , trace_c(0)
+, owns_xlate(in_xlate == NULL)
+, xlate(in_xlate)
 {
 	EngineBuilder	eb(theGenLLVM->getModule());
 	ExecutionEngine	*exeEngine;
@@ -88,7 +92,9 @@ VexExec::VexExec(Guest* in_gs)
 	/* XXX need to fix ownership of module exe engine deletes it now! */
 	theVexHelpers->bindToExeEngine(exeEngine);
 
-	jit_cache = new VexJITCache(new VexXlate(gs->getArch()), exeEngine);
+	if (!xlate) xlate = new VexXlate(gs->getArch());
+
+	jit_cache = new VexJITCache(xlate, exeEngine);
 	if (getenv("VEXLLVM_VSB_MAXCACHE")) {
 		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
 	}
@@ -217,7 +223,7 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	/* assuming !found means its ok... but that's not totally true */
 	/* XXX, when is !found bad? */
 	/* Disable writes to a page that is about to be executed.
-	 * If the code is self-modifying, the disabled write will 
+	 * If the code is self-modifying, the disabled write will
 	 * trigger a signal handler which will invalidate the page's
 	 * old code. */
 	if (found) {
@@ -269,11 +275,17 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 
 	sb_executed_c++;
 	new_ip = func_ptr(gs->getCPUState()->getStateData());
-	
+
 	return new_ip;
 }
 
 void VexExec::run(void)
+{
+	beginStepping();
+	while (stepVSB());
+}
+
+void VexExec::beginStepping(void)
 {
 	struct sigaction sa;
 
@@ -286,32 +298,37 @@ void VexExec::run(void)
 
 	/* top of address stack is executed */
 	addr_stack.push(gs->getEntryPoint());
-	runAddrStack();
 }
 
-void VexExec::runAddrStack(void)
+bool VexExec::stepVSB(void)
 {
-	while (!addr_stack.empty()) {
-		const VexSB	*sb;
-		void		*top_addr;
+	const VexSB	*sb;
+	void		*top_addr;
 
-		top_addr = addr_stack.top();
-		if (dump_current_state) {
-			std::cerr << "================BEFORE DOING "
-				<< top_addr
-				<< std::endl;
-			gs->print(std::cerr);
-		}
+	if (addr_stack.empty()) goto done_with_all;
 
-		sb = doNextSB();
-		if (!sb) break;
+	top_addr = addr_stack.top();
+	if (dump_current_state) {
+		std::cerr << "================BEFORE DOING "
+			<< top_addr
+			<< std::endl;
+		gs->print(std::cerr);
 	}
 
-	if (exited) {
-		std::cerr 	<< "[VEXLLVM] Exit call. Anthony fix this. "
-				<< "Exitcode=" << exit_code
-				<< std::endl;
-	}
+	sb = doNextSB();
+	if (sb) return true;
+
+done_with_all:
+	/* ran out of stuff to do, but didn't exit */
+	if (!exited) return false;
+
+	/* exited */
+	std::cerr 
+		<< "[VEXLLVM] Exit call. This should be fixed. "
+		<< "Exitcode=" << exit_code
+		<< std::endl;
+	return false;
+
 }
 
 void VexExec::dumpLogs(std::ostream& os) const
