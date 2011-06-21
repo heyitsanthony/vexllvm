@@ -10,7 +10,11 @@ if [ -z "$OUTPATH" ]; then
 fi
 
 REAL=$1
-EMU=$2
+if [ -z "$2" ]; then
+	EMU=$1
+else
+	EMU=$2
+fi
 TRACE_ADDR_LINES=1000
 OPROF_SAMPLERATE=1000000
 
