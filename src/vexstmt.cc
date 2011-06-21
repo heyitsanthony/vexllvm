@@ -149,10 +149,10 @@ void VexStmtLLSC::emitStore(void) const {
 	Value		*v_addr, *v_linked;
 	BasicBlock	*bb_linked, *bb_unlinked, *bb_origin;
 	IRBuilder<>	*builder;
-	
+
 	builder = theGenLLVM->getBuilder();
 	v_linked = theGenLLVM->getLinked();
-		
+
 	bb_origin = builder->GetInsertBlock();
 	bb_linked = BasicBlock::Create(
 		getGlobalContext(),
@@ -162,19 +162,19 @@ void VexStmtLLSC::emitStore(void) const {
 		getGlobalContext(),
 		"unlinked",
 		bb_origin->getParent());
-	
+
 	builder->SetInsertPoint(bb_origin);
 	builder->CreateCondBr(v_linked, bb_linked, bb_unlinked);
-	
+
 	/* we're linked still, so write it */
 	builder->SetInsertPoint(bb_linked);
 	v_addr = addr_expr->emit();
 	theGenLLVM->store(v_addr, data_expr->emit());
 	builder->CreateBr(bb_unlinked);
-	
+
 	/* not linked, skip it */
-	builder->SetInsertPoint(bb_unlinked);	
-	
+	builder->SetInsertPoint(bb_unlinked);
+
 	parent->setRegValue(result, v_linked);
 }
 void VexStmtLLSC::emit(void) const { 
@@ -368,7 +368,10 @@ VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 	switch (jk) {
 	case Ijk_Boring: exit_type = (uint8_t)GE_IGNORE; break;
 	/* arm has some conditional calls occasionally */
-	case Ijk_Call: exit_type = (uint8_t)GE_IGNORE; break;
+	case Ijk_Call: exit_type = (uint8_t)GE_CALL; break;
+	case Ijk_Ret: exit_type = (uint8_t)GE_RETURN; break;
+	case Ijk_Sys_int128: exit_type = (uint8_t)GE_SYSCALL; break;
+	case Ijk_Sys_syscall: exit_type = (uint8_t)GE_SYSCALL; break;
 	case Ijk_SigSEGV: exit_type = (uint8_t)GE_SIGSEGV; break;
 	case Ijk_EmWarn: exit_type = (uint8_t)GE_EMWARN; break;
 	/* it is allowed to have one of these show up in arm code. it has

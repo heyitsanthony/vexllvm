@@ -9,6 +9,7 @@
 #include "vexsb.h"
 #include "vexstmt.h"
 #include "vexexpr.h"
+#include "guestcpustate.h"
 
 using namespace llvm;
 
@@ -142,10 +143,35 @@ llvm::Function* VexSB::emit(const char* fname)
 	memset(values, 0, sizeof(Value*)*getNumRegs());
 
 	theGenLLVM->beginBB(fname);
+	
 	/* instructions */
 	foreach (it, stmts.begin(), stmts.end()) (*it)->emit();
+
 	/* compute goto */
 	ret_v = jump_expr->emit();
+
+	/* record exit type */
+	switch(jump_kind) {
+	case Ijk_Boring:
+	case Ijk_NoRedir:
+	case Ijk_ClientReq:
+		/* nothing, boring */
+		break;
+	case Ijk_Call:
+		theGenLLVM->setExitType(GE_CALL);
+		break;
+	case Ijk_Ret:
+		theGenLLVM->setExitType(GE_RETURN);
+		break;
+	case Ijk_Sys_syscall:
+	case Ijk_Sys_int128:
+		theGenLLVM->setExitType(GE_SYSCALL);
+		break;
+	default:
+		fprintf(stderr, "UNKNOWN JUMP TYPE %x\n", jump_kind);
+		assert(0 == 1 && "BAD JUMP");
+	}
+
 	/* return goto */
 	cur_f = theGenLLVM->endBB(ret_v);
 
@@ -213,9 +239,6 @@ const Type* VexSB::getRegType(unsigned int reg_idx) const
 void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 {
 	jump_kind = jk;
-
-//	ppIRJumpKind (jump_kind);
-//	printf("=JUMPKIND\n");
 
 	switch(jk) {
 	case Ijk_Call:

@@ -46,6 +46,9 @@ void* ARMCPUState::getPC(void) const {
 	   bits that control whether its in thumb mode or not? */
 	return (void*)state2arm()->guest_R15T;
 }
+void* ARMCPUState::getReturnAddress(void) const {
+	return (void*)(uintptr_t)*(const unsigned int*)getStackPtr();
+}
 
 
 /* ripped from libvex_guest_arm */

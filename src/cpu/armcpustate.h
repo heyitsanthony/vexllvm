@@ -20,6 +20,7 @@ public:
 	void* getStackPtr(void) const;
 	void setPC(void*);
 	void* getPC(void) const;
+	void* getReturnAddress(void) const;
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
 	uint64_t getExitCode(void) const;

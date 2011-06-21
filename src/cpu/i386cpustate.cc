@@ -40,6 +40,9 @@ void I386CPUState::setPC(void* ip) {
 void* I386CPUState::getPC(void) const {
 	return (void*)state2i386()->guest_EIP;
 }
+void* I386CPUState::getReturnAddress(void) const {
+	return (void*)(uintptr_t)*(const unsigned int*)getStackPtr();
+}
 
 
 /* ripped from libvex_guest_86 */

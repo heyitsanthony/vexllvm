@@ -41,6 +41,9 @@ void AMD64CPUState::setPC(void* ip) {
 void* AMD64CPUState::getPC(void) const {
 	return (void*)state2amd64()->guest_RIP;
 }
+void* AMD64CPUState::getReturnAddress(void) const {
+	return (void*)(uintptr_t)*(const unsigned int*)getStackPtr();
+}
 
 void AMD64CPUState::setTLS(GuestTLS* in_tls)
 {

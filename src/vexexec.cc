@@ -143,39 +143,37 @@ const VexSB* VexExec::doNextSB(void)
 
 	/* check for special exits */
 	exit_type = gs->getCPUState()->getExitType();
-	if (exit_type != GE_IGNORE) {
+	switch(exit_type) {
+	case GE_IGNORE:
 		gs->getCPUState()->setExitType(GE_IGNORE);
-		if (exit_type == GE_EMWARN) {
-			std::cerr << "[VEXLLVM] VEX Emulation warning!?"
-				<< std::endl;
-			addr_stack.push(new_jmpaddr);
-			return vsb;
-		} else
-			assert (0 == 1 && "SPECIAL EXIT TYPE");
-	}
-
-	/* push fall through address if call */
-	if (vsb->isCall())
-		addr_stack.push((elfptr_t)vsb->getEndAddr());
-
-	if (vsb->isSyscall()) {
+		break;
+	case GE_CALL:
+		/* push fall through address if call */
+		gs->getCPUState()->setExitType(GE_IGNORE);
+		addr_stack.push(gs->getCPUState()->getReturnAddress());
+		break;
+	case GE_RETURN:
+		gs->getCPUState()->setExitType(GE_IGNORE);
+		if (!addr_stack.empty()) {
+			addr_stack.pop();
+		}
+		break;
+	case GE_SYSCALL:
+		gs->getCPUState()->setExitType(GE_IGNORE);
 		doSysCall(vsb);
 		if (exited) return NULL;
+		break;
+	case GE_EMWARN:
+		gs->getCPUState()->setExitType(GE_IGNORE);
+		std::cerr << "[VEXLLVM] VEX Emulation warning!?"
+			<< std::endl;
+		break;
+	default:
+		assert (0 == 1 && "SPECIAL EXIT TYPE");
 	}
-
-	if (vsb->isReturn() && !addr_stack.empty()) {
-		/* why are we tracking the stack like this... seems
-		   weird to me, plus it means that the sp rewrites the
-		   loader does don't work */
-		addr_stack.pop();
-		if(addr_stack.empty())
-			addr_stack.push(new_jmpaddr);
-	}
-
 
 	/* next address to go to */
-	if (	!(vsb->isReturn() && addr_stack.empty()) &&
-		new_jmpaddr) addr_stack.push(new_jmpaddr);
+	addr_stack.push(new_jmpaddr);
 
 	return vsb;
 }

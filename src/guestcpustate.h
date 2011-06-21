@@ -28,7 +28,10 @@ enum GuestExitType {
 	GE_SIGTRAP = 1,
 	GE_SIGSEGV = 2,
 	GE_SIGBUS = 3,
-	GE_EMWARN = 4
+	GE_EMWARN = 4,
+	GE_SYSCALL = 5,
+	GE_CALL = 6,
+	GE_RETURN = 7,
 	/* XXX ADD MORE */ };
 
 class GuestTLS;
@@ -49,6 +52,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	virtual void* getStackPtr(void) const = 0;
 	virtual void setPC(void*) = 0;
 	virtual void* getPC(void) const = 0;
+	virtual void* getReturnAddress(void) const = 0;
 	virtual SyscallParams getSyscallParams(void) const = 0;
 	virtual void setSyscallResult(uint64_t ret) = 0;
 	virtual uint64_t getExitCode(void) const = 0;

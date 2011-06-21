@@ -1,4 +1,6 @@
 tests/opcodes/x86_64/OP*
 src/._*
+src/cpu/._*
+src/syscall/._*
 bitcode/vexops.bc
 bitcode/softfloat.bc
