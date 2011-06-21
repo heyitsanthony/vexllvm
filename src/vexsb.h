@@ -47,6 +47,11 @@ public:
 	static const char* getTypeStr(IRType ty);
 	uint64_t getJmp(void) const;
 	uint64_t getEndAddr(void) const;
+	/* hopefully VEX only puts one syscall in each block... */
+	bool isSyscall(void) const { 
+		return (jump_kind == Ijk_Sys_syscall || 
+			jump_kind == Ijk_Sys_int128); 
+	}
 	uint64_t getGuestAddr(void) const { return guest_addr; }
 private:
 	void loadInstructions(const IRSB* irsb);
