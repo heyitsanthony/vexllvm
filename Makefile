@@ -5,6 +5,7 @@ ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
 endif
 TRACE_CFLAGS+= -lm
+I386TRACE_CFLAGS=$(TRACE_CFLAGS) -m32
 ifndef TRACECC
 TRACECC=gcc
 endif
@@ -196,6 +197,18 @@ tests/traces-arm-bin/%-static : tests/traces-arm-obj/%.o
 tests/traces-arm-obj/%.o: tests/traces-src/%.c
 	$(ARMTRACECC) $(TRACE_CFLAGS) -c -o $@ $<
 
+tests/traces-i386-bin/dlsym : tests/traces-i386-obj/dlsym.o
+	$(TRACECC) $(I386TRACE_CFLAGS) -ldl $< -o $@
+
+tests/traces-i386-bin/% : tests/traces-i386-obj/%.o
+	$(TRACECC) $(I386TRACE_CFLAGS) $< -o $@
+
+tests/traces-i386-bin/%-static : tests/traces-i386-obj/%.o
+	$(TRACECC) $(I386TRACE_CFLAGS) -static $< -o $@
+
+tests/traces-i386-obj/%.o: tests/traces-src/%.c
+	$(TRACECC) $(I386TRACE_CFLAGS) -c -o $@ $<
+
 ### ### ### ### ###
  #  #   #    #  #
  #  ### ###  #  ###
@@ -218,14 +231,22 @@ ARMTRACEDEPS_PATH=					\
 	$(TRACEDEPS:%=tests/traces-arm-bin/%)		\
 	$(TRACEDEPS:%=tests/traces-arm-bin/%-static)
 
+I386TRACEDEPS_PATH=					\
+	$(TRACEDEPS:%=tests/traces-i386-bin/%)		\
+	$(TRACEDEPS:%=tests/traces-i386-bin/%)		\
+	$(TRACEDEPS:%=tests/traces-i386-bin/%-static)
+
 test-traces: all $(TRACEDEPS_PATH)
 	tests/traces.sh
 
 test-built-traces: all $(TRACEDEPS_PATH)
 	ONLY_BUILTIN=1 tests/traces.sh
 
-test-arm: all $(ARMTRACEDEPS_PATH)
+tests-arm: all $(ARMTRACEDEPS_PATH)
 	RUNCMD=bin/elf_run ONLY_BUILTIN=1 BUSYBOX=1 REALARCH=`uname -m` EMUARCH=armv6l VEXLLVM_LIBARY_ROOT=/usr/arm-linux-gnueabi REALPATH=tests/traces-bin EMUPATH=tests/traces-arm-bin OUTPATH=tests/traces-arm-out tests/traces.sh
+
+tests-i386: all $(I386TRACEDEPS_PATH)
+	RUNCMD=bin/elf_run ONLY_BUILTIN=1 BUSYBOX=1 REALARCH=`uname -m` EMUARCH=i686 REALPATH=tests/traces-bin EMUPATH=tests/traces-i386-bin OUTPATH=tests/traces-i386-out tests/traces.sh
 
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
