@@ -1,0 +1,50 @@
+tests/busybox/busybox-arch adjtimex
+tests/busybox/busybox-arch arp
+tests/busybox/busybox-arch arping
+tests/busybox/busybox-arch awk
+tests/busybox/busybox-arch base64 tests/bin_cmd.txt
+tests/busybox/busybox-arch basename /tmp/foo
+tests/busybox/busybox-arch brctl show
+tests/busybox/busybox-arch bzip2 -kf tests/bin_cmd.txt
+tests/busybox/busybox-arch mv tests/bin_cmd.txt.bz2 /tmp/test.bz2
+tests/busybox/busybox-arch bzcat /tmp/test.txt.bz2
+tests/busybox/busybox-arch bunzip2 -f /tmp/test.txt.bz2
+tests/busybox/busybox-arch diff tests/bin_cmd.txt /tmp/test.txt
+tests/busybox/busybox-arch chmod -w /tmp/test.txt
+tests/busybox/busybox-arch rm -f /tmp/test.txt
+tests/busybox/busybox-arch cksum tests/bin_cmd.txt
+tests/busybox/busybox-arch date --date="%D %k %M"
+tests/busybox/busybox-arch df
+tests/busybox/busybox-arch dirname tests/xyz
+tests/busybox/busybox-arch dmesg
+tests/busybox/busybox-arch du
+tests/busybox/busybox-arch echo foo
+tests/busybox/busybox-arch find src -name vexexec.cc
+tests/busybox/busybox-arch grep arm Makefile
+tests/busybox/busybox-arch gzip -kf tests/bin_cmd.txt
+tests/busybox/busybox-arch cp tests/bin_cmd.txt.gz /tmp/test.gz
+tests/busybox/busybox-arch gzcar /tmp/test.txt.gz
+tests/busybox/busybox-arch gunzip -f /tmp/test.txt.gz
+tests/busybox/busybox-arch cmp tests/bin_cmd.txt /tmp/test.txt
+tests/busybox/busybox-arch rm -f /tmp/test.txt
+tests/busybox/busybox-arch hostname
+tests/busybox/busybox-arch ifconfig
+tests/busybox/busybox-arch lpq
+tests/busybox/busybox-arch ls
+tests/busybox/busybox-arch ls -al
+tests/busybox/busybox-arch lsmod
+tests/busybox/busybox-arch lspci
+tests/busybox/busybox-arch lsusb
+tests/busybox/busybox-arch md5sum tests/bin_cmd.txt
+tests/busybox/busybox-arch ping 127.0.0.1
+tests/busybox/busybox-arch pwd
+tests/busybox/busybox-arch route
+tests/busybox/busybox-arch runlevel
+tests/busybox/busybox-arch sed
+tests/busybox/busybox-arch sleep 1
+tests/busybox/busybox-arch sort tests/bin_cmd.txt
+tests/busybox/busybox-arch strings bin/elf_run
+tests/busybox/busybox-arch tail tests/bin_cmd.txt
+tests/busybox/busybox-arch uname
+tests/busybox/busybox-arch wc tests/bin_cmd.txt
+tests/busybox/busybox-arch which ls

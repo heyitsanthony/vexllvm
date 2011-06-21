@@ -224,8 +224,8 @@ test-traces: all $(TRACEDEPS_PATH)
 test-built-traces: all $(TRACEDEPS_PATH)
 	ONLY_BUILTIN=1 tests/traces.sh
 
-test-built-arm-traces: all $(ARMTRACEDEPS_PATH)
-	RUNCMD=bin/elf_run ONLY_BUILTIN=1 VEXLLVM_LIBARY_ROOT=/usr/arm-linux-gnueabi REALPATH=tests/traces-bin EMUPATH=tests/traces-arm-bin OUTPATH=tests/traces-arm-out tests/traces.sh
+test-arm: all $(ARMTRACEDEPS_PATH)
+	RUNCMD=bin/elf_run ONLY_BUILTIN=1 BUSYBOX=1 REALARCH=`uname -m` EMUARCH=armv6l VEXLLVM_LIBARY_ROOT=/usr/arm-linux-gnueabi REALPATH=tests/traces-bin EMUPATH=tests/traces-arm-bin OUTPATH=tests/traces-arm-out tests/traces.sh
 
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh

@@ -68,8 +68,36 @@ function test_apps
 	done
 }
 
+function test_busybox
+{
+	echo "Now testing busybox"
+	IFS=$'\n'
+	for line in `cat tests/busybox_cmd.txt`;
+	do
+		if [ -z "$line" ]; then
+			continue
+		fi
+		a="$line"
+		if [ ! -z `echo $a | grep "^#" ` ]; then
+			continue
+		fi
+
+		b=`echo "$a" | sed s/arch/$EMUARCH/g`
+		a=`echo "$a" | sed s/arch/$REALARCH/g`
+		binname=`echo "$a" | cut -f1 -d' '` 
+		if [ ! -x "$binname" ]; then
+			continue
+		fi
+		tests/trace_docmd.sh "$a" "$b"
+	done
+}
+
 if [ -z "$ONLY_BUILTIN" ]; then
 	test_apps
+fi
+
+if [ ! -z "$BUSYBOX" ]; then
+	test_busybox
 fi
 
 echo	"Trace tests done"	\

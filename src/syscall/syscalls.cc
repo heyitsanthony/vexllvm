@@ -54,7 +54,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 
 	BAD_SYSCALL(SYS_clone)
 	BAD_SYSCALL(SYS_fork)
-	BAD_SYSCALL(SYS_exit)
+	// BAD_SYSCALL(SYS_exit) ok for now since clone isnt possible
 	BAD_SYSCALL(SYS_execve)
 	default:
 		sc_seen_c++;
@@ -158,6 +158,10 @@ bool Syscalls::interceptSyscall(
 {
 	switch (sys_nr) {
 	case SYS_exit_group:
+		exited = true;
+		sc_ret = args.getArg(0);
+		return true;
+	case SYS_exit:
 		exited = true;
 		sc_ret = args.getArg(0);
 		return true;

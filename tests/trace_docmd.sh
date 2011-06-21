@@ -36,13 +36,13 @@ function oprof_stop
 function run_trace_bin
 {
 	oprof_start
-	time "$RUNCMD" "$EMU" >"$FPREFIX.trace.out" 2>"$FPREFIX.trace.err"
+	time "$RUNCMD" $EMU >"$FPREFIX.trace.out" 2>"$FPREFIX.trace.err"
 	oprof_stop
 }
 
 function run_real_bin
 {
-	"$REAL" >"$FPREFIX.real.out" 2>"$FPREFIX.real.err"
+	$REAL >"$FPREFIX.real.out" 2>"$FPREFIX.real.err"
 }
 
 function dump_addrs
