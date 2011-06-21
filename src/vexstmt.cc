@@ -337,9 +337,31 @@ void VexStmtDirty::emit(void) const
 	v_call = builder->CreateCall(func, args_v.begin(), args_v.end());
 
 	/* sometimes dirty calls don't set temporaries */
-	if (tmp_reg != -1)
-		parent->setRegValue(tmp_reg, v_call);
-
+	if (tmp_reg != -1) {
+		/* vex dirty calls don't necessarily return the correct type,
+		   e.g. in the case of FLDENV on AMD64 it will return a 
+		   VexEmWarn enumeration which the compiler assigned to an 
+		   int, yet the VEX IR wants it to be 64-bit.  In C there
+		   isn't a good way to control the storage type for an enum,
+		   so I elected to just do an autocast here rather then modify
+		   vex to strip out the type or change the generated ir. */
+		Value* result = v_call;
+		const Type* ret_type = func->getReturnType();
+		const Type* tmp_type = parent->getRegType(tmp_reg);		
+		unsigned ret_bits = ret_type->getPrimitiveSizeInBits();
+		unsigned tmp_bits = tmp_type->getPrimitiveSizeInBits();
+		const Type* compat_type = IntegerType::get(
+			getGlobalContext(), ret_bits);
+		
+		if(ret_bits < tmp_bits) {
+			result = builder->CreateBitCast(result, compat_type);
+			result = builder->CreateZExt(result, tmp_type);
+		} else if (ret_bits > tmp_bits) {
+			result = builder->CreateBitCast(result, compat_type);
+			result = builder->CreateTrunc(result, tmp_type);
+		}
+		parent->setRegValue(tmp_reg, result);
+	}
 	builder->CreateBr(bb_merge);
 
 	builder->SetInsertPoint(bb_merge);
