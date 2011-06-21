@@ -9,6 +9,8 @@ if [ -z "$OUTPATH" ]; then
 	echo "OUTPATH not set. Try OUTPATH=tests/traces-out"
 fi
 
+REAL=$1
+EMU=$2
 TRACE_ADDR_LINES=1000
 OPROF_SAMPLERATE=1000000
 
@@ -34,13 +36,13 @@ function oprof_stop
 function run_trace_bin
 {
 	oprof_start
-	time "$RUNCMD" $1 >"$FPREFIX.trace.out" 2>"$FPREFIX.trace.err"
+	time "$RUNCMD" "$EMU" >"$FPREFIX.trace.out" 2>"$FPREFIX.trace.err"
 	oprof_stop
 }
 
 function run_real_bin
 {
-	$1 >"$FPREFIX.real.out" 2>"$FPREFIX.real.err"
+	"$REAL" >"$FPREFIX.real.out" 2>"$FPREFIX.real.err"
 }
 
 function dump_addrs
@@ -96,5 +98,5 @@ function do_trace
 	fi
 }
 
-a="$1"
+a="$REAL"
 do_trace

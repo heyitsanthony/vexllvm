@@ -8,6 +8,15 @@ if [ -z "$OUTPATH" ]; then
 	OUTPATH="tests/traces-out"
 fi
 
+if [ -z "$REALPATH" ]; then
+	REALPATH=tests/traces-bin
+fi
+if [ -z "$EMUPATH" ]; then
+	EMUPATH=tests/traces-bin
+fi
+
+export REALPATH
+export EMUPATH
 export OUTPATH
 export RUNCMD
 
@@ -33,8 +42,8 @@ for tl in $TESTLOGS; do
 done
 
 echo "Doing built-in tests"
-for a in tests/traces-bin/*; do
-	tests/trace_docmd.sh "$a"
+for a in $REALPATH/*; do
+	tests/trace_docmd.sh "$a" "$EMUPATH/`basename $a`"
 done
 
 function test_apps

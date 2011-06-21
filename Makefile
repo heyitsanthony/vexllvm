@@ -8,6 +8,9 @@ TRACE_CFLAGS+= -lm
 ifndef TRACECC
 TRACECC=gcc
 endif
+ifndef ARMTRACECC
+ARMTRACECC=arm-linux-gnueabi-gcc
+endif
 
 # XXX, MAKES BINARY SIZE EXPLODE
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
@@ -181,6 +184,18 @@ tests/traces-bin/%-static : tests/traces-obj/%.o
 tests/traces-obj/%.o: tests/traces-src/%.c
 	$(TRACECC) $(TRACE_CFLAGS) -c -o $@ $<
 
+tests/traces-arm-bin/dlsym : tests/traces-arm-obj/dlsym.o
+	$(ARMTRACECC) $(TRACE_CFLAGS) -ldl $< -o $@
+
+tests/traces-arm-bin/% : tests/traces-arm-obj/%.o
+	$(ARMTRACECC) $(TRACE_CFLAGS) $< -o $@
+
+tests/traces-arm-bin/%-static : tests/traces-arm-obj/%.o
+	$(ARMTRACECC) $(TRACE_CFLAGS) -static $< -o $@
+
+tests/traces-arm-obj/%.o: tests/traces-src/%.c
+	$(ARMTRACECC) $(TRACE_CFLAGS) -c -o $@ $<
+
 ### ### ### ### ###
  #  #   #    #  #
  #  ### ###  #  ###
@@ -198,11 +213,19 @@ TRACEDEPS_PATH=						\
 	$(TRACEDEPS:%=tests/traces-bin/%)		\
 	$(TRACEDEPS:%=tests/traces-bin/%-static)
 
+ARMTRACEDEPS_PATH=					\
+	$(TRACEDEPS:%=tests/traces-arm-bin/%)		\
+	$(TRACEDEPS:%=tests/traces-arm-bin/%)		\
+	$(TRACEDEPS:%=tests/traces-arm-bin/%-static)
+
 test-traces: all $(TRACEDEPS_PATH)
 	tests/traces.sh
 
 test-built-traces: all $(TRACEDEPS_PATH)
 	ONLY_BUILTIN=1 tests/traces.sh
+
+test-built-arm-traces: all $(ARMTRACEDEPS_PATH)
+	RUNCMD=bin/elf_run ONLY_BUILTIN=1 VEXLLVM_LIBARY_ROOT=/usr/arm-linux-gnueabi REALPATH=tests/traces-bin EMUPATH=tests/traces-arm-bin OUTPATH=tests/traces-arm-out tests/traces.sh
 
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
