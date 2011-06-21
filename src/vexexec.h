@@ -17,6 +17,7 @@ class Syscalls;
 class VexXlate;
 class VexSB;
 class SyscallParams;
+class VexXlate;
 
 namespace llvm
 {
@@ -33,13 +34,13 @@ class VexExec
 {
 public:
 	template <class T, class U>
-	static T* create(U* in_gs)
+	static T* create(U* in_gs, VexXlate* in_xlate = NULL)
 	{
 		T	*ve;
 
 		setupStatics(in_gs);
 
-		ve = new T(in_gs);
+		ve = new T(in_gs, in_xlate);
 		if (ve->getGuest() == NULL) {
 			delete ve;
 			return NULL;
@@ -56,8 +57,11 @@ public:
 	void dumpLogs(std::ostream& os) const;
 	unsigned int getSBExecutedCount(void) const { return sb_executed_c; }
 
+	void beginStepping(void);
+	bool stepVSB(void);
+
 protected:
-	VexExec(Guest* gs);
+	VexExec(Guest* gs, VexXlate* in_xlate = NULL);
 	virtual uint64_t doVexSB(VexSB* vsb);
 	uint64_t doVexSBAux(VexSB* vsb, void* aux);
 
@@ -70,10 +74,8 @@ protected:
 	VexFCache	*f_cache;
 
 private:
-	VexSB* getSBFromGuestAddr(void* elfptr);
-	const VexSB* doNextSB(void);
-	
-	void runAddrStack(void);
+	VexSB*		getSBFromGuestAddr(void* elfptr);
+	const VexSB*	doNextSB(void);
 
 	VexJITCache		*jit_cache;
 	static VexExec		*exec_context;
@@ -98,6 +100,9 @@ private:
 	TraceConf	trace_conf;
 	vexexec_traces	trace;
 	unsigned int	trace_c;
+
+	bool		owns_xlate;
+	VexXlate	*xlate;
 };
 
 #endif

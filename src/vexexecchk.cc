@@ -13,8 +13,8 @@
 #include "syscall/syscallsmarshalled.h"
 #include "vexexecchk.h"
 
-VexExecChk::VexExecChk(PTImgChk* gs)
-: VexExec(gs),
+VexExecChk::VexExecChk(PTImgChk* gs, VexXlate* vx)
+: VexExec(gs, vx),
   hit_syscall(false), is_deferred(false)
 {
 	cross_check = (getGuest()) ? gs : NULL;

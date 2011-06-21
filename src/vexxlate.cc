@@ -24,11 +24,26 @@ static vex_cb g_cb;
 static std::list<std::string>		xlate_msg_log;
 static VexXlate::VexXlateLogType	log_type;
 
+#if defined(__amd64__)
+/* we actually do have some extensions... */
+#define VEX_HOST_HWCAPS	0
+#define VEX_HOST_ARCH	VexArchAMD64
+#elif defined(__i386__)
+/* we actually do have some extensions... */
+#define VEX_HOST_HWCAPS	0
+#define VEX_HOST_ARCH	VexArchX86
+#elif defined(__arm__)
+/* pretend we're just arm 7 for now.. */
+#define VEX_HOST_HWCAPS 7
+#define VEX_HOST_ARCH	VexArchARM
+#else
+#error Unsupported Host Architecture
+#endif
 
 /* built-in handlers */
 static __attribute__((noreturn)) void vex_exit(void)
 {
-	printf("FAILURE EXIT\n");
+	printf("[VEXLLVM] LIBVEX: FAILURE EXIT\n");
 	exit(1);
 }
 
@@ -63,19 +78,7 @@ static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
 VexXlate::VexXlate(Arch::Arch in_arch)
 {
 	LibVEX_default_VexArchInfo(&vai_host);
-#if defined(__amd64__)
-	/* we actually do have some extensions... */
-	vai_host.hwcaps = 0;
-#elif defined(__i386__)
-	/* we actually do have some extensions... */
-	vai_host.hwcaps = 0;
-#elif defined(__arm__)
-	/* pretend we're just arm 7 for now.. */
-	vai_host.hwcaps = 7;
-#else
-	#error Unsupported Host Architecture
-#endif
-
+	vai_host.hwcaps = VEX_HOST_HWCAPS;
 
 	LibVEX_default_VexArchInfo(&vai_guest);
 	switch(in_arch) {
@@ -154,15 +157,7 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	memset(&vta, 0, sizeof(vta));
 	vta.arch_guest = arch;
 	vta.archinfo_guest = vai_guest;
-#if defined(__amd64__)
-	vta.arch_host = VexArchAMD64;
-#elif defined(__i386__)
-	vta.arch_host = VexArchX86;
-#elif defined(__arm__)
-	vta.arch_host = VexArchARM;
-#else
-	#error Unsupported Host Architecture
-#endif
+	vta.arch_host = VEX_HOST_ARCH;
 	vta.archinfo_host = vai_host;
 	vbi.guest_stack_redzone_size = 128;		/* I LOVE RED ZONE. BEST ABI BEST.*/
 	vbi.guest_amd64_assume_fs_is_zero = true;	/* XXX LIBVEX FIXME */

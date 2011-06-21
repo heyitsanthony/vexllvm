@@ -5,6 +5,7 @@
 
 class PTImgChk;
 class SyscallsMarshalled;
+class VexXlate;
 
 class VexExecChk : public VexExec
 {
@@ -13,7 +14,7 @@ public:
 	virtual ~VexExecChk(void) {}
 
 protected:
-	VexExecChk(PTImgChk* gs);
+	VexExecChk(PTImgChk* gs, VexXlate* vx = NULL);
 
 	virtual uint64_t doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);

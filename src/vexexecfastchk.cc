@@ -6,8 +6,8 @@
 #include "memlog.h"
 #include "ptimgchk.h"
 
-VexExecFastChk::VexExecFastChk(PTImgChk* gs)
-: VexExecChk(gs),
+VexExecFastChk::VexExecFastChk(PTImgChk* gs, VexXlate* vx)
+: VexExecChk(gs, vx),
   pt_sc_req_c(0),
   pt_sc_done_c(0)
 {
