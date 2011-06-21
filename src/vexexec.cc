@@ -305,7 +305,7 @@ bool VexExec::stepVSB(void)
 	const VexSB	*sb;
 	void		*top_addr;
 
-	if (addr_stack.empty()) goto done_with_all;
+	if (addr_stack.empty() || exited) goto done_with_all;
 
 	top_addr = addr_stack.top();
 	if (dump_current_state) {
@@ -328,7 +328,6 @@ done_with_all:
 		<< "Exitcode=" << exit_code
 		<< std::endl;
 	return false;
-
 }
 
 void VexExec::dumpLogs(std::ostream& os) const
