@@ -392,6 +392,24 @@ void GuestELF::setupMem(void)
 			(*it)->protection());
 		mem->recordMapping(s);
 	}
+	if(img->getArch() == Arch::ARM) {
+		GuestMem::Mapping s(
+			(void*)0xffff0000,
+			4096,
+			PROT_EXEC | PROT_READ);
+		void* tls = mmap(s.offset, s.length, PROT_WRITE | s.cur_prot, MAP_ANON | MAP_PRIVATE, -1, 0);
+		assert(tls == s.offset);
+		/* put the tls code in there: see arch/arm/kernel/entry-armv.S */
+		/* @0xffff0fe0 get_tls
+			mrc     p15, 0, r0, c13, c0, 3 
+			bx	r14
+		*/
+		*(unsigned int*)(uintptr_t)0xffff0fe0 = 0xee1d0f70;
+		*(unsigned int*)(uintptr_t)0xffff0fe4 = 0xe12fff1e;
+		/* note: there are others that we may need */
+		mprotect(s.offset, s.length, s.cur_prot);
+		mem->recordMapping(s); 
+	}
 
 	/* also record the stack */
 	GuestMem::Mapping s(
