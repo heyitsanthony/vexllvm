@@ -16,10 +16,12 @@
 #include <sstream>
 #include <sys/syscall.h>
 #include <sys/time.h>
+#include <set>
 #include "Sugar.h"
 
+#include "symbols.h"
 #include "elfimg.h"
-
+#include "elfdebug.h"
 #include "ptimgchk.h"
 #include "guestptimg.h"
 #include "guestcpustate.h"
@@ -35,6 +37,8 @@ static bool dump_maps;
 GuestPTImg::GuestPTImg(
 	int argc, char *const argv[], char *const envp[])
 : Guest(argv[0])
+, entry_pt(NULL)
+, symbols(NULL)
 {
 	ElfImg		*img;
 	
@@ -50,6 +54,11 @@ GuestPTImg::GuestPTImg(
 	cpu_state = GuestCPUState::create(getArch());
 
 	delete img;
+}
+
+GuestPTImg::~GuestPTImg(void)
+{
+	if (symbols != NULL) delete symbols;
 }
 
 void GuestPTImg::handleChild(pid_t pid)
@@ -476,3 +485,43 @@ void GuestPTImg::setupMem(void)
 }
 
 Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }
+
+void GuestPTImg::loadSymbols(void) const
+{
+	std::set<std::string>	mmap_fnames;
+
+	assert (symbols == NULL && "symbols already loaded");
+	symbols = new Symbols();
+
+	foreach (it, mappings.begin(), mappings.end()) {
+		std::string	libname((*it)->getLib());
+		Symbols		*new_syms;
+
+		/* already seen it? */
+		if (mmap_fnames.count(libname) != 0)
+			continue;
+
+		/* new fname, try to load the symbols */
+		new_syms = ElfDebug::getSyms(libname.c_str());
+		if (new_syms) {
+			symbols->addSyms(new_syms);
+			delete new_syms;
+		}
+
+		mmap_fnames.insert(libname);
+	}
+}
+
+std::string GuestPTImg::getName(void* x) const
+{
+	const Symbol	*sym_found;
+
+	if (symbols == NULL) loadSymbols();
+
+	sym_found = symbols->findSym(x);
+	if (sym_found != NULL) {
+		return sym_found->getName();
+	}
+
+	return Guest::getName(x);
+}

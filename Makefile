@@ -69,6 +69,7 @@ OBJDEPS=	vexxlate.o		\
 		vexhelpers.o		\
 		symbols.o		\
 		elfimg.o		\
+		elfdebug.o		\
 		dllib.o			\
 		ptimgchk.o		\
 		elfsegment.o		\

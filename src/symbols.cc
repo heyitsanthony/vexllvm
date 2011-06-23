@@ -19,13 +19,11 @@ const Symbol* Symbols::findSym(const std::string& s) const
 	return (*it).second;
 }
 
-/* TODO: this should be a range query so we can detect
- * mid-symbol accesses. */
 const Symbol* Symbols::findSym(void* ptr) const
 {
 	symaddr_map::const_iterator it;
 
-	it = addr_map.find((symaddr_t)ptr);
+	it = addr_map.lower_bound((symaddr_t)ptr);
 	if (it == addr_map.end()) return NULL;
 
 	return (*it).second;
@@ -43,4 +41,15 @@ bool Symbols::addSym(const std::string& name, symaddr_t addr, unsigned int len)
 	name_map[name] = sym;
 
 	return true;
+}
+
+void Symbols::addSym(const Symbol* sym)
+{
+	addSym(sym->getName(), sym->getBaseAddr(), sym->getLength());
+}
+
+void Symbols::addSyms(const Symbols* syms)
+{
+	foreach (it, syms->name_map.begin(), syms->name_map.end())
+		addSym(it->second);
 }
