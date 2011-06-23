@@ -10,6 +10,10 @@
 
 using namespace std;
 
+#ifdef __amd64__
+#define SYSPAGE_ADDR	((void*)0xffffffffff600000)
+#endif
+
 GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 {
 	GuestSnapshot	*ret;
@@ -99,6 +103,13 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 		GuestMem::Mapping	s(begin, length, prot,(is_stack != 0));
 		mem->recordMapping(s);
 	}
+
+#ifdef __amd64__
+	/* cheat so sys page shows up even though we skip it on save */
+	GuestMem::Mapping	sys_page(
+		SYSPAGE_ADDR, 4096, PROT_READ | PROT_EXEC);
+	mem->recordMapping(sys_page);
+#endif
 	END_F()
 
 	is_valid = true;
@@ -162,17 +173,22 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 	/* add mappings */
 	list<GuestMem::Mapping> maps = g->getMem()->getMaps();
 	foreach (it, maps.begin(), maps.end()) {
-		#define BAD_OFFSET_MASK	0xffffffffff000000
 		FILE			*map_f;
 		GuestMem::Mapping	mapping(*it);
 		ssize_t			sz;
 
-		/* XXX stupid hack, probably arch specific */
-		if (((uintptr_t)mapping.offset & BAD_OFFSET_MASK)
-			== BAD_OFFSET_MASK)
-		{
+#ifdef __amd64__
+		/* XXX stupid hack for kernel page; arch specific */
+		/* would like to write it out, but
+		 * 1. fwrite will fail it since it's kernel space addr
+		 * 2. it'll already be mapped on load()
+		 *
+		 * If we ever get cross platform snapshots, it'll 
+		 * need to actually be written out with a bounce buffer.
+		 */
+		if (mapping.offset == SYSPAGE_ADDR)
 			continue;
-		}
+#endif
 
 		/* range, prot, is_stack */
 		fprintf(f, "%p-%p %d %d\n",
@@ -183,6 +199,8 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 
 		snprintf(buf, 512, "%s/maps/%p", dirpath, mapping.offset);
 		map_f = fopen(buf, "w");
+		assert (map_f && "Couldn't open mem range file");
+
 		sz = fwrite(mapping.offset, mapping.length, 1, map_f);
 		assert (sz == 1 && "Failed to write mapping");
 		fclose(map_f);
