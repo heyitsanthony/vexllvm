@@ -9,27 +9,25 @@
 #include "collection.h"
 #include "arch.h"
 
-#include "symbols.h"
-
 typedef void* hostptr_t;
 typedef void* elfptr_t;
 typedef const void* celfptr_t;
 
 class ElfSegment;
-class DLLib;
 
+/* loads and maps an elf image into memory based on its Phdr--
+ * NOTE: two elfimg objects of the same exec can't coexist;
+ *       address collision ruins it. */
 class ElfImg
 {
 public:
-
-
 	static ElfImg* create(const char* fname, bool linked = true);
 	virtual ~ElfImg(void);
 	hostptr_t xlateAddr(elfptr_t addr) const;
 	elfptr_t getEntryPoint(void) const;
 	int getHeaderCount() const;
 	ElfImg* getInterp(void) const { return interp; }
-	bool isDirectMapped(void) const { return direct_mapped; } 
+	bool isDirectMapped(void) const { return direct_mapped; }
 	const char* getFilePath(void) const { return img_path; }
 	celfptr_t getHeader() const;
 	celfptr_t getBase() const;
@@ -43,13 +41,18 @@ public:
 			sizeof(Elf32_Ehdr) : sizeof(Elf64_Ehdr);
 	}
 	std::string getLibraryRoot() const { return library_root; }
+
+	static Arch::Arch getArch(const char* fname)
+	{
+		return readHeader(fname, false);
+	}
 private:
 	ElfImg(const char* fname, Arch::Arch arch, bool linked);
-	static Arch::Arch readHeader(const char* fname, 
+	static Arch::Arch readHeader(const char* fname,
 		bool require_exe);
-	static Arch::Arch readHeader32(const Elf32_Ehdr* hdr, 
+	static Arch::Arch readHeader32(const Elf32_Ehdr* hdr,
 		bool require_exe);
-	static Arch::Arch readHeader64(const Elf64_Ehdr* hdr, 
+	static Arch::Arch readHeader64(const Elf64_Ehdr* hdr,
 		bool require_exe);
 	template <typename Elf_Ehdr, typename Elf_Phdr>
 	void setupSegments(void);

@@ -10,6 +10,8 @@ extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
 }
 
+class Symbols;
+
 class PTImgMapEntry
 {
 public:
@@ -61,7 +63,7 @@ protected:
 class GuestPTImg : public Guest
 {
 public:
-	virtual ~GuestPTImg(void) {}
+	virtual ~GuestPTImg(void);
 	void* getEntryPoint(void) const { return entry_pt; }
 
 	template <class T>
@@ -92,6 +94,8 @@ public:
 	static void dumpSelfMap(void);
 	virtual Arch::Arch getArch() const;
 
+	virtual std::string getName(void*) const;
+
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
@@ -108,10 +112,12 @@ private:
 		int argc, char *const argv[], char *const envp[]);
 	void slurpBrains(pid_t pid);
 	void slurpMappings(pid_t pid);
+	void loadSymbols(void) const;
 
 	void				*entry_pt;
 	PtrList<PTImgMapEntry>		mappings;
 	std::map<void*, uint64_t>	breakpoints;
+	mutable Symbols			*symbols; // lazy loaded
 };
 
 #endif

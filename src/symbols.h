@@ -9,24 +9,22 @@ typedef uint64_t symaddr_t;
 
 class Symbol
 {
-friend class Symbols;
-
 public:
+	Symbol(	const std::string& in_name, symaddr_t in_addr,
+		unsigned int in_len)
+	: name(in_name), base_addr(in_addr), length(in_len) {}
 	virtual ~Symbol() {}
 	const std::string& getName() const { return name; }
 	symaddr_t getBaseAddr() const { return base_addr; }
 	unsigned int getLength() const { return length; }
 private:
-	Symbol(	const std::string& in_name, symaddr_t in_addr, 
-		unsigned int in_len)
-	: name(in_name), base_addr(in_addr), length(in_len) {}
 	std::string	name;
 	symaddr_t	base_addr;
 	unsigned int	length;
 };
 
 /* takes a symbol of form (name, address start, size).
- * replies to questions about which symbol contains a given address 
+ * replies to questions about which symbol contains a given address
  * replies to questions about which name maps to a symbol
  * **assumes no overlaps **
  */
@@ -45,6 +43,8 @@ public:
 		const std::string& name,
 		symaddr_t addr,
 		unsigned int len);
+	void addSym(const Symbol* sym);
+	void addSyms(const Symbols* syms);
 private:
 	symname_map	name_map;
 	symaddr_map	addr_map;

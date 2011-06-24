@@ -35,7 +35,7 @@ public:
 
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
-	std::string getName(void*) const;
+	virtual std::string getName(void*) const;
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
 	virtual Arch::Arch getArch() const = 0;
