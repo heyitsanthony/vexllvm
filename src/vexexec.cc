@@ -114,6 +114,7 @@ VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 	//TODO: apply the protection changes to guard against code patches
 }
 
+#define MAX_CODE_BYTES 1024
 const VexSB* VexExec::doNextSB(void)
 {
 	elfptr_t	elfptr;
@@ -141,6 +142,13 @@ const VexSB* VexExec::doNextSB(void)
 	}
 
 	addr_stack.pop();
+
+	if(to_flush.first) {
+		jit_cache->flush(
+			(void*)((uintptr_t)to_flush.first - MAX_CODE_BYTES),
+			(void*)((uintptr_t)to_flush.second + MAX_CODE_BYTES));
+		to_flush = std::make_pair(0, 0);
+	}
 
 	vsb = getSBFromGuestAddr(elfptr);
 	if (vsb == NULL) return NULL;
@@ -282,7 +290,8 @@ uint64_t VexExec::doVexSB(VexSB* vsb)
 void VexExec::run(void)
 {
 	beginStepping();
-	while (stepVSB());
+	while (stepVSB()) {
+	}
 }
 
 void VexExec::beginStepping(void)
@@ -335,12 +344,9 @@ void VexExec::dumpLogs(std::ostream& os) const
 	sc->print(os);
 }
 
-#define MAX_CODE_BYTES 1024
 void VexExec::flushTamperedCode(void* begin, void* end)
 {
-	jit_cache->flush(
-		(void*)((uintptr_t)begin - MAX_CODE_BYTES),
-		(void*)((uintptr_t)end + MAX_CODE_BYTES));
+	to_flush = std::make_pair((uintptr_t)begin, (uintptr_t)end);
 }
 
 /* this happens when executing JITed code. Be careful about not flushing
@@ -360,7 +366,6 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 			<< si->si_addr << std::endl;
 		exit(1);
 	}
-
 	if ((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
 		m.cur_prot = m.req_prot & ~PROT_EXEC;
 		mprotect(m.offset, m.length, m.cur_prot);

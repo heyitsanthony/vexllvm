@@ -206,8 +206,15 @@ void page_set_flags(target_ulong start, target_ulong end,
 		(void*)start, end - start, flags);
 }
 
-/* TODO: we should process the path, especially if it is a library */
-#define path(p) (char*)(p)
+static char* path(char* p) {
+	std::string path((char*)(uintptr_t)p);
+	if(path.empty() || path[0] != '/')
+		return (char*)(uintptr_t)p;
+	path = Syscalls::chroot + path;
+	g_to_delete.push_back(new char[path.size() + 1]);
+	memcpy(g_to_delete.back(), path.c_str(), path.size() + 1);
+	return g_to_delete.back();
+}
 
 /* we don't have signal handling and i have no idea if it is really in scope
    for doing something interesting, so i'm erring on the side of leaving

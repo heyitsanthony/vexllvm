@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <list>
+#include <vector>
 
 #include "syscallparams.h"
 #include "guestmem.h"
@@ -81,6 +82,8 @@ private:
 	const std::string		binary;
 	bool				log_syscalls;
 	bool				force_translation;
+public:
+	const static std::string	chroot;
 	
 /* specific architecture handling of syscall could go in another
    class if there wasn't the marshalled syscall option.  so we'll

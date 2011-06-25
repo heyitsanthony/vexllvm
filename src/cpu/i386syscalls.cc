@@ -16,6 +16,7 @@
 #include "syscall/translatedsyscall.h"
 
 static GuestMem::Mapping* g_syscall_last_mapping = NULL;
+static std::vector<char*> g_to_delete;
 
 namespace I386 {
 	/* this will hold the last mapping that was changed during the syscall
@@ -142,6 +143,10 @@ uintptr_t Syscalls::applyI386Syscall(
 		m = *g_syscall_last_mapping;
 		g_syscall_last_mapping = NULL;
 	}
+	
+	foreach(it, g_to_delete.begin(), g_to_delete.end())
+		delete [] *it;
+	g_to_delete.clear();
 	
 	return sc_ret;
 }

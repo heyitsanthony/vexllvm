@@ -103,6 +103,7 @@ private:
 
 	bool		owns_xlate;
 	VexXlate	*xlate;
+	std::pair<uintptr_t, uintptr_t>	to_flush;
 };
 
 #endif

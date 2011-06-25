@@ -390,6 +390,10 @@ void GuestELF::setupMem(void)
 			(*it)->base(),
 			(*it)->length(),
 			(*it)->protection());
+		if((s.req_prot & PROT_WRITE) && (s.req_prot & PROT_EXEC)) {
+			s.cur_prot &= ~PROT_WRITE;
+			mprotect(s.offset, s.length, s.cur_prot);
+		}
 		mem->recordMapping(s);
 	}
 	if(img->getArch() == Arch::ARM) {
@@ -399,7 +403,20 @@ void GuestELF::setupMem(void)
 			PROT_EXEC | PROT_READ);
 		void* tls = mmap(s.offset, s.length, PROT_WRITE | s.cur_prot, MAP_ANON | MAP_PRIVATE, -1, 0);
 		assert(tls == s.offset);
-		/* put the tls code in there: see arch/arm/kernel/entry-armv.S */
+		/* put the kernel helpers: see arch/arm/kernel/entry-armv.S */
+		/* @0xffff0fc0 cmpxchg
+			ldr	r3, [r2, #0]
+			subs	r3, r3, r0
+			it	eq
+			streq	r1, [r2, #0]
+			negs	r0, r3
+			bx	lr
+		*/
+		*(unsigned int*)(uintptr_t)0xffff0fc0 = 0xe5923000;
+		*(unsigned int*)(uintptr_t)0xffff0fc4 = 0xe0533000;
+		*(unsigned int*)(uintptr_t)0xffff0fc8 = 0x05821000;
+		*(unsigned int*)(uintptr_t)0xffff0fcc = 0xe2730000;
+		*(unsigned int*)(uintptr_t)0xffff0fd0 = 0xe12fff1e;
 		/* @0xffff0fe0 get_tls
 			mrc     p15, 0, r0, c13, c0, 3 
 			bx	r14

@@ -20,8 +20,12 @@ Syscalls::Syscalls(Guest* g)
 , binary(g->getBinaryPath())
 , log_syscalls(getenv("VEXLLVM_SYSCALLS") ? true : false)
 , force_translation(getenv("VEXLLVM_XLATE_SYSCALLS") ? true : false)
-{}
+{
+}
 
+const std::string Syscalls::chroot(getenv("VEXLLVM_CHROOT") ?
+	getenv("VEXLLVM_CHROOT") : "");
+	
 Syscalls::~Syscalls() {}
 
 uint64_t Syscalls::apply(void)

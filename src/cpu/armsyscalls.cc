@@ -11,6 +11,7 @@
 #include "syscall/translatedsyscall.h"
 
 static GuestMem::Mapping* g_syscall_last_mapping = NULL;
+static std::vector<char*> g_to_delete;
 
 namespace ARM {
 	/* this will hold the last mapping that was changed during the syscall
@@ -160,6 +161,10 @@ uintptr_t Syscalls::applyARMSyscall(
 		g_syscall_last_mapping = NULL;
 	}
 	
+	foreach(it, g_to_delete.begin(), g_to_delete.end())
+		delete [] *it;
+	g_to_delete.clear();
+	
 	return sc_ret;
 }
 SYSCALL_BODY(ARM, cacheflush) {
@@ -168,6 +173,12 @@ SYSCALL_BODY(ARM, cacheflush) {
 SYSCALL_BODY(ARM, set_tls) {
 	ARMCPUState* cpu_state = (ARMCPUState*)this->cpu_state;
 	cpu_state->setThreadPointer(args.getArg(0));
+	//also set the emulation location
+	GuestMem::Mapping tls_area;
+	mappings->lookupMapping((void*)(uintptr_t)0xffff0000, tls_area);
+	mprotect((void*)(uintptr_t)0xffff0000, PAGE_SIZE, tls_area.cur_prot | PROT_WRITE);
+	*(unsigned int*)(uintptr_t)0xffff0ff0 = (unsigned int)args.getArg(0);
+	mprotect((void*)(uintptr_t)0xffff0000, PAGE_SIZE, tls_area.cur_prot);
 	sc_ret = 0;
 	return true;
 }
