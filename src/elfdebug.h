@@ -10,7 +10,7 @@ class Symbols;
 class ElfDebug
 {
 public:
-	static Symbols* getSyms(const char* elf_path);
+	static Symbols* getSyms(const char* elf_path, void* base = NULL);
 
 private:
 	ElfDebug(const char* path);
@@ -29,6 +29,7 @@ private:
 	unsigned int	next_sym_idx;
 	unsigned int	sym_count;
 	const char	*strtab;
+	bool		is_dyn;
 };
 
 #endif

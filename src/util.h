@@ -16,24 +16,15 @@
 
 static inline std::string int_to_string(uint64_t i)
 {
-	std::string s;
 	std::stringstream out;
 	out << i;
 	return out.str();
 }
 
-static char hexmap[] = {"0123456789abcdef"};
-
 static inline std::string hex_to_string(uint64_t i)
 {
-	std::string s;
 	std::stringstream out;
-
-	out << "0x";
-	while (i) {
-		out << hexmap[(i & 0xf0) >> 4] << hexmap[(i & 0xf)];
-		i >>= 8;
-	}
+	out << "0x" << std::hex << i;
 	return out.str();
 }
 

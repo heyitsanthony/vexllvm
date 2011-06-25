@@ -1,5 +1,6 @@
 #include "Sugar.h"
 #include <stdio.h>
+#include <assert.h>
 #include "symbols.h"
 
 Symbols::~Symbols()
@@ -21,12 +22,28 @@ const Symbol* Symbols::findSym(const std::string& s) const
 
 const Symbol* Symbols::findSym(void* ptr) const
 {
-	symaddr_map::const_iterator it;
+	const Symbol			*ret;
+	symaddr_map::const_iterator	it;
 
-	it = addr_map.lower_bound((symaddr_t)ptr);
-	if (it == addr_map.end()) return NULL;
+	if (ptr == NULL)
+		return NULL;
 
-	return (*it).second;
+	it = addr_map.upper_bound((symaddr_t)ptr-1);
+	if (it == addr_map.end())
+		return NULL;
+
+	ret = it->second;
+	if (ret->getBaseAddr() == (symaddr_t)ptr)
+		return ret;
+
+	--it;
+	if (it == addr_map.end())
+		return NULL;
+
+	ret = it->second;
+	assert (ret->getBaseAddr() <= (symaddr_t)ptr && "WTF");
+
+	return ret;
 }
 
 bool Symbols::addSym(const std::string& name, symaddr_t addr, unsigned int len)
