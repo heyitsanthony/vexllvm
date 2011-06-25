@@ -10,7 +10,9 @@
 #include "elfimg.h"
 #include "elfdebug.h"
 
-Symbols* ElfDebug::getSyms(const char* elf_path)
+#include <stdio.h>
+
+Symbols* ElfDebug::getSyms(const char* elf_path, void* base)
 {
 	Symbols		*ret;
 	Symbol		*s;
@@ -24,7 +26,13 @@ Symbols* ElfDebug::getSyms(const char* elf_path)
 
 	ret = new Symbols();
 	while ((s = ed->nextSym()) != NULL) {
-		ret->addSym(s);
+		symaddr_t	addr;
+
+		addr = s->getBaseAddr();
+		if (s->isCode() && s->getName().size() > 0 && addr) {
+			if (s->isDynamic()) addr += (uint64_t)base;
+			ret->addSym(s->getName(), addr, s->getLength());
+		}
 		delete s;
 	}
 
@@ -80,16 +88,19 @@ void ElfDebug::setupTables(void)
 	/* pull data from section headers */
 	strtab = NULL;
 	sym_count = 0;
+	sym = NULL;
 	for (int i = 0; i < hdr->e_shnum; i++) {
 		if (i == hdr->e_shstrndx) continue;
 		if (shdr[i].sh_type == SHT_STRTAB) {
 			strtab = (const char*)(img + shdr[i].sh_offset);
 			continue;
 		}
-		if (shdr[i].sh_type == SHT_DYNSYM) {
+		if ((shdr[i].sh_type == SHT_DYNSYM && sym == NULL) ||
+		    (shdr[i].sh_type == SHT_SYMTAB) ) {
 			sym = (Elf_Sym*)(img + shdr[i].sh_offset);
 			sym_count = shdr[i].sh_size / shdr[i].sh_entsize;
 			assert (sizeof(Elf_Sym) == shdr[i].sh_entsize);
+			is_dyn = (shdr[i].sh_type == SHT_DYNSYM);
 		}
 	}
 
@@ -115,5 +126,7 @@ Symbol* ElfDebug::nextSym(void)
 	return new Symbol(
 		name,
 		cur_sym->st_value,
-		cur_sym->st_size);
+		cur_sym->st_size,
+		is_dyn,
+		(ELF64_ST_TYPE(cur_sym->st_info) == STT_FUNC));
 }

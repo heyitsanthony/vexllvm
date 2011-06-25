@@ -19,6 +19,7 @@
 #include <set>
 #include "Sugar.h"
 
+#include "util.h"
 #include "symbols.h"
 #include "elfimg.h"
 #include "elfdebug.h"
@@ -495,6 +496,7 @@ void GuestPTImg::loadSymbols(void) const
 
 	foreach (it, mappings.begin(), mappings.end()) {
 		std::string	libname((*it)->getLib());
+		void		*base((*it)->getBase());
 		Symbols		*new_syms;
 
 		/* already seen it? */
@@ -502,7 +504,7 @@ void GuestPTImg::loadSymbols(void) const
 			continue;
 
 		/* new fname, try to load the symbols */
-		new_syms = ElfDebug::getSyms(libname.c_str());
+		new_syms = ElfDebug::getSyms(libname.c_str(), base);
 		if (new_syms) {
 			symbols->addSyms(new_syms);
 			delete new_syms;
@@ -520,7 +522,8 @@ std::string GuestPTImg::getName(void* x) const
 
 	sym_found = symbols->findSym(x);
 	if (sym_found != NULL) {
-		return sym_found->getName();
+		return (sym_found->getName()+"+")+
+			hex_to_string((intptr_t)x-sym_found->getBaseAddr());
 	}
 
 	return Guest::getName(x);
