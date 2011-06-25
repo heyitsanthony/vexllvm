@@ -404,12 +404,14 @@ void GuestELF::setupMem(void)
 		void* tls = mmap(s.offset, s.length, PROT_WRITE | s.cur_prot, MAP_ANON | MAP_PRIVATE, -1, 0);
 		assert(tls == s.offset);
 		/* put the kernel helpers: see arch/arm/kernel/entry-armv.S */
+		/* note that this implementation depends on the system 
+		   restarting this code block if a context switch happens
+		   during its execution */
 		/* @0xffff0fc0 cmpxchg
-			ldr	r3, [r2, #0]
+			ldr	r3, [r2]
 			subs	r3, r3, r0
-			it	eq
-			streq	r1, [r2, #0]
-			negs	r0, r3
+			streq	r1, [r2]
+			rsbs	r0, r3, #0
 			bx	lr
 		*/
 		*(unsigned int*)(uintptr_t)0xffff0fc0 = 0xe5923000;
