@@ -26,11 +26,7 @@ void dumpIRSBs(void)
 	std::cerr << "DUMPING LOGS" << std::cerr;
 	vexexec->dumpLogs(std::cerr);
 }
-static int count(char**v) {
-	int i = 0;
-	for(;v[i]; ++i);
-	return i;
-}
+
 int main(int argc, char* argv[], char* envp[])
 {
 	GuestELF	*gs;
