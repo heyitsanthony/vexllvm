@@ -39,7 +39,8 @@ int main(int argc, char* argv[], char* envp[])
 		return -1;
 	}
 
-	gs = GuestPTImg::create<GuestPTImg>(argc - 1, argv + 1, envp);
+	GuestMem* mem = new GuestMem();
+	gs = GuestPTImg::create<GuestPTImg>(mem, argc - 1, argv + 1, envp);
 	vexexec = VexExec::create<VexExec,Guest>(gs);
 	assert (vexexec && "Could not create vexexec");
 	

@@ -35,9 +35,9 @@ using namespace llvm;
 
 static bool dump_maps;
 
-GuestPTImg::GuestPTImg(
+GuestPTImg::GuestPTImg(GuestMem* mem,
 	int argc, char *const argv[], char *const envp[])
-: Guest(argv[0])
+: Guest(mem, argv[0])
 , entry_pt(NULL)
 , symbols(NULL)
 {
@@ -45,7 +45,7 @@ GuestPTImg::GuestPTImg(
 	
 	dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
 
-	img = ElfImg::create(argv[0], false);
+	img = ElfImg::create(mem, argv[0], false);
 	assert (img != NULL && "DOES BINARY EXIST?");
 
 	entry_pt = img->getEntryPoint();

@@ -67,14 +67,14 @@ public:
 	void* getEntryPoint(void) const { return entry_pt; }
 
 	template <class T>
-	static T* create(
+	static T* create(GuestMem* mem,
 		int argc, char* const argv[], char* const envp[])
 	{
 		GuestPTImg		*pt_img;
 		T			*pt_t;
 		pid_t			slurped_pid;
 
-		pt_t = new T(argc, argv, envp);
+		pt_t = new T(mem, argc, argv, envp);
 		pt_img = pt_t;
 		slurped_pid = pt_img->createSlurpedChild(argc, argv, envp);
 		if (slurped_pid <= 0) {
@@ -97,7 +97,8 @@ public:
 	virtual std::string getName(void*) const;
 
 protected:
-	GuestPTImg(int argc, char* const argv[], char* const envp[]);
+	GuestPTImg(GuestMem* mem, int argc, char* const argv[], 
+		char* const envp[]);
 	virtual void handleChild(pid_t pid);
 
 	void slurpRegisters(pid_t pid);

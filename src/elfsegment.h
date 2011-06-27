@@ -30,7 +30,6 @@ public:
 	void clearEnd() {
 		memset((char*)my_end, 0, extra_bytes);
 	}
-	bool isDirectMapped(void) const { return direct_mapped; }
 protected:
 	template <typename Elf_Phdr>
 	ElfSegment(int fd, const Elf_Phdr& phdr,
@@ -46,8 +45,6 @@ private:
 	unsigned int	es_len;
 	unsigned int	file_pages;
 	unsigned int	spill_pages;
-
-	bool		direct_mapped;
 
 	size_t		elf_file_size;
 	elfptr_t	reloc;

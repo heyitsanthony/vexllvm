@@ -59,7 +59,7 @@ uint64_t doFunc(Guest* gs, Function* f)
 class GuestIdent : public Guest
 {
 public:
-	GuestIdent() : Guest("ident")
+	GuestIdent() : Guest(new GuestMem(), "ident")
 	{
 		cpu_state = GuestCPUState::create(Arch::X86_64);
 	}

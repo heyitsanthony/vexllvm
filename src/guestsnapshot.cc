@@ -14,11 +14,11 @@ using namespace std;
 #define SYSPAGE_ADDR	((void*)0xffffffffff600000)
 #endif
 
-GuestSnapshot* GuestSnapshot::create(const char* dirpath)
+GuestSnapshot* GuestSnapshot::create(GuestMem* mem, const char* dirpath)
 {
 	GuestSnapshot	*ret;
 
-	ret = new GuestSnapshot(dirpath);
+	ret = new GuestSnapshot(mem, dirpath);
 	if (ret->is_valid == false) {
 		delete ret;
 		return NULL;
@@ -35,8 +35,8 @@ GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
 
-GuestSnapshot::GuestSnapshot(const char* dirpath)
-: Guest(NULL), is_valid(false)
+GuestSnapshot::GuestSnapshot(GuestMem* mem, const char* dirpath)
+: Guest(mem, NULL), is_valid(false)
 {
 	ssize_t	sz;
 

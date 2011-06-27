@@ -5,6 +5,22 @@
 #include <list>
 #include <map>
 
+struct guest_ptr {
+	guest_ptr() : o(0) {}
+	explicit guest_ptr(uintptr_t) : o() {}
+	uintptr_t o;
+	operator uintptr_t() const {
+		return o;
+	}
+};
+template <typename T> 
+guest_ptr operator+(const guest_ptr& g, T offset) {
+	return guest_ptr(g.o + offset);
+}
+uintptr_t operator-(const guest_ptr& g, guest_ptr h) {
+	return g.o - h.o;
+}
+
 class GuestMem
 {
 public:
@@ -13,8 +29,9 @@ public:
  * getData works on non-identity mappings */
 class Mapping {
 public:
-	Mapping(void) : offset(NULL), length(0) {}
-	Mapping(void* in_off, size_t in_len, int prot, bool in_is_stack=false)
+	Mapping(void) : offset(0), length(0) {}
+	Mapping(guest_ptr in_off, size_t in_len, int prot, 
+		bool in_is_stack=false)
 	: offset(in_off)
 	, length(in_len)
 	, req_prot(prot)
@@ -23,10 +40,8 @@ public:
 	, unmapped(false){}
 	virtual ~Mapping(void) {}
 
-	void* end() const { return (char*)offset + length; }
+	guest_ptr end() const { return offset + length; }
 	
-	const void* getData(void) const { return offset; }
-	const void* getGuestAddr(void) const { return offset; }
 	unsigned int getBytes(void) const { return length; }
 	bool isStack(void) const { return is_stack; }
 	int getReqProt(void) const { return req_prot; }
@@ -37,7 +52,7 @@ public:
 	void markUnmapped() { unmapped = true; }
 	bool wasUnmapped() { return unmapped; }
 
-	void* 		offset;
+	guest_ptr	offset;
 	size_t		length;
 	int		req_prot;
 	int		cur_prot;
@@ -48,24 +63,27 @@ public:
 	GuestMem(void);
 	virtual ~GuestMem(void);
 	void recordMapping(Mapping& mapping);
-	const Mapping* lookupMappingPtr(void* addr);
+	const Mapping* lookupMappingPtr(guest_ptr addr);
 	void removeMapping(Mapping& mapping);
-	bool lookupMapping(void* addr, Mapping& mapping);
-	void* brk();
-	bool sbrk(void* new_top);
+	bool lookupMapping(guest_ptr addr, Mapping& mapping);
+	guest_ptr brk();
+	bool sbrk(guest_ptr new_top);
 	std::list<Mapping> getMaps(void) const;
 	void mark32Bit() { is_32_bit = true; }
+	char* getBase() const { return base; }
+	bool findRegion(size_t len, Mapping& m);
 
 private:
 	bool sbrkInitial();
-	bool sbrkInitial(void* new_top);
+	bool sbrkInitial(guest_ptr new_top);
 
-	typedef std::map<void*, Mapping> mapmap_t; 
+	typedef std::map<guest_ptr, Mapping> mapmap_t; 
 	mapmap_t	maps;
-	void		*top_brick;
-	void		*base_brick;
+	guest_ptr	top_brick;
+	guest_ptr	base_brick;
 	bool		is_32_bit;
-	void		*reserve_brick;
+	guest_ptr	reserve_brick;
+	char*		base;
 };
 
 #endif

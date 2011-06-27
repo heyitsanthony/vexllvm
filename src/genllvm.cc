@@ -241,6 +241,10 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 	}
 
 	ptrTy = PointerType::get(data_v->getType(), 0);
+	addr_v = builder->CreateAdd(addr_v, 
+		ConstantInt::get(getGlobalContext(),
+			APInt(sizeof(intptr_t)*8,
+			(uintptr_t)guest->getMem()->getBase())));
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "storePtr");
 	si = builder->CreateStore(data_v, addr_ptr);
 	si->setAlignment(8);
@@ -254,6 +258,10 @@ Value* GenLLVM::load(Value* addr_v, const Type* ty)
 	LoadInst	*loadInst;
 
 	ptrTy = PointerType::get(ty, 0);
+	addr_v = builder->CreateAdd(addr_v, 
+		ConstantInt::get(getGlobalContext(),
+			APInt(sizeof(intptr_t)*8,
+			(uintptr_t)guest->getMem()->getBase())));
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "loadPtr");
 	loadInst = builder->CreateLoad(addr_ptr);
 	loadInst->setAlignment(8);

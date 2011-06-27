@@ -9,7 +9,7 @@ class ElfImg;
 class GuestELF : public Guest
 {
 public:
-	GuestELF(ElfImg* in_img);
+	GuestELF(GuestMem* mem, ElfImg* in_img);
 	virtual ~GuestELF(void);
 	const ElfImg* getExeImage(void) const { return img; }
 	void* getEntryPoint(void) const;

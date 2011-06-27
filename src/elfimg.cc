@@ -23,12 +23,12 @@
 #define ElfImg32 ElfImg
 #define ElfImg64 ElfImg
 
-ElfImg* ElfImg::create(const char* fname, bool linked)
+ElfImg* ElfImg::create(GuestMem* mem, const char* fname, bool linked)
 {
 	Arch::Arch arch = readHeader(fname, linked);
 	if(arch == Arch::Unknown)
 		return NULL;
-	return new ElfImg(fname, arch, linked);
+	return new ElfImg(mem, fname, arch, linked);
 }
 
 ElfImg::~ElfImg(void)
@@ -41,10 +41,11 @@ ElfImg::~ElfImg(void)
 	close(fd);
 }
 
-ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked)
+ElfImg::ElfImg(GuestMem* in_mem, const char* fname, Arch::Arch in_arch, bool in_linked)
 : interp(NULL)
 , linked(in_linked)
 , arch(in_arch)
+, mem(in_mem)
 {
 	struct stat	st;
 
@@ -109,21 +110,19 @@ void ElfImg::setupSegments(void)
 	Elf_Ehdr *hdr = (Elf_Ehdr*)hdr_raw;
 	Elf_Phdr *phdr = (Elf_Phdr*)(((char*)hdr) + hdr->e_phoff);
 
-	direct_mapped = true;
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
 		ElfSegment	*es;
 		
 		if (phdr[i].p_type == PT_INTERP) {
 			std::string path((char*)img_mmap + phdr[i].p_offset);
 			path = library_root + path;
-			interp = ElfImg::create(path.c_str(), false); 
+			interp = ElfImg::create(mem, path.c_str(), false); 
 			continue;
 		}
 		es = ElfSegment::load(fd, phdr[i], 
 			segments.empty() ? 0
 			: getFirstSegment()->relocation());
 		if (!es) continue;
-		if (!es->isDirectMapped()) direct_mapped = false;
 
 		segments.push_back(es);
 	}

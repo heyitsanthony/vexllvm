@@ -37,7 +37,8 @@ int main(int argc, char* argv[], char* envp[])
 		return -1;
 	}
 
-	gs = GuestPTImg::create<PTImgChk>(argc - 1, argv + 1, envp);
+	GuestMem* mem = new GuestMem();
+	gs = GuestPTImg::create<PTImgChk>(mem, argc - 1, argv + 1, envp);
 
 	if (getenv("VEXLLVM_FASTCHK"))
 		vexexec = VexExec::create<VexExecFastChk,PTImgChk>(gs);

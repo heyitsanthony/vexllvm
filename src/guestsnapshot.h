@@ -7,14 +7,14 @@
 class GuestSnapshot : public Guest
 {
 public:
-	static GuestSnapshot* create(const char* dirname);
+	static GuestSnapshot* create(GuestMem* mem, const char* dirname);
 	virtual ~GuestSnapshot(void);
 	static void save(const Guest*, const char* dirname);
 	virtual void* getEntryPoint(void) const { return entry_pt; }
 	virtual Arch::Arch getArch(void) const { return arch; }
 
 protected:
-	GuestSnapshot(const char* dirname);
+	GuestSnapshot(GuestMem* mem, const char* dirname);
 
 private:
 	bool		is_valid;

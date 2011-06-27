@@ -12,18 +12,37 @@
 #define BRK_RESERVE 256 * 1024 * 1024
 
 GuestMem::GuestMem(void)
-: top_brick(NULL)
-, base_brick(NULL)
+: top_brick(0)
+, base_brick(0)
 , is_32_bit(false)
-, reserve_brick(NULL)
+, reserve_brick(0)
+, base(NULL)
 {
+// #ifdef __amd64__
+// 	/* an exact identity mapping causes problems running
+// 	   android binaries which have been prelinked.  the 
+// 	   prelinking phase put many of the libraries where
+// 	   the kernel module load region is 0xa0000000.  so
+// 	   for 64-bit host, we can just offset everything by
+// 	   4 GB and do the memory mappings ourselves.  this
+// 	   is kind of a kludge but it is probably better than
+// 	   doing a page table based implementation.  obviously,
+// 	   the prelinking will cause trouble running vexllvm
+// 	   natively on android anyway (the libs would definitely)
+// 	   overlap, so let's defer that for another day... */
+// 	base = (void*)(uintptr_t)0x100000000;
+// #endif
+	/* since we are managing the address space now, 
+	   record the null page so we don't reuse it */
+	Mapping null_page(guest_ptr(0), PAGE_SIZE, 0);
+	recordMapping(null_page);
 }
 
 GuestMem::~GuestMem(void)
 {
 }
 
-void* GuestMem::brk()
+guest_ptr GuestMem::brk()
 {
 	return top_brick;
 }
@@ -38,7 +57,10 @@ bool GuestMem::sbrkInitial() {
 		if(is_32_bit)
 			flags |= MAP_32BIT;
 	#endif
-	addr = mmap(NULL, BRK_RESERVE, prot, flags, -1, 0);
+	bool found = findRegion(BRK_RESERVE, m);
+	assert(found && "couldn't make mapping");
+	addr = mmap(getBase() + m.offset.o, BRK_RESERVE, prot, 
+		flags, -1, 0);
 	/* hmm, we could shrink the reserve but */
 	assert(addr != MAP_FAILED && "initial sbrk failed");
 	addr = mremap(addr, BRK_RESERVE, PAGE_SIZE, 0);
@@ -48,17 +70,16 @@ bool GuestMem::sbrkInitial() {
 	addr = mmap(addr, PAGE_SIZE, prot, flags, -1, 0);
 	assert(addr != MAP_FAILED && "sbrk flags fix kerplunked");
 
-	m.offset = addr;
 	m.length = PAGE_SIZE;
 	m.cur_prot = m.req_prot = prot;
 	recordMapping(m);
 	
 	top_brick = base_brick = m.offset;
-	reserve_brick = (char*)base_brick + BRK_RESERVE;
+	reserve_brick = base_brick + BRK_RESERVE;
 	return true;
 }
 
-bool GuestMem::sbrkInitial(void* new_top) {
+bool GuestMem::sbrkInitial(guest_ptr new_top) {
 	GuestMem::Mapping m;
 	void *addr;
 	int flags = MAP_PRIVATE | MAP_ANON;
@@ -70,10 +91,10 @@ bool GuestMem::sbrkInitial(void* new_top) {
 	   case you'd eventually see divergence in xchk, manifested
 	   by -ENOMEM being returned for the vex process on brk when
 	   the real process managed to extend the brk */
-	addr = mmap(new_top, PAGE_SIZE, prot, flags, -1, 0);
-	assert(addr == new_top && "initial forced sbrk failed");
+	addr = mmap(getBase() + new_top, PAGE_SIZE, prot, flags, -1, 0);
+	assert(addr == getBase() + new_top && "initial forced sbrk failed");
 	
-	m.offset = addr;
+	m.offset = new_top;
 	m.length = PAGE_SIZE;
 	m.cur_prot = m.req_prot = prot;
 	recordMapping(m);
@@ -82,25 +103,25 @@ bool GuestMem::sbrkInitial(void* new_top) {
 	return true;
 }
 
-bool GuestMem::sbrk(void* new_top)
+bool GuestMem::sbrk(guest_ptr new_top)
 {
 	GuestMem::Mapping	m;
 	bool			found;
 	size_t			new_len;
 	void			*addr;
 
-	if (top_brick == NULL) {
-		if(new_top == NULL)
+	if (top_brick == 0) {
+		if(new_top == 0)
 			return sbrkInitial();
 		else
 			return sbrkInitial(new_top);
 	}
 
-	found = lookupMapping((char*)base_brick, m);
+	found = lookupMapping(base_brick, m);
 	if (!found)
 		return false;
 
-	new_len = (char*)new_top - (char*)base_brick;
+	new_len = new_top - base_brick;
 	new_len = (new_len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
 	
 	/* new_top is not page aligned because its really just
@@ -114,14 +135,15 @@ bool GuestMem::sbrk(void* new_top)
 		
 
 	/* lame we can be more graceful here and try to do it */ 
-	if(reserve_brick && (char*)m.offset + new_len > reserve_brick)
+	if(reserve_brick && m.offset + new_len > reserve_brick)
 		return false;
 
 	/* i want to extend the existing mapping... but it seems like
 	   something is not working with that, so do this instead */
 	// addr = mremap(m.offset, m.length, new_len, MREMAP_FIXED);
-	addr = mmap(m.end(), new_len - m.length, PROT_READ | PROT_WRITE,
-		MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0);
+	addr = mmap(getBase() + m.end(), new_len - m.length, 
+		PROT_READ | PROT_WRITE, MAP_FIXED | MAP_PRIVATE | MAP_ANON,
+		-1, 0);
 		
 	if (addr == MAP_FAILED && errno != EFAULT) return false;
 	assert (addr != MAP_FAILED && "sbrk is broken again");
@@ -157,7 +179,7 @@ void GuestMem::recordMapping(Mapping& mapping)
 				maps.insert(std::make_pair(
 					smaller.offset, smaller));
 			}
-			lost = (char*)i->second.end() - (char*)mapping.offset;
+			lost = i->second.end() - mapping.offset;
 			i->second.length -= lost;
 		}
 		++i;
@@ -199,7 +221,7 @@ void GuestMem::recordMapping(Mapping& mapping)
 	if(i != maps.end() && mapping.end() > i->second.offset) {
 		long lost;
 
-		lost = (char*)mapping.end() - (char*)i->second.offset;
+		lost = mapping.end() - i->second.offset;
 		i->second.offset = mapping.end();
 		i->second.length -= lost;
 	}
@@ -213,7 +235,7 @@ void GuestMem::removeMapping(Mapping& mapping)
 	maps.erase(mapping.offset);
 }
 
-bool GuestMem::lookupMapping(void* addr, Mapping& mapping)
+bool GuestMem::lookupMapping(guest_ptr addr, Mapping& mapping)
 {
 	const GuestMem::Mapping* m = lookupMappingPtr(addr);
 	if(!m)
@@ -221,7 +243,7 @@ bool GuestMem::lookupMapping(void* addr, Mapping& mapping)
 	mapping = *m;
 	return true;
 }
-const GuestMem::Mapping* GuestMem::lookupMappingPtr(void* addr) {
+const GuestMem::Mapping* GuestMem::lookupMappingPtr(guest_ptr addr) {
 	mapmap_t::iterator i = maps.lower_bound(addr);
 	if(i != maps.end() && i->first == addr) {
 		return &i->second;
@@ -254,4 +276,26 @@ void GuestMem::Mapping::print(std::ostream& os) const
 	os	<< "Addr: " << offset << "--" << end() << ". ReqProt="
 		<< std::hex << req_prot << ". CurProt=" << cur_prot
 		<< std::endl;
+}
+bool GuestMem::findRegion(size_t len, Mapping& m) {
+	len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
+	guest_ptr current = guest_ptr(0x100000);
+	mapmap_t::iterator i = maps.lower_bound(current);
+	if(i != maps.begin())
+		--i;
+	while(i != maps.end() && 
+		i->second.end() > guest_ptr(0x100000)) 
+	{
+		++i;
+	}
+	for(; i != maps.end(); ++i) 
+	{
+		if(i->second.offset - current > len) {
+			m.offset = current;
+			m.length = len;
+			return true;
+		}
+		current = i->second.end();
+	}
+	return false;
 }

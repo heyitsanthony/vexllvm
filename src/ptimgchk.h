@@ -11,7 +11,8 @@ class SyscallsMarshalled;
 class PTImgChk : public GuestPTImg
 {
 public:
-	PTImgChk(int argc, char* const argv[], char* const envp[]);
+	PTImgChk(GuestMem* mem, int argc, char* const argv[], 
+		char* const envp[]);
 	virtual ~PTImgChk();
 
 	void stepThroughBounds(

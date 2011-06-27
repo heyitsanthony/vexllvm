@@ -137,9 +137,6 @@ void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 		*/
 	}
 
-	direct_mapped = ((void*)page_base(reloc_base) == es_mmapbase 
-		|| desired_base == 0);
-
 	my_end = (void*)((uintptr_t)es_mmapbase + filesz);
 
 	/* protect now that we have zeroed */
@@ -157,7 +154,6 @@ void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 		desired_base, spill_pages, prot, 
 		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	assert (spill_base != MAP_FAILED);
-	direct_mapped = direct_mapped && (desired_base == spill_base);
 }
 
 hostptr_t ElfSegment::xlate(elfptr_t elfptr) const

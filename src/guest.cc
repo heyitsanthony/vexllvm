@@ -16,8 +16,8 @@
 
 using namespace llvm;
 
-Guest::Guest(const char* in_bin_path)
-: mem(NULL),
+Guest::Guest(GuestMem* in_mem, const char* in_bin_path)
+: mem(in_mem),
   bin_path(NULL)
 {
 	setBinPath(in_bin_path);
@@ -104,13 +104,13 @@ void Guest::save(const char* dirpath) const
 	GuestSnapshot::save(this, dirpath);
 }
 
-Guest* Guest::load(const char* dirpath)
+Guest* Guest::load(GuestMem* mem, const char* dirpath)
 {
 	GuestSnapshot*	ret;
 
 	/* use most recent dir if don't care */
 	if (dirpath == NULL) dirpath = LAST_SYMLINK;
 
-	ret = GuestSnapshot::create(dirpath);
+	ret = GuestSnapshot::create(mem, dirpath);
 	return ret;
 }

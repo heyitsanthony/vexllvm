@@ -246,7 +246,9 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	}
 
 	/* compile it + get vsb */
-	vsb = jit_cache->getVSB(hostptr, (uint64_t)elfptr);
+	vsb = jit_cache->getVSB(
+		(char*)gs->getMem()->getBase() + (uint64_t)elfptr,
+		(uint64_t)elfptr);
 	jit_cache->getFPtr(hostptr, (uint64_t)elfptr);
 
 	if (!vsb) fprintf(stderr, "Could not get VSB for %p\n", elfptr);

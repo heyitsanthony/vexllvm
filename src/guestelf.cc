@@ -24,8 +24,8 @@ using namespace llvm;
 #define MAX_ARG_PAGES	32
 
 
-GuestELF::GuestELF(ElfImg* in_img)
-: Guest(in_img->getFilePath())
+GuestELF::GuestELF(GuestMem* mem, ElfImg* in_img)
+: Guest(mem, in_img->getFilePath())
 , img(in_img)
 , arg_pages(MAX_ARG_PAGES)
 {
@@ -379,9 +379,6 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 void GuestELF::setupMem(void)
 {
 	std::list<ElfSegment*>	m;
-
-	assert (mem == NULL);
-	mem = new GuestMem();
 
 	img->getSegments(m);
 
