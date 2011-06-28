@@ -16,8 +16,9 @@
 
 using namespace llvm;
 
-Guest::Guest(GuestMem* in_mem, const char* in_bin_path)
-: mem(in_mem),
+Guest::Guest(const char* in_bin_path)
+: cpu_state(NULL),
+  mem(NULL),
   bin_path(NULL)
 {
 	setBinPath(in_bin_path);
@@ -26,13 +27,8 @@ Guest::Guest(GuestMem* in_mem, const char* in_bin_path)
 Guest::~Guest(void)
 {
 	if (bin_path) free(bin_path);
-
-	if (mem) {
-		delete mem;
-		mem = NULL;
-	}
-
-	delete cpu_state;
+	if (mem) delete mem;
+	if (cpu_state) delete cpu_state;
 }
 
 void Guest::setBinPath(const char* p)
@@ -104,13 +100,13 @@ void Guest::save(const char* dirpath) const
 	GuestSnapshot::save(this, dirpath);
 }
 
-Guest* Guest::load(GuestMem* mem, const char* dirpath)
+Guest* Guest::load(const char* dirpath)
 {
 	GuestSnapshot*	ret;
 
 	/* use most recent dir if don't care */
 	if (dirpath == NULL) dirpath = LAST_SYMLINK;
 
-	ret = GuestSnapshot::create(mem, dirpath);
+	ret = GuestSnapshot::create(dirpath);
 	return ret;
 }

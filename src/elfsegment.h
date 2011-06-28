@@ -12,24 +12,13 @@ public:
 	static ElfSegment* load(GuestMem* mem, int fd, const Elf_Phdr& phdr, 
 		uintptr_t reloc);
 	guest_ptr xlate(guest_ptr elfaddr) const;
-	uintptr_t relocation() const { 
-		return es_hostbase - es_elfbase; 
-	};
-	guest_ptr offset(uintptr_t offset) {
-		return es_hostbase + offset;
-	}
-	guest_ptr base() const {
-		return es_mmapbase;
-	}
-	unsigned int length() const {
-		return es_len;
-	}
-	int protection() const {
-		return prot;
-	}
-	void clearEnd() {
-		mem->memset(my_end, 0, extra_bytes);
-	}
+	uintptr_t relocation() const { return es_hostbase - es_elfbase; }
+	guest_ptr offset(uintptr_t offset) { return es_hostbase + offset; }
+	guest_ptr base() const { return es_mmapbase; }
+	unsigned int length() const { return es_len; }
+	int protection() const { return prot; }
+	void clearEnd() { mem->memset(my_end, 0, extra_bytes); }
+
 protected:
 	template <typename Elf_Phdr>
 	ElfSegment(GuestMem* mem, int fd, const Elf_Phdr& phdr,

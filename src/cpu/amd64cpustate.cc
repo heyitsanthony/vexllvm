@@ -14,11 +14,9 @@ extern "C" {
 
 #define FS_SEG_OFFSET	(24*8)
 
-AMD64CPUState::AMD64CPUState(GuestMem* mem)
-: GuestCPUState(mem)
+AMD64CPUState::AMD64CPUState()
 {
 	mkRegCtx();
-
 	state_data = new uint8_t[state_byte_c+1];
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
@@ -33,11 +31,9 @@ AMD64CPUState::~AMD64CPUState()
 void AMD64CPUState::setPC(guest_ptr ip) {
 	state2amd64()->guest_RIP = ip;
 }
+
 guest_ptr AMD64CPUState::getPC(void) const {
 	return guest_ptr(state2amd64()->guest_RIP);
-}
-guest_ptr AMD64CPUState::getReturnAddress(void) const {
-	return guest_ptr(mem->read<unsigned long>(getStackPtr()));
 }
 
 /* ripped from libvex_guest_amd64 */
@@ -249,10 +245,10 @@ void AMD64CPUState::print(std::ostream& os) const
 void AMD64CPUState::setFSBase(uintptr_t base) {
 	state2amd64()->guest_FS_ZERO = base;
 }
+
 uintptr_t AMD64CPUState::getFSBase() const {
 	return state2amd64()->guest_FS_ZERO;
 }
-
 
 /* set a function argument */
 void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
@@ -269,8 +265,10 @@ void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 }
 
 #ifdef __amd64__
-void AMD64CPUState::setRegs(const user_regs_struct& regs, 
-	const user_fpregs_struct& fpregs) {
+void AMD64CPUState::setRegs(
+	const user_regs_struct& regs, 
+	const user_fpregs_struct& fpregs)
+{
 	state2amd64()->guest_RAX = regs.rax;
 	state2amd64()->guest_RCX = regs.rcx;
 	state2amd64()->guest_RDX = regs.rdx;
@@ -295,12 +293,15 @@ void AMD64CPUState::setRegs(const user_regs_struct& regs,
 	//valgrind/vex seems to not really fully segments them, how sneaky
 	state2amd64()->guest_FS_ZERO = regs.fs_base;
 
-	memcpy(&state2amd64()->guest_XMM0, &fpregs.xmm_space[0], sizeof(fpregs.xmm_space));
+	memcpy(	&state2amd64()->guest_XMM0,
+		&fpregs.xmm_space[0],
+		sizeof(fpregs.xmm_space));
 
 
 	//TODO: this is surely wrong, the sizes don't even match...
-	memcpy(&state2amd64()->guest_FPREG[0], &fpregs.st_space[0], sizeof(state2amd64()->guest_FPREG));
-
+	memcpy(	&state2amd64()->guest_FPREG[0],
+		&fpregs.st_space[0],
+		sizeof(state2amd64()->guest_FPREG));
 
 	//TODO: floating point flags and extra fp state, sse  rounding
 }

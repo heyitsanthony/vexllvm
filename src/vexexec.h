@@ -51,7 +51,6 @@ public:
 
 	virtual ~VexExec(void);
 	const Guest* getGuest(void) const { return gs; }
-	const vexexec_addrs& getAddrStack(void) const { return addr_stack; }
 	const vexexec_traces& getTraces(void) const { return trace; }
 	void run(void);
 	void dumpLogs(std::ostream& os) const;
@@ -82,7 +81,8 @@ private:
 	static void signalHandler(int sig, siginfo_t* si, void* raw_context);
 	void flushTamperedCode(guest_ptr start, guest_ptr end);
 
-	vexexec_addrs	addr_stack;
+	guest_ptr	next_addr;
+	int		call_depth;
 
 	/* stats */
 	unsigned int	sb_executed_c;

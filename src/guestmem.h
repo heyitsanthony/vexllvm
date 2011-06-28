@@ -5,30 +5,8 @@
 #include <list>
 #include <map>
 #include <string.h>
+#include "guestptr.h"
 
-/* class to enforce proper use of guest ptrs, operators
-   are defined as need to make code look nicer */
-struct guest_ptr {
-	guest_ptr() : o(0) {}
-	explicit guest_ptr(uintptr_t a) : o(a) {}
-	uintptr_t o;
-	operator uintptr_t() const {
-		return o;
-	}
-};
-template <typename T> 
-guest_ptr operator+(const guest_ptr& g, T offset) {
-	return guest_ptr(g.o + offset);
-}
-inline uintptr_t operator-(const guest_ptr& g, guest_ptr h) {
-	return g.o - h.o;
-}
-inline bool operator < (const guest_ptr& g, guest_ptr h) {
-	return g.o < h.o;
-}
-inline bool operator > (const guest_ptr& g, guest_ptr h) {
-	return g.o > h.o;
-}
 class GuestMem
 {
 public:
@@ -128,8 +106,10 @@ public:
 	int mprotect(guest_ptr offset, size_t length, 
 		int prot);
 	int munmap(guest_ptr offset, size_t length);
-	int mremap(guest_ptr& result, guest_ptr old_offset, 
-		size_t old_length, size_t new_length, int flags, guest_ptr new_offset);
+	int mremap(
+		guest_ptr& result, guest_ptr old_offset, 
+		size_t old_length, size_t new_length,
+		int flags, guest_ptr new_offset);
 
 private:
 	bool sbrkInitial();

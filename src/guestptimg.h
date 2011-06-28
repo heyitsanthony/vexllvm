@@ -53,14 +53,13 @@ public:
 	guest_ptr getEntryPoint(void) const { return entry_pt; }
 
 	template <class T>
-	static T* create(GuestMem* mem,
-		int argc, char* const argv[], char* const envp[])
+	static T* create(int argc, char* const argv[], char* const envp[])
 	{
 		GuestPTImg		*pt_img;
 		T			*pt_t;
 		pid_t			slurped_pid;
 
-		pt_t = new T(mem, argc, argv, envp);
+		pt_t = new T(argc, argv, envp);
 		pt_img = pt_t;
 		slurped_pid = pt_img->createSlurpedChild(argc, argv, envp);
 		if (slurped_pid <= 0) {
@@ -84,8 +83,7 @@ public:
 	virtual std::string getName(guest_ptr) const;
 
 protected:
-	GuestPTImg(GuestMem* mem, int argc, char* const argv[], 
-		char* const envp[]);
+	GuestPTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
 
 	void slurpRegisters(pid_t pid);
@@ -94,8 +92,6 @@ protected:
 	void resetBreakpoint(pid_t pid, guest_ptr addr);
 	guest_ptr undoBreakpoint(pid_t pid);
 private:
-	void setupMem(void);
-
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);
 	void slurpBrains(pid_t pid);

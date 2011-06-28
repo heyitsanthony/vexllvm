@@ -89,9 +89,8 @@ early enough to cause the cross checking technique to fail before the speed of
 the mechanism really made an impact in how far it can check.
 */
 
-PTImgChk::PTImgChk(GuestMem* mem, int argc, char* const argv[], 
-	char* const envp[])
-: GuestPTImg(mem, argc, argv, envp)
+PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
+: GuestPTImg(argc, argv, envp)
 , steps(0), bp_steps(0), blocks(0)
 , hit_syscall(false)
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)

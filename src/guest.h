@@ -47,11 +47,11 @@ public:
 	/* guest has an interface to saving/loading, but all the legwork
 	 * is done by guestsnapshot to keep things tidy */
 	void save(const char* dirpath = NULL) const;
-	static Guest* load(GuestMem* mem, const char* dirpath = NULL);
+	static Guest* load(const char* dirpath = NULL);
 
 protected:
 	void setBinPath(const char* b);
-	Guest(GuestMem* mem, const char* bin_path);
+	Guest(const char* bin_path);
 
 	GuestCPUState	*cpu_state;
 	GuestMem	*mem;

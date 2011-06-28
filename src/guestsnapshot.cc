@@ -14,11 +14,11 @@ using namespace std;
 #define SYSPAGE_ADDR	guest_ptr(0xffffffffff600000)
 #endif
 
-GuestSnapshot* GuestSnapshot::create(GuestMem* mem, const char* dirpath)
+GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 {
 	GuestSnapshot	*ret;
 
-	ret = new GuestSnapshot(mem, dirpath);
+	ret = new GuestSnapshot(dirpath);
 	if (ret->is_valid == false) {
 		delete ret;
 		return NULL;
@@ -35,8 +35,8 @@ GuestSnapshot* GuestSnapshot::create(GuestMem* mem, const char* dirpath)
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
 
-GuestSnapshot::GuestSnapshot(GuestMem* mem, const char* dirpath)
-: Guest(mem, NULL), is_valid(false)
+GuestSnapshot::GuestSnapshot(const char* dirpath)
+: Guest(NULL), is_valid(false)
 {
 	ssize_t	sz;
 
@@ -58,7 +58,7 @@ GuestSnapshot::GuestSnapshot(GuestMem* mem, const char* dirpath)
 	END_F()
 
 	SETUP_F_R("regs")
-	cpu_state = GuestCPUState::create(mem, arch);
+	cpu_state = GuestCPUState::create(arch);
 	sz = fread(
 		cpu_state->getStateData(),
 		cpu_state->getStateSize(),

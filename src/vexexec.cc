@@ -122,7 +122,7 @@ const VexSB* VexExec::doNextSB(void)
 	VexSB		*vsb;
 	GuestExitType	exit_type;
 
-	elfptr = addr_stack.top();
+	elfptr = next_addr;
 
 	if (trace_conf != TRACE_OFF) {
 		if (trace_conf == TRACE_LOG) {
@@ -131,17 +131,15 @@ const VexSB* VexExec::doNextSB(void)
 			else
 				trace_c++;
 			trace.push_back(std::pair<guest_ptr, int>(
-				elfptr, addr_stack.size()));
+				elfptr, call_depth));
 		} else {
 			std::cerr
 				<< "[VEXLLVM] dispatch: "
 				<< elfptr
-				<< " (depth=" << addr_stack.size()
+				<< " (depth=" << call_depth
 				<< ")\n";
 		}
 	}
-
-	addr_stack.pop();
 
 	if(to_flush.first.o) {
 		jit_cache->flush(
@@ -164,13 +162,11 @@ const VexSB* VexExec::doNextSB(void)
 	case GE_CALL:
 		/* push fall through address if call */
 		gs->getCPUState()->setExitType(GE_IGNORE);
-		addr_stack.push(gs->getCPUState()->getReturnAddress());
+		call_depth++;
 		break;
 	case GE_RETURN:
 		gs->getCPUState()->setExitType(GE_IGNORE);
-		if (!addr_stack.empty()) {
-			addr_stack.pop();
-		}
+		call_depth--;
 		break;
 	case GE_SYSCALL:
 		gs->getCPUState()->setExitType(GE_IGNORE);
@@ -187,7 +183,7 @@ const VexSB* VexExec::doNextSB(void)
 	}
 
 	/* next address to go to */
-	addr_stack.push(new_jmpaddr);
+	next_addr = new_jmpaddr;
 
 	return vsb;
 }
@@ -308,8 +304,8 @@ void VexExec::beginStepping(void)
 	sigemptyset(&sa.sa_mask);
    	sigaction(SIGSEGV, &sa, NULL);
 
-	/* top of address stack is executed */
-	addr_stack.push(gs->getEntryPoint());
+	next_addr = guest_ptr(gs->getEntryPoint());
+	call_depth = 0;
 }
 
 bool VexExec::stepVSB(void)
@@ -317,12 +313,11 @@ bool VexExec::stepVSB(void)
 	const VexSB	*sb;
 	guest_ptr	top_addr;
 
-	if (addr_stack.empty() || exited) goto done_with_all;
+	if (exited) goto done_with_all;
 
-	top_addr = addr_stack.top();
 	if (dump_current_state) {
 		std::cerr << "================BEFORE DOING "
-			<< (void*)top_addr.o
+			<< (void*)next_addr.o
 			<< std::endl;
 		gs->print(std::cerr);
 	}

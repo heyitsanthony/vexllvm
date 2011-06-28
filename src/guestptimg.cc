@@ -35,26 +35,23 @@ using namespace llvm;
 
 static bool dump_maps;
 
-GuestPTImg::GuestPTImg(GuestMem* mem,
-	int argc, char *const argv[], char *const envp[])
-: Guest(mem, argv[0])
-, entry_pt(0)
+GuestPTImg::GuestPTImg(int argc, char *const argv[], char *const envp[])
+: Guest(argv[0])
 , symbols(NULL)
 {
 	ElfImg		*img;
-	
+
+	mem = new GuestMem();
 	dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
 
-	img = ElfImg::create(mem, argv[0], false);
+	img = ElfImg::create(argv[0], false);
 	assert (img != NULL && "DOES BINARY EXIST?");
-
-	entry_pt = img->getEntryPoint();
-
 	assert(img->getArch() == getArch());
 
-	cpu_state = GuestCPUState::create(mem, getArch());
-
+	entry_pt = img->getEntryPoint();
 	delete img;
+
+	cpu_state = GuestCPUState::create(getArch());
 }
 
 GuestPTImg::~GuestPTImg(void)
@@ -111,12 +108,9 @@ pid_t GuestPTImg::createSlurpedChild(
 
 	if (dump_maps) dumpSelfMap();
 
-	/* slurp brains after trap code is removed so that we don't 
+	/* slurp brains after trap code is removed so that we don't
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
-
-	/* and store the mapping */
-	setupMem();
 
 	return pid;
 }
@@ -126,7 +120,7 @@ guest_ptr GuestPTImg::undoBreakpoint(pid_t pid)
 	struct user_regs_struct	regs;
 	int			err;
 
-	/* should be halted on our trapcode. need to set rip prior to 
+	/* should be halted on our trapcode. need to set rip prior to
 	 * trapcode addr */
 	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
 	assert (err != -1);
@@ -163,9 +157,9 @@ void PTImgMapEntry::mapStack(pid_t pid)
 	mem_begin.o -= STACK_EXTEND_BYTES;
 
 	int res = mem->mmap(
-		mmap_base, 
+		mmap_base,
 		mem_begin,
-		getByteCount(), 
+		getByteCount(),
 		prot,
 		flags | MAP_FIXED,
 		-1,
@@ -188,9 +182,9 @@ void PTImgMapEntry::mapAnon(pid_t pid)
 	flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
 	int res = mem->mmap(
-		mmap_base, 
+		mmap_base,
 		mem_begin,
-		getByteCount(), 
+		getByteCount(),
 		prot,
 		flags | MAP_FIXED,
 		mmap_fd,
@@ -205,7 +199,7 @@ void PTImgMapEntry::mapLib(pid_t pid)
 	int			prot, flags;
 
 
-	if (strcmp(libname, "[vsyscall]") == 0) 
+	if (strcmp(libname, "[vsyscall]") == 0)
 		return;
 	if (strcmp(libname, "[stack]") == 0) {
 		is_stack = true;
@@ -220,9 +214,9 @@ void PTImgMapEntry::mapLib(pid_t pid)
 
 		rc = stat(libname, &s);
 		assert (rc == -1);
-	
+
 		mapAnon(pid);
-			
+
 		return;
 	}
 
@@ -232,9 +226,9 @@ void PTImgMapEntry::mapLib(pid_t pid)
 	assert (mmap_fd != -1);
 
 	int res = mem->mmap(
-		mmap_base, 
+		mmap_base,
 		mem_begin,
-		getByteCount(), 
+		getByteCount(),
 		prot,
 		flags | MAP_FIXED,
 		mmap_fd,
@@ -246,12 +240,12 @@ void PTImgMapEntry::mapLib(pid_t pid)
 		ptraceCopy(pid, prot);
 }
 
-void PTImgMapEntry::ptraceCopyRange(pid_t pid, guest_ptr m_beg, 
+void PTImgMapEntry::ptraceCopyRange(pid_t pid, guest_ptr m_beg,
 	guest_ptr m_end)
 {
 	assert((m_beg & (sizeof(long) - 1)) == 0);
 	assert((m_end & (sizeof(long) - 1)) == 0);
-	
+
 	guest_ptr copy_addr;
 
 	copy_addr = m_beg;
@@ -272,7 +266,7 @@ void PTImgMapEntry::ptraceCopy(pid_t pid, int prot)
 	if (!(prot & PROT_READ)) return;
 
 	if (!(prot & PROT_WRITE)) {
-		int res = mem->mprotect(mmap_base, getByteCount(), 
+		int res = mem->mprotect(mmap_base, getByteCount(),
 			prot | PROT_WRITE);
 		assert(!res && "granting temporary write permission failed");
 	}
@@ -311,7 +305,7 @@ PTImgMapEntry::PTImgMapEntry(GuestMem* in_mem, pid_t pid, const char* mapline)
 	/* now map it in */
 	if (strlen(libname) > 0)
 		mapLib(pid);
-	else 
+	else
 		mapAnon(pid);
 }
 
@@ -361,9 +355,9 @@ void GuestPTImg::slurpRegisters(pid_t pid)
 	struct user_regs_struct		regs;
 	struct user_fpregs_struct	fpregs;
 
-	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs); 
+	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
 	assert(err != -1);
-	err = ptrace(PTRACE_GETFPREGS, pid, NULL, &fpregs); 
+	err = ptrace(PTRACE_GETFPREGS, pid, NULL, &fpregs);
 	assert(err != -1);
 
 #ifdef __amd64__
@@ -391,24 +385,24 @@ void GuestPTImg::stackTrace(
 
 	pid_str << pid;
 	if (range_begin && range_end) {
-		disasm_cmd << "disass " << range_begin << "," << range_end; 
+		disasm_cmd << "disass " << range_begin << "," << range_end;
 	} else {
 		disasm_cmd << "print \"???\"";
 	}
-	
+
 	err = pipe(pipefd);
 	assert (err != -1 && "Bad pipe for subservient trace");
-	
+
 	kill(pid, SIGSTOP);
 	ptrace(PTRACE_DETACH, pid, NULL, NULL);
-	
+
 	if (!fork()) {
 		close(pipefd[0]);    // close reading end in the child
 		dup2(pipefd[1], 1);  // send stdout to the pipe
 		dup2(pipefd[1], 2);  // send stderr to the pipe
 		close(pipefd[1]);    // this descriptor is no longer needed
 
-		execl("/usr/bin/gdb", 
+		execl("/usr/bin/gdb",
 			"/usr/bin/gdb",
 			"--batch",
 			binname,
@@ -468,13 +462,6 @@ void GuestPTImg::resetBreakpoint(pid_t pid, guest_ptr addr)
 	err = ptrace(PTRACE_POKETEXT, pid, addr.o, old_v);
 	assert (err != -1 && "Failed to reset breakpoint");
 	breakpoints.erase(addr);
-}
-
-void GuestPTImg::setupMem(void)
-{
-	/* once upon a time this put the mappings
-	   into the GuestMem, but now GuestMem handles
-	   the actual mappings and address translation */
 }
 
 Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }

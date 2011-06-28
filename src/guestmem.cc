@@ -18,14 +18,14 @@ GuestMem::GuestMem(void)
 , is_32_bit(false)
 , reserve_brick(0)
 , base(NULL)
-, force_flat(!getenv("VEXLLVM_4GB_REBASE"))
+, force_flat(getenv("VEXLLVM_4GB_REBASE") == NULL)
 {
 
 #ifdef __amd64__
 	/* this is probably only useful for 32-bit binaries
 	   or binaries that don't need the evil kernel page 
 	   @ f*******xxxxx... */
-	if(!force_flat)
+	if (!force_flat)
 		base = (char*)(uintptr_t)0x100000000;
 #endif
 	/* since we are managing the address space now, 
@@ -42,7 +42,9 @@ guest_ptr GuestMem::brk()
 {
 	return top_brick;
 }
-bool GuestMem::sbrkInitial() {
+
+bool GuestMem::sbrkInitial()
+{
 	GuestMem::Mapping m;
 	void *addr;
 	int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
@@ -86,7 +88,8 @@ bool GuestMem::sbrkInitial() {
 	return true;
 }
 
-bool GuestMem::sbrkInitial(guest_ptr new_top) {
+bool GuestMem::sbrkInitial(guest_ptr new_top)
+{
 	GuestMem::Mapping m;
 	void *addr;
 	int flags = MAP_PRIVATE | MAP_ANON;
@@ -249,6 +252,7 @@ bool GuestMem::lookupMapping(guest_ptr addr, Mapping& mapping)
 	mapping = *m;
 	return true;
 }
+
 const GuestMem::Mapping* GuestMem::lookupMappingPtr(guest_ptr addr) {
 	mapmap_t::iterator i = maps.lower_bound(addr);
 	if(i != maps.end() && i->first == addr) {
@@ -332,6 +336,7 @@ bool GuestMem::findRegion(size_t len, Mapping& m) {
 	assert(!is_32_bit || m.offset.o < 0xFFFFFFFFULL);
 	return true;
 }
+
 int GuestMem::mmap(guest_ptr& result, guest_ptr addr, 
 	size_t len, int prot, int flags, int fd, off_t offset)
 {
@@ -392,9 +397,11 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 	recordMapping(m);
 	return 0;
 }
-int GuestMem::mprotect(guest_ptr offset, 
-	size_t len, int prot)
+
+int GuestMem::mprotect(guest_ptr offset, size_t len, int prot)
 {
+	int	err;
+
 	if((offset & (PAGE_SIZE - 1)))
 		return -EINVAL;
 	if((len & (PAGE_SIZE - 1)))
@@ -407,31 +414,38 @@ int GuestMem::mprotect(guest_ptr offset,
 	if (m.req_prot & PROT_WRITE) {
 		m.cur_prot &= ~PROT_EXEC;
 	}
-	int result = ::mprotect(getBase() + offset.o, len, m.cur_prot);
-	if(result < 0) {
+
+	err = ::mprotect(getBase() + offset.o, len, m.cur_prot);
+	if (err < 0) 
 		return -errno;
-	}
+
 	recordMapping(m);
 	return 0;
 }
+
 int GuestMem::munmap(guest_ptr offset, size_t len)
 {
-	if((offset & (PAGE_SIZE - 1)))
+	int	err;
+
+	if ((offset & (PAGE_SIZE - 1)))
 		return -EINVAL;
-	if((len & (PAGE_SIZE - 1)))
+
+	if ((len & (PAGE_SIZE - 1)))
 		return -EINVAL;
 
 	/* TODO make sure this is a real mapped region in a better
 	   way then if munmap fails? */
 
 	Mapping m(offset, len, 0);
-	int result = ::munmap(getBase() + offset.o, len);
-	if(result < 0) {
+
+	err = ::munmap(getBase() + offset.o, len);
+	if (err < 0)
 		return -errno;
-	}
+
 	removeMapping(m);
 	return 0;	
 }
+
 int GuestMem::mremap(guest_ptr& result, guest_ptr old_offset, 
 	size_t old_length, size_t new_length, int flags, guest_ptr new_offset)
 {		

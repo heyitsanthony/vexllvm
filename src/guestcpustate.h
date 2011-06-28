@@ -8,7 +8,8 @@
 #include <sys/user.h>
 #include <assert.h>
 #include <map>
-#include "guestmem.h"
+
+#include "guestptr.h"
 
 namespace llvm
 {
@@ -21,7 +22,6 @@ struct guest_ctx_field
 	unsigned int	f_count;
 	const char*	f_name;
 };
-
 
 /* types of exit states we need to worry about on return */
 enum GuestExitType {
@@ -39,8 +39,8 @@ class GuestCPUState
 {
 public:
 typedef std::map<unsigned int, unsigned int> byte2elem_map;
-	static GuestCPUState* create(GuestMem* mem, Arch::Arch arch);
-	GuestCPUState(GuestMem* mem);
+	static GuestCPUState* create(Arch::Arch arch);
+	GuestCPUState();
 	virtual ~GuestCPUState() {};
 	const llvm::Type* getTy(void) const { return guestCtxTy; }
 	virtual unsigned int byteOffset2ElemIdx(unsigned int off) const = 0;
@@ -51,7 +51,6 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	virtual guest_ptr getStackPtr(void) const = 0;
 	virtual void setPC(guest_ptr) = 0;
 	virtual guest_ptr getPC(void) const = 0;
-	virtual guest_ptr getReturnAddress(void) const = 0;
 	virtual SyscallParams getSyscallParams(void) const = 0;
 	virtual void setSyscallResult(uint64_t ret) = 0;
 	virtual uint64_t getExitCode(void) const = 0;
@@ -74,7 +73,6 @@ protected:
 	uint8_t		*state_data;
 	uint8_t		*exit_type;
 	unsigned int	state_byte_c;
-	GuestMem	*mem;
 };
 
 #endif

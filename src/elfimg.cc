@@ -23,12 +23,20 @@
 #define ElfImg32 ElfImg
 #define ElfImg64 ElfImg
 
-ElfImg* ElfImg::create(GuestMem* mem, const char* fname, bool linked)
+ElfImg* ElfImg::create(const char* fname, bool linked)
 {
 	Arch::Arch arch = readHeader(fname, linked);
 	if(arch == Arch::Unknown)
 		return NULL;
-	return new ElfImg(mem, fname, arch, linked);
+	return new ElfImg(fname, arch, linked);
+}
+
+ElfImg* ElfImg::create(GuestMem* m, const char* fname, bool linked)
+{
+	Arch::Arch arch = readHeader(fname, linked);
+	if(arch == Arch::Unknown)
+		return NULL;
+	return new ElfImg(m, fname, arch, linked);
 }
 
 ElfImg::~ElfImg(void)
@@ -36,22 +44,46 @@ ElfImg::~ElfImg(void)
 	free(img_path);
 
 	if (fd < 0) return;
-	
+
+	/* segments rely on mem being valid, so we need
+	 * to free them before mem is freed */
+	segments.clear();
+
+	if (mem != NULL && owns_mem) delete mem;
 	munmap(img_mmap, img_bytes_c);
 	close(fd);
 }
 
-ElfImg::ElfImg(GuestMem* in_mem, const char* fname, Arch::Arch in_arch, bool in_linked)
+ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked)
 : interp(NULL)
 , linked(in_linked)
 , arch(in_arch)
-, mem(in_mem)
+, owns_mem(true)
+{
+	mem = new GuestMem();
+	img_path = strdup(fname);
+	setup();
+}
+
+ElfImg::ElfImg(
+	GuestMem* m,
+	const char* fname, Arch::Arch in_arch, bool in_linked)
+: interp(NULL)
+, linked(in_linked)
+, arch(in_arch)
+, mem(m)
+, owns_mem(false)
+{
+	assert (mem != NULL);
+	img_path = strdup(fname);
+	setup();
+}
+
+void ElfImg::setup(void)
 {
 	struct stat	st;
 
-	img_path = strdup(fname);
-
-	fd = open(fname, O_RDONLY);
+	fd = open(img_path, O_RDONLY);
 	/* should be ok, we did already open it */
 	assert(fd >= 0);
 
@@ -146,7 +178,8 @@ static const unsigned char ok_ident_32[] = "\x7f""ELF\x1\x1\x1";
 
 #define EXPECTED(x)	fprintf(stderr, "ELF: expected "x"!\n")
 
-guest_ptr ElfImg::getEntryPoint(void) const {
+guest_ptr ElfImg::getEntryPoint(void) const
+{
 	/* address must be translated in case the region was remapped
 	   as is the case for the interp which specified a load address
 	   base of 0 */
@@ -197,8 +230,6 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 		return Arch::Unknown;
 	}
 	
-	
-	
 	if(sizeof(void*) < address_bits / 8) {
 		EXPECTED("Host with matching addressing capabilities");
 		return Arch::Unknown;
@@ -221,7 +252,8 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 	return Arch::Unknown;
 }
 
-Arch::Arch ElfImg::readHeader32(const Elf32_Ehdr* hdr, bool require_exe) {
+Arch::Arch ElfImg::readHeader32(const Elf32_Ehdr* hdr, bool require_exe)
+{
 	if (require_exe && hdr->e_type != ET_EXEC) {
 		EXPECTED("ET_EXEC");
 		return Arch::Unknown;
@@ -236,7 +268,9 @@ Arch::Arch ElfImg::readHeader32(const Elf32_Ehdr* hdr, bool require_exe) {
 	/* just don't care about the rest, slutty is fun */
 	return Arch::Unknown;
 }
-Arch::Arch ElfImg::readHeader64(const Elf64_Ehdr* hdr, bool require_exe) {
+
+Arch::Arch ElfImg::readHeader64(const Elf64_Ehdr* hdr, bool require_exe)
+{
 	if (require_exe && hdr->e_type != ET_EXEC) {
 		EXPECTED("ET_EXEC");
 		return Arch::Unknown;

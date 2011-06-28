@@ -18,8 +18,7 @@ using namespace llvm;
 
 #define state2i386()	((VexGuestX86State*)(state_data))
 
-I386CPUState::I386CPUState(GuestMem* mem)
-: GuestCPUState(mem)
+I386CPUState::I386CPUState()
 {
 	mkRegCtx();
 
@@ -34,16 +33,12 @@ I386CPUState::~I386CPUState()
 	delete [] state_data;
 }
 
-void I386CPUState::setPC(guest_ptr ip) {
-	state2i386()->guest_EIP = ip;
-}
-guest_ptr I386CPUState::getPC(void) const {
+void I386CPUState::setPC(guest_ptr ip) { state2i386()->guest_EIP = ip; }
+
+guest_ptr I386CPUState::getPC(void) const
+{
 	return guest_ptr(state2i386()->guest_EIP);
 }
-guest_ptr I386CPUState::getReturnAddress(void) const {
-	return guest_ptr(mem->read<unsigned int>(getStackPtr()));
-}
-
 
 /* ripped from libvex_guest_86 */
 static struct guest_ctx_field x86_fields[] =
@@ -277,10 +272,14 @@ void I386CPUState::setRegs(const user_regs_struct& regs,
 	//TODO: segments? valgrind does something less frakked up here 
 	//(than amd64) ... there are actual segments... and no fs zero
 
-	memcpy(&state2i386()->guest_XMM0, &fpregs.xmm_space[0], sizeof(fpregs.xmm_space));
+	memcpy(	&state2i386()->guest_XMM0,
+		&fpregs.xmm_space[0],
+			sizeof(fpregs.xmm_space));
 
 	//TODO: this is surely wrong, the sizes don't even match...
-	memcpy(&state2i386()->guest_FPREG[0], &fpregs.st_space[0], sizeof(state2i386()->guest_FPREG));
+	memcpy(	&state2i386()->guest_FPREG[0],
+		&fpregs.st_space[0],
+		sizeof(state2i386()->guest_FPREG));
 
 	//TODO: floating point flags and extra fp state, sse  rounding
 }

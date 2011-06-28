@@ -52,8 +52,7 @@ template
 ElfSegment::ElfSegment<Elf64_Phdr>(GuestMem* mem, int fd, const Elf64_Phdr& phdr, 
 	uintptr_t in_reloc);
 
-/* Always mmap in the segment. We don't give a fuck. 
- * TODO: Efficiently use the address space! */
+/* Always mmap in the segment. */
 template <typename Elf_Phdr>
 ElfSegment::ElfSegment(GuestMem* in_mem, int fd, const Elf_Phdr& phdr, 
 	uintptr_t in_reloc)
@@ -84,10 +83,10 @@ void ElfSegment::makeMapping<Elf64_Phdr>(int fd, const Elf64_Phdr& phdr);
 template <typename Elf_Phdr>
 void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 {
-	off_t file_off_pgbase, file_off_pgoff;
-	guest_ptr desired_base, spill_base;
-	size_t end_off;
-	int flags;
+	off_t		file_off_pgbase, file_off_pgoff;
+	guest_ptr	desired_base, spill_base;
+	size_t		end_off;
+	int		flags;
 
 	/* map in */
 	file_off_pgbase = page_base(phdr.p_offset);

@@ -19,8 +19,7 @@ class GuestMem;
 class ElfImg
 {
 public:
-	static ElfImg* create(GuestMem* mem, const char* fname, 
-		bool linked = true);
+	static ElfImg* create(const char* fname, bool linked = true);
 	virtual ~ElfImg(void);
 	guest_ptr xlateAddr(guest_ptr addr) const;
 	guest_ptr getEntryPoint(void) const;
@@ -44,17 +43,30 @@ public:
 	{
 		return readHeader(fname, false);
 	}
+
+	GuestMem* takeMem(void)
+	{
+		GuestMem *m = mem;
+		mem = NULL;
+		return m;
+	}
+
 private:
-	ElfImg(GuestMem* mem, const char* fname, Arch::Arch arch, 
-		bool linked);
+	ElfImg(const char* fname, Arch::Arch arch, bool linked);
+	ElfImg(GuestMem* m, const char* fname, Arch::Arch arch, bool linked);
+	void setup(void);
+
+	static ElfImg* create(
+		GuestMem* m, const char* fname, bool linked = true);
 	static Arch::Arch readHeader(const char* fname,
 		bool require_exe);
 	static Arch::Arch readHeader32(const Elf32_Ehdr* hdr,
 		bool require_exe);
 	static Arch::Arch readHeader64(const Elf64_Ehdr* hdr,
 		bool require_exe);
+
 	template <typename Elf_Ehdr, typename Elf_Phdr>
-	void setupSegments(void);
+		void setupSegments(void);
 
 	char			*img_path;
 
@@ -74,6 +86,7 @@ private:
 	std::string		library_root;
 	Arch::Arch		arch;
 	GuestMem		*mem;
+	bool			owns_mem;
 };
 
 #endif

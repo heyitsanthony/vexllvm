@@ -33,9 +33,8 @@ int main(int argc, char* argv[], char* envp[])
 	/* for the JIT */
 	InitializeNativeTarget();
 
-	GuestMem* mem = new GuestMem();
 	if (argc == 1) {
-		g = Guest::load(mem);
+		g = Guest::load();
 		if (!g) {
 			fprintf(stderr,
 				"%s: Couldn't load guest. "
@@ -43,7 +42,7 @@ int main(int argc, char* argv[], char* envp[])
 			argv[0]);
 		}
 	} else {
-		g = Guest::load(mem, argv[1]);
+		g = Guest::load(argv[1]);
 	}
 
 	assert (g && "Could not load guest");

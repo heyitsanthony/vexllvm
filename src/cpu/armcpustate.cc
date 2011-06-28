@@ -23,8 +23,7 @@ struct ExtVexGuestARMState
 #define state2arm()	((VexGuestARMState*)(state_data))
 #define state2arm_ext() ((ExtVexGuestARMState*)(state_data))
 
-ARMCPUState::ARMCPUState(GuestMem* mem)
-: GuestCPUState(mem)
+ARMCPUState::ARMCPUState(void)
 {
 	mkRegCtx();
 
@@ -38,19 +37,13 @@ ARMCPUState::~ARMCPUState()
 	delete [] state_data;
 }
 
-void ARMCPUState::setPC(guest_ptr ip) {
-	state2arm()->guest_R15T = ip;
-}
+void ARMCPUState::setPC(guest_ptr ip) { state2arm()->guest_R15T = ip; }
+
 guest_ptr ARMCPUState::getPC(void) const {
 	/* todo is this right, do we need to mask the low
 	   bits that control whether its in thumb mode or not? */
 	return guest_ptr(state2arm()->guest_R15T);
 }
-guest_ptr ARMCPUState::getReturnAddress(void) const {
-	/* just return the link register? */
-	return guest_ptr(state2arm()->guest_R14);
-}
-
 
 /* ripped from libvex_guest_arm */
 static struct guest_ctx_field arm_fields[] =

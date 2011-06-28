@@ -15,14 +15,13 @@ class I386CPUState : public GuestCPUState
 public:
 typedef std::map<unsigned int, unsigned int> byte2elem_map;
 
-	I386CPUState(GuestMem* mem);
+	I386CPUState();
 	~I386CPUState();
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 	void setStackPtr(guest_ptr);
 	guest_ptr getStackPtr(void) const;
 	void setPC(guest_ptr);
 	guest_ptr getPC(void) const;
-	guest_ptr getReturnAddress(void) const;
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
 	uint64_t getExitCode(void) const;

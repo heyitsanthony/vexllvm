@@ -18,7 +18,7 @@ public:
 	
 	/* accessors for the logged data */
 	void clear() { memset(this, 0, sizeof(*this)); }	
-	bool wasWritten() const { return address != NULL; }
+	bool wasWritten() const { return address.o != 0; }
 	guest_ptr getAddress() const { return address; }
 	unsigned long getSize() const { return size; }
 	const char* getData() const { return &data[0]; }

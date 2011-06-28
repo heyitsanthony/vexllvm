@@ -24,21 +24,22 @@ using namespace llvm;
 #define MAX_ARG_PAGES	32
 
 
-GuestELF::GuestELF(GuestMem* mem, ElfImg* in_img)
-: Guest(mem, in_img->getFilePath())
+GuestELF::GuestELF(ElfImg* in_img)
+: Guest(in_img->getFilePath())
 , img(in_img)
 , arg_pages(MAX_ARG_PAGES)
 {
-	cpu_state = GuestCPUState::create(mem, img->getArch());
+	mem = in_img->takeMem();
+	cpu_state = GuestCPUState::create(img->getArch());
 }
 
 GuestELF::~GuestELF(void) {}
 
-guest_ptr GuestELF::getEntryPoint(void) const { 
+guest_ptr GuestELF::getEntryPoint(void) const {
 	if(img->getInterp())
-		return img->getInterp()->getEntryPoint(); 
+		return img->getInterp()->getEntryPoint();
 	else
-		return img->getEntryPoint(); 
+		return img->getEntryPoint();
 }
 
 /* XXX, amd specified */
@@ -47,7 +48,7 @@ guest_ptr GuestELF::getEntryPoint(void) const {
  * From libc _start code ...
  *	popq %rsi		; pop the argument count
  *	movq %rsp, %rdx		; argv starts just at the current stack top.
- * Align the stack to a 16 byte boundary to follow the ABI. 
+ * Align the stack to a 16 byte boundary to follow the ABI.
  *	andq  $~15, %rsp
  *
  */
@@ -71,7 +72,7 @@ void GuestELF::copyElfStrings(int argc, const char **argv)
 		tmp1 = tmp;
 		while (*tmp++);
 		len = tmp - tmp1;
-		
+
 		assert(arg_stack >= (unsigned int)len);
 		while (len) {
 			--arg_stack; --tmp; --len;
@@ -90,7 +91,7 @@ void GuestELF::copyElfStrings(int argc, const char **argv)
 				*(pag + offset) = *tmp;
 			}
 			else {
-				int bytes_to_copy = (len > offset) ? 
+				int bytes_to_copy = (len > offset) ?
 					offset : len;
 				tmp -= bytes_to_copy;
 				arg_stack -= bytes_to_copy;
@@ -105,7 +106,7 @@ void GuestELF::copyElfStrings(int argc, const char **argv)
 //borrowed liberally from qemu
 void GuestELF::setupArgPages()
 {
-	std::size_t size, guard; 
+	std::size_t size, guard;
 	guest_ptr error;
 
 	/* Create enough stack to hold everything.	If we don't use
@@ -123,8 +124,8 @@ void GuestELF::setupArgPages()
 	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 	if(img->getAddressBits() == 32)
 		flags |= MAP_32BIT;
-		
-	int res = mem->mmap(error, guest_ptr(0), size + guard, 
+
+	int res = mem->mmap(error, guest_ptr(0), size + guard,
 		PROT_READ | PROT_WRITE, flags, -1, 0);
 	assert(!res && "failed to map stack");
 
@@ -148,12 +149,12 @@ void GuestELF::setupArgPages()
 	exe_string = sp;
 
 	if(getenv("VEXLLVM_LOG_MAPPINGS")) {
-		std::cerr << "stack @ " << (void*)stack_limit.o << " sz " 
+		std::cerr << "stack @ " << (void*)stack_limit.o << " sz "
 			<< (void*)size << std::endl;
 	}
 }
 
-/* dunno where to get these that i know they will be on 
+/* dunno where to get these that i know they will be on
    any system, so just stickem here */
 #define ARM_HWCAP_SWP       1
 #define ARM_HWCAP_HALF      2
@@ -223,7 +224,7 @@ void GuestELF::createElfTables(int argc, int envc)
 		mem->memcpy(sp, k_platform, len);
 		u_platform = sp;
 	}
-	
+
 	/* random bytes used for aslr */
 	guest_ptr random_bytes(sp.o - 16);
 	char random_bytes_data[16];
@@ -240,7 +241,7 @@ void GuestELF::createElfTables(int argc, int envc)
 	switch(img->getArch()) {
 	case Arch::ARM:
 		/* more? */
-		table.add(AT_HWCAP, ARM_HWCAP_THUMB | ARM_HWCAP_NEON | 
+		table.add(AT_HWCAP, ARM_HWCAP_THUMB | ARM_HWCAP_NEON |
 			ARM_HWCAP_VFPv3 | ARM_HWCAP_TLS);
 		break;
 	case Arch::I386:
@@ -262,7 +263,7 @@ void GuestELF::createElfTables(int argc, int envc)
 	table.add(AT_PHDR, img->getHeader());
 	table.add(AT_PHENT, img->getElfPhdrSize());
 	table.add(AT_PHNUM, img->getHeaderCount());
-	
+
 	table.add(AT_BASE, img->getInterp() ?
 		img->getInterp()->getFirstSegment()->relocation()
 		: img->getFirstSegment()->relocation());
@@ -277,20 +278,20 @@ void GuestELF::createElfTables(int argc, int envc)
 	table.add(AT_EXECFN, exe_string);
 	table.add(AT_PLATFORM, u_platform);
 	table.add(AT_NULL, 0);
-	
+
 	/* align to 16 bytes for the entry point */
 	int items = argc + 1 + envc + 1 + 1 + table.size() * 2 ;
-	int sz = img->getAddressBits() == 32 ? 
+	int sz = img->getAddressBits() == 32 ?
 		sizeof(int) * items
 		: sizeof(long) * items;
-	while(((uintptr_t)sp - sz) & 0xf) 
+	while(((uintptr_t)sp - sz) & 0xf)
 		pushPadByte();
-		
+
 	foreach(it, table.rbegin(), table.rend()) {
 		pushNative(it->second);
 		pushNative(it->first);
 	}
-	
+
 	loaderBuildArgptr(envc, argc, string_stack, 0);
 }
 
@@ -314,9 +315,9 @@ void GuestELF::loaderBuildArgptr(int envc, int argc,
 		pushPointer(envp);
 		pushPointer(argv);
 	}
-	
+
 	pushNative(argc);
-		
+
 	/* copy all the arg pointers into the table */
 	while (argc-- > 0) {
 		putPointer(argv, stringp, 1);
@@ -341,8 +342,8 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 	copyElfStrings(1, &filename);
 	copyElfStrings(envc, envp);
 	if(!img->getLibraryRoot().empty()) {
-		ld_library_path = 
-			"LD_LIBRARY_PATH=" + 
+		ld_library_path =
+			"LD_LIBRARY_PATH=" +
 			img->getLibraryRoot() +
 			"/lib";
 		const char* extra_env[] = {
@@ -352,17 +353,17 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 		++envc;
 	}
 	copyElfStrings(argc, argv);
-	
+
 	setupArgPages();
 
 	createElfTables(argc, envc);
-	
+
 	if(getenv("VEXLLVM_DUMP_MAPS")) {
 		std::list<ElfSegment*> m;
 		img->getSegments(m);
 		foreach(it, m.begin(), m.end()) {
 			std::ostringstream save_fname;
-			save_fname << argv[0] << "." << getpid() 
+			save_fname << argv[0] << "." << getpid()
 				<< "." << (*it)->base();
 			std::ofstream o(save_fname.str().c_str());
 			char* buffer = new char[(*it)->length()];
@@ -371,7 +372,7 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 			delete [] buffer;
 		}
 		std::ostringstream save_fname;
-		save_fname << argv[0] << "." << getpid() 
+		save_fname << argv[0] << "." << getpid()
 			<< "." << (void*)stack_limit.o;
 		std::ofstream o(save_fname.str().c_str());
 		char* buffer = new char[stack_base - stack_limit];
@@ -389,41 +390,41 @@ void GuestELF::setupMem(void)
 	/* now this just fills in static pages ... elf segment builds
 	   the real guest mappings on the fly via calls to the GuestMem
 	   class */
+	if(img->getArch() != Arch::ARM) return;
 
-	if(img->getArch() == Arch::ARM) {
-		guest_ptr tls;
-		int res = mem->mmap(tls, guest_ptr(0xffff0000), PAGE_SIZE, 
-			PROT_WRITE | PROT_EXEC | PROT_READ,
-			MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
-			
-		assert(res == 0 && "failed to allocate arm tls");
-		/* put the kernel helpers: see arch/arm/kernel/entry-armv.S */
-		/* note that this implementation depends on the system 
-		   restarting this code block if a context switch happens
-		   during its execution */
-		/* @0xffff0fc0 cmpxchg
-			ldr	r3, [r2]
-			subs	r3, r3, r0
-			streq	r1, [r2]
-			rsbs	r0, r3, #0
-			bx	lr
-		*/
-		mem->write<unsigned int>(guest_ptr(0xffff0fc0), 0xe5923000);
-		mem->write<unsigned int>(guest_ptr(0xffff0fc4), 0xe0533000);
-		mem->write<unsigned int>(guest_ptr(0xffff0fc8), 0x05821000);
-		mem->write<unsigned int>(guest_ptr(0xffff0fcc), 0xe2730000);
-		mem->write<unsigned int>(guest_ptr(0xffff0fd0), 0xe12fff1e);
-		/* @0xffff0fe0 get_tls
-			mrc     p15, 0, r0, c13, c0, 3 
-			bx	r14
-		*/
-		mem->write<unsigned int>(guest_ptr(0xffff0fe0), 0xee1d0f70);
-		mem->write<unsigned int>(guest_ptr(0xffff0fe4), 0xe12fff1e);
-		/* note: there are others that we may need */
-		mem->mprotect(guest_ptr(0xffff0000), PAGE_SIZE, 
-			PROT_EXEC | PROT_READ);
-	}
+	guest_ptr tls;
+	int res = mem->mmap(tls, guest_ptr(0xffff0000), PAGE_SIZE,
+		PROT_WRITE | PROT_EXEC | PROT_READ,
+		MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+
+	assert(res == 0 && "failed to allocate arm tls");
+	/* put the kernel helpers: see arch/arm/kernel/entry-armv.S */
+	/* note that this implementation depends on the system
+	   restarting this code block if a context switch happens
+	   during its execution */
+	/* @0xffff0fc0 cmpxchg
+		ldr	r3, [r2]
+		subs	r3, r3, r0
+		streq	r1, [r2]
+		rsbs	r0, r3, #0
+		bx	lr
+	*/
+	mem->write<unsigned int>(guest_ptr(0xffff0fc0), 0xe5923000);
+	mem->write<unsigned int>(guest_ptr(0xffff0fc4), 0xe0533000);
+	mem->write<unsigned int>(guest_ptr(0xffff0fc8), 0x05821000);
+	mem->write<unsigned int>(guest_ptr(0xffff0fcc), 0xe2730000);
+	mem->write<unsigned int>(guest_ptr(0xffff0fd0), 0xe12fff1e);
+	/* @0xffff0fe0 get_tls
+		mrc     p15, 0, r0, c13, c0, 3
+		bx	r14
+	*/
+	mem->write<unsigned int>(guest_ptr(0xffff0fe0), 0xee1d0f70);
+	mem->write<unsigned int>(guest_ptr(0xffff0fe4), 0xe12fff1e);
+	/* note: there are others that we may need */
+	mem->mprotect(guest_ptr(0xffff0000), PAGE_SIZE,
+		PROT_EXEC | PROT_READ);
 }
+
 Arch::Arch GuestELF::getArch() const {
 	return img->getArch();
 }
@@ -456,7 +457,7 @@ void GuestELF::putNative(guest_ptr& p, uintptr_t v, ssize_t inc) {
 		mem->write<uintptr_t>(p, v);
 	}
 	nextNative(p, inc);
-}	
+}
 void GuestELF::nextNative(guest_ptr& p, ssize_t num) {
 	if(img->getAddressBits() == 32) {
 		p.o += num * sizeof(unsigned int);

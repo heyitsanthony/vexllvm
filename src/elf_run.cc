@@ -52,14 +52,15 @@ int main(int argc, char* argv[], char* envp[])
 	for(int i = 0; i < skip; ++i) {
 		env.push_back(argv[i + 1]);
 	}
-	GuestMem* mem = new GuestMem();
-	img = ElfImg::create(mem, argv[1+skip]);
+
+	img = ElfImg::create(argv[1+skip]);
 	if (img == NULL) {
 		fprintf(stderr, "%s: Could not open ELF %s\n", 
 			argv[0], argv[1+skip]);
 		return -2;
 	}
-	gs = new GuestELF(mem, img);
+
+	gs = new GuestELF(img);
 	gs->setArgv(argc-1-skip, const_cast<const char**>(argv+1+skip),
 		env.size(), const_cast<const char**>(&env[0]));
 

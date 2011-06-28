@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$RUNCMD" ]; then
-	RUNCMD="bin/pt_trace"
+	RUNCMD="bin/pt_run"
 fi
 
 if [ -z "$OUTPATH" ]; then
