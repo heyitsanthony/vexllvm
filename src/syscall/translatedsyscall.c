@@ -4357,7 +4357,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_unlink:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(unlink(p));
+        ret = get_errno(unlink(path(p)));
         unlock_user(p, arg1, 0);
         break;
 #if defined(TARGET_NR_unlinkat) && defined(__NR_unlinkat)
