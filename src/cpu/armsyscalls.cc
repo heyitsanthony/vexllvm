@@ -187,7 +187,7 @@ SYSCALL_BODY(ARM, mmap2) {
 		args.getArg(2), 
 		args.getArg(3), 
 		args.getArg(4), 
-		args.getArg(5));
+		args.getArg(5) * PAGE_SIZE);
 	if(sc_ret == 0)
 		sc_ret = m;
 	return true;
