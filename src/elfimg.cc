@@ -74,6 +74,7 @@ ElfImg::ElfImg(GuestMem* in_mem, const char* fname, Arch::Arch in_arch, bool in_
 		break;
 	case Arch::ARM:
 	case Arch::I386:
+		mem->mark32Bit();
 		address_bits = 32;
 		setupSegments<Elf32_Ehdr, Elf32_Phdr>();
 		break;

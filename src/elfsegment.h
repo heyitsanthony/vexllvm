@@ -28,7 +28,6 @@ public:
 		return prot;
 	}
 	void clearEnd() {
-		std::cerr << "my_end" << (void*)my_end.o << std::endl;
 		mem->memset(my_end, 0, extra_bytes);
 	}
 protected:

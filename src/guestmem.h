@@ -78,8 +78,10 @@ public:
 	bool sbrk(guest_ptr new_top);
 	std::list<Mapping> getMaps(void) const;
 	void mark32Bit() { is_32_bit = true; }
+	bool is32Bit() const { return is_32_bit; }
 	char* getBase() const { return base; }
 	bool findRegion(size_t len, Mapping& m);
+	bool isFlat() const { return force_flat; }
 	
 	/* access small bits of guest memory */
 	template <typename T>
@@ -140,6 +142,7 @@ private:
 	bool		is_32_bit;
 	guest_ptr	reserve_brick;
 	char*		base;
+	bool		force_flat;
 };
 
 #endif

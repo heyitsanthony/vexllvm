@@ -177,6 +177,7 @@ class ElfTable : public std::vector<std::pair<uintptr_t, uintptr_t> >
 public:
 	template <typename T>
 	void add(uintptr_t t, T v) {
+		assert(!((uintptr_t)v & ~0xFFFFFFFFULL));
 		push_back(std::make_pair(t, (uintptr_t)v));
 	}
 };
@@ -422,11 +423,6 @@ void GuestELF::setupMem(void)
 		/* note: there are others that we may need */
 		mem->mprotect(guest_ptr(0xffff0000), PAGE_SIZE, 
 			PROT_EXEC | PROT_READ);
-	}
-	
-	/* needs to be done much earlier */
-	if(img->getAddressBits() == 32) {
-		mem->mark32Bit();
 	}
 }
 Arch::Arch GuestELF::getArch() const {

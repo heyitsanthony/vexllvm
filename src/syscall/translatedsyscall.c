@@ -651,50 +651,6 @@ char *target_strerror(int err)
 static abi_ulong target_brk;
 static abi_ulong target_original_brk;
 
-void target_set_brk(abi_ulong new_brk)
-{
-    target_original_brk = target_brk = HOST_PAGE_ALIGN(new_brk);
-}
-
-/* do_brk() must return target values and target errnos. */
-abi_long do_brk(abi_ulong new_brk)
-{
-    abi_ulong brk_page;
-    abi_long mapped_addr;
-    int	new_alloc_size;
-
-    if (!new_brk)
-        return target_brk;
-    if (new_brk < target_original_brk)
-        return target_brk;
-
-    brk_page = HOST_PAGE_ALIGN(target_brk);
-
-    /* If the new brk is less than this, set it and we're done... */
-    if (new_brk < brk_page) {
-	target_brk = new_brk;
-    	return target_brk;
-    }
-
-    /* We need to allocate more memory after the brk... */
-    new_alloc_size = HOST_PAGE_ALIGN(new_brk - brk_page + 1);
-    mapped_addr = get_errno(target_mmap(brk_page, new_alloc_size,
-                                        PROT_READ|PROT_WRITE,
-                                        MAP_ANON|MAP_FIXED|MAP_PRIVATE, 0, 0));
-
-#if defined(TARGET_ALPHA)
-    /* We (partially) emulate OSF/1 on Alpha, which requires we
-       return a proper errno, not an unchanged brk value.  */
-    if (is_error(mapped_addr)) {
-        return -TARGET_ENOMEM;
-    }
-#endif
-
-    if (!is_error(mapped_addr)) {
-	target_brk = new_brk;
-    }
-    return target_brk;
-}
 
 static inline abi_long copy_from_user_fdset(fd_set *fds,
                                             abi_ulong target_fds_addr,
@@ -4332,7 +4288,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
         ret = get_errno(close(arg1));
         break;
     case TARGET_NR_brk:
-        ret = do_brk(arg1);
+	assert(!"brk should be handled at a higher level");
         break;
 #ifdef TARGET_NR_waitpid
     case TARGET_NR_waitpid:
@@ -5407,68 +5363,23 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
 #endif
 #ifdef TARGET_NR_mmap
     case TARGET_NR_mmap:
-#if (defined(TARGET_I386) && defined(TARGET_ABI32)) || defined(TARGET_ARM) || \
-    defined(TARGET_M68K) || defined(TARGET_CRIS) || defined(TARGET_MICROBLAZE) \
-    || defined(TARGET_S390X)
-        {
-            abi_ulong *v;
-            abi_ulong v1, v2, v3, v4, v5, v6;
-            if (!(v = (abi_ulong*)
-                lock_user(VERIFY_READ, arg1, 6 * sizeof(abi_ulong), 1))) {
-                goto efault;
-            }
-            v1 = tswapl(v[0]);
-            v2 = tswapl(v[1]);
-            v3 = tswapl(v[2]);
-            v4 = tswapl(v[3]);
-            v5 = tswapl(v[4]);
-            v6 = tswapl(v[5]);
-            unlock_user(v, arg1, 0);
-            ret = get_errno(target_mmap(v1, v2, v3,
-                                        target_to_host_bitmask(v4, mmap_flags_tbl),
-                                        v5, v6));
-        }
-#else
-        ret = get_errno(target_mmap(arg1, arg2, arg3,
-                                    target_to_host_bitmask(arg4, mmap_flags_tbl),
-                                    arg5,
-                                    arg6));
-#endif
+	assert(!"mmap should be handled at a higher level");
         break;
 #endif
 #ifdef TARGET_NR_mmap2
     case TARGET_NR_mmap2:
-#ifndef MMAP_SHIFT
-#define MMAP_SHIFT 12
-#endif
-        ret = get_errno(target_mmap(arg1, arg2, arg3,
-                                    target_to_host_bitmask(arg4, mmap_flags_tbl),
-                                    arg5,
-                                    arg6 << MMAP_SHIFT));
+	assert(!"mmap2 should be handled at a higher level");
         break;
 #endif
     case TARGET_NR_munmap:
-        ret = get_errno(target_munmap(arg1, arg2));
+	assert(!"munmap should be handle at a higher level");
         break;
     case TARGET_NR_mprotect:
-        {
-#if 0
-            TaskState *ts = ((CPUState *)cpu_env)->opaque;
-            /* Special hack to detect libc making the stack executable.  */
-            if ((arg3 & PROT_GROWSDOWN)
-                && arg1 >= ts->info->stack_limit
-                && arg1 <= ts->info->start_stack) {
-                arg3 &= ~PROT_GROWSDOWN;
-                arg2 = arg2 + arg1 - ts->info->stack_limit;
-                arg1 = ts->info->stack_limit;
-            }
-#endif
-        }
-        ret = get_errno(target_mprotect(arg1, arg2, arg3));
+	assert(!"mprotect should be handle at a higher level");
         break;
 #ifdef TARGET_NR_mremap
     case TARGET_NR_mremap:
-        ret = get_errno(target_mremap(arg1, arg2, arg3, arg4, arg5));
+	assert(!"mremap should be handle at a higher level");
         break;
 #endif
         /* ??? msync/mlock/munlock are broken for softmmu.  */

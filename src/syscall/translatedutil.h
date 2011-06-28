@@ -19,11 +19,12 @@
 	#define HOST_LONG_BITS	32
 #endif
 /* we should do checks here to make it return EFAULT as necessary */
-#define lock_user_struct(m, p, a, ...) (*(void**)&p = (void*)a)
+#define lock_user_struct(m, p, a, ...) \
+	(*(void**)&p = (void*)(g_mem->getBase() + (uintptr_t)a))
 #define unlock_user_struct(...)
-#define lock_user_string(b) (char*)(b)
+#define lock_user_string(b) (g_mem->getBase() + (uintptr_t)b)
 #define unlock_user_string(...)
-#define lock_user(a, b, ...) (char*)(b)
+#define lock_user(a, b, ...) (g_mem->getBase() + (uintptr_t)b)
 #define unlock_user(...)
 #define access_ok(...) true
 /* These are made up numbers... */
@@ -31,8 +32,8 @@
 #define VERIFY_WRITE	2
 
 /* these imply that the address space mapping is identity */
-#define g2h(x) (void*)(uintptr_t)(x)
-#define h2g(x) (abi_ulong)(uintptr_t)(x)
+#define g2h(x) (void*)(uintptr_t)(x + (uintptr_t)g_mem->getBase())
+#define h2g(x) (abi_ulong)(uintptr_t)(x - (uintptr_t)g_mem->getBase())
 
 #define gemu_log(...)
 
@@ -50,11 +51,10 @@
 #define PAGE_RESERVED  0x0020
 #endif
 
-/* oh poo, these need to record mappings... they don't right now */
-#define target_munmap(a, l)		munmap((void*)a, l)
-#define target_mprotect(a, l, p) 	mprotect((void*)a, l, p)
-#define target_mremap(oa, ol, ns, f, na) \
-	(abi_ulong)(uintptr_t)mremap((void*)oa, ol, ns, f, (void*)na)
+/* oh poo, shoud be caught by upper layers */
+#define target_munmap(a, l)	({assert(!"qemu target_munmap"); 0})
+#define target_mprotect(a, l, p) 	({assert(!"qemu target_mprotect"); 0})
+#define target_mremap(oa, ol, ns, f, na) ({assert(!"qemu target_mremap"); 0})
 
 #define tswapl(s) s
 #define tswap16(s) s
@@ -70,6 +70,7 @@ static inline int copy_to_user(abi_ulong d, void* s, abi_ulong l) {
 	g_mem->memcpy(guest_ptr(d), s, l);
 	return 0;
 }
+
 #define __put_user(x, hptr)\
 ({\
     int size = sizeof(*hptr);\
@@ -115,76 +116,132 @@ static inline int copy_to_user(abi_ulong d, void* s, abi_ulong l) {
     }\
     0;\
 })
+
+// template <typename G, typename H>
+// int __put_user(G x, H hptr)
+// {
+// 	int size = sizeof(*hptr);
+// 	switch(size) {
+// 	case 1:
+// 		g_mem->write(guest_ptr((uintptr_t)hptr), (uint8_t)x);
+// 		// *(uint8_t *)(hptr) = (uint8_t)(typeof(*hptr))(x);
+// 		break;
+// 	case 2:
+// 		g_mem->write(guest_ptr((uintptr_t)hptr), (uint16_t)x);
+// 		// *(uint16_t *)(hptr) = tswap16((typeof(*hptr))(x));
+// 		break;
+// 	case 4:
+// 		g_mem->write(guest_ptr((uintptr_t)hptr), (uint32_t)x);
+// 		// *(uint32_t *)(hptr) = tswap32((typeof(*hptr))(x));
+// 		break;
+// 	case 8:
+// 		g_mem->write(guest_ptr((uintptr_t)hptr), (uint64_t)x);
+// 		// *(uint64_t *)(hptr) = tswap64((typeof(*hptr))(x));
+// 		break;
+// 	default:
+// 	abort();
+// 	}
+// 	return 0;
+// }
+// 
+// template <typename G, typename H>
+// int __get_user(G& x, H hptr)
+// {
+// 	int size = sizeof(*hptr);
+// 	switch(size) {
+// 	case 1:
+// 		x = g_mem->read<uint8_t>(guest_ptr((uintptr_t)hptr));
+// 		// x = (typeof(*hptr))*(uint8_t *)(hptr);
+// 		break;
+// 	case 2:
+// 		x = g_mem->read<uint16_t>(guest_ptr((uintptr_t)hptr));
+// 		// x = (typeof(*hptr))tswap16(*(uint16_t *)(hptr));
+// 		break;
+// 	case 4:
+// 		x = g_mem->read<uint32_t>(guest_ptr((uintptr_t)hptr));
+// 		// x = (typeof(*hptr))tswap32(*(uint32_t *)(hptr));
+// 		break;
+// 	case 8:
+// 		x = g_mem->read<uint64_t>(guest_ptr((uintptr_t)hptr));
+// 		// x = (typeof(*hptr))tswap64(*(uint64_t *)(hptr));
+// 		break;
+// 	default:
+// 		/* avoid warning */\
+// 		x = 0;
+// 		abort();
+// 	}
+// 	return 0;
+// }
 #ifdef TARGET_ABI64
 /* icky bastards are doing weird stuff with native size
    chunks in do_socket call... maybe fix them later */
 static inline int get_user_ual(socklen_t& v, abi_ulong a) {
-	v = *(socklen_t*)a;
+	v = g_mem->read<socklen_t>(guest_ptr(a));
 	return 0;
 }
 #endif
 static inline int get_user_sal(abi_long& v, abi_ulong a) {
-	v = *(abi_long*)a;
+	v = g_mem->read<abi_long>(guest_ptr(a));
 	return 0;
 }
 static inline int get_user_ual(abi_ulong& v, abi_ulong a) {
-	v = *(abi_ulong*)a;
+	v = g_mem->read<abi_ulong>(guest_ptr(a));
 	return 0;
 }
 #ifndef TARGET_ABI64
 static inline int get_user_ual(size_t& v, abi_ulong a) {
-	v = *(abi_ulong*)a;
+	v = g_mem->read<abi_ulong>(guest_ptr(a));
 	return 0;
 }
 #endif
 static inline int get_user_u8(char& v, abi_ulong a) {
-	v = *(char*)a;
+	v = g_mem->read<char>(guest_ptr(a));
 	return 0;
 }
 static inline int get_user_u8(abi_long& v, abi_ulong a) {
-	v = *(char*)a;
+	v = g_mem->read<char>(guest_ptr(a));
 	return 0;
 }
 #ifdef TARGET_ABI64
 static inline int get_user_u8(int& v, abi_ulong a) {
-	v = *(char*)a;
+	v = g_mem->read<char>(guest_ptr(a));
 	return 0;
 }
 #endif
 static inline int get_user_u32(unsigned int& v, abi_ulong a) {
-	v = *(unsigned int*)a;
+	v = g_mem->read<unsigned int>(guest_ptr(a));
 	return 0;
 }
 static inline int get_user_s32(int& v, abi_ulong a) {
-	v = *(int*)a;
+	v = g_mem->read<int>(guest_ptr(a));
 	return 0;
 }
 static inline int put_user_ual(abi_ulong v, abi_ulong a) {
-	*(abi_ulong*)a = v;
+	g_mem->write<abi_ulong>(guest_ptr(a), v);
 	return 0;
 }
 static inline int put_user_sal(abi_long v, abi_ulong a) {
-	*(abi_long*)a = v;
+	g_mem->write<abi_long>(guest_ptr(a), v);
 	return 0;
 }
 static inline int put_user_s32(int v, abi_ulong a) {
-	*(int*)a = v;
+	g_mem->write<int>(guest_ptr(a), v);
 	return 0;
 }
 static inline int put_user_u32(unsigned int v, abi_ulong a) {
-	*(unsigned int*)a = v;
+	g_mem->write<unsigned int>(guest_ptr(a), v);
 	return 0;
 }
 static inline int put_user_u16(unsigned short v, abi_ulong a) {
-	*(unsigned short*)a = v;
+	g_mem->write<unsigned short>(guest_ptr(a), v);
 	return 0;
 }
 static inline int put_user_s64(long long v, abi_ulong a) {
-	*(long long*)a = v;
+	g_mem->write<long long>(guest_ptr(a), v);
 	return 0;
 }
 static inline int put_user_u8(abi_long v, abi_ulong a) {
-	*(char*)a = v;
+	g_mem->write<char>(guest_ptr(a), v);
 	return 0;
 	
 }
@@ -202,10 +259,8 @@ abi_ulong mmap_find_vma_flags(abi_ulong start, abi_ulong size,
 void page_set_flags(target_ulong start, target_ulong end, 
 	int flags)
 {
-	assert(!g_syscall_last_mapping && "only one map per syscall allowed");
 	int res = g_mem->mprotect(guest_ptr(start), end - start, flags);
 	assert(res == 0 && "failed to set page flags as requested");
-	g_syscall_last_mapping = g_mem->lookupMappingPtr(guest_ptr(start));
 }
 
 static char* path(char* p) {

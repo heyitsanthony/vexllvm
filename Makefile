@@ -1,6 +1,6 @@
 BIN_BASE="0xa000000"
 BIN_BASE2="0xc000000"
-CFLAGS=-g -I`pwd`/src/
+CFLAGS=-g -O3 -I`pwd`/src/
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
 endif
