@@ -177,7 +177,6 @@ class ElfTable : public std::vector<std::pair<uintptr_t, uintptr_t> >
 public:
 	template <typename T>
 	void add(uintptr_t t, T v) {
-		assert(!((uintptr_t)v & ~0xFFFFFFFFULL));
 		push_back(std::make_pair(t, (uintptr_t)v));
 	}
 };

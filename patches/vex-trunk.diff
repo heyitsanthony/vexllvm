@@ -1,6 +1,6 @@
 Index: test/test-amd64.c
 ===================================================================
---- test/test-amd64.c	(revision 2155)
+--- test/test-amd64.c	(revision 2165)
 +++ test/test-amd64.c	(working copy)
 @@ -553,6 +553,20 @@
      printf("%-10s A=%08x R=%08x %d\n", #op, val, res, resz);\
@@ -165,7 +165,7 @@ Index: test/test-amd64.c
      test_lea();
 Index: priv/guest_amd64_toIR.c
 ===================================================================
---- priv/guest_amd64_toIR.c	(revision 2155)
+--- priv/guest_amd64_toIR.c	(revision 2165)
 +++ priv/guest_amd64_toIR.c	(working copy)
 @@ -7356,7 +7356,7 @@
     UChar  modrm;
@@ -399,7 +399,7 @@ Index: priv/guest_amd64_toIR.c
     Int       alen;
     UChar     opc, modrm, abyte, pre;
     Long      d64;
-@@ -17160,12 +17229,26 @@
+@@ -17198,12 +17267,26 @@
                                mkU64(1<<18)))
              );
  
@@ -428,9 +428,22 @@ Index: priv/guest_amd64_toIR.c
  
        DIP("pushf%c\n", nameISize(sz));
        break;
+Index: priv/guest_arm_toIR.c
+===================================================================
+--- priv/guest_arm_toIR.c	(revision 2165)
++++ priv/guest_arm_toIR.c	(working copy)
+@@ -14265,7 +14265,7 @@
+             insn.  So, have a look at them. */
+          guaranteedUnconditional = True; /* assume no 'it' insn found, till we do */
+ 
+-         UShort* hwp = (UShort*)(HWord)pc;
++         UShort* hwp = (UShort*)guest_instr;
+          Int i;
+          for (i = -1; i >= -9; i--) {
+             /* We're in the same page.  (True, but commented out due
 Index: priv/main_main.c
 ===================================================================
---- priv/main_main.c	(revision 2155)
+--- priv/main_main.c	(revision 2165)
 +++ priv/main_main.c	(working copy)
 @@ -120,7 +120,7 @@
     vassert(vcon->iropt_unroll_thresh >= 0);
@@ -441,14 +454,15 @@ Index: priv/main_main.c
     vassert(vcon->guest_chase_thresh >= 0);
     vassert(vcon->guest_chase_thresh < vcon->guest_max_insns);
     vassert(vcon->guest_chase_cond == True 
-@@ -625,6 +625,12 @@
+@@ -631,6 +631,13 @@
        irsb = vta->finaltidy(irsb);
     }
  
 +   if(vta->irsb_only) {
 +      *(vta->host_bytes_used) = out_used;
 +      vexSetAllocModeTEMP_and_clear();
-+      return VexTransOK;
++      res.status = VexTransOK;
++      return res;
 +   }
 +
     vexAllocSanityCheck();
@@ -456,9 +470,9 @@ Index: priv/main_main.c
     if (vex_traceflags & VEX_TRACE_TREES) {
 Index: priv/guest_generic_bb_to_IR.c
 ===================================================================
---- priv/guest_generic_bb_to_IR.c	(revision 2155)
+--- priv/guest_generic_bb_to_IR.c	(revision 2165)
 +++ priv/guest_generic_bb_to_IR.c	(working copy)
-@@ -173,7 +173,7 @@
+@@ -180,7 +180,7 @@
     /* check sanity .. */
     vassert(sizeof(HWord) == sizeof(void*));
     vassert(vex_control.guest_max_insns >= 1);
@@ -469,9 +483,9 @@ Index: priv/guest_generic_bb_to_IR.c
     vassert(guest_word_type == Ity_I32 || guest_word_type == Ity_I64);
 Index: pub/libvex.h
 ===================================================================
---- pub/libvex.h	(revision 2155)
+--- pub/libvex.h	(revision 2165)
 +++ pub/libvex.h	(working copy)
-@@ -587,6 +587,11 @@
+@@ -594,6 +594,11 @@
        */
        void* dispatch_unassisted;
        void* dispatch_assisted;
@@ -482,4 +496,17 @@ Index: pub/libvex.h
 +      Bool irsb_only;
     }
     VexTranslateArgs;
+ 
+Index: pub/libvex_emwarn.h
+===================================================================
+--- pub/libvex_emwarn.h	(revision 2165)
++++ pub/libvex_emwarn.h	(working copy)
+@@ -54,7 +54,7 @@
+ */
+ 
+ typedef
+-   enum {
++   enum VexEmWarn {
+       /* no warning indicated */
+       EmWarn_NONE=0,
  

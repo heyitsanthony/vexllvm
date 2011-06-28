@@ -57,7 +57,9 @@ static IRSB* vex_finaltidy(IRSB* irsb)
 	x = 0;
 	return irsb;
 }
-
+static UInt vex_needs_self_check(void*, VexGuestExtents* ) {
+	return 0;
+}
 static void vex_log(HChar* hc, Int nbytes)
 {
 	switch (log_type) {
@@ -186,13 +188,16 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	}
 #if !defined(VALGRIND_TRUNK)
 	vta.dispatch = (void*)dispatch_asm_amd64;
+	res = LibVEX_Translate(&vta);
+	if (res == VexTransAccessFail) return NULL;
 #else
 	vta.dispatch_assisted = (void*)dispatch_asm_amd64;
 	vta.dispatch_unassisted = (void*)dispatch_asm_amd64;
 	vta.irsb_only = true;
-#endif
+	vta.needs_self_check = vex_needs_self_check;
 	res = LibVEX_Translate(&vta);
-	if (res == VexTransAccessFail) return NULL;
+	if (res.status == VexTranslateResult::VexTransAccessFail) return NULL;
+#endif
 
 	return g_cb.cb_vexsb;
 }

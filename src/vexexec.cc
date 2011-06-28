@@ -322,7 +322,7 @@ bool VexExec::stepVSB(void)
 	top_addr = addr_stack.top();
 	if (dump_current_state) {
 		std::cerr << "================BEFORE DOING "
-			<< top_addr
+			<< (void*)top_addr.o
 			<< std::endl;
 		gs->print(std::cerr);
 	}

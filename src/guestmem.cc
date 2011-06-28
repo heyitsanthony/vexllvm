@@ -22,17 +22,9 @@ GuestMem::GuestMem(void)
 {
 
 #ifdef __amd64__
-	/* an exact identity mapping causes problems running
-	   android binaries which have been prelinked.  the 
-	   prelinking phase put many of the libraries where
-	   the kernel module load region is 0xa0000000.  so
-	   for 64-bit host, we can just offset everything by
-	   4 GB and do the memory mappings ourselves.  this
-	   is kind of a kludge but it is probably better than
-	   doing a page table based implementation.  obviously,
-	   the prelinking will cause trouble running vexllvm
-	   natively on android anyway (the libs would definitely)
-	   overlap, so let's defer that for another day... */
+	/* this is probably only useful for 32-bit binaries
+	   seeing as there is the evil kernel page at
+	   f*******xxxxx  ... */
 	if(!force_flat)
 		base = (char*)(uintptr_t)0x100000000;
 #endif
@@ -61,10 +53,18 @@ bool GuestMem::sbrkInitial() {
 		if(is_32_bit)
 			flags |= MAP_32BIT;
 	#endif
+	/* this sux, for some reason it keeps redirecting the allocation
+	   lower, but the truth is, we're forcing it elsewhere anyway, so
+	   it doesn't matter.  it would be good to reserve the whole address
+	   space for a 32-bit proc */
+	if(!force_flat)
+		flags |= MAP_FIXED;
 	bool found = findRegion(BRK_RESERVE, m);
 	assert(found && "couldn't make mapping");
+
 	addr = ::mmap(getBase() + m.offset.o, BRK_RESERVE, prot, 
 		flags, -1, 0);
+
 	/* hmm, we could shrink the reserve but */
 	assert(addr != MAP_FAILED && "initial sbrk failed");
 	m.offset = guest_ptr((char*)addr - getBase());
@@ -283,6 +283,9 @@ void GuestMem::Mapping::print(std::ostream& os) const
 		<< std::hex << req_prot << ". CurProt=" << cur_prot
 		<< std::endl;
 }
+/* TODO: some kind of check to see if we blew out address space 
+   thats ok in 64-bit, or possibly using the host mapping capability
+   to just find something higher than the rebase */
 bool GuestMem::findRegion(size_t len, Mapping& m) {
 	if(force_flat) {
 		int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
@@ -302,8 +305,9 @@ bool GuestMem::findRegion(size_t len, Mapping& m) {
 	   doing something other than linear search as that is super lame */
 	len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
 	
-	//guest_ptr current = guest_ptr(0x100000);
-	guest_ptr current = guest_ptr(0x100000000);	
+	guest_ptr current = guest_ptr(0x100000);
+	if(current < reserve_brick)
+		current = reserve_brick;
 	mapmap_t::iterator i = maps.lower_bound(current);
 	if(i != maps.begin())
 		--i;
@@ -325,21 +329,12 @@ bool GuestMem::findRegion(size_t len, Mapping& m) {
 	}
 	m.offset = current;
 	m.length = len;
-	assert(!is_32_bit || m.offset.o > 0xFFFFFFFFULL);
+	assert(!is_32_bit || m.offset.o < 0xFFFFFFFFULL);
 	return true;
 }
 int GuestMem::mmap(guest_ptr& result, guest_ptr addr, 
 	size_t len, int prot, int flags, int fd, off_t offset)
 {
-	// std::cerr << "mmap("
-	// 	<< (void*)addr.o << ", "
-	// 	<< (void*)len << ", "
-	// 	<< (void*)prot << ", "
-	// 	<< (void*)flags << ", "
-	// 	<< (void*)fd << ", "
-	// 	<< (void*)offset
-	// 	<< ")" << std::endl;
-
 	if(fd >= 0 && (offset & (PAGE_SIZE - 1)))
 		return -EINVAL;
 	if(fd >= 0 && (addr.o & (PAGE_SIZE - 1)))
@@ -347,8 +342,6 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 
 	if((addr & (PAGE_SIZE - 1)))
 		return -EINVAL;
-
-	// std::cerr << "passed checks" << std::endl;
 
 	// /* we are fixing these up as long as a file mapping isn't involved. 
 	//    does this match the linux kernel implementation? */
@@ -360,7 +353,6 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 	Mapping m(addr, len, prot);
 	if(addr == 0 && !fixed) {
 		if(!findRegion(m.length, m)) {
-			// std::cerr << "no region" << std::endl;
 			return -ENOMEM;
 		}
 		fixed = true;
@@ -372,6 +364,7 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 	void* desired = getBase() + m.offset.o;
 	void* at = ::mmap(getBase() + m.offset.o, m.length, 
 		m.cur_prot, flags, fd, offset);
+
 	/* this is bad because it will probably be out of our desired
 	   address range... so, this is a fail */
 	if(at != desired) {
@@ -397,18 +390,11 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 	}
 	result = m.offset;
 	recordMapping(m);
-	// std::cerr << "mmap OK => " << (void*)m.offset.o << std::endl;
 	return 0;
 }
 int GuestMem::mprotect(guest_ptr offset, 
 	size_t len, int prot)
 {
-	// std::cerr << "mprotect("
-	// 	<< (void*)offset.o << ", "
-	// 	<< (void*)len << ", "
-	// 	<< (void*)prot
-	// 	<< ")" << std::endl;
-
 	if((offset & (PAGE_SIZE - 1)))
 		return -EINVAL;
 	if((len & (PAGE_SIZE - 1)))
@@ -426,15 +412,10 @@ int GuestMem::mprotect(guest_ptr offset,
 		return -errno;
 	}
 	recordMapping(m);
-	// std::cerr << "mprotect OK" << std::endl;
 	return 0;
 }
 int GuestMem::munmap(guest_ptr offset, size_t len)
 {
-	// std::cerr << "munmap("
-	// 	<< (void*)offset.o << ", "
-	// 	<< (void*)len
-	// 	<< ")" << std::endl;
 	if((offset & (PAGE_SIZE - 1)))
 		return -EINVAL;
 	if((len & (PAGE_SIZE - 1)))
@@ -449,20 +430,11 @@ int GuestMem::munmap(guest_ptr offset, size_t len)
 		return -errno;
 	}
 	removeMapping(m);
-	// std::cerr << "munmap OK" << std::endl;
 	return 0;	
 }
 int GuestMem::mremap(guest_ptr& result, guest_ptr old_offset, 
 	size_t old_length, size_t new_length, int flags, guest_ptr new_offset)
-{
-	// std::cerr << "mremap("
-	// 	<< (void*)old_offset.o << ", "
-	// 	<< (void*)old_length << ", "
-	// 	<< (void*)new_length << ", "
-	// 	<< (void*)flags << ", "
-	// 	<< (void*)new_offset.o 
-	// 	<< ")" << std::endl;
-		
+{		
 	if((old_offset & (PAGE_SIZE - 1)))
 		return -EINVAL;
 	if((old_length & (PAGE_SIZE - 1)))
@@ -527,7 +499,6 @@ int GuestMem::mremap(guest_ptr& result, guest_ptr old_offset,
 	result = n.offset;
 	removeMapping(m);
 	recordMapping(n);
-	// std::cerr << "mremap OK => " << (void*)n.offset.o << std::endl;
 	return 0;
 }
 

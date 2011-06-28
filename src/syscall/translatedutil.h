@@ -20,11 +20,11 @@
 #endif
 /* we should do checks here to make it return EFAULT as necessary */
 #define lock_user_struct(m, p, a, ...) \
-	(*(void**)&p = (void*)(g_mem->getBase() + (uintptr_t)a))
+	(*(void**)&p = (void*)(g_mem->getBase() + (uintptr_t)(abi_ulong)a))
 #define unlock_user_struct(...)
-#define lock_user_string(b) (g_mem->getBase() + (uintptr_t)b)
+#define lock_user_string(b) (g_mem->getBase() + (uintptr_t)(abi_ulong)b)
 #define unlock_user_string(...)
-#define lock_user(a, b, ...) (g_mem->getBase() + (uintptr_t)b)
+#define lock_user(a, b, ...) (g_mem->getBase() + (uintptr_t)(abi_ulong)b)
 #define unlock_user(...)
 #define access_ok(...) true
 /* These are made up numbers... */
@@ -32,8 +32,10 @@
 #define VERIFY_WRITE	2
 
 /* these imply that the address space mapping is identity */
-#define g2h(x) (void*)(uintptr_t)(x + (uintptr_t)g_mem->getBase())
-#define h2g(x) (abi_ulong)(uintptr_t)(x - (uintptr_t)g_mem->getBase())
+#define g2h(x) \
+	(void*)(g_mem->getBase() + (abi_ulong)(x))
+#define h2g(x) \
+	(abi_ulong)(uintptr_t(x) - (uintptr_t)g_mem->getBase())
 
 #define gemu_log(...)
 
@@ -117,61 +119,7 @@ static inline int copy_to_user(abi_ulong d, void* s, abi_ulong l) {
     0;\
 })
 
-// template <typename G, typename H>
-// int __put_user(G x, H hptr)
-// {
-// 	int size = sizeof(*hptr);
-// 	switch(size) {
-// 	case 1:
-// 		g_mem->write(guest_ptr((uintptr_t)hptr), (uint8_t)x);
-// 		// *(uint8_t *)(hptr) = (uint8_t)(typeof(*hptr))(x);
-// 		break;
-// 	case 2:
-// 		g_mem->write(guest_ptr((uintptr_t)hptr), (uint16_t)x);
-// 		// *(uint16_t *)(hptr) = tswap16((typeof(*hptr))(x));
-// 		break;
-// 	case 4:
-// 		g_mem->write(guest_ptr((uintptr_t)hptr), (uint32_t)x);
-// 		// *(uint32_t *)(hptr) = tswap32((typeof(*hptr))(x));
-// 		break;
-// 	case 8:
-// 		g_mem->write(guest_ptr((uintptr_t)hptr), (uint64_t)x);
-// 		// *(uint64_t *)(hptr) = tswap64((typeof(*hptr))(x));
-// 		break;
-// 	default:
-// 	abort();
-// 	}
-// 	return 0;
-// }
-// 
-// template <typename G, typename H>
-// int __get_user(G& x, H hptr)
-// {
-// 	int size = sizeof(*hptr);
-// 	switch(size) {
-// 	case 1:
-// 		x = g_mem->read<uint8_t>(guest_ptr((uintptr_t)hptr));
-// 		// x = (typeof(*hptr))*(uint8_t *)(hptr);
-// 		break;
-// 	case 2:
-// 		x = g_mem->read<uint16_t>(guest_ptr((uintptr_t)hptr));
-// 		// x = (typeof(*hptr))tswap16(*(uint16_t *)(hptr));
-// 		break;
-// 	case 4:
-// 		x = g_mem->read<uint32_t>(guest_ptr((uintptr_t)hptr));
-// 		// x = (typeof(*hptr))tswap32(*(uint32_t *)(hptr));
-// 		break;
-// 	case 8:
-// 		x = g_mem->read<uint64_t>(guest_ptr((uintptr_t)hptr));
-// 		// x = (typeof(*hptr))tswap64(*(uint64_t *)(hptr));
-// 		break;
-// 	default:
-// 		/* avoid warning */\
-// 		x = 0;
-// 		abort();
-// 	}
-// 	return 0;
-// }
+
 #ifdef TARGET_ABI64
 /* icky bastards are doing weird stuff with native size
    chunks in do_socket call... maybe fix them later */
@@ -264,7 +212,7 @@ void page_set_flags(target_ulong start, target_ulong end,
 }
 
 static char* path(char* p) {
-	std::string path((char*)(uintptr_t)p);
+	std::string path(p);
 	if(path.empty() || path[0] != '/')
 		return (char*)(uintptr_t)p;
 	path = Syscalls::chroot + path;
