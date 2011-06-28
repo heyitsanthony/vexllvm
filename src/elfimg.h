@@ -8,12 +8,10 @@
 #include <map>
 #include "collection.h"
 #include "arch.h"
-
-typedef void* hostptr_t;
-typedef void* elfptr_t;
-typedef const void* celfptr_t;
+#include "guestmem.h"
 
 class ElfSegment;
+class GuestMem;
 
 /* loads and maps an elf image into memory based on its Phdr--
  * NOTE: two elfimg objects of the same exec can't coexist;
@@ -21,16 +19,16 @@ class ElfSegment;
 class ElfImg
 {
 public:
-	static ElfImg* create(const char* fname, bool linked = true);
+	static ElfImg* create(GuestMem* mem, const char* fname, 
+		bool linked = true);
 	virtual ~ElfImg(void);
-	hostptr_t xlateAddr(elfptr_t addr) const;
-	elfptr_t getEntryPoint(void) const;
+	guest_ptr xlateAddr(guest_ptr addr) const;
+	guest_ptr getEntryPoint(void) const;
 	int getHeaderCount() const;
 	ElfImg* getInterp(void) const { return interp; }
-	bool isDirectMapped(void) const { return direct_mapped; }
 	const char* getFilePath(void) const { return img_path; }
-	celfptr_t getHeader() const;
-	celfptr_t getBase() const;
+	const guest_ptr getHeader() const;
+	const guest_ptr getBase() const;
 	ElfSegment* getFirstSegment() const { return segments.front(); }
 	void getSegments(std::list<ElfSegment*>& r) const;
 	unsigned int getPageSize() const { return 4096; }
@@ -47,7 +45,8 @@ public:
 		return readHeader(fname, false);
 	}
 private:
-	ElfImg(const char* fname, Arch::Arch arch, bool linked);
+	ElfImg(GuestMem* mem, const char* fname, Arch::Arch arch, 
+		bool linked);
 	static Arch::Arch readHeader(const char* fname,
 		bool require_exe);
 	static Arch::Arch readHeader32(const Elf32_Ehdr* hdr,
@@ -69,12 +68,12 @@ private:
 		Elf64_Ehdr	*hdr64;
 	};
 
-	bool direct_mapped;
 	ElfImg* interp;
 	bool linked;
 	unsigned		address_bits;
 	std::string		library_root;
 	Arch::Arch		arch;
+	GuestMem		*mem;
 };
 
 #endif

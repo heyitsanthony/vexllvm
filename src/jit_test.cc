@@ -33,7 +33,7 @@ extern "C"
 
 using namespace llvm;
 
-#define TEST_VSB_GUESTADDR	((void*)0x12345678)
+#define TEST_VSB_GUESTADDR	guest_ptr(0x12345678)
 
 static ExecutionEngine	*exeEngine;
 
@@ -59,12 +59,12 @@ uint64_t doFunc(Guest* gs, Function* f)
 class GuestIdent : public Guest
 {
 public:
-	GuestIdent() : Guest("ident")
+	GuestIdent() : Guest(new GuestMem(), "ident")
 	{
-		cpu_state = GuestCPUState::create(Arch::X86_64);
+		cpu_state = GuestCPUState::create(getMem(), Arch::X86_64);
 	}
 	virtual ~GuestIdent() {}
-	void* getEntryPoint(void) const { return NULL; }
+	guest_ptr getEntryPoint(void) const { return guest_ptr(0); }
 	virtual Arch::Arch getArch() const { return Arch::getHostArch(); }
 };
 
@@ -86,9 +86,9 @@ public:
 		std::vector<VexStmt*>	stmts;
 		VexExpr*		next_expr;
 
-		vsb = new VexSB((uint64_t)TEST_VSB_GUESTADDR, 10 /* whatever */);
+		vsb = new VexSB(TEST_VSB_GUESTADDR, 0, NULL);
 		stmts.push_back(
-			new VexStmtIMark(vsb, (uint64_t)TEST_VSB_GUESTADDR, 4));
+			new VexStmtIMark(vsb, TEST_VSB_GUESTADDR, 4));
 		setupStmts(vsb, stmts);
 		next_expr = new VexExprConstU64(NULL, 0xdeadbeef);
 
@@ -478,11 +478,11 @@ void doTest(Guest* gs, TestSB* tsb)
 {
 	Function*	f;
 	VexSB		*vsb;
-	void*		guest_ptr;
+	guest_ptr	guest;
 	char		emitstr[1024];
 
-	guest_ptr = TEST_VSB_GUESTADDR;
-	sprintf(emitstr, "sb_%p", guest_ptr);
+	guest = TEST_VSB_GUESTADDR;
+	sprintf(emitstr, "sb_%p", guest);
 
 	vsb = tsb->getSB();
 	f = vsb->emit(emitstr);

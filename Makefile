@@ -49,7 +49,6 @@ OBJDEPS=	vexxlate.o		\
 		guestcpustate.o		\
 		guestelf.o		\
 		guestptimg.o		\
-		guesttls.o		\
 		guestsnapshot.o		\
 		cpu/amd64cpustate.o	\
 		cpu/i386cpustate.o	\

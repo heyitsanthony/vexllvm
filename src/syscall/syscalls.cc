@@ -73,17 +73,17 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	   for new mappings, changed mapping, and unmappings */
 	GuestMem::Mapping	m;
 
-	fakedSyscall = interceptSyscall(sys_nr, args, m, sc_ret);
+	fakedSyscall = interceptSyscall(sys_nr, args, sc_ret);
 	if (!fakedSyscall) {
 		switch(guest->getArch()) {
 		case Arch::X86_64:
-			sc_ret = applyAMD64Syscall(args, m);
+			sc_ret = applyAMD64Syscall(args);
 			break;
 		case Arch::ARM:
-			sc_ret = applyARMSyscall(args, m);
+			sc_ret = applyARMSyscall(args);
 			break;
 		case Arch::I386:
-			sc_ret = applyI386Syscall(args, m);
+			sc_ret = applyI386Syscall(args);
 			break;
 		default:
 			assert(!"unknown arch type for syscall");
@@ -94,32 +94,6 @@ uint64_t Syscalls::apply(SyscallParams& args)
 		print(std::cerr, args, &sc_ret);
 	}
 
-	if (fakedSyscall) {
-		/* memory handling code is below, enforce this */
-		assert(!m.isValid());
-		return sc_ret;
-	}
-
-	/* record the offset if this was a pass through mapping */
-	if(sys_nr == SYS_mmap && !m.offset && 
-		(sc_ret != (uintptr_t)MAP_FAILED || 
-			(sc_ret != (unsigned)(uintptr_t)MAP_FAILED)))
-	{
-		m.offset = (void*)sc_ret;
-	}
-
-	if(m.isValid()) {
-		if(m.wasUnmapped()) {
-			mappings->removeMapping(m);
-		} else {
-			/* mask out write permission for JITs */
-			if (m.req_prot & PROT_EXEC) {
-				m.cur_prot &= ~PROT_WRITE;
-				mprotect(m.offset, m.length, m.cur_prot);
-			}
-			mappings->recordMapping(m);
-		}
-	}
 	return sc_ret;
 }
 
@@ -157,7 +131,6 @@ std::string Syscalls::getSyscallName(int sys_nr) const {
 bool Syscalls::interceptSyscall(
 	int sys_nr,
 	SyscallParams&		args,
-	GuestMem::Mapping&	m,
 	unsigned long&		sc_ret)
 {
 	switch (sys_nr) {
@@ -177,8 +150,8 @@ bool Syscalls::interceptSyscall(
 		}
 		return false;
 	case SYS_brk:
-		if (mappings->sbrk((void*)args.getArg(0)))
-			sc_ret = (uintptr_t)mappings->brk();
+		if (mappings->sbrk(guest_ptr(args.getArg(0))))
+			sc_ret = mappings->brk();
 		else
 			sc_ret = -ENOMEM;
 		return true;
@@ -187,20 +160,42 @@ bool Syscalls::interceptSyscall(
 		   executed without us.  we'd rather crash! */
 		sc_ret = 0;
 		return true;
-	case SYS_mmap:
+	case SYS_mmap: {
+		guest_ptr m;
+		sc_ret = mappings->mmap(m, 
+			guest_ptr(args.getArg(0)),
+			args.getArg(1), 
+			args.getArg(2), 
+			args.getArg(3), 
+			args.getArg(4), 
+			args.getArg(5));
+		if(sc_ret == 0)
+			sc_ret = m;
+		return true;
+	}
+	case SYS_mremap: {
+		guest_ptr m;
+		sc_ret = mappings->mremap(m, 
+			guest_ptr(args.getArg(0)),
+			args.getArg(1), 
+			args.getArg(2), 
+			args.getArg(3), 
+			guest_ptr(args.getArg(4)));
+		if(sc_ret == 0)
+			sc_ret = m;
+		return true;
+	}
 	case SYS_mprotect:
-		m = GuestMem::Mapping(
-			(void*)args.getArg(0),	/* offset */
-			args.getArg(1),		/* length */
+		sc_ret = mappings->mprotect(
+			guest_ptr(args.getArg(0)),
+			args.getArg(1),
 			args.getArg(2));
-		return false;
-
+		return true;
 	case SYS_munmap:
-		m.offset = (void*)args.getArg(0);
-		m.length = args.getArg(1);
-		m.markUnmapped();
-		return false;
-
+		sc_ret = mappings->munmap(
+			guest_ptr(args.getArg(0)),
+			args.getArg(1));
+		return true;
 	case SYS_readlink:
 		std::string path = (char*)args.getArg(0);
 		if(path != "/proc/self/exe") break;
@@ -228,8 +223,7 @@ bool Syscalls::interceptSyscall(
 }
 
 uintptr_t Syscalls::passthroughSyscall(
-	SyscallParams& args,
-	GuestMem::Mapping& m)
+	SyscallParams& args)
 {
 	uintptr_t sc_ret = syscall(
 		args.getSyscall(),

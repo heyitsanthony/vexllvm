@@ -2,7 +2,6 @@
 #include <sys/errno.h>
 #include <sys/prctl.h>
 #include <asm/prctl.h> 
-#include "guestmem.h"
 #include <vector>
 #include <sstream>
 #include "Sugar.h"
@@ -15,7 +14,7 @@
 /* this header loads all of the system headers outside of the namespace */
 #include "syscall/translatedsyscall.h"
 
-static GuestMem::Mapping* g_syscall_last_mapping = NULL;
+static GuestMem* g_mem = NULL;
 static std::vector<char*> g_to_delete;
 
 namespace I386 {
@@ -42,8 +41,6 @@ namespace I386 {
 	/* memory mapping requires wrappers based on the host address
 	   space limitations */
 	/* oh poo, this needs to record mappings... they don't right now */
-	#define target_mmap(a, l, p, f, fd, o) \
-		(abi_long)(uintptr_t)mmap((void*)a, l, p, f, fd, o)
 	#define mmap_find_vma(s, l)	mmap_find_vma_flags(s, l, MAP_32BIT)
 
 	/* our implementations of stuff ripped out of the qemu files */
@@ -111,8 +108,7 @@ std::string Syscalls::getI386SyscallName(int sys_nr) const {
 }
 
 uintptr_t Syscalls::applyI386Syscall(
-	SyscallParams& args,
-	GuestMem::Mapping& m)
+	SyscallParams& args)
 {
 	uintptr_t sc_ret = ~0ULL;
 
@@ -121,15 +117,22 @@ uintptr_t Syscalls::applyI386Syscall(
 	   behaviors, but they can just alter the args and let
 	   the other mechanisms finish the job */
 	switch (args.getSyscall()) {
+	case TARGET_NR_mmap2:
+		if(I386_mmap2(args, sc_ret))
+			return sc_ret;
+		break;
 	default:
 		break;
 	}
 
 	/* if the host and guest are identical, then just pass through */
-	if(!force_translation && guest->getArch() == Arch::getHostArch()) {
-		return passthroughSyscall(args, m);
+	if(mappings->isFlat() && !force_translation && 
+		guest->getArch() == Arch::getHostArch()) 
+	{
+		return passthroughSyscall(args);
 	}
 	
+	g_mem = mappings;
 	sc_ret = I386::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),
@@ -138,15 +141,23 @@ uintptr_t Syscalls::applyI386Syscall(
 		args.getArg(3),
 		args.getArg(4),
 		args.getArg(5));
-		
-	if(g_syscall_last_mapping) {
-		m = *g_syscall_last_mapping;
-		g_syscall_last_mapping = NULL;
-	}
-	
+			
 	foreach(it, g_to_delete.begin(), g_to_delete.end())
 		delete [] *it;
 	g_to_delete.clear();
 	
 	return sc_ret;
+}
+SYSCALL_BODY(I386, mmap2) {
+	guest_ptr m;
+	sc_ret = mappings->mmap(m, 
+		guest_ptr(args.getArg(0)),
+		args.getArg(1), 
+		args.getArg(2), 
+		args.getArg(3), 
+		args.getArg(4), 
+		args.getArg(5));
+	if(sc_ret == 0)
+		sc_ret = m;
+	return true;
 }

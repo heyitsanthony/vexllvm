@@ -19,24 +19,24 @@ VexJITCache::~VexJITCache(void)
 	delete exeEngine;
 }
 
-vexfunc_t VexJITCache::getCachedFPtr(uint64_t guest_addr)
+vexfunc_t VexJITCache::getCachedFPtr(guest_ptr guest_addr)
 {
 	jit_map::const_iterator it;
 	vexfunc_t		*fptr;
 
-	fptr = jit_dc.get((void*)guest_addr);
+	fptr = jit_dc.get(guest_addr);
 	if (fptr) return (vexfunc_t)fptr;
 
 	it = jit_cache.find(guest_addr);
 	if (it == jit_cache.end()) return NULL;
 
 	fptr = (vexfunc_t*)(*it).second;
-	jit_dc.put((void*)guest_addr, fptr);
+	jit_dc.put(guest_addr, fptr);
 
 	return (vexfunc_t)fptr;
 }
 
-vexfunc_t VexJITCache::getFPtr(void* host_addr, uint64_t guest_addr)
+vexfunc_t VexJITCache::getFPtr(void* host_addr, guest_ptr guest_addr)
 {
 	Function	*llvm_f;
 	vexfunc_t	ret_f;
@@ -51,19 +51,19 @@ vexfunc_t VexJITCache::getFPtr(void* host_addr, uint64_t guest_addr)
 	assert (ret_f != NULL && "Could not JIT");
 
 	jit_cache[guest_addr] = ret_f;
-	jit_dc.put((void*)guest_addr, (vexfunc_t*)ret_f);
+	jit_dc.put(guest_addr, (vexfunc_t*)ret_f);
 
 	return ret_f;
 }
 
-void VexJITCache::evict(uint64_t guest_addr)
+void VexJITCache::evict(guest_ptr guest_addr)
 {
 	Function	*f;
 	if ((f = getCachedFunc(guest_addr)) != NULL) {
 		exeEngine->freeMachineCodeForFunction(f);
 	}
 	jit_cache.erase(guest_addr);
-	jit_dc.put((void*)guest_addr, NULL);
+	jit_dc.put(guest_addr, NULL);
 	VexFCache::evict(guest_addr);
 }
 
@@ -78,12 +78,12 @@ void VexJITCache::flush(void)
 	VexFCache::flush();
 }
 
-void VexJITCache::flush(void* begin, void* end)
+void VexJITCache::flush(guest_ptr begin, guest_ptr end)
 {
 	foreach (it, funcBegin(begin), funcEnd(end)) {
 		Function	*f = it->second;
 		exeEngine->freeMachineCodeForFunction(f);
-		jit_cache.erase((uint64_t)it->first);
+		jit_cache.erase(it->first);
 		jit_dc.put(it->first, NULL);
 	}
 	VexFCache::flush(begin, end);

@@ -26,12 +26,12 @@ VexExecChk::VexExecChk(PTImgChk* gs, VexXlate* vx)
 }
 
 /* ensures that shadow process's state <= llvm process's state */
-uint64_t VexExecChk::doVexSB(VexSB* vsb)
+guest_ptr VexExecChk::doVexSB(VexSB* vsb)
 {
 	const VexGuestAMD64State*	state;
 	MemLog				*ml;
 	bool				new_ip_in_bounds;
-	uint64_t			new_ip;
+	guest_ptr			new_ip;
 
 	state = (const VexGuestAMD64State*)gs->getCPUState()->getStateData();
 
@@ -50,7 +50,7 @@ uint64_t VexExecChk::doVexSB(VexSB* vsb)
 	} else
 		new_ip = VexExec::doVexSB(vsb);
 
-	gs->getCPUState()->setPC((void*)new_ip);
+	gs->getCPUState()->setPC(new_ip);
 
 	new_ip_in_bounds = 	new_ip >= vsb->getGuestAddr() &&
 				new_ip < vsb->getEndAddr();
@@ -81,8 +81,8 @@ uint64_t VexExecChk::doVexSB(VexSB* vsb)
 		cross_check->stepThroughBounds(
 			deferred_bound_start, deferred_bound_end, *state);
 		is_deferred = false;
-		deferred_bound_start = 0;
-		deferred_bound_end = 0;
+		deferred_bound_start = guest_ptr(0);
+		deferred_bound_end = guest_ptr(0);
 		goto states_should_be_equal;
 	} else if (new_ip_in_bounds) {
 		 /* Nasty VexIR trivia. A SB can:
@@ -126,8 +126,8 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 	}
 
 	fixed = cross_check->fixup(
-		(void*)vsb->getGuestAddr(), 
-		(void*)vsb->getEndAddr());
+		vsb->getGuestAddr(), 
+		vsb->getEndAddr());
 	if (fixed) return;
 
 	fprintf(stderr, "MISMATCH: END OF BLOCK. FIND NEW EMU BUG.\n");
@@ -195,11 +195,11 @@ void VexExecChk::dumpSubservient(VexSB* vsb)
 	if (vsb != NULL) {
 		std::cerr << 
 			"found divergence running block @ " <<
-			(void*)vsb->getGuestAddr() << std::endl;
+			(void*)vsb->getGuestAddr().o << std::endl;
 
 		std::cerr << 
 			"original block end was @ " <<
-			(void*)vsb->getEndAddr() << std::endl;
+			(void*)vsb->getEndAddr().o << std::endl;
 	}
 
 	cross_check->printTraceStats(std::cerr);
@@ -216,8 +216,8 @@ void VexExecChk::dumpSubservient(VexSB* vsb)
 	std::cerr << "PTRACE stack" << std::endl;
 	cross_check->stackTraceSubservient(
 		std::cerr,
-		(void*)vsb->getGuestAddr(), 
-		(void*)vsb->getEndAddr());
+		vsb->getGuestAddr(), 
+		vsb->getEndAddr());
 		
 	//if you want to keep going anyway, stop checking
 	cross_check = NULL;

@@ -33,15 +33,17 @@ int main(int argc, char* argv[], char* envp[])
 	/* for the JIT */
 	InitializeNativeTarget();
 
+	GuestMem* mem = new GuestMem();
 	if (argc == 1) {
-		g = Guest::load();
+		g = Guest::load(mem);
 		if (!g) {
-		fprintf(stderr,
-			"%s: Couldn't load guest. Did you run VEXLLVM_SAVE?\n",
+			fprintf(stderr,
+				"%s: Couldn't load guest. "
+				"Did you run VEXLLVM_SAVE?\n",
 			argv[0]);
 		}
 	} else {
-		g = Guest::load(argv[1]);
+		g = Guest::load(mem, argv[1]);
 	}
 
 	assert (g && "Could not load guest");

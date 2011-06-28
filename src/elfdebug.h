@@ -10,7 +10,8 @@ class Symbols;
 class ElfDebug
 {
 public:
-	static Symbols* getSyms(const char* elf_path, void* base = NULL);
+	static Symbols* getSyms(const char* elf_path, 
+		uintptr_t base = 0);
 
 private:
 	ElfDebug(const char* path);

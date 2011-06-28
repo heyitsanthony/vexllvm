@@ -5,7 +5,7 @@
 #include <map>
 #include <string>
 
-typedef uint64_t symaddr_t;
+typedef uintptr_t symaddr_t;
 
 class Symbol
 {
@@ -46,7 +46,7 @@ public:
 	Symbols() {}
 	virtual ~Symbols();
 	const Symbol* findSym(const std::string& s) const;
-	const Symbol* findSym(void* ptr) const;
+	const Symbol* findSym(uintptr_t ptr) const;
 	bool addSym(
 		const std::string& name,
 		symaddr_t addr,

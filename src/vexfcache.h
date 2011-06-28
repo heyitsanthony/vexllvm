@@ -15,8 +15,8 @@ namespace llvm
 class VexSB;
 class VexXlate;
 
-typedef std::map<void* /* guest addr */, VexSB*> vexsb_map;
-typedef std::map<void* /* guest addr */, llvm::Function*> func_map;
+typedef std::map<guest_ptr, VexSB*> vexsb_map;
+typedef std::map<guest_ptr, llvm::Function*> func_map;
 
 // function cache of vsb's */
 class VexFCache
@@ -32,31 +32,31 @@ public:
 	llvm::Function* genFunctionByVSB(VexSB* vsb);
 
 	/* do not try to free anything returned here!!! */
-	VexSB* 		getVSB(void* hostptr, uint64_t guest_addr);
-	llvm::Function*	getFunc(void* hostptr, uint64_t guest_addr);
+	VexSB* 		getVSB(void* hostptr, guest_ptr guest_addr);
+	llvm::Function*	getFunc(void* hostptr, guest_ptr guest_addr);
 
-	VexSB* getCachedVSB(uint64_t guest_addr);
-	llvm::Function* getCachedFunc(uint64_t guest_addr);
+	VexSB* getCachedVSB(guest_ptr guest_addr);
+	llvm::Function* getCachedFunc(guest_ptr guest_addr);
 
-	virtual void evict(uint64_t guest_addr);
+	virtual void evict(guest_ptr guest_addr);
 	void dumpLog(std::ostream& os) const;
 	virtual void setMaxCache(unsigned int x);
 	virtual void flush(void);
-	virtual void flush(void* begin, void* end);
+	virtual void flush(guest_ptr begin, guest_ptr end);
 
 	unsigned int size(void) const { return vexsb_cache.size(); }
 protected:
 	unsigned int getMaxCache(void) const { return max_cache_ents; }
 	func_map::iterator funcBegin() { return func_cache.begin(); }
 	func_map::iterator funcEnd() { return func_cache.end(); }
-	func_map::iterator funcBegin(void* b) {
+	func_map::iterator funcBegin(guest_ptr b) {
 		return func_cache.lower_bound(b); }
-	func_map::iterator funcEnd(void* e) {
+	func_map::iterator funcEnd(guest_ptr e) {
 		return func_cache.upper_bound(e); }
 
-	uint64_t selectVictimAddress(void) const;
+	guest_ptr selectVictimAddress(void) const;
 private:
-	VexSB* allocCacheVSB(void* hostptr, uint64_t guest_addr);
+	VexSB* allocCacheVSB(void* hostptr, guest_ptr guest_addr);
 
 	bool			dump_llvm;
 

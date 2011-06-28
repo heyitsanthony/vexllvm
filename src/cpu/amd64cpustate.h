@@ -14,14 +14,14 @@ class SyscallParams;
 class AMD64CPUState : public GuestCPUState
 {
 public:
-	AMD64CPUState();
+	AMD64CPUState(GuestMem* mem);
 	~AMD64CPUState();
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
-	void setStackPtr(void*);
-	void* getStackPtr(void) const;
-	void setPC(void*);
-	void* getPC(void) const;
-	void* getReturnAddress(void) const;
+	void setStackPtr(guest_ptr);
+	guest_ptr getStackPtr(void) const;
+	void setPC(guest_ptr);
+	guest_ptr getPC(void) const;
+	guest_ptr getReturnAddress(void) const;
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
 	uint64_t getExitCode(void) const;
@@ -33,18 +33,12 @@ public:
 #endif
 	void print(std::ostream& os) const;
 
-	GuestTLS* getTLS(void) { return tls; }
-	const GuestTLS* getTLS(void) const { return tls; }
-	void setTLS(GuestTLS* tls);
-
 	void setFSBase(uintptr_t base);
 	uintptr_t getFSBase() const;
 
 	const char* off2Name(unsigned int off) const;
 protected:
 	void mkRegCtx(void);
-private:
-	GuestTLS	*tls;
 };
 
 #endif

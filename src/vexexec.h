@@ -26,9 +26,9 @@ class Function;
 }
 
 
-typedef std::list<std::pair<void*, int /* depth */> > vexexec_traces;
-typedef std::stack<void*> vexexec_addrs;
-typedef std::set<void*> exit_func_set;
+typedef std::list<std::pair<guest_ptr, int /* depth */> > vexexec_traces;
+typedef std::stack<guest_ptr> vexexec_addrs;
+typedef std::set<guest_ptr> exit_func_set;
 
 class VexExec
 {
@@ -62,8 +62,8 @@ public:
 
 protected:
 	VexExec(Guest* gs, VexXlate* in_xlate = NULL);
-	virtual uint64_t doVexSB(VexSB* vsb);
-	uint64_t doVexSBAux(VexSB* vsb, void* aux);
+	virtual guest_ptr doVexSB(VexSB* vsb);
+	guest_ptr doVexSBAux(VexSB* vsb, void* aux);
 
 	virtual void doSysCall(VexSB* vsb);
 	void doSysCall(VexSB* vsb, SyscallParams& sp);
@@ -74,13 +74,13 @@ protected:
 	VexFCache	*f_cache;
 
 private:
-	VexSB*		getSBFromGuestAddr(void* elfptr);
+	VexSB*		getSBFromGuestAddr(guest_ptr elfptr);
 	const VexSB*	doNextSB(void);
 
 	VexJITCache		*jit_cache;
 	static VexExec		*exec_context;
 	static void signalHandler(int sig, siginfo_t* si, void* raw_context);
-	void flushTamperedCode(void* start, void* end);
+	void flushTamperedCode(guest_ptr start, guest_ptr end);
 
 	vexexec_addrs	addr_stack;
 
@@ -103,7 +103,7 @@ private:
 
 	bool		owns_xlate;
 	VexXlate	*xlate;
-	std::pair<uintptr_t, uintptr_t>	to_flush;
+	std::pair<guest_ptr, guest_ptr>	to_flush;
 };
 
 #endif

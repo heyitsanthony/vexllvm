@@ -26,8 +26,8 @@ namespace llvm
 class Guest
 {
 public:
-	virtual ~Guest(void);
-	virtual void* getEntryPoint(void) const = 0;
+	virtual ~Guest();
+	virtual guest_ptr getEntryPoint(void) const = 0;
 	std::list<GuestMem::Mapping> getMemoryMap(void) const;
 
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
@@ -35,7 +35,7 @@ public:
 
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
-	virtual std::string getName(void*) const;
+	virtual std::string getName(guest_ptr) const;
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
 	virtual Arch::Arch getArch() const = 0;
@@ -47,11 +47,11 @@ public:
 	/* guest has an interface to saving/loading, but all the legwork
 	 * is done by guestsnapshot to keep things tidy */
 	void save(const char* dirpath = NULL) const;
-	static Guest* load(const char* dirpath = NULL);
+	static Guest* load(GuestMem* mem, const char* dirpath = NULL);
 
 protected:
 	void setBinPath(const char* b);
-	Guest(const char* bin_path);
+	Guest(GuestMem* mem, const char* bin_path);
 
 	GuestCPUState	*cpu_state;
 	GuestMem	*mem;

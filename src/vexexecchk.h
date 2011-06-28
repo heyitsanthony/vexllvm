@@ -16,7 +16,7 @@ public:
 protected:
 	VexExecChk(PTImgChk* gs, VexXlate* vx = NULL);
 
-	virtual uint64_t doVexSB(VexSB* vsb);
+	virtual guest_ptr doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);
 	void doSysCallCore(VexSB* vsb);
 	void verifyBlockRun(VexSB* vsb);
@@ -29,8 +29,8 @@ protected:
 private:
 	bool		hit_syscall;
 	bool		is_deferred;
-	uintptr_t	deferred_bound_start;
-	uintptr_t	deferred_bound_end;
+	guest_ptr	deferred_bound_start;
+	guest_ptr	deferred_bound_end;
 };
 
 #endif

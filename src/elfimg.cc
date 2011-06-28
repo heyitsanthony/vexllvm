@@ -23,12 +23,12 @@
 #define ElfImg32 ElfImg
 #define ElfImg64 ElfImg
 
-ElfImg* ElfImg::create(const char* fname, bool linked)
+ElfImg* ElfImg::create(GuestMem* mem, const char* fname, bool linked)
 {
 	Arch::Arch arch = readHeader(fname, linked);
 	if(arch == Arch::Unknown)
 		return NULL;
-	return new ElfImg(fname, arch, linked);
+	return new ElfImg(mem, fname, arch, linked);
 }
 
 ElfImg::~ElfImg(void)
@@ -41,10 +41,11 @@ ElfImg::~ElfImg(void)
 	close(fd);
 }
 
-ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked)
+ElfImg::ElfImg(GuestMem* in_mem, const char* fname, Arch::Arch in_arch, bool in_linked)
 : interp(NULL)
 , linked(in_linked)
 , arch(in_arch)
+, mem(in_mem)
 {
 	struct stat	st;
 
@@ -73,6 +74,7 @@ ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked)
 		break;
 	case Arch::ARM:
 	case Arch::I386:
+		mem->mark32Bit();
 		address_bits = 32;
 		setupSegments<Elf32_Ehdr, Elf32_Phdr>();
 		break;
@@ -91,7 +93,7 @@ int ElfImg::getHeaderCount() const {
 	}
 }
 
-celfptr_t ElfImg::getHeader() const {
+const guest_ptr ElfImg::getHeader() const {
 	/* this is so janky and will most likely not work other places */
 	if(address_bits == 32) {
 		return getFirstSegment()->offset(hdr32->e_phoff);
@@ -109,21 +111,19 @@ void ElfImg::setupSegments(void)
 	Elf_Ehdr *hdr = (Elf_Ehdr*)hdr_raw;
 	Elf_Phdr *phdr = (Elf_Phdr*)(((char*)hdr) + hdr->e_phoff);
 
-	direct_mapped = true;
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
 		ElfSegment	*es;
 		
 		if (phdr[i].p_type == PT_INTERP) {
 			std::string path((char*)img_mmap + phdr[i].p_offset);
 			path = library_root + path;
-			interp = ElfImg::create(path.c_str(), false); 
+			interp = ElfImg::create(mem, path.c_str(), false); 
 			continue;
 		}
-		es = ElfSegment::load(fd, phdr[i], 
-			segments.empty() ? 0
+		es = ElfSegment::load(mem, fd, phdr[i], 
+			segments.empty() ? uintptr_t(0)
 			: getFirstSegment()->relocation());
 		if (!es) continue;
-		if (!es->isDirectMapped()) direct_mapped = false;
 
 		segments.push_back(es);
 	}
@@ -146,14 +146,14 @@ static const unsigned char ok_ident_32[] = "\x7f""ELF\x1\x1\x1";
 
 #define EXPECTED(x)	fprintf(stderr, "ELF: expected "x"!\n")
 
-elfptr_t ElfImg::getEntryPoint(void) const {
+guest_ptr ElfImg::getEntryPoint(void) const {
 	/* address must be translated in case the region was remapped
 	   as is the case for the interp which specified a load address
 	   base of 0 */
 	if(address_bits == 32) {
-		return xlateAddr((void*)hdr32->e_entry); 
+		return xlateAddr(guest_ptr(hdr32->e_entry)); 
 	} else if(address_bits == 64) {
-		return xlateAddr((void*)hdr64->e_entry); 
+		return xlateAddr(guest_ptr(hdr64->e_entry)); 
 	} else {
 		assert(!"address bits corrupted");
 	}
@@ -250,18 +250,18 @@ Arch::Arch ElfImg::readHeader64(const Elf64_Ehdr* hdr, bool require_exe) {
 	return Arch::Unknown;
 }
 
-hostptr_t ElfImg::xlateAddr(elfptr_t elfptr) const
+guest_ptr ElfImg::xlateAddr(guest_ptr elfptr) const
 {
 	foreach (it, segments.begin(), segments.end()) {
 		ElfSegment	*es = *it;
-		hostptr_t	ret;
+		guest_ptr	ret;
 
 		ret = es->xlate(elfptr);
 		if (ret) return ret;
 	}
 
 	/* failed to xlate */
-	return 0;
+	return guest_ptr(0);
 }
 
 void ElfImg::getSegments(std::list<ElfSegment*>& r) const

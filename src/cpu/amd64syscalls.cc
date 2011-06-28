@@ -6,15 +6,15 @@
 #include <sstream>
 #include "Sugar.h"
 
-#include "guestmem.h"
 #include "guest.h"
+#include "guestmem.h"
 #include "syscall/syscalls.h"
 #include "amd64cpustate.h"
 
 /* this header loads all of the system headers outside of the namespace */
 #include "syscall/translatedsyscall.h"
 
-static GuestMem::Mapping* g_syscall_last_mapping = NULL;
+static GuestMem* g_mem = NULL;
 static std::vector<char*> g_to_delete;
 
 namespace AMD64 {
@@ -42,8 +42,6 @@ namespace AMD64 {
 	/* memory mapping requires wrappers based on the host address
 	   space limitations */
 	/* oh poo, this needs to record mappings... they don't right now */
-	#define target_mmap(a, l, p, f, fd, o) \
-		(abi_long)(uintptr_t)mmap((void*)a, l, p, f, fd, o)
 	#define mmap_find_vma(s, l)	mmap_find_vma_flags(s, l, MAP_32BIT)
 
 	/* our implementations of stuff ripped out of the qemu files */
@@ -111,8 +109,7 @@ std::string Syscalls::getAMD64SyscallName(int sys_nr) const {
 }
 
 uintptr_t Syscalls::applyAMD64Syscall(
-	SyscallParams& args,
-	GuestMem::Mapping& m)
+	SyscallParams& args)
 {
 	uintptr_t sc_ret = ~0ULL;
 
@@ -122,7 +119,7 @@ uintptr_t Syscalls::applyAMD64Syscall(
 	   the other mechanisms finish the job */
 	switch (args.getSyscall()) {
 	case SYS_arch_prctl:
-		if(AMD64_arch_prctl(args, m, sc_ret))
+		if(AMD64_arch_prctl(args, sc_ret))
 			return sc_ret;
 		break;
 	default:
@@ -130,10 +127,13 @@ uintptr_t Syscalls::applyAMD64Syscall(
 	}
 
 	/* if the host and guest are identical, then just pass through */
-	if(!force_translation && guest->getArch() == Arch::getHostArch()) {
-		return passthroughSyscall(args, m);
+	if(mappings->isFlat() && !force_translation && 
+		guest->getArch() == Arch::getHostArch()) 
+	{
+		return passthroughSyscall(args);
 	}
 	
+	g_mem = mappings;
 	sc_ret = AMD64::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),
@@ -143,11 +143,6 @@ uintptr_t Syscalls::applyAMD64Syscall(
 		args.getArg(4),
 		args.getArg(5));
 		
-	if(g_syscall_last_mapping) {
-		m = *g_syscall_last_mapping;
-		g_syscall_last_mapping = NULL;
-	}
-	
 	foreach(it, g_to_delete.begin(), g_to_delete.end())
 		delete [] *it;
 	g_to_delete.clear();

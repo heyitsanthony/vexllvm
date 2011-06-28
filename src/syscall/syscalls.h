@@ -18,7 +18,6 @@ class GuestCPUState;
 #define SYSCALL_HANDLER_TRICK(arch, call, underbar) \
 	bool arch##underbar##call(		\
 		SyscallParams&		args,	\
-		GuestMem::Mapping&	m,	\
 		unsigned long&		sc_ret)
 
 #define SYSCALL_BODY(arch, call) SYSCALL_BODY_TRICK(arch, call, _)
@@ -26,7 +25,6 @@ class GuestCPUState;
 #define SYSCALL_BODY_TRICK(arch, call, underbar) \
 	bool Syscalls::arch##underbar##call(	\
 		SyscallParams&		args,	\
-		GuestMem::Mapping&	m,	\
 		unsigned long&		sc_ret)
 
 class Syscalls
@@ -43,15 +41,13 @@ public:
 	std::string getSyscallName(int guest) const;
 	
 	int translateSyscall(int guest) const;
-private:
+protected:
 	bool interceptSyscall(
 		int sys_nr,
 		SyscallParams& args,
-		GuestMem::Mapping& m, 
 		unsigned long& sc_ret);
 	uintptr_t passthroughSyscall(
-		SyscallParams& args,
-		GuestMem::Mapping& m);
+		SyscallParams& args);
 
 	/* map a guest syscall number to the host equivalent */
 	int translateARMSyscall(int sys_nr) const;
@@ -63,15 +59,9 @@ private:
 	std::string getAMD64SyscallName(int sys_nr) const;
 	
 	/* either passthrough or emulate the syscall */
-	uintptr_t applyARMSyscall(
-		SyscallParams& args,
-		GuestMem::Mapping& m);
-	uintptr_t applyI386Syscall(
-		SyscallParams& args,
-		GuestMem::Mapping& m);
-	uintptr_t applyAMD64Syscall(
-		SyscallParams& args,
-		GuestMem::Mapping& m);
+	uintptr_t applyARMSyscall(SyscallParams& args);
+	uintptr_t applyI386Syscall(SyscallParams& args);
+	uintptr_t applyAMD64Syscall(SyscallParams& args);
 		
 	Guest				*guest;
 	std::list<SyscallParams>	sc_trace;
@@ -94,6 +84,8 @@ private:
 	SYSCALL_HANDLER(AMD64, arch_modify_ldt);
 	SYSCALL_HANDLER(ARM, cacheflush);
 	SYSCALL_HANDLER(ARM, set_tls);
+	SYSCALL_HANDLER(ARM, mmap2);
+	SYSCALL_HANDLER(I386, mmap2);
 };
 
 #endif

@@ -13,7 +13,7 @@
 
 using namespace llvm;
 
-VexSB::VexSB(uint64_t in_guest_addr, const IRSB* irsb)
+VexSB::VexSB(guest_ptr in_guest_addr, const IRSB* irsb)
 :	guest_addr(in_guest_addr),
 	reg_c(irsb->tyenv->types_used),
 	stmt_c(irsb->stmts_used),
@@ -35,7 +35,7 @@ VexSB::~VexSB(void)
 	delete [] types;
 }
 
-VexSB::VexSB(uint64_t in_guest_addr, unsigned int num_regs)
+VexSB::VexSB(guest_ptr in_guest_addr, unsigned int num_regs, IRType* in_types)
 : 	guest_addr(in_guest_addr),
 	reg_c(num_regs),
 	stmt_c(0),
@@ -43,6 +43,8 @@ VexSB::VexSB(uint64_t in_guest_addr, unsigned int num_regs)
 {
 	values = new Value*[reg_c];
 	memset(values, 0, sizeof(Value*)*getNumRegs());
+	types = new IRType[reg_c];
+	memcpy(types, in_types, reg_c * sizeof(IRType));
 }
 
 void VexSB::load(
@@ -256,17 +258,17 @@ void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 	}
 }
 
-uint64_t VexSB::getJmp(void) const
+guest_ptr VexSB::getJmp(void) const
 {
 	VexExprConst	*cexpr;
 
 	cexpr = dynamic_cast<VexExprConst*>(jump_expr);
-	if (cexpr == NULL) return 0;
+	if (cexpr == NULL) return guest_ptr(0);
 
-	return cexpr->toValue();
+	return guest_ptr(cexpr->toValue());
 }
 
-uint64_t VexSB::getEndAddr(void) const
+guest_ptr VexSB::getEndAddr(void) const
 {
 	assert (last_imark != NULL);
 	return last_imark->getAddr() + last_imark->getLen();

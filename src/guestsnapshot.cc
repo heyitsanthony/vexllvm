@@ -11,14 +11,14 @@
 using namespace std;
 
 #ifdef __amd64__
-#define SYSPAGE_ADDR	((void*)0xffffffffff600000)
+#define SYSPAGE_ADDR	guest_ptr(0xffffffffff600000)
 #endif
 
-GuestSnapshot* GuestSnapshot::create(const char* dirpath)
+GuestSnapshot* GuestSnapshot::create(GuestMem* mem, const char* dirpath)
 {
 	GuestSnapshot	*ret;
 
-	ret = new GuestSnapshot(dirpath);
+	ret = new GuestSnapshot(mem, dirpath);
 	if (ret->is_valid == false) {
 		delete ret;
 		return NULL;
@@ -35,8 +35,8 @@ GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
 
-GuestSnapshot::GuestSnapshot(const char* dirpath)
-: Guest(NULL), is_valid(false)
+GuestSnapshot::GuestSnapshot(GuestMem* mem, const char* dirpath)
+: Guest(mem, NULL), is_valid(false)
 {
 	ssize_t	sz;
 
@@ -58,7 +58,7 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	END_F()
 
 	SETUP_F_R("regs")
-	cpu_state = GuestCPUState::create(arch);
+	cpu_state = GuestCPUState::create(mem, arch);
 	sz = fread(
 		cpu_state->getStateData(),
 		cpu_state->getStateSize(),
@@ -73,7 +73,7 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	mem = new GuestMem();
 
 	while (fgets(buf, 512, f) != NULL) {
-		void		*begin, *end, *mmap_addr;
+		guest_ptr	begin, end, mmap_addr;
 		size_t		length;
 		int		prot, is_stack;
 		int		item_c;
@@ -82,26 +82,23 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 		item_c = sscanf(
 			buf,
 			"%p-%p %d %d\n",
-			&begin, &end, &prot, &is_stack);
+			(void**)&begin, (void**)&end, &prot, &is_stack);
 		assert (item_c == 4);
 
 		length =(uintptr_t)end - (uintptr_t)begin;
 
-		snprintf(buf, 512, "%s/maps/%p", dirpath, begin);
+		snprintf(buf, 512, "%s/maps/%p", dirpath, (void*)begin.o);
 		fd = open(buf, O_RDONLY);
 		assert (fd != -1);
-		mmap_addr = mmap(
+		int res = mem->mmap(mmap_addr,
 			begin,
 			length,
 			prot,
 			MAP_PRIVATE | MAP_FIXED,
 			fd,
 			0);
-		assert (mmap_addr != MAP_FAILED);
+		assert (res == 0 && "failed to map region on ss load");
 		fd_list.push_back(fd);
-
-		GuestMem::Mapping	s(begin, length, prot,(is_stack != 0));
-		mem->recordMapping(s);
 	}
 
 #ifdef __amd64__
@@ -192,16 +189,20 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 
 		/* range, prot, is_stack */
 		fprintf(f, "%p-%p %d %d\n",
-			mapping.offset,
-			mapping.end(),
+			(void*)mapping.offset.o,
+			(void*)mapping.end().o,
 			mapping.req_prot,
 			(int)(mapping.isStack()));
 
-		snprintf(buf, 512, "%s/maps/%p", dirpath, mapping.offset);
+		snprintf(buf, 512, "%s/maps/%p", dirpath,
+			(void*)mapping.offset.o);
 		map_f = fopen(buf, "w");
 		assert (map_f && "Couldn't open mem range file");
 
-		sz = fwrite(mapping.offset, mapping.length, 1, map_f);
+		char* buffer = new char[mapping.length];
+		g->getMem()->memcpy(buffer, mapping.offset, mapping.length);
+		sz = fwrite(buffer, mapping.length, 1, map_f);
+		delete [] buffer;
 		assert (sz == 1 && "Failed to write mapping");
 		fclose(map_f);
 

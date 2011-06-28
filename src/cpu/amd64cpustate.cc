@@ -5,7 +5,6 @@
 #include <cstring>
 #include <vector>
 
-#include "guesttls.h"
 #include "amd64cpustate.h"
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
@@ -15,7 +14,8 @@ extern "C" {
 
 #define FS_SEG_OFFSET	(24*8)
 
-AMD64CPUState::AMD64CPUState()
+AMD64CPUState::AMD64CPUState(GuestMem* mem)
+: GuestCPUState(mem)
 {
 	mkRegCtx();
 
@@ -23,34 +23,21 @@ AMD64CPUState::AMD64CPUState()
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
 	state2amd64()->guest_DFLAG = 1;
-
-	tls = new GuestTLS();
-	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) =
-		(uintptr_t)tls->getBase();
 }
 
 AMD64CPUState::~AMD64CPUState()
 {
 	delete [] state_data;
-	delete tls;
 }
 
-void AMD64CPUState::setPC(void* ip) {
-	state2amd64()->guest_RIP = (uintptr_t)ip;
+void AMD64CPUState::setPC(guest_ptr ip) {
+	state2amd64()->guest_RIP = ip;
 }
-void* AMD64CPUState::getPC(void) const {
-	return (void*)state2amd64()->guest_RIP;
+guest_ptr AMD64CPUState::getPC(void) const {
+	return guest_ptr(state2amd64()->guest_RIP);
 }
-void* AMD64CPUState::getReturnAddress(void) const {
-	return (void*)(uintptr_t)*(const unsigned int*)getStackPtr();
-}
-
-void AMD64CPUState::setTLS(GuestTLS* in_tls)
-{
-	delete tls;
-	tls = in_tls;
-	*((uintptr_t*)(((uintptr_t)state_data) + FS_SEG_OFFSET)) =
-		(uintptr_t)tls->getBase();
+guest_ptr AMD64CPUState::getReturnAddress(void) const {
+	return guest_ptr(mem->read<unsigned long>(getStackPtr()));
 }
 
 /* ripped from libvex_guest_amd64 */
@@ -179,14 +166,14 @@ unsigned int AMD64CPUState::byteOffset2ElemIdx(unsigned int off) const
 	return (*it).second;
 }
 
-void AMD64CPUState::setStackPtr(void* stack_ptr)
+void AMD64CPUState::setStackPtr(guest_ptr stack_ptr)
 {
 	state2amd64()->guest_RSP = (uint64_t)stack_ptr;
 }
 
-void* AMD64CPUState::getStackPtr(void) const
+guest_ptr AMD64CPUState::getStackPtr(void) const
 {
-	return (void*)(state2amd64()->guest_RSP);
+	return guest_ptr(state2amd64()->guest_RSP);
 }
 
 /**
@@ -257,17 +244,6 @@ void AMD64CPUState::print(std::ostream& os) const
 	}
 
 	os << "fs_base = " << (void*)state2amd64()->guest_FS_ZERO << std::endl;
-#if 0
-	const uint64_t*	tls_data = (const uint64_t*)tls->getBase();
-	unsigned int	tls_bytes = tls->getSize();
-
-	for (unsigned int i = 0; i < tls_bytes / sizeof(uint64_t); i++) {
-		if (!tls_data[i]) continue;
-		os	<< "fs+" << (void*)(i*8)  << ":"
-			<< (void*)tls_data[i]
-			<< std::endl;
-	}
-#endif
 }
 
 void AMD64CPUState::setFSBase(uintptr_t base) {

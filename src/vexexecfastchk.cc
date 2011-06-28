@@ -13,21 +13,21 @@ VexExecFastChk::VexExecFastChk(PTImgChk* gs, VexXlate* vx)
 {
 }
 
-uint64_t VexExecFastChk::doVexSB(VexSB* vsb)
+guest_ptr VexExecFastChk::doVexSB(VexSB* vsb)
 {
 	MemLog	*ml;
-	uint64_t new_ip;
+	guest_ptr new_ip;
 
 	cross_check->breakpointSysCalls(
-		(void*)vsb->getGuestAddr(),
-		(void*)vsb->getEndAddr());
+		vsb->getGuestAddr(),
+		vsb->getEndAddr());
 	if ((ml = cross_check->getMemLog())) {
 		ml->clear();
 		return VexExec::doVexSBAux(vsb, ml);
 	} else {
 		new_ip = VexExec::doVexSB(vsb);
 	}
-	gs->getCPUState()->setPC((void*)new_ip);
+	gs->getCPUState()->setPC(new_ip);
 
 	return new_ip;
 }
@@ -36,7 +36,7 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 {
 	VexGuestAMD64State*	state;
 	bool			matched;
-	void			*bp_addr;
+	guest_ptr		bp_addr;
 
 	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	/* shadow process has seen k syscall opcodes (and executed k); 

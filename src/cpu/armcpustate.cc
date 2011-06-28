@@ -8,7 +8,6 @@
 #include <cstring>
 #include <vector>
 
-#include "guesttls.h"
 #include "armcpustate.h"
 extern "C" {
 #include <valgrind/libvex_guest_arm.h>
@@ -24,7 +23,8 @@ struct ExtVexGuestARMState
 #define state2arm()	((VexGuestARMState*)(state_data))
 #define state2arm_ext() ((ExtVexGuestARMState*)(state_data))
 
-ARMCPUState::ARMCPUState()
+ARMCPUState::ARMCPUState(GuestMem* mem)
+: GuestCPUState(mem)
 {
 	mkRegCtx();
 
@@ -38,16 +38,17 @@ ARMCPUState::~ARMCPUState()
 	delete [] state_data;
 }
 
-void ARMCPUState::setPC(void* ip) {
-	state2arm()->guest_R15T = (uintptr_t)ip;
+void ARMCPUState::setPC(guest_ptr ip) {
+	state2arm()->guest_R15T = ip;
 }
-void* ARMCPUState::getPC(void) const {
+guest_ptr ARMCPUState::getPC(void) const {
 	/* todo is this right, do we need to mask the low
 	   bits that control whether its in thumb mode or not? */
-	return (void*)state2arm()->guest_R15T;
+	return guest_ptr(state2arm()->guest_R15T);
 }
-void* ARMCPUState::getReturnAddress(void) const {
-	return (void*)(uintptr_t)*(const unsigned int*)getStackPtr();
+guest_ptr ARMCPUState::getReturnAddress(void) const {
+	/* just return the link register? */
+	return guest_ptr(state2arm()->guest_R14);
 }
 
 
@@ -210,14 +211,14 @@ unsigned int ARMCPUState::byteOffset2ElemIdx(unsigned int off) const
 	return (*it).second;
 }
 
-void ARMCPUState::setStackPtr(void* stack_ptr)
+void ARMCPUState::setStackPtr(guest_ptr stack_ptr)
 {
-	state2arm()->guest_R13 = (uint64_t)stack_ptr;
+	state2arm()->guest_R13 = stack_ptr;
 }
 
-void* ARMCPUState::getStackPtr(void) const
+guest_ptr ARMCPUState::getStackPtr(void) const
 {
-	return (void*)(state2arm()->guest_R13);
+	return guest_ptr(state2arm()->guest_R13);
 }
 
 SyscallParams ARMCPUState::getSyscallParams(void) const

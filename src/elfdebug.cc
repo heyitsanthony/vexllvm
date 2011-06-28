@@ -12,7 +12,7 @@
 
 #include <stdio.h>
 
-Symbols* ElfDebug::getSyms(const char* elf_path, void* base)
+Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 {
 	Symbols		*ret;
 	Symbol		*s;
@@ -30,7 +30,7 @@ Symbols* ElfDebug::getSyms(const char* elf_path, void* base)
 
 		addr = s->getBaseAddr();
 		if (s->isCode() && s->getName().size() > 0 && addr) {
-			if (s->isDynamic()) addr += (uint64_t)base;
+			if (s->isDynamic()) addr += base;
 			ret->addSym(s->getName(), addr, s->getLength());
 		}
 		delete s;

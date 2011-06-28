@@ -2,6 +2,7 @@
 #define MEMLOG_H
 
 #include <string.h>
+#include "guestmem.h"
 
 namespace llvm {
 	class StructType;
@@ -18,7 +19,7 @@ public:
 	/* accessors for the logged data */
 	void clear() { memset(this, 0, sizeof(*this)); }	
 	bool wasWritten() const { return address != NULL; }
-	char* getAddress() const { return address; }
+	guest_ptr getAddress() const { return address; }
 	unsigned long getSize() const { return size; }
 	const char* getData() const { return &data[0]; }
 
@@ -31,7 +32,7 @@ public:
 	static const unsigned int MAX_STORE_SIZE = 128;
 private:
 
-	char 		*address;
+	guest_ptr 	address;
 	unsigned long 	size;
 	char		data[MAX_STORE_SIZE / 8];
 
