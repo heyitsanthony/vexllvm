@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "guest.h"
-#include "guesttls.h"
 #include "i386cpustate.h"
 extern "C" {
 #include <valgrind/libvex_guest_x86.h>
@@ -19,7 +18,8 @@ using namespace llvm;
 
 #define state2i386()	((VexGuestX86State*)(state_data))
 
-I386CPUState::I386CPUState()
+I386CPUState::I386CPUState(GuestMem* mem)
+: GuestCPUState(mem)
 {
 	mkRegCtx();
 
@@ -34,14 +34,14 @@ I386CPUState::~I386CPUState()
 	delete [] state_data;
 }
 
-void I386CPUState::setPC(void* ip) {
-	state2i386()->guest_EIP = (uintptr_t)ip;
+void I386CPUState::setPC(guest_ptr ip) {
+	state2i386()->guest_EIP = ip;
 }
-void* I386CPUState::getPC(void) const {
-	return (void*)state2i386()->guest_EIP;
+guest_ptr I386CPUState::getPC(void) const {
+	return guest_ptr(state2i386()->guest_EIP);
 }
-void* I386CPUState::getReturnAddress(void) const {
-	return (void*)(uintptr_t)*(const unsigned int*)getStackPtr();
+guest_ptr I386CPUState::getReturnAddress(void) const {
+	return guest_ptr(mem->read<unsigned int>(getStackPtr()));
 }
 
 
@@ -186,14 +186,14 @@ unsigned int I386CPUState::byteOffset2ElemIdx(unsigned int off) const
 	return (*it).second;
 }
 
-void I386CPUState::setStackPtr(void* stack_ptr)
+void I386CPUState::setStackPtr(guest_ptr stack_ptr)
 {
 	state2i386()->guest_ESP = (uint64_t)stack_ptr;
 }
 
-void* I386CPUState::getStackPtr(void) const
+guest_ptr I386CPUState::getStackPtr(void) const
 {
-	return (void*)(state2i386()->guest_ESP);
+	return guest_ptr(state2i386()->guest_ESP);
 }
 
 SyscallParams I386CPUState::getSyscallParams(void) const

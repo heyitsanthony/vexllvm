@@ -4,10 +4,13 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <string.h>
 
+/* class to enforce proper use of guest ptrs, operators
+   are defined as need to make code look nicer */
 struct guest_ptr {
 	guest_ptr() : o(0) {}
-	explicit guest_ptr(uintptr_t) : o() {}
+	explicit guest_ptr(uintptr_t a) : o(a) {}
 	uintptr_t o;
 	operator uintptr_t() const {
 		return o;
@@ -17,10 +20,15 @@ template <typename T>
 guest_ptr operator+(const guest_ptr& g, T offset) {
 	return guest_ptr(g.o + offset);
 }
-uintptr_t operator-(const guest_ptr& g, guest_ptr h) {
+inline uintptr_t operator-(const guest_ptr& g, guest_ptr h) {
 	return g.o - h.o;
 }
-
+inline bool operator < (const guest_ptr& g, guest_ptr h) {
+	return g.o < h.o;
+}
+inline bool operator > (const guest_ptr& g, guest_ptr h) {
+	return g.o > h.o;
+}
 class GuestMem
 {
 public:
@@ -72,6 +80,54 @@ public:
 	void mark32Bit() { is_32_bit = true; }
 	char* getBase() const { return base; }
 	bool findRegion(size_t len, Mapping& m);
+	
+	/* access small bits of guest memory */
+	template <typename T>
+	T read(guest_ptr offset) {
+		return *(T*)(base + offset.o);
+	}
+	uintptr_t readNative(guest_ptr offset) {
+		if(is_32_bit)
+			return *(unsigned int*)(base + offset.o);
+		else
+			return *(unsigned long*)(base + offset.o);
+	}
+	template <typename T>
+	void write(guest_ptr offset, const T& t) {
+		*(T*)(base + offset.o) = t;
+	}
+	void writeNative(guest_ptr offset, uintptr_t t) {
+		if(is_32_bit)
+			*(unsigned int*)(base + offset.o) = t;
+		else
+			*(unsigned long*)(base + offset.o) = t;
+	}
+
+	/* access large blocks of guest memory */
+	void memcpy(guest_ptr dest, const void* src, size_t len) {
+		::memcpy(base + dest.o, src, len);
+	}
+	void memcpy(void* dest, guest_ptr src, size_t len) const {
+		::memcpy(dest, base + src.o, len);
+	}
+	void memset(guest_ptr dest, char d, size_t len) {
+		::memset(base + dest.o, d, len);
+	}
+	int strlen(guest_ptr p) const {
+		return ::strlen(base + p.o);
+	}
+	
+	/* virtual memory handling, these update the mappings as 
+	   necessary and also do the proper protection to 
+	   distinguish between self-modifying/generating code
+	   and normal data writes */
+	int mmap(guest_ptr& result, guest_ptr addr, size_t length,
+	 	int prot, int flags, int fd, off_t offset);
+	int mprotect(guest_ptr offset, size_t length, 
+		int prot);
+	int munmap(guest_ptr offset, size_t length);
+	int mremap(guest_ptr& result, guest_ptr old_offset, 
+		size_t old_length, size_t new_length, int flags, guest_ptr new_offset);
 
 private:
 	bool sbrkInitial();

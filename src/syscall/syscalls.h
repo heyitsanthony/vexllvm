@@ -43,7 +43,7 @@ public:
 	std::string getSyscallName(int guest) const;
 	
 	int translateSyscall(int guest) const;
-private:
+protected:
 	bool interceptSyscall(
 		int sys_nr,
 		SyscallParams& args,

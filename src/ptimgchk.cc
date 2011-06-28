@@ -128,10 +128,10 @@ void PTImgChk::handleChild(pid_t pid)
 }
 
 void PTImgChk::stepThroughBounds(
-	uint64_t start, uint64_t end,
+	guest_ptr start, guest_ptr end,
 	const VexGuestAMD64State& state)
 {
-	uintptr_t	new_ip;
+	guest_ptr	new_ip;
 
 	/* TODO: timeout? */
 	do {
@@ -141,15 +141,15 @@ void PTImgChk::stepThroughBounds(
 	} while (new_ip >= start && new_ip < end);
 }
 
-uintptr_t PTImgChk::continueForwardWithBounds(
-	uint64_t start, uint64_t end,
+guest_ptr PTImgChk::continueForwardWithBounds(
+	guest_ptr start, guest_ptr end,
 	const VexGuestAMD64State& state)
 {
 	user_regs_struct	regs;
 
 	if (log_steps) {
 		std::cerr << "RANGE: "
-			<< (void*)start << "-" << (void*)end
+			<< (void*)start.o << "-" << (void*)end.o
 			<< std::endl;
 	}
 
@@ -157,11 +157,11 @@ uintptr_t PTImgChk::continueForwardWithBounds(
 	while (doStep(start, end, regs, state)) {
 		/* so we trap on backjumps */
 		if (regs.rip > start)
-			start = regs.rip;
+			start = guest_ptr(regs.rip);
 	}
 
 	blocks++;
-	return regs.rip;
+	return guest_ptr(regs.rip);
 }
 
 bool PTImgChk::isRegMismatch(
@@ -188,18 +188,18 @@ bool PTImgChk::isRegMismatch(
 /* if we find an opcode that is causing problems, we'll replace the vexllvm
  * state with the pt state (since the pt state is by definition correct)
  */
-bool PTImgChk::fixup(const void* ip_begin, const void* ip_end)
+bool PTImgChk::fixup(const guest_ptr ip_begin, const guest_ptr ip_end)
 {
-	const char		*cur_window, *last_window;
+	guest_ptr cur_window, last_window;
 
 	/* guest ip's are mapped in our addr space, no need for IPC */
-	cur_window = (const char*)ip_begin;
-	last_window = ((const char*)ip_end)-(sizeof(long)-1);
+	cur_window = ip_begin;
+	last_window = guest_ptr(ip_end.o - (sizeof(long) - 1));
 	while (cur_window < ip_end) {
 		long		op;
 		uint16_t	op16;
 
-		memcpy(&op, cur_window, sizeof(long));
+		mem->memcpy(&op, cur_window, sizeof(long));
 		op16 = op & 0xffff;
 		switch (op16) {
 		case 0xbc0f: /* BSF */
@@ -207,17 +207,18 @@ bool PTImgChk::fixup(const void* ip_begin, const void* ip_end)
 			fprintf(stderr,
 				"[VEXLLVM] fixing up op=%p@IP=%p\n",
 				(void*)op16,
-				cur_window);
+				(void*)cur_window.o);
 			slurpRegisters(child_pid);
 			return true;
 		default:
 			break;
 		}
 
-		cur_window++;
+		cur_window.o++;
 	}
 
-	fprintf(stderr, "VAIN ATTEMPT TO FIXUP %p-%p\n", ip_begin, ip_end);
+	fprintf(stderr, "VAIN ATTEMPT TO FIXUP %p-%p\n", 
+		(void*)ip_begin.o, (void*)ip_end.o);
 	/* couldn't figure out how to fix */
 	return false;
 }
@@ -315,7 +316,7 @@ bool PTImgChk::isMatchMemLog() const
 
 
 bool PTImgChk::doStep(
-	uint64_t start, uint64_t end,
+	guest_ptr start, guest_ptr end,
 	user_regs_struct& regs,
 	const VexGuestAMD64State& state)
 {
@@ -326,8 +327,8 @@ bool PTImgChk::doStep(
 		if(log_steps) {
 			std::cerr << "STOPPING: "
 				<< (void*)regs.rip << " not in ["
-				<< (void*)start << ", "
-				<< (void*)end << "]"
+				<< (void*)start.o << ", "
+				<< (void*)end.o << "]"
 				<< std::endl;
 		}
 		/* out of bounds, report back, no more stepping */
@@ -541,26 +542,28 @@ void PTImgChk::setRegs(const user_regs_struct& regs)
 	}
 }
 
-void PTImgChk::copyIn(void* dst, const void* src, unsigned int bytes)
+void PTImgChk::copyIn(guest_ptr dst, const void* src, unsigned int bytes)
 {
-	const char	*in_addr, *end_addr;
-	char		*out_addr;
+	char*		in_addr;
+	guest_ptr	out_addr, end_addr;
 
 	assert ((bytes % sizeof(long)) == 0);
 
-	in_addr = (const char*)src;
-	out_addr = (char*)dst;
+	in_addr = (char*)src;
+	out_addr = dst;
 	end_addr = out_addr + bytes;
 
 	while (out_addr < end_addr) {
-		int	err;
-		err = ptrace(PTRACE_POKEDATA, child_pid, out_addr, *(long*)in_addr);
+		long data = *(long*)in_addr;
+		int err = ptrace(PTRACE_POKEDATA, child_pid, 
+			out_addr.o, data);
+		assert(err == 0);
 		in_addr += sizeof(long);
-		out_addr += sizeof(long);
+		out_addr.o += sizeof(long);
 	}
 }
 
-void* PTImgChk::stepToBreakpoint(void)
+guest_ptr PTImgChk::stepToBreakpoint(void)
 {
 	int	err, status;
 
@@ -578,7 +581,7 @@ void* PTImgChk::stepToBreakpoint(void)
 			"OOPS. status: stopped=%d sig=%d status=%p\n",
 			WIFSTOPPED(status), WSTOPSIG(status), (void*)status);
 		getRegs(regs);
-		stackTraceSubservient(std::cerr, NULL,  NULL);
+		stackTraceSubservient(std::cerr, guest_ptr(0),  guest_ptr(0));
 		assert (0 == 1 && "bad wait from breakpoint");
 	}
 
@@ -611,7 +614,8 @@ void PTImgChk::waitForSingleStep(void)
 	}
 }
 
-void PTImgChk::stackTraceSubservient(std::ostream& os, void* begin, void* end)
+void PTImgChk::stackTraceSubservient(std::ostream& os, guest_ptr begin,
+	guest_ptr end)
 {
 	stackTrace(os, getBinaryPath(), child_pid, begin, end);
 }
@@ -689,7 +693,7 @@ void PTImgChk::printMemory(std::ostream& os) const
 
 	if(!isMatchMemLog())
 		os << "***";
-	os << "last write @ " << (void*)mem_log->getAddress()
+	os << "last write @ " << (void*)mem_log->getAddress().o
 		<< " size: " << mem_log->getSize();
 
 	char data[MemLog::MAX_STORE_SIZE / 8 + sizeof(long)];
@@ -698,9 +702,9 @@ void PTImgChk::printMemory(std::ostream& os) const
 	uintptr_t aligned = base & ~(sizeof(long) - 1);
 	uintptr_t end = base + mem_log->getSize();
 	unsigned int extra = base - aligned;
-	for(long* mem = (long*)&data[0];
-		aligned < end; aligned += sizeof(long), ++mem) {
-		*mem = ptrace(PTRACE_PEEKTEXT, child_pid,
+	for(long* lmem = (long*)&data[0];
+		aligned < end; aligned += sizeof(long), ++lmem) {
+		*lmem = ptrace(PTRACE_PEEKTEXT, child_pid,
 			aligned, NULL);
 	}
 	memmove(&data[0], &data[extra], mem_log->getSize());
@@ -708,7 +712,7 @@ void PTImgChk::printMemory(std::ostream& os) const
 		<< *(void**)&data[0];
 
 	void* vexdata[2] = {0, 0};
-	memcpy(&vexdata[0], mem_log->getAddress(),
+	mem->memcpy(&vexdata[0], mem_log->getAddress(),
 		mem_log->getSize());
 	os << " vexdata: " << vexdata[1] << "|" << vexdata[0];
 
@@ -766,18 +770,18 @@ void PTImgChk::printTraceStats(std::ostream& os)
 		<< steps << " instructions" << std::endl;
 }
 
-bool PTImgChk::breakpointSysCalls(const void* ip_begin, const void* ip_end)
+bool PTImgChk::breakpointSysCalls(const guest_ptr ip_begin, 
+	const guest_ptr ip_end)
 {
-	long	rip;
+	guest_ptr	rip = ip_begin;
 	bool	set_bp = false;
 
-	rip = (long)(uintptr_t)ip_begin;
-	while ((const void*)rip != ip_end) {
+	while (rip != ip_end) {
 		if (((getInsOp(rip) & 0xffff) == 0x050f)) {
-			setBreakpoint((void*)rip);
+			setBreakpoint(rip);
 			set_bp = true;
 		}
-		rip++;
+		rip.o++;
 	}
 
 	return set_bp;

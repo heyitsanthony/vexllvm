@@ -20,7 +20,7 @@ const Symbol* Symbols::findSym(const std::string& s) const
 	return (*it).second;
 }
 
-const Symbol* Symbols::findSym(void* ptr) const
+const Symbol* Symbols::findSym(uint64_t ptr) const
 {
 	const Symbol			*ret;
 	symaddr_map::const_iterator	it;

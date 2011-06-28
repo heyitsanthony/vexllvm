@@ -117,8 +117,8 @@ VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 #define MAX_CODE_BYTES 1024
 const VexSB* VexExec::doNextSB(void)
 {
-	elfptr_t	elfptr;
-	elfptr_t	new_jmpaddr;
+	guest_ptr	elfptr;
+	guest_ptr	new_jmpaddr;
 	VexSB		*vsb;
 	GuestExitType	exit_type;
 
@@ -130,7 +130,7 @@ const VexSB* VexExec::doNextSB(void)
 				trace.pop_front();
 			else
 				trace_c++;
-			trace.push_back(std::pair<void*, int>(
+			trace.push_back(std::pair<guest_ptr, int>(
 				elfptr, addr_stack.size()));
 		} else {
 			std::cerr
@@ -143,17 +143,17 @@ const VexSB* VexExec::doNextSB(void)
 
 	addr_stack.pop();
 
-	if(to_flush.first) {
+	if(to_flush.first.o) {
 		jit_cache->flush(
-			(void*)((uintptr_t)to_flush.first - MAX_CODE_BYTES),
-			(void*)((uintptr_t)to_flush.second + MAX_CODE_BYTES));
-		to_flush = std::make_pair(0, 0);
+			guest_ptr(to_flush.first.o - MAX_CODE_BYTES),
+			guest_ptr(to_flush.second.o + MAX_CODE_BYTES));
+		to_flush = std::make_pair(guest_ptr(0), guest_ptr(0));
 	}
 
 	vsb = getSBFromGuestAddr(elfptr);
 	if (vsb == NULL) return NULL;
 
-	new_jmpaddr = (void*)doVexSB(vsb);
+	new_jmpaddr = doVexSB(vsb);
 
 	/* check for special exits */
 	exit_type = gs->getCPUState()->getExitType();
@@ -210,23 +210,23 @@ void VexExec::doSysCall(VexSB* vsb, SyscallParams& sp)
 	gs->setSyscallResult(sc_ret);
 }
 
-VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
+VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 {
-	hostptr_t			hostptr;
+	void*				hostptr;
 	VexSB				*vsb;
 	vexsb_map::const_iterator	it;
 	GuestMem::Mapping		m;
 	bool				found;
 
-	hostptr = elfptr;
+	hostptr = gs->getMem()->getBase() + elfptr.o;
 
-	if (exit_addrs.count((elfptr_t)elfptr)) {
+	if (exit_addrs.count(elfptr)) {
 		exited = true;
 		exit_code = gs->getExitCode();
 		return NULL;
 	}
 
-	found = gs->getMem()->lookupMapping(hostptr, m);
+	found = gs->getMem()->lookupMapping(elfptr, m);
 
 	/* assuming !found means its ok... but that's not totally true */
 	/* XXX, when is !found bad? */
@@ -235,34 +235,35 @@ VexSB* VexExec::getSBFromGuestAddr(void* elfptr)
 	 * trigger a signal handler which will invalidate the page's
 	 * old code. */
 	if (found) {
+		/* it be nice to factor some of this into guestmem */
 		if (!(m.req_prot & PROT_EXEC)) {
 			assert (false && "Trying to jump to non-code");
 		}
 		if (m.cur_prot & PROT_WRITE) {
 			m.cur_prot = m.req_prot & ~PROT_WRITE;
-			mprotect(m.offset, m.length, m.cur_prot);
+			mprotect(gs->getMem()->getBase() + m.offset, m.length,
+				m.cur_prot);
 			gs->getMem()->recordMapping(m);
 		}
 	}
 
 	/* compile it + get vsb */
-	vsb = jit_cache->getVSB(
-		(char*)gs->getMem()->getBase() + (uint64_t)elfptr,
-		(uint64_t)elfptr);
-	jit_cache->getFPtr(hostptr, (uint64_t)elfptr);
+	vsb = jit_cache->getVSB(hostptr, elfptr);
+	jit_cache->getFPtr(hostptr, elfptr);
 
-	if (!vsb) fprintf(stderr, "Could not get VSB for %p\n", elfptr);
+	if (!vsb) fprintf(stderr, "Could not get VSB for %p\n", 
+		(void*)elfptr.o);
 	assert (vsb && "Expected VSB");
-	assert((!found || (void*)vsb->getEndAddr() < m.end()) &&
+	assert((!found || vsb->getEndAddr() < m.end()) &&
 		"code spanned known page mappings");
 
 	return vsb;
 }
 
-uint64_t VexExec::doVexSBAux(VexSB* vsb, void* aux)
+guest_ptr VexExec::doVexSBAux(VexSB* vsb, void* aux)
 {
 	vexfunc_t		func_ptr;
-	uint64_t		new_ip;
+	guest_ptr		new_ip;
 
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);
@@ -275,10 +276,10 @@ uint64_t VexExec::doVexSBAux(VexSB* vsb, void* aux)
 	return new_ip;
 }
 
-uint64_t VexExec::doVexSB(VexSB* vsb)
+guest_ptr VexExec::doVexSB(VexSB* vsb)
 {
 	vexfunc_t		func_ptr;
-	uint64_t		new_ip;
+	guest_ptr		new_ip;
 
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);
@@ -314,7 +315,7 @@ void VexExec::beginStepping(void)
 bool VexExec::stepVSB(void)
 {
 	const VexSB	*sb;
-	void		*top_addr;
+	guest_ptr	top_addr;
 
 	if (addr_stack.empty() || exited) goto done_with_all;
 
@@ -346,7 +347,7 @@ void VexExec::dumpLogs(std::ostream& os) const
 	sc->print(os);
 }
 
-void VexExec::flushTamperedCode(void* begin, void* end)
+void VexExec::flushTamperedCode(guest_ptr begin, guest_ptr end)
 {
 	to_flush = std::make_pair((uintptr_t)begin, (uintptr_t)end);
 }
@@ -361,7 +362,8 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 	bool			found;
 
 	mem = exec_context->gs->getMem();
-	found = mem->lookupMapping(si->si_addr, m);
+	found = mem->lookupMapping(
+		guest_ptr((char*)si->si_addr - mem->getBase()), m);
 	if (!found) {
 		std::cerr << "Caught SIGSEGV but couldn't "
 			<< "find a mapping to tweak @ \n"
@@ -370,7 +372,7 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 	}
 	if ((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
 		m.cur_prot = m.req_prot & ~PROT_EXEC;
-		mprotect(m.offset, m.length, m.cur_prot);
+		mprotect(mem->getBase() + m.offset, m.length, m.cur_prot);
 		mem->recordMapping(m);
 		exec_context->flushTamperedCode(m.offset, m.end());
 	} else {

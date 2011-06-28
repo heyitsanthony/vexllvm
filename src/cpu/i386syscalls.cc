@@ -2,7 +2,6 @@
 #include <sys/errno.h>
 #include <sys/prctl.h>
 #include <asm/prctl.h> 
-#include "guestmem.h"
 #include <vector>
 #include <sstream>
 #include "Sugar.h"
@@ -15,7 +14,8 @@
 /* this header loads all of the system headers outside of the namespace */
 #include "syscall/translatedsyscall.h"
 
-static GuestMem::Mapping* g_syscall_last_mapping = NULL;
+static GuestMem* g_mem = NULL;
+static const GuestMem::Mapping* g_syscall_last_mapping = NULL;
 static std::vector<char*> g_to_delete;
 
 namespace I386 {
@@ -130,6 +130,7 @@ uintptr_t Syscalls::applyI386Syscall(
 		return passthroughSyscall(args, m);
 	}
 	
+	g_mem = mappings;
 	sc_ret = I386::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),

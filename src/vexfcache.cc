@@ -41,10 +41,10 @@ void VexFCache::setMaxCache(unsigned int x)
 }
 
 /* XXX: be smarter; random eviction is stupid */
-uint64_t VexFCache::selectVictimAddress(void) const
+guest_ptr VexFCache::selectVictimAddress(void) const
 {
 	int		choice = rand() % vexsb_cache.size();
-	uint64_t	evict_addr = 0;
+	guest_ptr	evict_addr(0);
 
 	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
 		if (!choice) {
@@ -58,7 +58,7 @@ uint64_t VexFCache::selectVictimAddress(void) const
 	return evict_addr;
 }
 
-VexSB* VexFCache::getVSB(void* hostptr, uint64_t guest_addr)
+VexSB* VexFCache::getVSB(void* hostptr, guest_ptr guest_addr)
 {
 	VexSB*	vsb;
 
@@ -68,54 +68,54 @@ VexSB* VexFCache::getVSB(void* hostptr, uint64_t guest_addr)
 	return allocCacheVSB(hostptr, guest_addr);
 }
 
-VexSB* VexFCache::allocCacheVSB(void* hostptr, uint64_t guest_addr)
+VexSB* VexFCache::allocCacheVSB(void* hostptr, guest_ptr guest_addr)
 {
 	VexSB*	vsb;
 
-	vsb = xlate->xlate(hostptr, (uint64_t)guest_addr);
+	vsb = xlate->xlate(hostptr, guest_addr);
 
 	if (vexsb_cache.size() == max_cache_ents)
 		evict(selectVictimAddress());
 	assert (vexsb_cache.size() < max_cache_ents);
 
-	vexsb_cache[(void*)guest_addr] = vsb;
-	vexsb_dc.put((void*)guest_addr, vsb);
+	vexsb_cache[guest_addr] = vsb;
+	vexsb_dc.put(guest_addr, vsb);
 	return vsb;
 }
 
-VexSB* VexFCache::getCachedVSB(uint64_t guest_addr)
+VexSB* VexFCache::getCachedVSB(guest_ptr guest_addr)
 {
 	VexSB				*vsb;
 	vexsb_map::const_iterator	it;
 
-	vsb = vexsb_dc.get((void*)guest_addr);
+	vsb = vexsb_dc.get(guest_addr);
 	if (vsb) return vsb;
 
-	it = vexsb_cache.find((void*)guest_addr);
+	it = vexsb_cache.find(guest_addr);
 	if (it == vexsb_cache.end()) return NULL;
 
 	vsb = (*it).second;
-	vexsb_dc.put((void*)guest_addr, vsb);
+	vexsb_dc.put(guest_addr, vsb);
 	return vsb;
 }
 
-Function* VexFCache::getCachedFunc(uint64_t guest_addr)
+Function* VexFCache::getCachedFunc(guest_ptr guest_addr)
 {
 	Function			*func;
 	func_map::const_iterator	it;
 
-	func = func_dc.get((void*)guest_addr);
+	func = func_dc.get(guest_addr);
 	if (func) return func;
 
-	it = func_cache.find((void*)guest_addr);
+	it = func_cache.find(guest_addr);
 	if (it == func_cache.end()) return NULL;
 
 	func = (*it).second;
-	func_dc.put((void*)guest_addr, func);
+	func_dc.put(guest_addr, func);
 	return func;
 }
 
-Function* VexFCache::getFunc(void* hostptr, uint64_t guest_addr)
+Function* VexFCache::getFunc(void* hostptr, guest_ptr guest_addr)
 {
 	Function*	ret_f;
 	VexSB*		vsb;
@@ -135,32 +135,32 @@ Function* VexFCache::genFunctionByVSB(VexSB* vsb)
 	char				emitstr[512];
 
 	/* not in caches, generate */
-	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr());
+	sprintf(emitstr, "sb_%p", (void*)vsb->getGuestAddr().o);
 	f = vsb->emit(emitstr);
 	assert (f && "FAILED TO EMIT FUNC??");
 
-	func_cache[(void*)vsb->getGuestAddr()] = f;
-	func_dc.put((void*)vsb->getGuestAddr(), f);
+	func_cache[vsb->getGuestAddr()] = f;
+	func_dc.put(vsb->getGuestAddr(), f);
 
 	if (dump_llvm) f->dump();
 
 	return f;
 }
 
-void VexFCache::evict(uint64_t guest_addr)
+void VexFCache::evict(guest_ptr guest_addr)
 {
 	VexSB		*vsb;
 	Function	*func;
 
 	if ((func = getCachedFunc(guest_addr)) != NULL) {
-		func_cache.erase((void*)guest_addr);
-		func_dc.put((void*)guest_addr, NULL);
+		func_cache.erase(guest_addr);
+		func_dc.put(guest_addr, NULL);
 		func->eraseFromParent();
 	}
 
 	if ((vsb = getCachedVSB(guest_addr)) != NULL) {
-		vexsb_cache.erase((void*)guest_addr);
-		vexsb_dc.put((void*)guest_addr, NULL);
+		vexsb_cache.erase(guest_addr);
+		vexsb_dc.put(guest_addr, NULL);
 		delete vsb;
 	}
 }
@@ -187,9 +187,9 @@ void VexFCache::flush(void)
 	func_dc.flush();
 }
 
-void VexFCache::flush(void* begin, void* end)
+void VexFCache::flush(guest_ptr begin, guest_ptr end)
 {
-	std::list<void*>	delete_addrs;
+	std::list<guest_ptr>	delete_addrs;
 
 	/* delete VSBs that fall in range */
 	foreach (it,

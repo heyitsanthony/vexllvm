@@ -13,21 +13,22 @@
 
 using namespace llvm;
 
-GuestCPUState::GuestCPUState()
+GuestCPUState::GuestCPUState(GuestMem* in_mem)
 : guestCtxTy(NULL)
 , state_data(NULL)
 , exit_type(NULL)
 , state_byte_c(0)
+, mem(in_mem)
 {
 }
-GuestCPUState* GuestCPUState::create(Arch::Arch arch) {
+GuestCPUState* GuestCPUState::create(GuestMem* mem, Arch::Arch arch) {
 	switch(arch) {
 	case Arch::X86_64:
-		return new AMD64CPUState();
+		return new AMD64CPUState(mem);
 	case Arch::I386:
-		return new I386CPUState();
+		return new I386CPUState(mem);
 	case Arch::ARM:
-		return new ARMCPUState();
+		return new ARMCPUState(mem);
 	default:
 		assert(!"supported guest architecture");
 	}

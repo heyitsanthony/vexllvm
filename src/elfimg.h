@@ -8,10 +8,7 @@
 #include <map>
 #include "collection.h"
 #include "arch.h"
-
-typedef void* hostptr_t;
-typedef void* elfptr_t;
-typedef const void* celfptr_t;
+#include "guestmem.h"
 
 class ElfSegment;
 class GuestMem;
@@ -25,13 +22,13 @@ public:
 	static ElfImg* create(GuestMem* mem, const char* fname, 
 		bool linked = true);
 	virtual ~ElfImg(void);
-	hostptr_t xlateAddr(elfptr_t addr) const;
-	elfptr_t getEntryPoint(void) const;
+	guest_ptr xlateAddr(guest_ptr addr) const;
+	guest_ptr getEntryPoint(void) const;
 	int getHeaderCount() const;
 	ElfImg* getInterp(void) const { return interp; }
 	const char* getFilePath(void) const { return img_path; }
-	celfptr_t getHeader() const;
-	celfptr_t getBase() const;
+	const guest_ptr getHeader() const;
+	const guest_ptr getBase() const;
 	ElfSegment* getFirstSegment() const { return segments.front(); }
 	void getSegments(std::list<ElfSegment*>& r) const;
 	unsigned int getPageSize() const { return 4096; }

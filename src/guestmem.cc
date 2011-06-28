@@ -59,15 +59,26 @@ bool GuestMem::sbrkInitial() {
 	#endif
 	bool found = findRegion(BRK_RESERVE, m);
 	assert(found && "couldn't make mapping");
-	addr = mmap(getBase() + m.offset.o, BRK_RESERVE, prot, 
+	std::cerr << "do mmapbrkinit1("
+		<< (void*)(getBase() + m.offset.o) << ", "
+		<< PAGE_SIZE << ", "
+		<< "... )" << std::endl;
+	addr = ::mmap(getBase() + m.offset.o, BRK_RESERVE, prot, 
 		flags, -1, 0);
 	/* hmm, we could shrink the reserve but */
 	assert(addr != MAP_FAILED && "initial sbrk failed");
-	addr = mremap(addr, BRK_RESERVE, PAGE_SIZE, 0);
+	m.offset = guest_ptr((char*)addr - getBase());
+	assert(!is_32_bit || m.offset.o > 0xFFFFFFFFULL);
+	addr = ::mremap(addr, BRK_RESERVE, PAGE_SIZE, 0);
 	assert(addr != MAP_FAILED && "sbrk shrink assploded");
 	flags &= ~MAP_NORESERVE;
 	flags |= MAP_FIXED;
-	addr = mmap(addr, PAGE_SIZE, prot, flags, -1, 0);
+
+	std::cerr << "do mmapbrkinit2("
+		<< (void*)(addr) << ", "
+		<< PAGE_SIZE << ", "
+		<< "... )" << std::endl;
+	addr = ::mmap(addr, PAGE_SIZE, prot, flags, -1, 0);
 	assert(addr != MAP_FAILED && "sbrk flags fix kerplunked");
 
 	m.length = PAGE_SIZE;
@@ -85,13 +96,17 @@ bool GuestMem::sbrkInitial(guest_ptr new_top) {
 	int flags = MAP_PRIVATE | MAP_ANON;
 	int prot = PROT_READ | PROT_WRITE;
 
+	std::cerr << "do mmapbrkinit("
+		<< (void*)(getBase() + new_top) << ", "
+		<< PAGE_SIZE << ", "
+		<< "... )" << std::endl;
 	/* they picked it (e.g. xchk), try to make a mapping there. 
 	   note that this initial mapping doesn't reserve any extra
 	   space, so jerks could map over it and screw us.  in this
 	   case you'd eventually see divergence in xchk, manifested
 	   by -ENOMEM being returned for the vex process on brk when
 	   the real process managed to extend the brk */
-	addr = mmap(getBase() + new_top, PAGE_SIZE, prot, flags, -1, 0);
+	addr = ::mmap(getBase() + new_top, PAGE_SIZE, prot, flags, -1, 0);
 	assert(addr == getBase() + new_top && "initial forced sbrk failed");
 	
 	m.offset = new_top;
@@ -137,11 +152,14 @@ bool GuestMem::sbrk(guest_ptr new_top)
 	/* lame we can be more graceful here and try to do it */ 
 	if(reserve_brick && m.offset + new_len > reserve_brick)
 		return false;
-
+	std::cerr << "do mmapbrk("
+		<< (void*)(getBase() + m.end()) << ", "
+		<< new_len - m.length << ", "
+		<< "... )" << std::endl;
 	/* i want to extend the existing mapping... but it seems like
 	   something is not working with that, so do this instead */
 	// addr = mremap(m.offset, m.length, new_len, MREMAP_FIXED);
-	addr = mmap(getBase() + m.end(), new_len - m.length, 
+	addr = ::mmap(getBase() + m.end(), new_len - m.length, 
 		PROT_READ | PROT_WRITE, MAP_FIXED | MAP_PRIVATE | MAP_ANON,
 		-1, 0);
 		
@@ -299,3 +317,209 @@ bool GuestMem::findRegion(size_t len, Mapping& m) {
 	}
 	return false;
 }
+int GuestMem::mmap(guest_ptr& result, guest_ptr addr, 
+	size_t len, int prot, int flags, int fd, off_t offset)
+{
+	std::cerr << "mmap("
+		<< (void*)addr.o << ", "
+		<< (void*)len << ", "
+		<< (void*)prot << ", "
+		<< (void*)flags << ", "
+		<< (void*)fd << ", "
+		<< (void*)offset
+		<< ")" << std::endl;
+
+	if(fd >= 0 && (offset & (PAGE_SIZE - 1)))
+		return -EINVAL;
+	if(fd >= 0 && (addr.o & (PAGE_SIZE - 1)))
+		return EINVAL;
+
+	if((addr & (PAGE_SIZE - 1)))
+		return -EINVAL;
+	if((len & (PAGE_SIZE - 1)))
+		return -EINVAL;
+
+	std::cerr << "passed checks" << std::endl;
+
+	// /* we are fixing these up as long as a file mapping isn't involved. 
+	//    does this match the linux kernel implementation? */
+	// len += addr.o & ~(PAGE_SIZE - 1);
+	// addr.o &= ~(PAGE_SIZE - 1);
+	// len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
+	
+	bool fixed = flags & MAP_FIXED;
+	Mapping m(addr, len, prot);
+	if(addr == 0 && !fixed) {
+		if(!findRegion(m.length, m)) {
+			std::cerr << "no region" << std::endl;
+			return -ENOMEM;
+		}
+		fixed = true;
+		flags |= MAP_FIXED;
+	}
+	if (m.req_prot & PROT_WRITE) {
+		m.cur_prot &= ~PROT_EXEC;
+	}
+	void* desired = getBase() + m.offset.o;
+	void* at = ::mmap(getBase() + m.offset.o, m.length, 
+		m.cur_prot, flags, fd, offset);
+	/* this is bad because it will probably be out of our desired
+	   address range... so, this is a fail */
+	if(at != desired) {
+		if(at != MAP_FAILED) {
+			::munmap(at, m.length);
+		}
+		if(fixed) {
+			return -errno;
+		} 
+		/* ok, they didn't force it somewhere, so we can tolerate
+		   a modified mapping */
+		if(!findRegion(m.length, m)) {
+			return -ENOMEM;
+		}
+		fixed = true;
+		flags |= MAP_FIXED;
+		at = ::mmap(getBase() + m.offset.o, m.length, 
+			m.cur_prot, flags, fd, offset);
+	}
+	/* fixed is set, so at can only be map failed */
+	if(at == MAP_FAILED) {
+		return -errno;
+	}
+	result = m.offset;
+	recordMapping(m);
+	std::cerr << "mmap OK => " << (void*)m.offset.o << std::endl;
+	return 0;
+}
+int GuestMem::mprotect(guest_ptr offset, 
+	size_t len, int prot)
+{
+	std::cerr << "mprotect("
+		<< (void*)offset.o << ", "
+		<< (void*)len << ", "
+		<< (void*)prot
+		<< ")" << std::endl;
+
+	if((offset & (PAGE_SIZE - 1)))
+		return -EINVAL;
+	if((len & (PAGE_SIZE - 1)))
+		return -EINVAL;
+
+	/* TODO make sure this is a real mapped region in a better
+	   way then if mprotect fails? */
+	
+	Mapping m(offset, len, prot);
+	if (m.req_prot & PROT_WRITE) {
+		m.cur_prot &= ~PROT_EXEC;
+	}
+	int result = ::mprotect(getBase() + offset.o, len, m.cur_prot);
+	if(result < 0) {
+		return -errno;
+	}
+	recordMapping(m);
+	std::cerr << "mprotect OK" << std::endl;
+	return 0;
+}
+int GuestMem::munmap(guest_ptr offset, size_t len)
+{
+	std::cerr << "munmap("
+		<< (void*)offset.o << ", "
+		<< (void*)len
+		<< ")" << std::endl;
+	if((offset & (PAGE_SIZE - 1)))
+		return -EINVAL;
+	if((len & (PAGE_SIZE - 1)))
+		return -EINVAL;
+
+	/* TODO make sure this is a real mapped region in a better
+	   way then if munmap fails? */
+
+	Mapping m(offset, len, 0);
+	int result = ::munmap(getBase() + offset.o, len);
+	if(result < 0) {
+		return -errno;
+	}
+	removeMapping(m);
+	std::cerr << "munmap OK" << std::endl;
+	return 0;	
+}
+int GuestMem::mremap(guest_ptr& result, guest_ptr old_offset, 
+	size_t old_length, size_t new_length, int flags, guest_ptr new_offset)
+{
+	std::cerr << "mremap("
+		<< (void*)old_offset.o << ", "
+		<< (void*)old_length << ", "
+		<< (void*)new_length << ", "
+		<< (void*)flags << ", "
+		<< (void*)new_offset.o 
+		<< ")" << std::endl;
+		
+	if((old_offset & (PAGE_SIZE - 1)))
+		return -EINVAL;
+	if((old_length & (PAGE_SIZE - 1)))
+		return -EINVAL;
+	if(flags & MREMAP_FIXED && (new_offset & (PAGE_SIZE - 1)))
+		return -EINVAL;
+	if((new_length & (PAGE_SIZE - 1)))
+		return -EINVAL;
+	bool fixed = flags & MREMAP_FIXED;
+	bool maymove = flags & MREMAP_MAYMOVE;
+	
+	if(!maymove && fixed && old_offset != new_offset) {
+		return -EINVAL;
+	}
+
+	Mapping m;
+	bool found = lookupMapping(old_offset, m);
+	if(!found)
+		return -EINVAL;
+	
+	if(old_offset != m.offset)
+		return -EINVAL;
+	if(old_length != m.length)
+		return -EINVAL;
+
+	Mapping n = m;
+	bool fits = true;
+	if(!fixed && !maymove) {
+		mapmap_t::iterator i = 
+			maps.lower_bound(m.offset + new_length);
+		if(i != maps.end() && 
+			i->second.offset < m.offset + new_length) 
+		{
+			return -ENOMEM;
+		}
+		n.length = new_length;
+	} else if(fixed) {
+		n.offset = new_offset;
+		n.length = new_length;
+	} else if(maymove) {
+		mapmap_t::iterator i = 
+			maps.lower_bound(m.offset + new_length);
+		if(i != maps.end() && 
+			i->second.offset < m.offset + new_length) 
+		{
+			if(!findRegion(new_length, n)) {
+				return -ENOMEM;
+			}
+		}
+		fixed = true;
+		flags |= MREMAP_FIXED;
+	}
+	
+	void* desired = getBase() + n.offset.o;
+	void* at = ::mremap(getBase() + m.offset.o, m.length, n.length,
+		flags, n.offset.o);
+	/* if something was allowed to move, then it would have become
+	   fixed, so this can only be map failed or the correct address */
+	if(at != desired) {
+		assert(at == MAP_FAILED);
+		return -errno;
+	}
+	result = n.offset;
+	removeMapping(m);
+	recordMapping(n);
+	std::cerr << "mremap OK => " << (void*)n.offset.o << std::endl;
+	return 0;
+}
+

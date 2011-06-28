@@ -92,7 +92,7 @@ int ElfImg::getHeaderCount() const {
 	}
 }
 
-celfptr_t ElfImg::getHeader() const {
+const guest_ptr ElfImg::getHeader() const {
 	/* this is so janky and will most likely not work other places */
 	if(address_bits == 32) {
 		return getFirstSegment()->offset(hdr32->e_phoff);
@@ -119,8 +119,8 @@ void ElfImg::setupSegments(void)
 			interp = ElfImg::create(mem, path.c_str(), false); 
 			continue;
 		}
-		es = ElfSegment::load(fd, phdr[i], 
-			segments.empty() ? 0
+		es = ElfSegment::load(mem, fd, phdr[i], 
+			segments.empty() ? uintptr_t(0)
 			: getFirstSegment()->relocation());
 		if (!es) continue;
 
@@ -145,14 +145,14 @@ static const unsigned char ok_ident_32[] = "\x7f""ELF\x1\x1\x1";
 
 #define EXPECTED(x)	fprintf(stderr, "ELF: expected "x"!\n")
 
-elfptr_t ElfImg::getEntryPoint(void) const {
+guest_ptr ElfImg::getEntryPoint(void) const {
 	/* address must be translated in case the region was remapped
 	   as is the case for the interp which specified a load address
 	   base of 0 */
 	if(address_bits == 32) {
-		return xlateAddr((void*)hdr32->e_entry); 
+		return xlateAddr(guest_ptr(hdr32->e_entry)); 
 	} else if(address_bits == 64) {
-		return xlateAddr((void*)hdr64->e_entry); 
+		return xlateAddr(guest_ptr(hdr64->e_entry)); 
 	} else {
 		assert(!"address bits corrupted");
 	}
@@ -249,18 +249,18 @@ Arch::Arch ElfImg::readHeader64(const Elf64_Ehdr* hdr, bool require_exe) {
 	return Arch::Unknown;
 }
 
-hostptr_t ElfImg::xlateAddr(elfptr_t elfptr) const
+guest_ptr ElfImg::xlateAddr(guest_ptr elfptr) const
 {
 	foreach (it, segments.begin(), segments.end()) {
 		ElfSegment	*es = *it;
-		hostptr_t	ret;
+		guest_ptr	ret;
 
 		ret = es->xlate(elfptr);
 		if (ret) return ret;
 	}
 
 	/* failed to xlate */
-	return 0;
+	return guest_ptr(0);
 }
 
 void ElfImg::getSegments(std::list<ElfSegment*>& r) const

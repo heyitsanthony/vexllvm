@@ -15,7 +15,7 @@ void VexStmtNoOp::print(std::ostream& os) const { os << "NoOp"; }
 
 void VexStmtIMark::print(std::ostream& os) const
 {
-	os <<	"IMark: Addr=" << (void*)guest_addr <<
+	os <<	"IMark: Addr=" << (void*)guest_addr.o <<
 		". OpLen= " << guest_op_len;
 }
 VexStmtIMark::VexStmtIMark(
@@ -406,8 +406,8 @@ VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 	}
 
 	switch(in_stmt->Ist.Exit.dst->tag) {
-	#define CONST_TAGOP(x) case Ico_##x :		\
-	dst = in_stmt->Ist.Exit.dst->Ico.x; return;	\
+	#define CONST_TAGOP(x) case Ico_##x :			\
+	dst = guest_ptr(in_stmt->Ist.Exit.dst->Ico.x); return;	\
 
 	CONST_TAGOP(U1);
 	CONST_TAGOP(U8);
@@ -465,5 +465,5 @@ void VexStmtExit::print(std::ostream& os) const
 {
 	os << "If (";
 	guard->print(os);
-	os << ") goto {...} " << (void*)dst;
+	os << ") goto {...} " << (void*)dst.o;
 }

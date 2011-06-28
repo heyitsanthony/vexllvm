@@ -100,26 +100,6 @@ uint64_t Syscalls::apply(SyscallParams& args)
 		return sc_ret;
 	}
 
-	/* record the offset if this was a pass through mapping */
-	if(sys_nr == SYS_mmap && !m.offset && 
-		(sc_ret != (uintptr_t)MAP_FAILED || 
-			(sc_ret != (unsigned)(uintptr_t)MAP_FAILED)))
-	{
-		m.offset = (void*)sc_ret;
-	}
-
-	if(m.isValid()) {
-		if(m.wasUnmapped()) {
-			mappings->removeMapping(m);
-		} else {
-			/* mask out write permission for JITs */
-			if (m.req_prot & PROT_EXEC) {
-				m.cur_prot &= ~PROT_WRITE;
-				mprotect(m.offset, m.length, m.cur_prot);
-			}
-			mappings->recordMapping(m);
-		}
-	}
 	return sc_ret;
 }
 
@@ -177,8 +157,8 @@ bool Syscalls::interceptSyscall(
 		}
 		return false;
 	case SYS_brk:
-		if (mappings->sbrk((void*)args.getArg(0)))
-			sc_ret = (uintptr_t)mappings->brk();
+		if (mappings->sbrk(guest_ptr(args.getArg(0))))
+			sc_ret = mappings->brk();
 		else
 			sc_ret = -ENOMEM;
 		return true;
@@ -188,19 +168,30 @@ bool Syscalls::interceptSyscall(
 		sc_ret = 0;
 		return true;
 	case SYS_mmap:
-	case SYS_mprotect:
 		m = GuestMem::Mapping(
-			(void*)args.getArg(0),	/* offset */
+			guest_ptr(args.getArg(0)),/* offset */
 			args.getArg(1),		/* length */
 			args.getArg(2));
-		return false;
-
+		sc_ret = mappings->mmap(m.offset, m.offset, m.length,
+			m.req_prot, args.getArg(3), 
+			args.getArg(4), args.getArg(5));
+		if(sc_ret == 0)
+			sc_ret = m.offset;
+		return true;
+	case SYS_mprotect:
+		m = GuestMem::Mapping(
+			guest_ptr(args.getArg(0)),/* offset */
+			args.getArg(1),		/* length */
+			args.getArg(2));
+		sc_ret = mappings->mprotect(m.offset, m.length, m.req_prot);
+		return true;
 	case SYS_munmap:
-		m.offset = (void*)args.getArg(0);
-		m.length = args.getArg(1);
-		m.markUnmapped();
-		return false;
-
+		m = GuestMem::Mapping(
+			guest_ptr(args.getArg(0)),/* offset */
+			args.getArg(1),		/* length */
+			0);
+		sc_ret = mappings->munmap(m.offset, m.length);
+		return true;
 	case SYS_readlink:
 		std::string path = (char*)args.getArg(0);
 		if(path != "/proc/self/exe") break;

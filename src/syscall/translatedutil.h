@@ -66,7 +66,10 @@
 #define mmap_lock()
 #define mmap_unlock()
 
-#define copy_to_user(d, s, l) memcpy((void*)d, s, l)
+static inline int copy_to_user(abi_ulong d, void* s, abi_ulong l) {
+	g_mem->memcpy(guest_ptr(d), s, l);
+	return 0;
+}
 #define __put_user(x, hptr)\
 ({\
     int size = sizeof(*hptr);\
@@ -189,21 +192,20 @@ static int host_to_target_errno(int err);
 abi_ulong mmap_find_vma_flags(abi_ulong start, abi_ulong size,
 	int flags) 
 {
-	/* host page align? */
-	void* res = mmap((void*)(uintptr_t)start, size, PROT_READ, 
-		MAP_NORESERVE | flags, -1, 0);
-	if(res != MAP_FAILED) {
-		munmap(res, size);
-		return (abi_ulong)(uintptr_t)res;
-	}
-	return (abi_ulong)-host_to_target_errno(errno);
+	GuestMem::Mapping m;
+	/* TODO: try their proposed start sometime? */
+	bool found = g_mem->findRegion(size, m);
+	if(!found)
+		return (abi_ulong)(uintptr_t)(long)-ENOMEM;
+	return (abi_ulong)m.offset;
 }
 void page_set_flags(target_ulong start, target_ulong end, 
 	int flags)
 {
 	assert(!g_syscall_last_mapping && "only one map per syscall allowed");
-	g_syscall_last_mapping = new GuestMem::Mapping(
-		(void*)start, end - start, flags);
+	int res = g_mem->mprotect(guest_ptr(start), end - start, flags);
+	assert(res == 0 && "failed to set page flags as requested");
+	g_syscall_last_mapping = g_mem->lookupMappingPtr(guest_ptr(start));
 }
 
 static char* path(char* p) {

@@ -1,6 +1,6 @@
 BIN_BASE="0xa000000"
 BIN_BASE2="0xc000000"
-CFLAGS=-g -O3 -I`pwd`/src/
+CFLAGS=-g -I`pwd`/src/
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
 endif
@@ -49,7 +49,6 @@ OBJDEPS=	vexxlate.o		\
 		guestcpustate.o		\
 		guestelf.o		\
 		guestptimg.o		\
-		guesttls.o		\
 		guestsnapshot.o		\
 		cpu/amd64cpustate.o	\
 		cpu/i386cpustate.o	\

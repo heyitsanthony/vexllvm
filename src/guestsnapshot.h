@@ -10,7 +10,7 @@ public:
 	static GuestSnapshot* create(GuestMem* mem, const char* dirname);
 	virtual ~GuestSnapshot(void);
 	static void save(const Guest*, const char* dirname);
-	virtual void* getEntryPoint(void) const { return entry_pt; }
+	virtual guest_ptr getEntryPoint(void) const { return entry_pt; }
 	virtual Arch::Arch getArch(void) const { return arch; }
 
 protected:
@@ -18,7 +18,7 @@ protected:
 
 private:
 	bool		is_valid;
-	void		*entry_pt;
+	guest_ptr	entry_pt;
 	Arch::Arch	arch;
 	std::list<int>	fd_list;
 };

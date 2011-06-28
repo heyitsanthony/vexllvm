@@ -27,7 +27,7 @@ class Guest
 {
 public:
 	virtual ~Guest();
-	virtual void* getEntryPoint(void) const = 0;
+	virtual guest_ptr getEntryPoint(void) const = 0;
 	std::list<GuestMem::Mapping> getMemoryMap(void) const;
 
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
@@ -35,7 +35,7 @@ public:
 
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
-	virtual std::string getName(void*) const;
+	virtual std::string getName(guest_ptr) const;
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
 	virtual Arch::Arch getArch() const = 0;

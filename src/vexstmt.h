@@ -10,6 +10,7 @@ extern "C" {
 #include <valgrind/libvex.h>
 #include <valgrind/libvex_ir.h>
 }
+#include "guestmem.h"
 
 namespace llvm
 {
@@ -47,15 +48,15 @@ class VexStmtIMark : public VexStmt
 {
 public:
 	VexStmtIMark(VexSB* in_parent, const IRStmt* in_stmt);
-	VexStmtIMark(VexSB* in_parent, uint64_t in_ga, unsigned int in_len)
+	VexStmtIMark(VexSB* in_parent, guest_ptr in_ga, unsigned int in_len)
 	: VexStmt(in_parent, NULL), guest_addr(in_ga), guest_op_len(in_len) {}
 	virtual ~VexStmtIMark() {}
 	virtual void emit(void) const { /* ignore */ }
 	virtual void print(std::ostream& os) const;
-	uint64_t getAddr(void) const { return guest_addr; }
+	guest_ptr getAddr(void) const { return guest_addr; }
 	unsigned int getLen(void) const { return guest_op_len; }
 private:
-	uint64_t	guest_addr;
+	guest_ptr	guest_addr;
 	unsigned int	guest_op_len;
 };
 
@@ -196,7 +197,7 @@ private:
 	VexExpr		*guard;	/* Conditional expression-- always 1-bit */
 	uint8_t		exit_type;
 	IRJumpKind	jk;	/* Jump kind */
-	uint64_t	dst;	/* target constant */
+	guest_ptr	dst;	/* target constant */
 };
 
 #endif

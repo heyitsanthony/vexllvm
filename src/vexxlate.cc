@@ -53,7 +53,7 @@ static IRSB* vex_finaltidy(IRSB* irsb)
 
 	assert(x == 0 && "NOT REENTRANT RIGHT NOW");
 	x = 1;
-	g_cb.cb_vexsb = new VexSB(g_cb.cb_guestaddr, irsb);
+	g_cb.cb_vexsb = new VexSB(guest_ptr(g_cb.cb_guestaddr), irsb);
 	x = 0;
 	return irsb;
 }

@@ -28,36 +28,37 @@ struct ElfSegmentMapFlags<Elf32_Phdr> {
 	static const int flags = MAP_32BIT;
 };
 template 
-ElfSegment* ElfSegment::load<Elf32_Phdr>(int fd, const Elf32_Phdr& phdr, 
-	elfptr_t reloc);
+ElfSegment* ElfSegment::load<Elf32_Phdr>(GuestMem* mem, int fd, 
+	const Elf32_Phdr& phdr, uintptr_t reloc);
 template
-ElfSegment* ElfSegment::load<Elf64_Phdr>(int fd, const Elf64_Phdr& phdr, 
-	elfptr_t reloc);
+ElfSegment* ElfSegment::load<Elf64_Phdr>(GuestMem* mem, int fd, 
+	const Elf64_Phdr& phdr, uintptr_t reloc);
 
 template <typename Elf_Phdr>
-ElfSegment* ElfSegment::load(int fd, const Elf_Phdr& phdr, 
-	elfptr_t reloc)
+ElfSegment* ElfSegment::load(GuestMem* mem, int fd, const Elf_Phdr& phdr, 
+	uintptr_t reloc)
 {
 	/* in the future we might care about non-loadable segments */
 	if (phdr.p_type != PT_LOAD) 
 		return NULL;
 
-	return new ElfSegment(fd, phdr, reloc);
+	return new ElfSegment(mem, fd, phdr, reloc);
 }
 
 template 
-ElfSegment::ElfSegment<Elf32_Phdr>(int fd, const Elf32_Phdr& phdr, 
-	elfptr_t in_reloc);
+ElfSegment::ElfSegment<Elf32_Phdr>(GuestMem* mem, int fd, const Elf32_Phdr& phdr, 
+	uintptr_t in_reloc);
 template
-ElfSegment::ElfSegment<Elf64_Phdr>(int fd, const Elf64_Phdr& phdr, 
-	elfptr_t in_reloc);
+ElfSegment::ElfSegment<Elf64_Phdr>(GuestMem* mem, int fd, const Elf64_Phdr& phdr, 
+	uintptr_t in_reloc);
 
 /* Always mmap in the segment. We don't give a fuck. 
  * TODO: Efficiently use the address space! */
 template <typename Elf_Phdr>
-ElfSegment::ElfSegment(int fd, const Elf_Phdr& phdr, 
-	elfptr_t in_reloc)
+ElfSegment::ElfSegment(GuestMem* in_mem, int fd, const Elf_Phdr& phdr, 
+	uintptr_t in_reloc)
 : reloc(in_reloc)
+, mem(in_mem)
 {
 	statFile(fd);
 	makeMapping(fd, phdr);
@@ -65,7 +66,7 @@ ElfSegment::ElfSegment(int fd, const Elf_Phdr& phdr,
 
 ElfSegment::~ElfSegment(void)
 {
-	munmap(es_mmapbase, es_len);
+	mem->munmap(es_mmapbase, es_len);
 }
 
 void ElfSegment::statFile(int fd)
@@ -83,10 +84,10 @@ void ElfSegment::makeMapping<Elf64_Phdr>(int fd, const Elf64_Phdr& phdr);
 template <typename Elf_Phdr>
 void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 {
-	off_t	file_off_pgbase, file_off_pgoff;
-	void	*desired_base, *spill_base;
-	size_t	end_off;
-	int	flags;
+	off_t file_off_pgbase, file_off_pgoff;
+	guest_ptr desired_base, spill_base;
+	size_t end_off;
+	int flags;
 
 	/* map in */
 	file_off_pgbase = page_base(phdr.p_offset);
@@ -104,8 +105,8 @@ void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 	if(phdr.p_vaddr != 0)
 		flags |= MAP_FIXED;
 
-	uintptr_t reloc_base = phdr.p_vaddr + (uintptr_t)reloc;
-	desired_base = (void*)page_base(reloc_base);
+	guest_ptr reloc_base = guest_ptr(phdr.p_vaddr) + reloc;
+	desired_base = guest_ptr(page_base(reloc_base));
 	es_len = page_round_up(reloc_base + phdr.p_memsz);
 	es_len -= page_base(reloc_base);
 
@@ -116,10 +117,10 @@ void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 		spill_pages = 0;
 	file_pages = es_len - spill_pages;
 
-	es_mmapbase = mmap(desired_base, file_pages, 
+	int res = mem->mmap(es_mmapbase, desired_base, file_pages, 
 		prot | PROT_WRITE, flags, fd, file_off_pgbase);
 
-	assert (es_mmapbase != MAP_FAILED);
+	assert (res == 0 || "failed to map segment");
 	uintptr_t filesz = phdr.p_offset - file_off_pgbase + phdr.p_filesz;
 	extra_bytes = file_pages - filesz;
 
@@ -137,35 +138,33 @@ void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 		*/
 	}
 
-	my_end = (void*)((uintptr_t)es_mmapbase + filesz);
+	my_end = es_mmapbase + filesz;
 
 	/* protect now that we have zeroed */
-	mprotect(es_mmapbase, file_pages, prot);
+	mem->mprotect(es_mmapbase, file_pages, prot);
 
 	/* declare guest-visible mapping */
-	es_elfbase = (void*)reloc_base;
-	es_hostbase = (void*)(((char*)es_mmapbase)+file_off_pgoff);
+	es_elfbase = reloc_base;
+	es_hostbase = es_mmapbase + file_off_pgoff;
 
 	if (spill_pages == 0)
 		return;
 
-	desired_base = (void*)(((char*)desired_base) + file_pages);
-	spill_base = mmap(
+	desired_base = desired_base + file_pages;
+	res = mem->mmap(spill_base, 
 		desired_base, spill_pages, prot, 
 		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	assert (spill_base != MAP_FAILED);
+	assert (res == 0 && "failed to map segment spill");
 }
 
-hostptr_t ElfSegment::xlate(elfptr_t elfptr) const
+guest_ptr ElfSegment::xlate(guest_ptr elfptr) const
 {
-	uintptr_t	elfptr_i = (uintptr_t)elfptr;
-	uintptr_t	seg_base = (uintptr_t)es_elfbase;
 	uintptr_t	off;
 
-	if ((seg_base > elfptr_i) || ((seg_base + es_len) < elfptr_i))
-		return 0;
+	if ((es_elfbase > elfptr) || ((es_elfbase + es_len) < elfptr))
+		return guest_ptr(0);
 
-	assert (elfptr_i >= seg_base);
-	off = elfptr_i - seg_base;
-	return (void*)(off + (uintptr_t)es_hostbase);
+	assert (elfptr >= es_elfbase);
+	off = elfptr - es_elfbase;
+	return es_hostbase + off;
 }

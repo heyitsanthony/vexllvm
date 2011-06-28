@@ -13,7 +13,7 @@ public:
 protected:
 	VexExecFastChk(PTImgChk* gs, VexXlate* vx);
 
-	virtual uint64_t doVexSB(VexSB* vsb);
+	virtual guest_ptr doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);
 private:
 	unsigned int	pt_sc_req_c;	/* syscall opcodes ptrace seen */

@@ -7,12 +7,13 @@
 #include <stdlib.h>
 #include "syscallsmarshalled.h"
 
-SyscallPtrBuf::SyscallPtrBuf(unsigned int in_len, void* in_ptr)
+SyscallPtrBuf::SyscallPtrBuf(GuestMem* mem, unsigned int in_len,
+ 	guest_ptr in_ptr)
 : ptr(in_ptr), len(in_len)
 {
 	if (in_ptr) {
 		data = new char[len];
-		memcpy(data, in_ptr, len);
+		mem->memcpy(data, in_ptr, len);
 	} else {
 		data = NULL;
 		len = 0;
@@ -47,23 +48,27 @@ uint64_t SyscallsMarshalled::apply(SyscallParams& args)
 	switch (sys_nr) {
 	case SYS_clock_gettime:
 		last_sc_ptrbuf = new SyscallPtrBuf(
+			mappings,
 			sizeof(struct timespec),
-			(void*)args.getArg(1));
+			guest_ptr(args.getArg(1)));
 		break;
 	case SYS_gettimeofday:
 		last_sc_ptrbuf = new SyscallPtrBuf(
+			mappings,
 			sizeof(struct timeval),
-			(void*)args.getArg(0));
+			guest_ptr(args.getArg(0)));
 		break;
 	case SYS_rt_sigaction:
 		last_sc_ptrbuf = new SyscallPtrBuf(
+			mappings,
 			sizeof(struct sigaction),
-			(void*)args.getArg(2));
+			guest_ptr(args.getArg(2)));
 		break;
 	case SYS_times:
 		last_sc_ptrbuf = new SyscallPtrBuf(
+			mappings,
 			sizeof(struct tms),
-			(void*)args.getArg(0));
+			guest_ptr(args.getArg(0)));
 		break;
 	}
 

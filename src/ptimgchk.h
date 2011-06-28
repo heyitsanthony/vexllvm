@@ -16,34 +16,35 @@ public:
 	virtual ~PTImgChk();
 
 	void stepThroughBounds(
-		uint64_t start, uint64_t end,
+		guest_ptr start, guest_ptr end,
 		const VexGuestAMD64State& state);
-	void* stepToBreakpoint(void);
+	guest_ptr stepToBreakpoint(void);
 
 	void stepSysCall(SyscallsMarshalled* sc, const VexGuestAMD64State& st);
-	uint64_t continueForwardWithBounds(
-		uint64_t start, uint64_t end,
+	guest_ptr continueForwardWithBounds(
+		guest_ptr start, guest_ptr end,
 		const VexGuestAMD64State& state);
 	void printSubservient(
 		std::ostream& os, 
 		const VexGuestAMD64State& ref) const;
-	void stackTraceSubservient(std::ostream& os, void* b = 0, void* e = 0);
+	void stackTraceSubservient(std::ostream& os, 
+		guest_ptr b = guest_ptr(0), guest_ptr e = guest_ptr(0));
 	void printTraceStats(std::ostream& os);
 
 	bool isMatch(const VexGuestAMD64State& state) const;
 	bool isMatchMemLog() const;
 
-	bool fixup(const void* ip_begin, const void* ip_end);
+	bool fixup(guest_ptr ip_begin, guest_ptr ip_end);
 
-	bool breakpointSysCalls(const void* ip_begin, const void* ip_end);
+	bool breakpointSysCalls(guest_ptr ip_begin, guest_ptr ip_end);
 
 	void getRegs(user_regs_struct& regs) const;
 	void setRegs(const user_regs_struct& regs);
 	uintptr_t getSysCallResult() const;
 
-	void resetBreakpoint(void* x) {
+	void resetBreakpoint(guest_ptr x) {
 		GuestPTImg::resetBreakpoint(child_pid, x); }
-	void setBreakpoint(void* x) {
+	void setBreakpoint(guest_ptr x) {
 		GuestPTImg::setBreakpoint(child_pid, x); }
 
 	MemLog* getMemLog(void) { return mem_log; }
@@ -55,7 +56,7 @@ protected:
 
 private:
 	bool doStep(
-		uint64_t start, uint64_t end,
+		guest_ptr start, guest_ptr end,
 		user_regs_struct& regs,
 		const VexGuestAMD64State& state);
 	void waitForSingleStep(void);
@@ -82,7 +83,7 @@ private:
 
 	void printMemory(std::ostream& os) const;
 
-	void copyIn(void* dst, const void* src, unsigned int bytes);
+	void copyIn(guest_ptr dst, const void* src, unsigned int bytes);
 
 	pid_t		child_pid;
 	

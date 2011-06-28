@@ -53,8 +53,8 @@ void Guest::setSyscallResult(uint64_t ret)
 	cpu_state->setSyscallResult(ret);
 }
 
-std::string Guest::getName(void* x) const { 
-	return hex_to_string((uintptr_t)x); 
+std::string Guest::getName(guest_ptr x) const { 
+	return hex_to_string(x); 
 }
 
 uint64_t Guest::getExitCode(void) const

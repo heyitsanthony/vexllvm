@@ -10,7 +10,8 @@
 /* this header loads all of the system headers outside of the namespace */
 #include "syscall/translatedsyscall.h"
 
-static GuestMem::Mapping* g_syscall_last_mapping = NULL;
+static GuestMem* g_mem = NULL;
+static const GuestMem::Mapping* g_syscall_last_mapping = NULL;
 static std::vector<char*> g_to_delete;
 
 namespace ARM {
@@ -147,6 +148,7 @@ uintptr_t Syscalls::applyARMSyscall(
 		return passthroughSyscall(args, m);
 	}
 
+	g_mem = mappings;
 	sc_ret = ARM::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),
@@ -175,10 +177,12 @@ SYSCALL_BODY(ARM, set_tls) {
 	cpu_state->setThreadPointer(args.getArg(0));
 	//also set the emulation location
 	GuestMem::Mapping tls_area;
-	mappings->lookupMapping((void*)(uintptr_t)0xffff0000, tls_area);
-	mprotect((void*)(uintptr_t)0xffff0000, PAGE_SIZE, tls_area.cur_prot | PROT_WRITE);
-	*(unsigned int*)(uintptr_t)0xffff0ff0 = (unsigned int)args.getArg(0);
-	mprotect((void*)(uintptr_t)0xffff0000, PAGE_SIZE, tls_area.cur_prot);
+	mappings->lookupMapping(guest_ptr(0xffff0000), tls_area);
+	mappings->mprotect(guest_ptr(0xffff0000), PAGE_SIZE,
+		tls_area.cur_prot | PROT_WRITE);
+	mappings->write(guest_ptr(0xffff0ff0), (unsigned int)args.getArg(0));
+	mappings->mprotect(guest_ptr(0xffff0000), PAGE_SIZE,
+		tls_area.cur_prot);
 	sc_ret = 0;
 	return true;
 }

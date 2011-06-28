@@ -8,6 +8,7 @@
 #include <sys/user.h>
 #include <assert.h>
 #include <map>
+#include "guestmem.h"
 
 namespace llvm
 {
@@ -34,25 +35,23 @@ enum GuestExitType {
 	GE_RETURN = 7
 	/* XXX ADD MORE */ };
 
-class GuestTLS;
-
 class GuestCPUState
 {
 public:
 typedef std::map<unsigned int, unsigned int> byte2elem_map;
-	static GuestCPUState* create(Arch::Arch arch);
-	GuestCPUState();
+	static GuestCPUState* create(GuestMem* mem, Arch::Arch arch);
+	GuestCPUState(GuestMem* mem);
 	virtual ~GuestCPUState() {};
 	const llvm::Type* getTy(void) const { return guestCtxTy; }
 	virtual unsigned int byteOffset2ElemIdx(unsigned int off) const = 0;
 	void* getStateData(void) { return state_data; }
 	const void* getStateData(void) const { return state_data; }
 	unsigned int getStateSize(void) const { return state_byte_c+1; }
-	virtual void setStackPtr(void*) = 0;
-	virtual void* getStackPtr(void) const = 0;
-	virtual void setPC(void*) = 0;
-	virtual void* getPC(void) const = 0;
-	virtual void* getReturnAddress(void) const = 0;
+	virtual void setStackPtr(guest_ptr) = 0;
+	virtual guest_ptr getStackPtr(void) const = 0;
+	virtual void setPC(guest_ptr) = 0;
+	virtual guest_ptr getPC(void) const = 0;
+	virtual guest_ptr getReturnAddress(void) const = 0;
 	virtual SyscallParams getSyscallParams(void) const = 0;
 	virtual void setSyscallResult(uint64_t ret) = 0;
 	virtual uint64_t getExitCode(void) const = 0;
@@ -75,6 +74,7 @@ protected:
 	uint8_t		*state_data;
 	uint8_t		*exit_type;
 	unsigned int	state_byte_c;
+	GuestMem	*mem;
 };
 
 #endif

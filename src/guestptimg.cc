@@ -38,7 +38,7 @@ static bool dump_maps;
 GuestPTImg::GuestPTImg(GuestMem* mem,
 	int argc, char *const argv[], char *const envp[])
 : Guest(mem, argv[0])
-, entry_pt(NULL)
+, entry_pt(0)
 , symbols(NULL)
 {
 	ElfImg		*img;
@@ -52,7 +52,7 @@ GuestPTImg::GuestPTImg(GuestMem* mem,
 
 	assert(img->getArch() == getArch());
 
-	cpu_state = GuestCPUState::create(getArch());
+	cpu_state = GuestCPUState::create(mem, getArch());
 
 	delete img;
 }
@@ -73,7 +73,7 @@ pid_t GuestPTImg::createSlurpedChild(
 {
 	int			err, status;
 	pid_t			pid;
-	void			*break_addr;
+	guest_ptr		break_addr;
 
 	pid = fork();
 	if (pid == 0) {
@@ -121,7 +121,7 @@ pid_t GuestPTImg::createSlurpedChild(
 	return pid;
 }
 
-void* GuestPTImg::undoBreakpoint(pid_t pid)
+guest_ptr GuestPTImg::undoBreakpoint(pid_t pid)
 {
 	struct user_regs_struct	regs;
 	int			err;
@@ -135,7 +135,7 @@ void* GuestPTImg::undoBreakpoint(pid_t pid)
 	err = ptrace(PTRACE_SETREGS, pid, NULL, &regs);
 
 	/* run again w/out reseting BP and you'll end up back here.. */
-	return (void*)regs.rip;
+	return guest_ptr(regs.rip);
 }
 
 int PTImgMapEntry::getProt(void) const
@@ -160,23 +160,21 @@ void PTImgMapEntry::mapStack(pid_t pid)
 	prot = getProt();
 	flags = MAP_GROWSDOWN | MAP_STACK | MAP_PRIVATE | MAP_ANONYMOUS;
 
-	mem_begin = (void*)((uint64_t)mem_begin - STACK_EXTEND_BYTES);
+	mem_begin.o -= STACK_EXTEND_BYTES;
 
-	mmap_base = mmap(
+	int res = mem->mmap(
+		mmap_base, 
 		mem_begin,
 		getByteCount(), 
 		prot,
 		flags | MAP_FIXED,
 		-1,
 		0);
-	if (mmap_base != mem_begin) {
-		fprintf(stderr, "COLLISION: GOT=%p, EXPECTED=%p\n",
-			mmap_base, mem_begin);
-	}
 
-	assert (mmap_base == mem_begin && "Could not map to same address");
-	ptraceCopyRange(pid, prot, 
-		(void*)((uintptr_t)mem_begin + STACK_EXTEND_BYTES),
+	assert (!res && "Could not map stack region");
+
+	ptraceCopyRange(pid,
+		mem_begin + STACK_EXTEND_BYTES,
 		mem_end);
 }
 
@@ -189,19 +187,16 @@ void PTImgMapEntry::mapAnon(pid_t pid)
 	prot = getProt();
 	flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
-	mmap_base = mmap(
+	int res = mem->mmap(
+		mmap_base, 
 		mem_begin,
 		getByteCount(), 
 		prot,
 		flags | MAP_FIXED,
 		mmap_fd,
 		off);
-	if (mmap_base != mem_begin) {
-		fprintf(stderr, "COLLISION: GOT=%p, EXPECTED=%p\n",
-			mmap_base, mem_begin);
-	}
+	assert (!res && "Could not map anonymous region");
 
-	assert (mmap_base == mem_begin && "Could not map to same address");
 	ptraceCopy(pid, prot);
 }
 
@@ -233,43 +228,42 @@ void PTImgMapEntry::mapLib(pid_t pid)
 
 	flags = MAP_PRIVATE;
 	prot = getProt();
-//	if (prot & PROT_EXEC) flags = MAP_SHARED;
-//	else flags = MAP_PRIVATE;
 
 	assert (mmap_fd != -1);
 
-	mmap_base = mmap(
+	int res = mem->mmap(
+		mmap_base, 
 		mem_begin,
 		getByteCount(), 
 		prot,
 		flags | MAP_FIXED,
 		mmap_fd,
 		off);
-	if (mmap_base != mem_begin) {
-		fprintf(stderr, "COLLISION: GOT=%p, EXPECTED=%p\n",
-			mmap_base, mem_begin);
-	}
+	assert (!res && "Could not map library region");
 
 	assert (mmap_base == mem_begin && "Could not map to same address");
 	if (flags != MAP_SHARED)
 		ptraceCopy(pid, prot);
 }
 
-void PTImgMapEntry::ptraceCopyRange(pid_t pid, int prot, void* m_beg, void* m_end)
+void PTImgMapEntry::ptraceCopyRange(pid_t pid, guest_ptr m_beg, 
+	guest_ptr m_end)
 {
-	long			*copy_addr;
+	assert((m_beg & (sizeof(long) - 1)) == 0);
+	assert((m_end & (sizeof(long) - 1)) == 0);
+	
+	guest_ptr copy_addr;
 
-	copy_addr = (long*)m_beg;
+	copy_addr = m_beg;
 	errno = 0;
 	while (copy_addr != m_end) {
-		long	peek_data;
-		peek_data = ptrace(PTRACE_PEEKDATA, pid, copy_addr, NULL);
+		long peek_data;
+		peek_data = ptrace(PTRACE_PEEKDATA, pid, copy_addr.o, NULL);
 		assert (peek_data != -1 || errno == 0);
-		if (*copy_addr != peek_data) {
-			*copy_addr = peek_data;
+		if (mem->read<long>(copy_addr) != peek_data) {
+			mem->write(copy_addr, peek_data);
 		}
-
-		copy_addr++;
+		copy_addr.o += sizeof(long);
 	}
 }
 
@@ -277,24 +271,32 @@ void PTImgMapEntry::ptraceCopy(pid_t pid, int prot)
 {
 	if (!(prot & PROT_READ)) return;
 
-	if (!(prot & PROT_WRITE))
-		mprotect(mmap_base, getByteCount(), prot | PROT_WRITE);
+	if (!(prot & PROT_WRITE)) {
+		int res = mem->mprotect(mmap_base, getByteCount(), 
+			prot | PROT_WRITE);
+		assert(!res && "granting temporary write permission failed");
+	}
 
-	ptraceCopyRange(pid, prot, mem_begin, mem_end);
+	ptraceCopyRange(pid, mem_begin, mem_end);
 
-	if (!(prot & PROT_WRITE))
-		mprotect(mmap_base, getByteCount(), prot);
+	if (!(prot & PROT_WRITE)) {
+		int res = mem->mprotect(mmap_base, getByteCount(), prot);
+		assert(!res && "removing temporary write permission failed");
+	}
 }
 
-PTImgMapEntry::PTImgMapEntry(pid_t pid, const char* mapline)
- : mmap_base(NULL), mmap_fd(-1), is_stack(false)
+PTImgMapEntry::PTImgMapEntry(GuestMem* in_mem, pid_t pid, const char* mapline)
+: mmap_base(0)
+, mmap_fd(-1)
+, is_stack(false)
+, mem(in_mem)
 {
 	int                     rc;
 
 	libname[0] = '\0';
 	rc = sscanf(mapline, "%p-%p %s %x %d:%d %d %s",
-		&mem_begin,
-		&mem_end,
+		(void**)&mem_begin,
+		(void**)&mem_end,
 		perms,
 		&off,
 		&t[0],
@@ -316,7 +318,7 @@ PTImgMapEntry::PTImgMapEntry(pid_t pid, const char* mapline)
 PTImgMapEntry::~PTImgMapEntry(void)
 {
 	if (mmap_fd) close(mmap_fd);
-	if (mmap_base) munmap(mmap_base, getByteCount());
+	if (mmap_base) mem->munmap(mmap_base, getByteCount());
 }
 
 void GuestPTImg::dumpSelfMap(void)
@@ -347,7 +349,7 @@ void GuestPTImg::slurpMappings(pid_t pid)
 		if (fgets(line_buf, 256, f) == NULL)
 			break;
 
-		mapping = new PTImgMapEntry(pid, line_buf);
+		mapping = new PTImgMapEntry(mem, pid, line_buf);
 		mappings.add(mapping);
 	}
 	fclose(f);
@@ -367,7 +369,6 @@ void GuestPTImg::slurpRegisters(pid_t pid)
 #ifdef __amd64__
 	AMD64CPUState* amd64_cpu_state = (AMD64CPUState*)cpu_state;
 	amd64_cpu_state->setRegs(regs, fpregs);
-	amd64_cpu_state->setTLS(new PTImgTLS((void*)regs.fs_base));
 #endif
 }
 
@@ -380,7 +381,7 @@ void GuestPTImg::slurpBrains(pid_t pid)
 void GuestPTImg::stackTrace(
 	std::ostream& os,
 	const char* binname, pid_t pid,
-	void* range_begin, void* range_end)
+	guest_ptr range_begin, guest_ptr range_end)
 {
 	char			buffer[1024];
 	int			bytes;
@@ -439,7 +440,7 @@ void GuestPTImg::stackTrace(
 }
 
 /* TODO: only change a single character */
-void GuestPTImg::setBreakpoint(pid_t pid, void* addr)
+void GuestPTImg::setBreakpoint(pid_t pid, guest_ptr addr)
 {
 	uint64_t		old_v, new_v;
 	int			err;
@@ -447,16 +448,16 @@ void GuestPTImg::setBreakpoint(pid_t pid, void* addr)
 	/* already set? */
 	if (breakpoints.count(addr)) return;
 
-	old_v = ptrace(PTRACE_PEEKTEXT, pid, addr, NULL);
+	old_v = ptrace(PTRACE_PEEKTEXT, pid, addr.o, NULL);
 	new_v = old_v & ~0xff;
 	new_v |= 0xcc;
 
-	err = ptrace(PTRACE_POKETEXT, pid, addr, new_v);
+	err = ptrace(PTRACE_POKETEXT, pid, addr.o, new_v);
 	assert (err != -1 && "Failed to set breakpoint");
 	breakpoints[addr] = old_v;
 }
 
-void GuestPTImg::resetBreakpoint(pid_t pid, void* addr)
+void GuestPTImg::resetBreakpoint(pid_t pid, guest_ptr addr)
 {
 	uint64_t	old_v;
 	int		err;
@@ -464,25 +465,16 @@ void GuestPTImg::resetBreakpoint(pid_t pid, void* addr)
 	assert (breakpoints.count(addr) && "Resetting non-BP!");
 
 	old_v = breakpoints[addr];
-	err = ptrace(PTRACE_POKETEXT, pid, addr, old_v);
+	err = ptrace(PTRACE_POKETEXT, pid, addr.o, old_v);
 	assert (err != -1 && "Failed to reset breakpoint");
 	breakpoints.erase(addr);
 }
 
 void GuestPTImg::setupMem(void)
 {
-	assert (mem == NULL);
-	mem = new GuestMem();
-
-	foreach (it, mappings.begin(), mappings.end()) {
-		PTImgMapEntry		*ptm = *it;
-		GuestMem::Mapping	s(
-			ptm->getBase(),
-			ptm->getByteCount(),
-			ptm->getProt(),
-			ptm->isStack());
-		mem->recordMapping(s);
-	}	
+	/* once upon a time this put the mappings
+	   into the GuestMem, but now GuestMem handles
+	   the actual mappings and address translation */
 }
 
 Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }
@@ -496,7 +488,7 @@ void GuestPTImg::loadSymbols(void) const
 
 	foreach (it, mappings.begin(), mappings.end()) {
 		std::string	libname((*it)->getLib());
-		void		*base((*it)->getBase());
+		guest_ptr	base((*it)->getBase());
 		Symbols		*new_syms;
 
 		/* already seen it? */
@@ -514,7 +506,7 @@ void GuestPTImg::loadSymbols(void) const
 	}
 }
 
-std::string GuestPTImg::getName(void* x) const
+std::string GuestPTImg::getName(guest_ptr x) const
 {
 	const Symbol	*sym_found;
 

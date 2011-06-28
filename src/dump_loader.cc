@@ -14,6 +14,7 @@
 void dumpIRSBs(void) {}
 
 static bool loadEntry(
+	GuestMem* mem,
 	pid_t pid,
 	const char* save_arg,
 	std::istream& is)
@@ -24,7 +25,7 @@ static bool loadEntry(
 	if(is.fail()) return false;
 	is.get();
 
-	PTImgMapEntry m(pid, line_buf);
+	PTImgMapEntry m(mem, pid, line_buf);
 
 	std::cerr << m.getBase()
 		<< " sz: " << (void*)m.getByteCount()
@@ -38,7 +39,7 @@ static bool loadEntry(
 	char* buffer = (char*)malloc(m.getByteCount());
 	for(unsigned int i = 0; i < m.getByteCount(); i += sizeof(long)) {
 		*(long*)&buffer[i] = ptrace(
-			PTRACE_PEEKTEXT, pid, (char*)m.getBase() + i, NULL);
+			PTRACE_PEEKTEXT, pid, m.getBase().o + i, NULL);
 	}
 	std::ofstream o(save_fname.str().c_str());
 	o.write(buffer, m.getByteCount());
@@ -69,9 +70,10 @@ int main(int argc, char *argv[], char *envp[])
 
 	std::ostringstream map_fname;
 	map_fname << "/proc/" << pid << "/maps";
-
+	
+	GuestMem* mem = new GuestMem();
 	std::ifstream i(map_fname.str().c_str());
-	while (loadEntry(pid, argv[1], i));
+	while (loadEntry(mem, pid, argv[1], i));
 
 	kill(pid, SIGKILL);
 	return 0;

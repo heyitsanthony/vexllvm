@@ -6,15 +6,16 @@
 #include <sstream>
 #include "Sugar.h"
 
-#include "guestmem.h"
 #include "guest.h"
+#include "guestmem.h"
 #include "syscall/syscalls.h"
 #include "amd64cpustate.h"
 
 /* this header loads all of the system headers outside of the namespace */
 #include "syscall/translatedsyscall.h"
 
-static GuestMem::Mapping* g_syscall_last_mapping = NULL;
+static GuestMem* g_mem = NULL;
+static const GuestMem::Mapping* g_syscall_last_mapping = NULL;
 static std::vector<char*> g_to_delete;
 
 namespace AMD64 {
@@ -134,6 +135,7 @@ uintptr_t Syscalls::applyAMD64Syscall(
 		return passthroughSyscall(args, m);
 	}
 	
+	g_mem = mappings;
 	sc_ret = AMD64::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),

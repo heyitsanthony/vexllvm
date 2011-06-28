@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include "guestmem.h"
 
 #define DC_SIZE 4096
 
@@ -17,7 +18,7 @@ public:
 
 	virtual ~DirectCache() {}
 
-	void put(void* p, T* t)
+	void put(guest_ptr p, T* t)
 	{
 		unsigned int	idx;
 		idx = ptr2slot(p);
@@ -25,7 +26,7 @@ public:
 		ents[idx].t = t;
 	}
 
-	T* get(void* p) const
+	T* get(guest_ptr p) const
 	{
 		unsigned int	idx;
 		idx = ptr2slot(p);
@@ -35,17 +36,17 @@ public:
 
 	void flush(void) { memset(ents, 0, sizeof(ents)); }
 private:
-	unsigned int ptr2slot(void* p) const
+	unsigned int ptr2slot(guest_ptr p) const
 	{
 		uintptr_t	n;
-		n = (((uintptr_t)p) >> 2); /* who cares about the lowest bits */
+		n = (p.o >> 2); /* who cares about the lowest bits */
 		return n % DC_SIZE;
 	}
 
 	struct dc_pair
 	{
-		void*	ptr;
-		T*	t;
+		guest_ptr	ptr;
+		T*		t;
 	};
 
 	struct dc_pair	ents[DC_SIZE];
