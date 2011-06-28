@@ -159,6 +159,7 @@ void ElfImg::setupSegments(void)
 
 		segments.push_back(es);
 	}
+	assert(!segments.empty());
 	segments.back()->clearEnd();
 }
 

@@ -149,6 +149,13 @@ bool Syscalls::interceptSyscall(
 			return true;
 		}
 		return false;
+	case SYS_dup2:
+		/* do not close stdin, stdout, stderr! */
+		if (args.getArg(1) < 3) {
+			sc_ret = 0;
+			return true;
+		}
+		return false;
 	case SYS_brk:
 		if (mappings->sbrk(guest_ptr(args.getArg(0))))
 			sc_ret = mappings->brk();

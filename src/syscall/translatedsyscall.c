@@ -971,6 +971,7 @@ static inline abi_long target_to_host_sockaddr(struct sockaddr *addr,
     const socklen_t unix_maxlen = sizeof (struct sockaddr_un);
     sa_family_t sa_family;
     struct target_sockaddr *target_saddr;
+    struct sockaddr_un* unix_saddr;
 
     target_saddr = (struct target_sockaddr *)
 	lock_user(VERIFY_READ, target_addr, len, 1);
@@ -994,11 +995,19 @@ static inline abi_long target_to_host_sockaddr(struct sockaddr *addr,
             if ( cp[len-1] && !cp[len] )
                 len++;
         }
-        if (len > unix_maxlen)
+        if (len > unix_maxlen) {
             len = unix_maxlen;
+	}
     }
 
     memcpy(addr, target_saddr, len);
+
+    if (sa_family == AF_UNIX) {
+	unix_saddr = (struct sockaddr_un*)addr;
+	char* p = path(&unix_saddr->sun_path[0]);
+	assert(strlen(p) + sizeof(sa_family_t) < unix_maxlen && "chroot broke socket name length");
+	memcpy(&unix_saddr->sun_path[0], p, strlen(p) + 1);
+    }
     addr->sa_family = sa_family;
     unlock_user(target_saddr, target_addr, 0);
 
@@ -4320,7 +4329,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_creat:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(creat(p, arg2));
+        ret = get_errno(creat(path(p), arg2));
         unlock_user(p, arg1, 0);
         break;
 #endif
@@ -4332,7 +4341,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             if (!p || !p2)
                 ret = -TARGET_EFAULT;
             else
-                ret = get_errno(link(p, p2));
+                ret = get_errno(link(path(p), path(p2)));
             unlock_user(p2, arg2, 0);
             unlock_user(p, arg1, 0);
         }
@@ -4348,7 +4357,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             if (!p || !p2)
                 ret = -TARGET_EFAULT;
             else
-                ret = get_errno(sys_linkat(arg1, p, arg3, p2, arg5));
+                ret = get_errno(sys_linkat(arg1, path(p), arg3, path(p2), arg5));
             unlock_user(p, arg2, 0);
             unlock_user(p2, arg4, 0);
         }
@@ -4364,7 +4373,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_unlinkat:
         if (!(p = lock_user_string(arg2)))
             goto efault;
-        ret = get_errno(sys_unlinkat(arg1, p, arg3));
+        ret = get_errno(sys_unlinkat(arg1, path(p), arg3));
         unlock_user(p, arg2, 0);
         break;
 #endif
@@ -4454,7 +4463,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_chdir:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(chdir(p));
+        ret = get_errno(chdir(path(p)));
         unlock_user(p, arg1, 0);
         break;
 #ifdef TARGET_NR_time
@@ -4472,21 +4481,21 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_mknod:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(mknod(p, arg2, arg3));
+        ret = get_errno(mknod(path(p), arg2, arg3));
         unlock_user(p, arg1, 0);
         break;
 #if defined(TARGET_NR_mknodat) && defined(__NR_mknodat)
     case TARGET_NR_mknodat:
         if (!(p = lock_user_string(arg2)))
             goto efault;
-        ret = get_errno(sys_mknodat(arg1, p, arg3, arg4));
+        ret = get_errno(sys_mknodat(arg1, path(p), arg3, arg4));
         unlock_user(p, arg2, 0);
         break;
 #endif
     case TARGET_NR_chmod:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(chmod(p, arg2));
+        ret = get_errno(chmod(path(p), arg2));
         unlock_user(p, arg1, 0);
         break;
 #ifdef TARGET_NR_break
@@ -4527,9 +4536,9 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
                              * string.
                              */
                             if ( ! arg5 )
-                                ret = get_errno(mount(p, p2, p3, (unsigned long)arg4, NULL));
+                                ret = get_errno(mount(path(p), path(p2), p3, (unsigned long)arg4, NULL));
                             else
-                                ret = get_errno(mount(p, p2, p3, (unsigned long)arg4, g2h(arg5)));
+                                ret = get_errno(mount(path(p), path(p2), p3, (unsigned long)arg4, g2h(arg5)));
                         }
                         unlock_user(p, arg1, 0);
                         unlock_user(p2, arg2, 0);
@@ -4540,7 +4549,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_umount:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(umount(p));
+        ret = get_errno(umount(path(p)));
         unlock_user(p, arg1, 0);
         break;
 #endif
@@ -4587,7 +4596,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             }
             if (!(p = lock_user_string(arg1)))
                 goto efault;
-            ret = get_errno(utime(p, host_tbuf));
+            ret = get_errno(utime(path(p), host_tbuf));
             unlock_user(p, arg1, 0);
         }
         break;
@@ -4606,7 +4615,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             }
             if (!(p = lock_user_string(arg1)))
                 goto efault;
-            ret = get_errno(utimes(p, tvp));
+            ret = get_errno(utimes(path(p), tvp));
             unlock_user(p, arg1, 0);
         }
         break;
@@ -4648,7 +4657,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_faccessat:
         if (!(p = lock_user_string(arg2)))
             goto efault;
-        ret = get_errno(sys_faccessat(arg1, p, arg3));
+        ret = get_errno(sys_faccessat(arg1, path(p), arg3));
         unlock_user(p, arg2, 0);
         break;
 #endif
@@ -4676,7 +4685,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             if (!p || !p2)
                 ret = -TARGET_EFAULT;
             else
-                ret = get_errno(rename(p, p2));
+                ret = get_errno(rename(path(p), path(p2)));
             unlock_user(p2, arg2, 0);
             unlock_user(p, arg1, 0);
         }
@@ -4690,7 +4699,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             if (!p || !p2)
                 ret = -TARGET_EFAULT;
             else
-                ret = get_errno(sys_renameat(arg1, p, arg3, p2));
+                ret = get_errno(sys_renameat(arg1, path(p), arg3, path(p2)));
             unlock_user(p2, arg4, 0);
             unlock_user(p, arg2, 0);
         }
@@ -4699,21 +4708,21 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_mkdir:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(mkdir(p, arg2));
+        ret = get_errno(mkdir(path(p), arg2));
         unlock_user(p, arg1, 0);
         break;
 #if defined(TARGET_NR_mkdirat) && defined(__NR_mkdirat)
     case TARGET_NR_mkdirat:
         if (!(p = lock_user_string(arg2)))
             goto efault;
-        ret = get_errno(sys_mkdirat(arg1, p, arg3));
+        ret = get_errno(sys_mkdirat(arg1, path(p), arg3));
         unlock_user(p, arg2, 0);
         break;
 #endif
     case TARGET_NR_rmdir:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(rmdir(p));
+        ret = get_errno(rmdir(path(p)));
         unlock_user(p, arg1, 0);
         break;
     case TARGET_NR_dup:
@@ -4767,7 +4776,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_umount2:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(umount2(p, arg2));
+        ret = get_errno(umount2(path(p), arg2));
         unlock_user(p, arg1, 0);
         break;
 #endif
@@ -4802,7 +4811,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_chroot:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(chroot(p));
+        ret = get_errno(chroot(path(p)));
         unlock_user(p, arg1, 0);
         break;
     case TARGET_NR_ustat:
@@ -5282,7 +5291,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             if (!p || !p2)
                 ret = -TARGET_EFAULT;
             else
-                ret = get_errno(symlink(p, p2));
+                ret = get_errno(symlink(path(p), path(p2)));
             unlock_user(p2, arg2, 0);
             unlock_user(p, arg1, 0);
         }
@@ -5296,7 +5305,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             if (!p || !p2)
                 ret = -TARGET_EFAULT;
             else
-                ret = get_errno(sys_symlinkat(p, arg2, p2));
+                ret = get_errno(sys_symlinkat(path(p), arg2, path(p2)));
             unlock_user(p2, arg3, 0);
             unlock_user(p, arg1, 0);
         }
@@ -5308,6 +5317,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
 #endif
     case TARGET_NR_readlink:
         {
+	    /* TODO: fixup the symlink to be in the virtual namespace */
             char *p2, *temp;
             p = lock_user_string(arg1);
             p2 = lock_user(VERIFY_WRITE, arg2, arg3, 0);
@@ -5322,7 +5332,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
                     snprintf((char *)p2, arg3, "%s", real);
                     }
                 else
-                    ret = get_errno(readlink(path(p), p2, arg3));
+                    ret = get_errno(readlink(path(p), path(p2), arg3));
             }
             unlock_user(p2, arg2, ret);
             unlock_user(p, arg1, 0);
@@ -5337,7 +5347,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
             if (!p || !p2)
         	ret = -TARGET_EFAULT;
             else
-                ret = get_errno(sys_readlinkat(arg1, path(p), p2, arg4));
+                ret = get_errno(sys_readlinkat(arg1, path(p), path(p2), arg4));
             unlock_user(p2, arg3, ret);
             unlock_user(p, arg2, 0);
         }
@@ -5351,7 +5361,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_swapon:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(swapon(p, arg2));
+        ret = get_errno(swapon(path(p), arg2));
         unlock_user(p, arg1, 0);
         break;
 #endif
@@ -5411,7 +5421,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_truncate:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(truncate(p, arg2));
+        ret = get_errno(truncate(path(p), arg2));
         unlock_user(p, arg1, 0);
         break;
     case TARGET_NR_ftruncate:
@@ -5424,7 +5434,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_fchmodat:
         if (!(p = lock_user_string(arg2)))
             goto efault;
-        ret = get_errno(sys_fchmodat(arg1, p, arg3));
+        ret = get_errno(sys_fchmodat(arg1, path(p), arg3));
         unlock_user(p, arg2, 0);
         break;
 #endif
@@ -5722,7 +5732,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
         if (!(p = lock_user_string(arg1)))
             goto efault;
         ret = get_errno(swapoff(p));
-        unlock_user(p, arg1, 0);
+        unlock_user(path(p), arg1, 0);
         break;
 #endif
     case TARGET_NR_sysinfo:
@@ -6388,7 +6398,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_truncate64:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-	ret = target_truncate64(cpu_env, p, arg2, arg3, arg4);
+	ret = target_truncate64(cpu_env, path(p), arg2, arg3, arg4);
         unlock_user(p, arg1, 0);
 	break;
 #endif
@@ -6446,7 +6456,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_lchown:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(lchown(p, low2highuid(arg2), low2highgid(arg3)));
+        ret = get_errno(lchown(path(p), low2highuid(arg2), low2highgid(arg3)));
         unlock_user(p, arg1, 0);
         break;
 #ifdef TARGET_NR_getuid
@@ -6523,7 +6533,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_fchownat:
         if (!(p = lock_user_string(arg2))) 
             goto efault;
-        ret = get_errno(sys_fchownat(arg1, p, low2highuid(arg3), low2highgid(arg4), arg5));
+        ret = get_errno(sys_fchownat(arg1, path(p), low2highuid(arg3), low2highgid(arg4), arg5));
         unlock_user(p, arg2, 0);
         break;
 #endif
@@ -6572,7 +6582,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_chown:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(chown(p, low2highuid(arg2), low2highgid(arg3)));
+        ret = get_errno(chown(path(p), low2highuid(arg2), low2highgid(arg3)));
         unlock_user(p, arg1, 0);
         break;
     case TARGET_NR_setuid:
@@ -6592,7 +6602,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_lchown32:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(lchown(p, arg2, arg3));
+        ret = get_errno(lchown(path(p), arg2, arg3));
         unlock_user(p, arg1, 0);
         break;
 #endif
@@ -6861,7 +6871,7 @@ abi_long do_syscall(void *cpu_env, int num, abi_long arg1,
     case TARGET_NR_chown32:
         if (!(p = lock_user_string(arg1)))
             goto efault;
-        ret = get_errno(chown(p, arg2, arg3));
+        ret = get_errno(chown(path(p), arg2, arg3));
         unlock_user(p, arg1, 0);
         break;
 #endif
