@@ -80,3 +80,8 @@ Type* GuestCPUState::mkFromFields(
 
 	return StructType::get(gctx, types, "guestCtxTy");
 }
+
+void GuestCPUState::print(std::ostream& os) const
+{
+	print(os, getStateData());
+}

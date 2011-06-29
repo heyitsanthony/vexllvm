@@ -30,7 +30,7 @@ public:
 	void setRegs(const user_regs_struct& regs, 
 		const user_fpregs_struct& fpregs);
 #endif
-	void print(std::ostream& os) const;
+	virtual void print(std::ostream& os, const void*) const;
 
 	void setFSBase(uintptr_t base);
 	uintptr_t getFSBase() const;

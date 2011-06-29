@@ -30,7 +30,7 @@ public:
 		const user_vfp& vfpregs) {
 #endif
 	void setThreadPointer(uint32_t v);
-	void print(std::ostream& os) const;
+	virtual void print(std::ostream& os, const void*) const;
 
 	const char* off2Name(unsigned int off) const;
 protected:

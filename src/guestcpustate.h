@@ -62,7 +62,9 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 
 	virtual void setFuncArg(uintptr_t arg_val, unsigned int arg_num) = 0;
 
-	virtual void print(std::ostream& os) const = 0;
+	void print(std::ostream& os) const;
+	virtual void print(std::ostream& os, const void* regctx) const = 0;
+
 	virtual const char* off2Name(unsigned int off) const = 0;
 protected:
 	llvm::Type* mkFromFields(struct guest_ctx_field* f,

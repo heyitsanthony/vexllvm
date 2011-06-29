@@ -217,33 +217,37 @@ uint64_t I386CPUState::getExitCode(void) const
 }
 
 // 152 == XMM base
-#define get_xmm_lo(i)	((uint64_t*)(&(((uint8_t*)state_data)[152+16*i])))[0]
-#define get_xmm_hi(i)	((uint64_t*)(&(((uint8_t*)state_data)[152+16*i])))[1]
+#define get_xmm_lo(x,i)	((uint64_t*)(&(((uint8_t*)x)[152+16*i])))[0]
+#define get_xmm_hi(x,i)	((uint64_t*)(&(((uint8_t*)x)[152+16*i])))[1]
 
-void I386CPUState::print(std::ostream& os) const
+void I386CPUState::print(std::ostream& os, const void* regctx) const
 {
-	os << "EIP: " << (void*)state2i386()->guest_EIP << "\n";
-	os << "EAX: " << (void*)state2i386()->guest_EAX << "\n";
-	os << "EBX: " << (void*)state2i386()->guest_EBX << "\n";
-	os << "ECX: " << (void*)state2i386()->guest_ECX << "\n";
-	os << "EDX: " << (void*)state2i386()->guest_EDX << "\n";
-	os << "ESP: " << (void*)state2i386()->guest_ESP << "\n";
-	os << "EBP: " << (void*)state2i386()->guest_EBP << "\n";
-	os << "EDI: " << (void*)state2i386()->guest_EDI << "\n";
-	os << "ESI: " << (void*)state2i386()->guest_ESI << "\n";
+	const VexGuestX86State	*s;
+	
+	s = (const VexGuestX86State*)regctx;
+
+	os << "EIP: " << (void*)s->guest_EIP << "\n";
+	os << "EAX: " << (void*)s->guest_EAX << "\n";
+	os << "EBX: " << (void*)s->guest_EBX << "\n";
+	os << "ECX: " << (void*)s->guest_ECX << "\n";
+	os << "EDX: " << (void*)s->guest_EDX << "\n";
+	os << "ESP: " << (void*)s->guest_ESP << "\n";
+	os << "EBP: " << (void*)s->guest_EBP << "\n";
+	os << "EDI: " << (void*)s->guest_EDI << "\n";
+	os << "ESI: " << (void*)s->guest_ESI << "\n";
 
 	for (int i = 0; i < 8; i++) {
 		os
 		<< "XMM" << i << ": "
-		<< (void*) get_xmm_hi(i) << "|"
-		<< (void*)get_xmm_lo(i) << std::endl;
+		<< (void*) get_xmm_hi(s, i) << "|"
+		<< (void*)get_xmm_lo(s, i) << std::endl;
 	}
 
 	for (int i = 0; i < 8; i++) {
-		int r  = (state2i386()->guest_FTOP + i) & 0x7;
+		int r  = (s->guest_FTOP + i) & 0x7;
 		os
 		<< "ST" << i << ": "
-		<< (void*)state2i386()->guest_FPREG[r] << std::endl;
+		<< (void*)s->guest_FPREG[r] << std::endl;
 	}
 }
 
@@ -254,8 +258,10 @@ void I386CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 }
 
 #ifdef __i386__
-void I386CPUState::setRegs(const user_regs_struct& regs, 
-	const user_fpregs_struct& fpregs) {
+void I386CPUState::setRegs(
+	const user_regs_struct& regs, 
+	const user_fpregs_struct& fpregs)
+{
 	state2i386()->guest_EAX = regs.eax;
 	state2i386()->guest_ECX = regs.ecx;
 	state2i386()->guest_EDX = regs.edx;

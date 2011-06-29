@@ -202,44 +202,48 @@ uint64_t AMD64CPUState::getExitCode(void) const
 }
 
 // 208 == XMM base
-#define get_xmm_lo(i)	((uint64_t*)(&(((uint8_t*)state_data)[208+16*i])))[0]
-#define get_xmm_hi(i)	((uint64_t*)(&(((uint8_t*)state_data)[208+16*i])))[1]
+#define get_xmm_lo(x,i)	((uint64_t*)(&(((uint8_t*)s)[208+16*i])))[0]
+#define get_xmm_hi(x,i)	((uint64_t*)(&(((uint8_t*)s)[208+16*i])))[1]
 
-void AMD64CPUState::print(std::ostream& os) const
+void AMD64CPUState::print(std::ostream& os, const void* regctx) const
 {
-	os << "RIP: " << (void*)state2amd64()->guest_RIP << "\n";
-	os << "RAX: " << (void*)state2amd64()->guest_RAX << "\n";
-	os << "RBX: " << (void*)state2amd64()->guest_RBX << "\n";
-	os << "RCX: " << (void*)state2amd64()->guest_RCX << "\n";
-	os << "RDX: " << (void*)state2amd64()->guest_RDX << "\n";
-	os << "RSP: " << (void*)state2amd64()->guest_RSP << "\n";
-	os << "RBP: " << (void*)state2amd64()->guest_RBP << "\n";
-	os << "RDI: " << (void*)state2amd64()->guest_RDI << "\n";
-	os << "RSI: " << (void*)state2amd64()->guest_RSI << "\n";
-	os << "R8: " << (void*)state2amd64()->guest_R8 << "\n";
-	os << "R9: " << (void*)state2amd64()->guest_R9 << "\n";
-	os << "R10: " << (void*)state2amd64()->guest_R10 << "\n";
-	os << "R11: " << (void*)state2amd64()->guest_R11 << "\n";
-	os << "R12: " << (void*)state2amd64()->guest_R12 << "\n";
-	os << "R13: " << (void*)state2amd64()->guest_R13 << "\n";
-	os << "R14: " << (void*)state2amd64()->guest_R14 << "\n";
-	os << "R15: " << (void*)state2amd64()->guest_R15 << "\n";
+	VexGuestAMD64State	*s;
+
+	s = (VexGuestAMD64State*)regctx;
+
+	os << "RIP: " << (void*)s->guest_RIP << "\n";
+	os << "RAX: " << (void*)s->guest_RAX << "\n";
+	os << "RBX: " << (void*)s->guest_RBX << "\n";
+	os << "RCX: " << (void*)s->guest_RCX << "\n";
+	os << "RDX: " << (void*)s->guest_RDX << "\n";
+	os << "RSP: " << (void*)s->guest_RSP << "\n";
+	os << "RBP: " << (void*)s->guest_RBP << "\n";
+	os << "RDI: " << (void*)s->guest_RDI << "\n";
+	os << "RSI: " << (void*)s->guest_RSI << "\n";
+	os << "R8: " << (void*)s->guest_R8 << "\n";
+	os << "R9: " << (void*)s->guest_R9 << "\n";
+	os << "R10: " << (void*)s->guest_R10 << "\n";
+	os << "R11: " << (void*)s->guest_R11 << "\n";
+	os << "R12: " << (void*)s->guest_R12 << "\n";
+	os << "R13: " << (void*)s->guest_R13 << "\n";
+	os << "R14: " << (void*)s->guest_R14 << "\n";
+	os << "R15: " << (void*)s->guest_R15 << "\n";
 
 	for (int i = 0; i < 16; i++) {
 		os
 		<< "XMM" << i << ": "
-		<< (void*) get_xmm_hi(i) << "|"
-		<< (void*)get_xmm_lo(i) << std::endl;
+		<< (void*) get_xmm_hi(s,i) << "|"
+		<< (void*)get_xmm_lo(s,i) << std::endl;
 	}
 
 	for (int i = 0; i < 8; i++) {
 		int r  = (state2amd64()->guest_FTOP + i) & 0x7;
 		os
 		<< "ST" << i << ": "
-		<< (void*)state2amd64()->guest_FPREG[r] << std::endl;
+		<< (void*)s->guest_FPREG[r] << std::endl;
 	}
 
-	os << "fs_base = " << (void*)state2amd64()->guest_FS_ZERO << std::endl;
+	os << "fs_base = " << (void*)s->guest_FS_ZERO << std::endl;
 }
 
 void AMD64CPUState::setFSBase(uintptr_t base) {

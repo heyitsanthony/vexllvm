@@ -61,6 +61,8 @@ public:
 	bool findRegion(size_t len, Mapping& m);
 	bool isFlat() const { return force_flat; }
 	
+	void* getData(const Mapping& m) const { return (void*)(base + m.offset.o); }
+
 	/* access small bits of guest memory */
 	template <typename T>
 	T read(guest_ptr offset) {

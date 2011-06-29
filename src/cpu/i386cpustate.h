@@ -31,7 +31,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	void setRegs(const user_regs_struct& regs, 
 		const user_fpregs_struct& fpregs);
 #endif
-	void print(std::ostream& os) const;
+	void print(std::ostream& os, const void*) const;
 
 	const char* off2Name(unsigned int off) const;
 protected:

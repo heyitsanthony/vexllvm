@@ -246,26 +246,29 @@ void ARMCPUState::setThreadPointer(uint32_t v)
 	state2arm()->guest_TPIDRURO = v;
 }
 
-void ARMCPUState::print(std::ostream& os) const
+void ARMCPUState::print(std::ostream& os, const void* regctx) const
 {
+	const ExtVexGuestARMState*	s;
+	const uint32_t			*gpr_base;
 
-	unsigned int *gpr_base = &state2arm()->guest_R0;
+	s = (const ExtVexGuestARMState*)regctx;
+	gpr_base = &s->guest_vex.guest_R0;
 	for (int i = 0; i < 16; i++) {
 		os
 		<< "R" << i << ": "
 		<< (void*)gpr_base[i] << std::endl;
 	}
 
-	unsigned long long *vpr_base = &state2arm()->guest_D0;
+	const unsigned long long *vpr_base = &s->guest_vex.guest_D0;
 	for (int i = 0; i < 16; i++) {
 		os
 		<< "D" << i << ": "
 		<< (void*)vpr_base[i] << std::endl;
 	}
-	os << "FPCSR: "  << (void*)state2arm()->guest_FPSCR << "\n";
+	os << "FPCSR: "  << (void*)s->guest_vex.guest_FPSCR << "\n";
 	/* tls */
-	os << "TPIDRURO: "  << (void*)state2arm()->guest_TPIDRURO << "\n";
-	os << "LINKED: "  << (void*)state2arm_ext()->guest_LINKED << "\n";
+	os << "TPIDRURO: "  << (void*)s->guest_vex.guest_TPIDRURO << "\n";
+	os << "LINKED: "  << (void*)s->guest_LINKED << "\n";
 }
 
 /* set a function argument */
