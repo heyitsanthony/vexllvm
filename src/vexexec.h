@@ -67,6 +67,7 @@ protected:
 	virtual void doSysCall(VexSB* vsb);
 	void doSysCall(VexSB* vsb, SyscallParams& sp);
 	static void setupStatics(Guest* in_gs);
+	void setExit(int ec) { exited = true; exit_code = ec; }
 
 	Guest		*gs;
 	Syscalls	*sc;

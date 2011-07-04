@@ -193,16 +193,14 @@ void VexExec::doSysCall(VexSB* vsb)
 	SyscallParams sp(gs->getSyscallParams());
 	doSysCall(vsb, sp);
 }
+
 void VexExec::doSysCall(VexSB* vsb, SyscallParams& sp)
 {
 	uint64_t	sc_ret;
 
 	sc_ret = sc->apply(sp);
 
-	if (sc->isExit()) {
-		exited = true;
-		exit_code = sc_ret;
-	}
+	if (sc->isExit()) setExit(sc_ret);
 	gs->setSyscallResult(sc_ret);
 }
 
@@ -217,8 +215,7 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 	hostptr = gs->getMem()->getBase() + elfptr.o;
 
 	if (exit_addrs.count(elfptr)) {
-		exited = true;
-		exit_code = gs->getExitCode();
+		setExit(gs->getExitCode());
 		return NULL;
 	}
 
