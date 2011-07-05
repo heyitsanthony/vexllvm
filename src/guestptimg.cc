@@ -199,8 +199,13 @@ void PTImgMapEntry::mapLib(pid_t pid)
 	int			prot, flags;
 
 
-	if (strcmp(libname, "[vsyscall]") == 0)
+	if (strcmp(libname, "[vsyscall]") == 0) {
+		/* the infamous syspage */
+		GuestMem::Mapping m(
+			getBase(), getByteCount(), PROT_READ | PROT_EXEC);
+		mem->recordMapping(m);
 		return;
+	}
 	if (strcmp(libname, "[stack]") == 0) {
 		is_stack = true;
 		mapStack(pid);
