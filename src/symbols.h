@@ -20,6 +20,7 @@ public:
 	virtual ~Symbol() {}
 	const std::string& getName() const { return name; }
 	symaddr_t getBaseAddr() const { return base_addr; }
+	symaddr_t getEndAddr() const { return base_addr + length; }
 	unsigned int getLength() const { return length; }
 	bool isDynamic(void) const { return is_dyn; }
 	bool isCode(void) const { return is_code; }
@@ -54,6 +55,10 @@ public:
 	void addSym(const Symbol* sym);
 	void addSyms(const Symbols* syms);
 	unsigned int size(void) const { return name_map.size(); }
+
+	symname_map::const_iterator begin() const { return name_map.begin(); }
+	symname_map::const_iterator end() const { return name_map.end(); }
+
 private:
 	symname_map	name_map;
 	symaddr_map	addr_map;

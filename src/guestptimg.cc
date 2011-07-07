@@ -498,17 +498,8 @@ void GuestPTImg::loadSymbols(void) const
 	}
 }
 
-std::string GuestPTImg::getName(guest_ptr x) const
+const Symbols* GuestPTImg::getSymbols(void) const
 {
-	const Symbol	*sym_found;
-
-	if (symbols == NULL) loadSymbols();
-
-	sym_found = symbols->findSym(x);
-	if (sym_found != NULL) {
-		return (sym_found->getName()+"+")+
-			hex_to_string((intptr_t)x-sym_found->getBaseAddr());
-	}
-
-	return Guest::getName(x);
+	if (!symbols) loadSymbols();
+	return symbols;
 }

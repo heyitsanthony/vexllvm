@@ -80,7 +80,7 @@ public:
 	static void dumpSelfMap(void);
 	virtual Arch::Arch getArch() const;
 
-	virtual std::string getName(guest_ptr) const;
+	virtual const Symbols* getSymbols(void) const;
 
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[]);

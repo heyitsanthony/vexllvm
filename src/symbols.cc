@@ -25,7 +25,7 @@ const Symbol* Symbols::findSym(uint64_t ptr) const
 	const Symbol			*ret;
 	symaddr_map::const_iterator	it;
 
-	if (ptr == NULL)
+	if (ptr == 0)
 		return NULL;
 
 	it = addr_map.upper_bound((symaddr_t)ptr-1);

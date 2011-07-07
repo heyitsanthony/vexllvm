@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #include "util.h"
+#include "symbols.h"
 #include "guestcpustate.h"
 #include "guestsnapshot.h"
 
@@ -49,7 +50,21 @@ void Guest::setSyscallResult(uint64_t ret)
 	cpu_state->setSyscallResult(ret);
 }
 
-std::string Guest::getName(guest_ptr x) const { 
+std::string Guest::getName(guest_ptr x) const
+{
+	const Symbol	*sym_found;
+	const Symbols	*syms;
+
+	syms = getSymbols();
+	if (syms == NULL)
+		return hex_to_string(x);
+
+	sym_found = syms->findSym(x);
+	if (sym_found != NULL) {
+		return (sym_found->getName()+"+")+
+			hex_to_string((intptr_t)x-sym_found->getBaseAddr());
+	}
+
 	return hex_to_string(x); 
 }
 

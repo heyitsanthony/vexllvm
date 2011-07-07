@@ -1,3 +1,6 @@
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -5,6 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "Sugar.h"
+#include "symbols.h"
+#include "util.h"
 #include "guestcpustate.h"
 #include "guestsnapshot.h"
 
@@ -36,7 +41,9 @@ GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 #define END_F()	fclose(f); }
 
 GuestSnapshot::GuestSnapshot(const char* dirpath)
-: Guest(NULL), is_valid(false)
+: Guest(NULL)
+, is_valid(false)
+, syms(NULL)
 {
 	ssize_t	sz;
 
@@ -67,7 +74,14 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	assert (sz == 1);
 	END_F()
 
-	/* setup guestmem */
+	loadMappings(dirpath);
+	loadSymbols(dirpath);
+
+	is_valid = true;
+}
+
+void GuestSnapshot::loadMappings(const char* dirpath)
+{
 	SETUP_F_R("mapinfo")
 	assert (mem == NULL);
 	mem = new GuestMem();
@@ -108,8 +122,23 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	mem->recordMapping(sys_page);
 #endif
 	END_F()
+}
 
-	is_valid = true;
+void GuestSnapshot::loadSymbols(const char* dirpath)
+{
+	syms = new Symbols();
+	SETUP_F_R("syms");
+
+	do {
+		unsigned int	elems;
+		uint64_t	begin, end;
+
+		elems = fscanf(f, "%s %"PRIx64"-%"PRIx64"\n", buf, &begin, &end);
+		if (elems != 3)
+			break;
+		syms->addSym(buf, begin, end - begin);
+	} while (1);
+	END_F();
 }
 
 GuestSnapshot::~GuestSnapshot(void)
@@ -117,7 +146,8 @@ GuestSnapshot::~GuestSnapshot(void)
 	foreach (it, fd_list.begin(), fd_list.end()) {
 		close(*it);
 	}
-	/* nothing yet */
+
+	if (syms != NULL) delete syms;
 }
 
 #define SETUP_F_W(x)			\
@@ -161,6 +191,32 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 	assert (wsz == 1);
 	END_F()
 
+	saveMappings(g, dirpath);
+	saveSymbols(g, dirpath);
+}
+
+void GuestSnapshot::saveSymbols(const Guest* g, const char* dirpath)
+{
+	const Symbols	*g_syms;
+
+	SETUP_F_W("syms");
+	g_syms = g->getSymbols();
+	if (g_syms == NULL) goto done;
+
+	foreach (it, g_syms->begin(), g_syms->end()) {
+		const Symbol	*cur_sym = it->second;
+		fprintf(f, "%s %"PRIx64"-%"PRIx64"\n",
+			it->first.c_str(),
+			cur_sym->getBaseAddr(),
+			cur_sym->getEndAddr());
+	}
+
+done:
+	END_F();
+}
+
+void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
+{
 	/* save guestmem */
 	SETUP_F_W("mapinfo")
 
@@ -209,5 +265,4 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 	}
 
 	END_F()
-	/* done saving map */
 }
