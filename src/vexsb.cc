@@ -28,6 +28,17 @@ VexSB::VexSB(guest_ptr in_guest_addr, const IRSB* irsb)
 	loadJump(irsb->jumpkind, VexExpr::create(stmts.back(), irsb->next));
 }
 
+VexSB* VexSB::create(guest_ptr guest_addr, const IRSB* in_irsb)
+{
+	if (in_irsb == NULL) return NULL;
+
+	/* error decoding? likely jump to creepy place in memory */
+	if (in_irsb->jumpkind == Ijk_NoDecode)
+		return NULL;
+
+	return new VexSB(guest_addr, in_irsb);
+}
+
 VexSB::~VexSB(void)
 {
 	delete [] values;
@@ -233,6 +244,7 @@ Value* VexSB::getRegValue(unsigned int reg_idx) const
 	assert (values[reg_idx] != NULL);
 	return values[reg_idx];
 }
+
 const Type* VexSB::getRegType(unsigned int reg_idx) const
 {
 	return theGenLLVM->vexTy2LLVM(types[reg_idx]);

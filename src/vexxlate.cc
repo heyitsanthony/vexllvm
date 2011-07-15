@@ -53,13 +53,15 @@ static IRSB* vex_finaltidy(IRSB* irsb)
 
 	assert(x == 0 && "NOT REENTRANT RIGHT NOW");
 	x = 1;
-	g_cb.cb_vexsb = new VexSB(guest_ptr(g_cb.cb_guestaddr), irsb);
+	g_cb.cb_vexsb = VexSB::create(guest_ptr(g_cb.cb_guestaddr), irsb);
 	x = 0;
 	return irsb;
 }
-static UInt vex_needs_self_check(void*, VexGuestExtents* ) {
-	return 0;
-}
+
+#if defined(VALGRIND_TRUNK)
+static UInt vex_needs_self_check(void*, VexGuestExtents* ) { return 0; }
+#endif
+
 static void vex_log(HChar* hc, Int nbytes)
 {
 	switch (log_type) {
@@ -78,6 +80,7 @@ static void vex_log(HChar* hc, Int nbytes)
 static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
 
 VexXlate::VexXlate(Arch::Arch in_arch)
+: trace_fe(getenv("VEXLLVM_TRACE_FE") != NULL)
 {
 	LibVEX_default_VexArchInfo(&vai_host);
 	vai_host.hwcaps = VEX_HOST_HWCAPS;
@@ -183,9 +186,7 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	vta.host_bytes_used = &host_bytes_used;
 
 	vta.traceflags = VEX_TRACE_FLAGS;
-	if(getenv("VEXLLVM_TRACE_FE")) {
-		vta.traceflags |= (1 << 7);
-	}
+	if (trace_fe) vta.traceflags |= (1 << 7);
 #if !defined(VALGRIND_TRUNK)
 	vta.dispatch = (void*)dispatch_asm_amd64;
 	res = LibVEX_Translate(&vta);

@@ -73,6 +73,8 @@ VexSB* VexFCache::allocCacheVSB(void* hostptr, guest_ptr guest_addr)
 	VexSB*	vsb;
 
 	vsb = xlate->xlate(hostptr, guest_addr);
+	if (vsb == NULL)
+		return NULL;
 
 	if (vexsb_cache.size() == max_cache_ents)
 		evict(selectVictimAddress());
@@ -124,6 +126,8 @@ Function* VexFCache::getFunc(void* hostptr, guest_ptr guest_addr)
 	if (ret_f) return ret_f;
 
 	vsb = getVSB(hostptr, guest_addr);
+	if (vsb == NULL)
+		return NULL;
 
 	ret_f = genFunctionByVSB(vsb);
 	return ret_f;

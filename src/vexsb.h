@@ -26,8 +26,10 @@ namespace llvm
 class VexSB
 {
 public:
-	VexSB(guest_ptr guess_addr, const IRSB* in_irsb);
+	/* may be requesting to translate a bad IRSB; return NULL */
+	static VexSB* create(guest_ptr guest_addr, const IRSB* in_irsb);
 
+	/* empty VSB for building vex stmts manually and then load()ing them */
 	VexSB(guest_ptr guest_addr, unsigned int num_regs, IRType* in_types);
 
 	// takes ownership
@@ -54,6 +56,9 @@ public:
 			jump_kind == Ijk_Sys_int128); 
 	}
 	guest_ptr getGuestAddr(void) const { return guest_addr; }
+
+protected:
+	VexSB(guest_ptr guess_addr, const IRSB* in_irsb);
 private:
 	void loadInstructions(const IRSB* irsb);
 	void loadJump(IRJumpKind, VexExpr*);

@@ -242,11 +242,13 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 
 	/* compile it + get vsb */
 	vsb = jit_cache->getVSB(hostptr, elfptr);
+	if (vsb == NULL) {
+		fprintf(stderr, "Could not get VSB for %p\n",  (void*)elfptr.o);
+		return NULL;
+	}
+
 	jit_cache->getFPtr(hostptr, elfptr);
 
-	if (!vsb) fprintf(stderr, "Could not get VSB for %p\n", 
-		(void*)elfptr.o);
-	assert (vsb && "Expected VSB");
 	assert((!found || vsb->getEndAddr() < m.end()) &&
 		"code spanned known page mappings");
 

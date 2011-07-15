@@ -37,6 +37,9 @@ private:
 	VexArchInfo		vai_guest;
 	VexAbiInfo		vbi;
 	VexArch			arch;
+
+	/* Only TJ knows what this does. */
+	bool			trace_fe;
 };
 
 #endif
