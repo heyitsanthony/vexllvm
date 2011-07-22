@@ -70,8 +70,8 @@ void VexStmtPutI::emit(void) const
 }
 
 
-void VexStmtPutI::print(std::ostream& os) const { 
-	os << "PutI(" << base << ", " 
+void VexStmtPutI::print(std::ostream& os) const {
+	os << "PutI(" << base << ", "
 		<< bias << ", ";
 	ix_expr->print(os);
 	os << ", " << len << ") <- ";
@@ -138,10 +138,10 @@ VexStmtLLSC::VexStmtLLSC(VexSB* in_parent, const IRStmt* in_stmt)
 			in_stmt->Ist.LLSC.storedata);
 	}
 }
-void VexStmtLLSC::emitLoad(void) const { 
-	parent->setRegValue(result, 
+void VexStmtLLSC::emitLoad(void) const {
+	parent->setRegValue(result,
 		theGenLLVM->load(
-			addr_expr->emit(), 
+			addr_expr->emit(),
 			parent->getRegType(result)));
 	theGenLLVM->markLinked();
 }
@@ -177,7 +177,7 @@ void VexStmtLLSC::emitStore(void) const {
 
 	parent->setRegValue(result, v_linked);
 }
-void VexStmtLLSC::emit(void) const { 
+void VexStmtLLSC::emit(void) const {
 	if(data_expr) {
 		emitStore();
 	} else {
@@ -273,7 +273,6 @@ VexStmtDirty::VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
   :	VexStmt(in_parent, in_stmt),
   	guard(VexExpr::create(this, in_stmt->Ist.Dirty.details->guard)),
   	needs_state_ptr(in_stmt->Ist.Dirty.details->needsBBP),
-	state_base_ptr(NULL),
 	tmp_reg(in_stmt->Ist.Dirty.details->tmp)
 {
 	const char*	func_name;
@@ -286,16 +285,6 @@ VexStmtDirty::VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
 		std::cerr << "Could not find dirty function \"" <<
 			func_name << "\". Bye" << std::endl;
 		assert (func != NULL && "Could not find dirty function");
-	}
-
-	/* put cpu state ptr on arg stack */
-	if (needs_state_ptr) {
-		const Type	*ptrty;	
-		state_base_ptr = theGenLLVM->getCtxBase();
-		/* result is an i8*, pull the correct ptr type func */
-		ptrty = ((func->arg_begin()))->getType();
-		state_base_ptr = theGenLLVM->getBuilder()->CreateBitCast(
-			state_base_ptr, ptrty);
 	}
 
 	in_args = in_stmt->Ist.Dirty.details->args;
@@ -331,16 +320,22 @@ void VexStmtDirty::emit(void) const
 
 	/* guard condition OK, make drty call */
 	builder->SetInsertPoint(bb_then);
-	if (needs_state_ptr) args_v.push_back(state_base_ptr);
-	foreach (it, args.begin(), args.end()) 
+
+	if (needs_state_ptr) {
+		args_v.push_back(
+			theGenLLVM->getBuilder()->CreateBitCast(
+				theGenLLVM->getCtxBase(),
+				func->arg_begin()->getType()));
+	}
+	foreach (it, args.begin(), args.end())
 		args_v.push_back((*it)->emit());
 	v_call = builder->CreateCall(func, args_v.begin(), args_v.end());
 
 	/* sometimes dirty calls don't set temporaries */
 	if (tmp_reg != -1) {
 		/* vex dirty calls don't necessarily return the correct type,
-		   e.g. in the case of FLDENV on AMD64 it will return a 
-		   VexEmWarn enumeration which the compiler assigned to an 
+		   e.g. in the case of FLDENV on AMD64 it will return a
+		   VexEmWarn enumeration which the compiler assigned to an
 		   int, yet the VEX IR wants it to be 64-bit.  In C there
 		   isn't a good way to control the storage type for an enum,
 		   so I elected to just do an autocast here rather then modify
@@ -369,9 +364,8 @@ void VexStmtDirty::emit(void) const
 
 void VexStmtDirty::print(std::ostream& os) const
 {
-	os << "DirtyCall(" << func->getNameStr() << ")"; 
+	os << "DirtyCall(" << func->getNameStr() << ")";
 }
-
 
 void VexStmtMBE::emit(void) const
 {
@@ -380,7 +374,6 @@ void VexStmtMBE::emit(void) const
 }
 
 void VexStmtMBE::print(std::ostream& os) const { os << "MBE"; }
-
 
 VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 : VexStmt(in_parent, in_stmt),

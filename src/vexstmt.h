@@ -170,7 +170,6 @@ private:
 	llvm::Function*		func;
 	PtrList<VexExpr>	args;
 	bool			needs_state_ptr;
-	llvm::Value		*state_base_ptr;
 	int			tmp_reg;	/* where to store */
 };
 

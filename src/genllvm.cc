@@ -285,27 +285,13 @@ Value* GenLLVM::load(Value* addr_v, IRType vex_type)
 	return load(addr_v, vexTy2LLVM(vex_type));
 }
 
-/* gets i8* of base ptr */
-Value* GenLLVM::getCtxBase(void)
-{
-	Value		*intptr_v;
-	const Type	*ptrty;
-
-	ptrty = PointerType::get(builder->getInt8Ty(), 0);
-	intptr_v = ConstantInt::get(
-		getGlobalContext(),
-		APInt(	sizeof(intptr_t)*8,
-			(uintptr_t)guest->getCPUState()->getStateData()));
-
-	return builder->CreateIntToPtr(intptr_v, ptrty, "ctxbaseptr");
-}
-
 void GenLLVM::markLinked() {
 	/* DEATH: we need to set linked...
 	   also how to do this in a processor indepent way, because
 	   this is really an ARM problem */
 	return;
 }
+
 llvm::Value* GenLLVM::getLinked() {
 	return ConstantInt::get(getGlobalContext(), APInt(1, 1));
 }
