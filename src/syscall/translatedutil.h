@@ -265,5 +265,6 @@ static inline void pstrcpy(char *buf, int buf_size, const char *str)
     *q = '\0';
 }
 
+#define CONFIG_USE_NPTL
 
 #endif
