@@ -17,15 +17,17 @@ ifndef ARMTRACECC
 ARMTRACECC=arm-linux-gnueabi-gcc
 endif
 
+ifeq ($(shell llvm-config --version),2.6)
+CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=6
+endif
+
 # XXX, MAKES BINARY SIZE EXPLODE
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
 LDRELOC2="-Wl,-Ttext-segment=$(BIN_BASE2)"
 #LDFLAGS=
 VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
-#LLVMCONFIG_PATH="/home/chz/src/llvm/llvm-2.6/Release/bin/llvm-config"
-#CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=6
 LLVMCONFIG_PATH=llvm-config
-CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)`
+CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)
 LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
 LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
 LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
