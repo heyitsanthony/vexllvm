@@ -154,33 +154,35 @@ const VexSB* VexExec::doNextSB(void)
 	new_jmpaddr = doVexSB(vsb);
 
 	/* check for special exits */
+	/* NOTE: we set the exit type *after* we process so that
+	 * klee-mc will work */
 	exit_type = gs->getCPUState()->getExitType();
 	switch(exit_type) {
 	case GE_IGNORE:
-		gs->getCPUState()->setExitType(GE_IGNORE);
 		break;
 	case GE_CALL:
 		/* push fall through address if call */
-		gs->getCPUState()->setExitType(GE_IGNORE);
 		call_depth++;
 		break;
 	case GE_RETURN:
-		gs->getCPUState()->setExitType(GE_IGNORE);
 		call_depth--;
 		break;
 	case GE_SYSCALL:
-		gs->getCPUState()->setExitType(GE_IGNORE);
 		doSysCall(vsb);
-		if (exited) return NULL;
+		if (exited) {
+			gs->getCPUState()->setExitType(GE_IGNORE);
+			return NULL;
+		}
 		break;
 	case GE_EMWARN:
-		gs->getCPUState()->setExitType(GE_IGNORE);
 		std::cerr << "[VEXLLVM] VEX Emulation warning!?"
 			<< std::endl;
 		break;
 	default:
 		assert (0 == 1 && "SPECIAL EXIT TYPE");
 	}
+
+	gs->getCPUState()->setExitType(GE_IGNORE);
 
 	/* next address to go to */
 	next_addr = new_jmpaddr;
