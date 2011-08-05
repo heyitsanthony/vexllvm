@@ -371,10 +371,37 @@ void GuestPTImg::slurpRegisters(pid_t pid)
 #endif
 }
 
+#ifdef __amd64__
+extern "C" {
+#include <valgrind/libvex_guest_amd64.h>
+}
+#endif
+
 void GuestPTImg::slurpBrains(pid_t pid)
 {
 	slurpMappings(pid);
 	slurpRegisters(pid);
+#ifdef __amd64__
+	/* XXX there should be a better place for this */
+	/* from glibc, sysdeps/x86_64/elf/start.S
+	 * argc = rsi
+	 * argv = rdx */
+	VexGuestAMD64State	*amd64regs;
+	guest_ptr		argv;
+	unsigned int		argc;
+
+	amd64regs = (VexGuestAMD64State*)cpu_state->getStateData();
+	argv_ptrs.clear();
+	argc = mem->readNative(guest_ptr(amd64regs->guest_RSP));
+	argv = guest_ptr(mem->readNative(guest_ptr(amd64regs->guest_RSP), 1));
+	for (unsigned int i = 0; i < argc; i++) {
+		argv_ptrs.push_back(argv);
+		argv.o += mem->strlen(argv) + 1;
+	}
+#else
+	fprintf(stderr,
+		"[VEXLLVM] WARNING: can not get argv for current arch\n");
+#endif
 }
 
 void GuestPTImg::stackTrace(

@@ -2,6 +2,7 @@
 #define GUEST_H
 
 #include <iostream>
+#include <vector>
 #include <stdint.h>
 #include <list>
 #include "arch.h"
@@ -51,6 +52,12 @@ public:
 	 * is done by guestsnapshot to keep things tidy */
 	void save(const char* dirpath = NULL) const;
 	static Guest* load(const char* dirpath = NULL);
+
+	/* This might have to eventually morph into some 'get parameters'
+	 * type function. Since we just do executables right now, limit
+	 * the interface to argv's */
+	virtual std::vector<guest_ptr> getArgvPtrs(void) const
+	{ return std::vector<guest_ptr>(); }
 
 protected:
 	void setBinPath(const char* b);

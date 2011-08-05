@@ -321,6 +321,7 @@ void GuestELF::loaderBuildArgptr(int envc, int argc,
 	/* copy all the arg pointers into the table */
 	while (argc-- > 0) {
 		putPointer(argv, stringp, 1);
+		argv_ptrs.push_back(argv);
 		stringp.o += mem->strlen(stringp) + 1;
 	}
 

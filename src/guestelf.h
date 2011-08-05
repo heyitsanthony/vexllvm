@@ -17,6 +17,10 @@ public:
 	void setArgv(unsigned int argc, const char* argv[],
 		int envc, const char* envp[]);
 	virtual Arch::Arch getArch() const;
+
+	virtual std::vector<guest_ptr> getArgvPtrs(void) const
+	{ return argv_ptrs; }
+
 private:
 	void setupMem(void);
 	void setupArgPages();
@@ -40,6 +44,8 @@ private:
 	guest_ptr		stack_limit;
 	guest_ptr		exe_string;
 	std::string		ld_library_path;
+
+	std::vector<guest_ptr>	argv_ptrs;
 };
 
 #endif

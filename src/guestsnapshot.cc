@@ -74,6 +74,14 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	assert (sz == 1);
 	END_F()
 
+	SETUP_F_R("argv")
+	argv_ptrs.clear();
+	uint64_t	p;
+	while (fscanf(f, "%p\n", ((void**)&p)) == 1) {
+		argv_ptrs.push_back(guest_ptr(p));
+	}
+	END_F()
+
 	loadMappings(dirpath);
 	loadSymbols(dirpath);
 
@@ -189,6 +197,14 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 	cpu = g->getCPUState();
 	wsz = fwrite(cpu->getStateData(), cpu->getStateSize(), 1, f);
 	assert (wsz == 1);
+	END_F()
+
+	/* save argv pointers */
+	SETUP_F_W("argv")
+	std::vector<guest_ptr>	p(g->getArgvPtrs());
+	foreach (it, p.begin(), p.end()) {
+		fprintf(f, "%p\n", (void*)(it)->o);
+	}
 	END_F()
 
 	saveMappings(g, dirpath);

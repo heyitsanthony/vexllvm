@@ -68,11 +68,11 @@ public:
 	T read(guest_ptr offset) {
 		return *(T*)(base + offset.o);
 	}
-	uintptr_t readNative(guest_ptr offset) {
+	uintptr_t readNative(guest_ptr offset, int idx = 0) {
 		if(is_32_bit)
-			return *(unsigned int*)(base + offset.o);
+			return *(unsigned int*)(base + offset.o + idx*4);
 		else
-			return *(unsigned long*)(base + offset.o);
+			return *(unsigned long*)(base + offset.o + idx*8);
 	}
 	template <typename T>
 	void write(guest_ptr offset, const T& t) {
