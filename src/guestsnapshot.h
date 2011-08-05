@@ -14,6 +14,9 @@ public:
 	virtual Arch::Arch getArch(void) const { return arch; }
 
 	virtual const Symbols* getSymbols(void) const { return syms; }
+	virtual std::vector<guest_ptr> getArgvPtrs(void) const
+	{ return argv_ptrs; }
+
 protected:
 	GuestSnapshot(const char* dirname);
 
@@ -23,11 +26,12 @@ private:
 	void loadSymbols(const char* dirname);
 	void loadMappings(const char* dirname);
 
-	bool		is_valid;
-	guest_ptr	entry_pt;
-	Arch::Arch	arch;
-	std::list<int>	fd_list;
-	Symbols		*syms;
+	bool			is_valid;
+	guest_ptr		entry_pt;
+	Arch::Arch		arch;
+	std::list<int>		fd_list;
+	Symbols			*syms;
+	std::vector<guest_ptr>	argv_ptrs;
 };
 
 #endif

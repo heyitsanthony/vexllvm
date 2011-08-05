@@ -81,6 +81,8 @@ public:
 	virtual Arch::Arch getArch() const;
 
 	virtual const Symbols* getSymbols(void) const;
+	virtual std::vector<guest_ptr> getArgvPtrs(void) const
+	{ return argv_ptrs; }
 
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[]);
@@ -102,6 +104,7 @@ private:
 	PtrList<PTImgMapEntry>		mappings;
 	std::map<guest_ptr, uint64_t>	breakpoints;
 	mutable Symbols			*symbols; // lazy loaded
+	std::vector<guest_ptr>		argv_ptrs;
 };
 
 #endif
