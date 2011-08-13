@@ -27,15 +27,20 @@ using namespace llvm;
 VexHelpers* theVexHelpers;
 extern void vexop_setup_fp(VexHelpers* vh);
 
-VexHelpers::VexHelpers(Arch::Arch arch)
-: helper_mod(0), vexop_mod(0)
+VexHelpers::VexHelpers(Arch::Arch in_arch)
+: arch(in_arch)
+, helper_mod(0)
+, vexop_mod(0)
 {
-	char		path_buf[512];
-
 	/* env not set => assume running from git root */
 	bc_dirpath = getenv("VEXLLVM_HELPER_PATH");
 	if (bc_dirpath == NULL) bc_dirpath = "bitcode";
-	
+}
+
+void VexHelpers::loadDefaultModules(void)
+{
+	char		path_buf[512];
+
 	const char* helper_file = NULL;
 	switch(arch) {
 	case Arch::X86_64:
@@ -56,8 +61,19 @@ VexHelpers::VexHelpers(Arch::Arch arch)
 	snprintf(path_buf, 512, "%s/%s", bc_dirpath, VEXOP_BC_FILE);
 	vexop_mod = loadMod(path_buf);
 
-	assert (helper_mod && vexop_mod);
 	vexop_setup_fp(this);
+
+	assert (vexop_mod && helper_mod);
+}
+
+VexHelpers* VexHelpers::create(Arch::Arch arch)
+{
+	VexHelpers	*vh;
+
+	vh = new VexHelpers(arch);
+	vh->loadDefaultModules();
+
+	return vh;
 }
 
 Module* VexHelpers::loadMod(const char* path)
@@ -131,8 +147,8 @@ VexHelpers::~VexHelpers()
 {
 /* XXX. Kill when KLEE is updated; modules are deleted with builder */
 #if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
-	delete helper_mod;
-	delete vexop_mod;
+	if (helper_mod) delete helper_mod;
+	if (vexop_mod) delete vexop_mod;
 	foreach (it, user_mods.begin(), user_mods.end())
 		delete (*it);
 #endif

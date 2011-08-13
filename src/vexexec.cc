@@ -46,7 +46,7 @@ void VexExec::setupStatics(Guest* in_gs)
 	const char* saveas;
 
 	if (!theGenLLVM) theGenLLVM = new GenLLVM(in_gs);
-	if (!theVexHelpers) theVexHelpers = new VexHelpers(in_gs->getArch());
+	if (!theVexHelpers) theVexHelpers = VexHelpers::create(in_gs->getArch());
 
 	/* stupid hack to save right before execution */
 	if (getenv("VEXLLVM_SAVE")) {
