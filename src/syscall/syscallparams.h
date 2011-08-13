@@ -32,6 +32,9 @@ public:
 		assert (n < NUM_SYSCALL_ARGS);
 		return args[n];
 	}
+
+	void* getArgPtr(unsigned int n) const { return (void*)getArg(n); }
+
 	void setArg(unsigned int n, uintptr_t v)
 	{
 		assert (n < NUM_SYSCALL_ARGS);
