@@ -221,7 +221,7 @@ void GuestMem::recordMapping(Mapping& mapping)
 	}
 
 	/* now kill all the ones it overlaps */
-	while(i != maps.end() && mapping.end() > i->second.end()) {
+	while(i != maps.end() && mapping.end() >= i->second.end()) {
 		mapmap_t::iterator to_erase = i++;
 		maps.erase(to_erase);
 	}

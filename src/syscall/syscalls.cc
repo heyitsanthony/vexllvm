@@ -259,7 +259,7 @@ void Syscalls::print(std::ostream& os) const
 void Syscalls::print(std::ostream& os, const SyscallParams& sp, 
 	uintptr_t* result) const
 {
-	os << "Syscall: " << getSyscallName(sp.getSyscall());
+	os << "Syscall: " << sp.getSyscall() << " : " << getSyscallName(sp.getSyscall());
 	os << " {"
 		<< (void*)sp.getArg(0) << ", "
 		<< (void*)sp.getArg(1) << ", "
