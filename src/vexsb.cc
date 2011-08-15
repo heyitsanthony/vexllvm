@@ -180,6 +180,9 @@ llvm::Function* VexSB::emit(const char* fname)
 	case Ijk_Sys_int128:
 		theGenLLVM->setExitType(GE_SYSCALL);
 		break;
+	case Ijk_SigTRAP:
+		theGenLLVM->setExitType(GE_TRAP);
+		break;
 	default:
 		fprintf(stderr, "UNKNOWN JUMP TYPE %x\n", jump_kind);
 		assert(0 == 1 && "BAD JUMP");
@@ -261,6 +264,7 @@ void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 	case Ijk_NoRedir:
 	case Ijk_Sys_syscall:
 	case Ijk_Sys_int128:
+	case Ijk_SigTRAP:
 	case Ijk_ClientReq:
 		jump_expr = blk_next;
 		break;

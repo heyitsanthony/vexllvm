@@ -30,7 +30,7 @@ public:
 	llvm::IRBuilder<>* getBuilder(void) { return builder; }
 	llvm::Module* getModule(void) { return mod; }
 
-	const llvm::Type* vexTy2LLVM(IRType ty) const;
+	static const llvm::Type* vexTy2LLVM(IRType ty);
 	
 	llvm::Value* readCtx(unsigned int byteOff, IRType ty);
 	llvm::Value* readCtx(

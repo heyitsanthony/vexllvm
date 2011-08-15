@@ -32,6 +32,16 @@ GuestCPUState* GuestCPUState::create(Arch::Arch arch)
 	}
 }
 
+uint8_t* GuestCPUState::copyStateData(void) const
+{
+	uint8_t	*ret;
+
+	assert (state_data != NULL && "NO STATE DATA TO COPY??");
+	ret = new uint8_t[getStateSize()];
+	memcpy(ret, state_data, getStateSize());
+	return ret;
+}
+
 Type* GuestCPUState::mkFromFields(
 	struct guest_ctx_field* f,
 	byte2elem_map& offmap)
