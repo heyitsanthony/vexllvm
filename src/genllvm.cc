@@ -90,20 +90,21 @@ Function* GenLLVM::endBB(Value* retVal)
 	return ret_f;
 }
 
-const Type* GenLLVM::vexTy2LLVM(IRType ty) const
+const Type* GenLLVM::vexTy2LLVM(IRType ty)
 {
 	switch(ty) {
-	case Ity_I1:	return builder->getInt1Ty();
-	case Ity_I8:	return builder->getInt8Ty();
-	case Ity_I16:	return builder->getInt16Ty();
-	case Ity_I32:	return builder->getInt32Ty();
-	case Ity_I64:	return builder->getInt64Ty();
-	case Ity_F32:	return builder->getFloatTy();
-	case Ity_F64:	return builder->getDoubleTy();
+	case Ity_I1:	return IntegerType::get(getGlobalContext(), 1);
+	case Ity_I8:	return IntegerType::get(getGlobalContext(), 8);
+	case Ity_I16:	return IntegerType::get(getGlobalContext(), 16);
+	case Ity_I32:	return IntegerType::get(getGlobalContext(), 32);
+	case Ity_I64:	return IntegerType::get(getGlobalContext(), 64);
+	case Ity_F32:	return Type::getFloatTy(getGlobalContext());
+	case Ity_F64:	return Type::getDoubleTy(getGlobalContext());
 //	case Ity_I128:	 TODO
 	case Ity_V128:
 		return VectorType::get(
-			Type::getInt8Ty(getGlobalContext()), 16);
+			Type::getInt8Ty(getGlobalContext()),
+			16);
 	default:
 		std::cout << "COULDN'T HANDLE " << ty << std::endl;
 	}
@@ -314,16 +315,13 @@ void GenLLVM::setExitType(uint8_t exit_type)
 void GenLLVM::mkFuncTy(void)
 {
 	std::vector<const Type*>	f_args;
-	f_args.push_back(PointerType::get(
-		guest->getCPUState()->getTy(), 0));
+
+	f_args.push_back(PointerType::get(guest->getCPUState()->getTy(), 0));
 	if(log_last_store) {
-		f_args.push_back(PointerType::get(
-			MemLog::getType(), 0));
+		f_args.push_back(PointerType::get(MemLog::getType(), 0));
 	}
-	funcTy = FunctionType::get(
-		builder->getInt64Ty(),
-		f_args,
-		false);
+
+	funcTy = FunctionType::get(builder->getInt64Ty(), f_args, false);
 }
 
 Value* GenLLVM::to16x8i(Value* v) const

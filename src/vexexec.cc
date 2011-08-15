@@ -87,6 +87,9 @@ VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 
 	eb.setErrorStr(&err_str);
 	exeEngine = eb.create();
+	if (!exeEngine) {
+		std::cerr << "Exe Engine Error: " << err_str << '\n';
+	}
 	assert (exeEngine && "Could not make exe engine");
 
 	/* XXX need to fix ownership of module exe engine deletes it now! */
@@ -174,6 +177,13 @@ const VexSB* VexExec::doNextSB(void)
 			return NULL;
 		}
 		break;
+	case GE_TRAP:
+		doTrap(vsb);
+		if (exited) {
+			gs->getCPUState()->setExitType(GE_IGNORE);
+			return NULL;
+		}
+		break;
 	case GE_EMWARN:
 		std::cerr << "[VEXLLVM] VEX Emulation warning!?"
 			<< std::endl;
@@ -232,7 +242,11 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 	if (found) {
 		/* it be nice to factor some of this into guestmem */
 		if (!(m.req_prot & PROT_EXEC)) {
-			assert (false && "Trying to jump to non-code");
+			std::cerr
+				<< "[VEXLLVM] Tried to run non-exec memory @"
+				<< elfptr
+				<< "\n";
+			return NULL;
 		}
 		if (m.cur_prot & PROT_WRITE) {
 			m.cur_prot = m.req_prot & ~PROT_WRITE;

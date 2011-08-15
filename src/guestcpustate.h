@@ -32,7 +32,8 @@ enum GuestExitType {
 	GE_EMWARN = 4,
 	GE_SYSCALL = 5,
 	GE_CALL = 6,
-	GE_RETURN = 7
+	GE_RETURN = 7,
+	GE_TRAP = 8
 	/* XXX ADD MORE */ };
 
 class GuestCPUState
@@ -44,9 +45,12 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	virtual ~GuestCPUState() {};
 	const llvm::Type* getTy(void) const { return guestCtxTy; }
 	virtual unsigned int byteOffset2ElemIdx(unsigned int off) const = 0;
+
 	void* getStateData(void) { return state_data; }
 	const void* getStateData(void) const { return state_data; }
 	unsigned int getStateSize(void) const { return state_byte_c+1; }
+	uint8_t* copyStateData(void) const;
+
 	virtual void setStackPtr(guest_ptr) = 0;
 	virtual guest_ptr getStackPtr(void) const = 0;
 	virtual void setPC(guest_ptr) = 0;
