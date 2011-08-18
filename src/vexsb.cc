@@ -181,7 +181,7 @@ llvm::Function* VexSB::emit(const char* fname)
 		theGenLLVM->setExitType(GE_SYSCALL);
 		break;
 	case Ijk_SigTRAP:
-		theGenLLVM->setExitType(GE_TRAP);
+		theGenLLVM->setExitType(GE_SIGTRAP);
 		break;
 	default:
 		fprintf(stderr, "UNKNOWN JUMP TYPE %x\n", jump_kind);

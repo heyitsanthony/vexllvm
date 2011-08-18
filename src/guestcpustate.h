@@ -33,7 +33,6 @@ enum GuestExitType {
 	GE_SYSCALL = 5,
 	GE_CALL = 6,
 	GE_RETURN = 7,
-	GE_TRAP = 8
 	/* XXX ADD MORE */ };
 
 class GuestCPUState

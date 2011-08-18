@@ -177,7 +177,7 @@ const VexSB* VexExec::doNextSB(void)
 			return NULL;
 		}
 		break;
-	case GE_TRAP:
+	case GE_SIGTRAP:
 		doTrap(vsb);
 		if (exited) {
 			gs->getCPUState()->setExitType(GE_IGNORE);
