@@ -34,7 +34,7 @@ GuestMem::GuestMem(void)
 		assert (base == NULL && "Double setting base!");
 		if (base_str[1] == 'x') {
 			size_t	scan_nr;
-			scan_nr = sscanf(base_str+2, "%x", &base);
+			scan_nr = sscanf(base_str+2, "%lx", (long*)&base);
 			assert (scan_nr == 1);
 		} else {
 			base = (char*)((uintptr_t)atoi(base_str));
@@ -345,11 +345,12 @@ bool GuestMem::findRegion(size_t len, Mapping& m) {
 int GuestMem::mmap(guest_ptr& result, guest_ptr addr, 
 	size_t len, int prot, int flags, int fd, off_t offset)
 {
+	void	*desired, *at;
+
 	if(fd >= 0 && (offset & (PAGE_SIZE - 1)))
 		return -EINVAL;
 	if(fd >= 0 && (addr.o & (PAGE_SIZE - 1)))
-		return EINVAL;
-
+		return -EINVAL;
 	if((addr & (PAGE_SIZE - 1)))
 		return -EINVAL;
 
@@ -359,43 +360,38 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 	// addr.o &= ~(PAGE_SIZE - 1);
 	len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE -1);
 	
-	bool fixed = flags & MAP_FIXED;
 	Mapping m(addr, len, prot);
-	if(addr == 0 && !fixed) {
-		if(!findRegion(m.length, m)) {
+	if(addr == 0 && !(flags & MAP_FIXED)) {
+		if (!findRegion(m.length, m))
 			return -ENOMEM;
-		}
-		fixed = true;
-		flags |= MAP_FIXED;
 	}
-	if (m.req_prot & PROT_WRITE) {
+
+	if (m.req_prot & PROT_WRITE)
 		m.cur_prot &= ~PROT_EXEC;
-	}
-	void* desired = getBase() + m.offset.o;
-	void* at = ::mmap(desired, m.length, m.cur_prot, flags, fd, offset);
+
+	desired = getHostPtr(m.offset);
+	at = ::mmap(desired, m.length, m.cur_prot, flags & ~MAP_FIXED, fd, offset);
 
 	/* this is bad because it will probably be out of our desired
 	   address range... so, this is a fail */
-	if(at != desired) {
-		if(at != MAP_FAILED) {
+	if (at != desired) {
+		if(at != MAP_FAILED)
 			::munmap(at, m.length);
-		}
-		if(fixed) {
+
+		if (flags & MAP_FIXED)
 			return -errno;
-		} 
+
 		/* ok, they didn't force it somewhere, so we can tolerate
 		   a modified mapping */
-		if(!findRegion(m.length, m)) {
-			return -ENOMEM;
-		}
-		fixed = true;
+		if (!findRegion(m.length, m)) return -ENOMEM;
+
 		flags |= MAP_FIXED;
 		at = ::mmap(desired, m.length, m.cur_prot, flags, fd, offset);
 	}
-	/* fixed is set, so at can only be map failed */
-	if(at == MAP_FAILED) {
-		return -errno;
-	}
+
+	/* fixed == true, so 'at' can only be map failed */
+	if(at == MAP_FAILED) return -errno;
+
 	result = m.offset;
 	recordMapping(m);
 	return 0;

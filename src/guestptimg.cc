@@ -305,7 +305,7 @@ PTImgMapEntry::PTImgMapEntry(GuestMem* in_mem, pid_t pid, const char* mapline)
 
 	assert (rc >= 0);
 
-	if (dump_maps) fprintf(stderr, "MAPPING: %s", mapline);
+	if (dump_maps) fprintf(stderr, "PTImgMapEntry: %s", mapline);
 
 	/* now map it in */
 	if (strlen(libname) > 0)

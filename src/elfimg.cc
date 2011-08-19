@@ -41,6 +41,7 @@ ElfImg* ElfImg::create(GuestMem* m, const char* fname, bool linked)
 
 ElfImg::~ElfImg(void)
 {
+	if (interp) delete interp;
 	free(img_path);
 
 	if (fd < 0) return;
