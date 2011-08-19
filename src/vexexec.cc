@@ -196,7 +196,6 @@ const VexSB* VexExec::doNextSB(void)
 
 	/* next address to go to */
 	next_addr = new_jmpaddr;
-
 	return vsb;
 }
 
@@ -224,13 +223,7 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 	GuestMem::Mapping		m;
 	bool				found;
 
-	hostptr = gs->getMem()->getBase() + elfptr.o;
-
-	if (exit_addrs.count(elfptr)) {
-		setExit(gs->getExitCode());
-		return NULL;
-	}
-
+	hostptr = gs->getMem()->getHostPtr(elfptr);
 	found = gs->getMem()->lookupMapping(elfptr, m);
 
 	/* assuming !found means its ok... but that's not totally true */
@@ -259,7 +252,9 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 	/* compile it + get vsb */
 	vsb = jit_cache->getVSB(hostptr, elfptr);
 	if (vsb == NULL) {
-		fprintf(stderr, "Could not get VSB for %p\n",  (void*)elfptr.o);
+		fprintf(stderr,
+			"Could not get VSB for %p. Bad decode?\n",
+			(void*)elfptr.o);
 		return NULL;
 	}
 
@@ -279,11 +274,10 @@ guest_ptr VexExec::doVexSBAux(VexSB* vsb, void* aux)
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);
 
-	sb_executed_c++;
-
-	sb_executed_c++;
 	new_ip = ((vexauxfunc_t)(func_ptr))
 		(gs->getCPUState()->getStateData(), aux);
+	sb_executed_c++;
+
 	return new_ip;
 }
 
@@ -295,8 +289,8 @@ guest_ptr VexExec::doVexSB(VexSB* vsb)
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);
 
-	sb_executed_c++;
 	new_ip = func_ptr(gs->getCPUState()->getStateData());
+	sb_executed_c++;
 
 	return new_ip;
 }

@@ -94,7 +94,7 @@ private:
 	unsigned int	log_gauge_overflow;
 
 	/* caches check for opcodes */
-	uintptr_t	chk_addr;
+	guest_ptr	chk_addr;
 	long		chk_opcode;
 
 	bool		hit_syscall;

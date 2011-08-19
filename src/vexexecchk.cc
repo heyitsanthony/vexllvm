@@ -69,6 +69,7 @@ guest_ptr VexExecChk::doVexSB(VexSB* vsb)
 			vsb->getGuestAddr(),
 			vsb->getEndAddr(),
 			*state);
+
 		is_deferred = false;
 		if (vsb->isSyscall()) {
 			hit_syscall = true;

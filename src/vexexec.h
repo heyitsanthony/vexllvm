@@ -89,8 +89,6 @@ private:
 	/* stats */
 	unsigned int	sb_executed_c;
 
-	exit_func_set		exit_addrs;
-
 	/* dump current state before executing BB */
 	/* defined by env var VEXLLVM_DUMP_STATES */
 	bool		dump_current_state;

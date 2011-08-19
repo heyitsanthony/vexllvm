@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "Sugar.h"
 #include "guestmem.h"
@@ -20,7 +21,7 @@ GuestMem::GuestMem(void)
 , base(NULL)
 , force_flat(getenv("VEXLLVM_4GB_REBASE") == NULL)
 {
-
+	const char	*base_str;
 #ifdef __amd64__
 	/* this is probably only useful for 32-bit binaries
 	   or binaries that don't need the evil kernel page 
@@ -28,19 +29,23 @@ GuestMem::GuestMem(void)
 	if (!force_flat)
 		base = (char*)(uintptr_t)0x100000000;
 #endif
+	base_str = getenv("VEXLLVM_BASE_BIAS");
+	if (base_str) {
+		assert (base == NULL && "Double setting base!");
+		if (base_str[1] == 'x') {
+			size_t	scan_nr;
+			scan_nr = sscanf(base_str+2, "%x", &base);
+			assert (scan_nr == 1);
+		} else {
+			base = (char*)((uintptr_t)atoi(base_str));
+		}
+		fprintf(stderr, "[VEXLLVM] Rebased to %p\n", base);
+	}
+
 	/* since we are managing the address space now, 
 	   record the null page so we don't reuse it */
 	Mapping null_page(guest_ptr(0), PAGE_SIZE, 0);
 	recordMapping(null_page);
-}
-
-GuestMem::~GuestMem(void)
-{
-}
-
-guest_ptr GuestMem::brk()
-{
-	return top_brick;
 }
 
 bool GuestMem::sbrkInitial()
@@ -367,8 +372,7 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 		m.cur_prot &= ~PROT_EXEC;
 	}
 	void* desired = getBase() + m.offset.o;
-	void* at = ::mmap(getBase() + m.offset.o, m.length, 
-		m.cur_prot, flags, fd, offset);
+	void* at = ::mmap(desired, m.length, m.cur_prot, flags, fd, offset);
 
 	/* this is bad because it will probably be out of our desired
 	   address range... so, this is a fail */
@@ -386,8 +390,7 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 		}
 		fixed = true;
 		flags |= MAP_FIXED;
-		at = ::mmap(getBase() + m.offset.o, m.length, 
-			m.cur_prot, flags, fd, offset);
+		at = ::mmap(desired, m.length, m.cur_prot, flags, fd, offset);
 	}
 	/* fixed is set, so at can only be map failed */
 	if(at == MAP_FAILED) {

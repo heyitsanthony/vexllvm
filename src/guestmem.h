@@ -47,12 +47,12 @@ public:
 };
 
 	GuestMem(void);
-	virtual ~GuestMem(void);
+	virtual ~GuestMem(void) {}
 	void recordMapping(Mapping& mapping);
 	const Mapping* lookupMappingPtr(guest_ptr addr);
 	void removeMapping(Mapping& mapping);
 	bool lookupMapping(guest_ptr addr, Mapping& mapping);
-	guest_ptr brk();
+	guest_ptr brk() { return top_brick; }
 	bool sbrk(guest_ptr new_top);
 	std::list<Mapping> getMaps(void) const;
 	void mark32Bit() { is_32_bit = true; }
@@ -98,6 +98,7 @@ public:
 	int strlen(guest_ptr p) const {
 		return ::strlen(base + p.o);
 	}
+	void* getHostPtr(guest_ptr p) const { return (void*)(base + p.o); }
 	
 	/* virtual memory handling, these update the mappings as 
 	   necessary and also do the proper protection to 
