@@ -95,16 +95,15 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 	mem = new GuestMem();
 
 	while (fgets(buf, 512, f) != NULL) {
-		guest_ptr	begin, end, mmap_addr;
-		size_t		length;
-		int		prot, is_stack;
-		int		item_c;
-		int		fd;
+		guest_ptr			begin, end, mmap_addr;
+		size_t				length;
+		int				prot, fd, item_c;
+		GuestMem::Mapping::MapType	map_type;
 
 		item_c = sscanf(
 			buf,
 			"%p-%p %d %d\n",
-			(void**)&begin, (void**)&end, &prot, &is_stack);
+			(void**)&begin, (void**)&end, &prot, &map_type);
 		assert (item_c == 4);
 
 		length =(uintptr_t)end - (uintptr_t)begin;
@@ -119,7 +118,10 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 			MAP_PRIVATE | MAP_FIXED,
 			fd,
 			0);
+
 		assert (res == 0 && "failed to map region on ss load");
+		mem->setType(mmap_addr, map_type);
+
 		fd_list.push_back(fd);
 	}
 
@@ -233,12 +235,13 @@ done:
 
 void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 {
-	/* save guestmem */
+	/* save guestmem to mapinfo file */
 	SETUP_F_W("mapinfo")
 
 	/* force dir to exist */
 	snprintf(buf, 512, "%s/maps", dirpath);
 	mkdir(buf, 0755);
+
 	/* add mappings */
 	list<GuestMem::Mapping> maps = g->getMem()->getMaps();
 	foreach (it, maps.begin(), maps.end()) {
@@ -259,12 +262,12 @@ void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 			continue;
 #endif
 
-		/* range, prot, is_stack */
+		/* range, prot, type */
 		fprintf(f, "%p-%p %d %d\n",
 			(void*)mapping.offset.o,
 			(void*)mapping.end().o,
 			mapping.req_prot,
-			(int)(mapping.isStack()));
+			(int)mapping.type);
 
 		snprintf(buf, 512, "%s/maps/%p", dirpath,
 			(void*)mapping.offset.o);
@@ -276,8 +279,8 @@ void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 		sz = fwrite(buffer, mapping.length, 1, map_f);
 		delete [] buffer;
 		assert (sz == 1 && "Failed to write mapping");
-		fclose(map_f);
 
+		fclose(map_f);
 	}
 
 	END_F()

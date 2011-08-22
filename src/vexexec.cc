@@ -8,6 +8,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
+#include "guestptimg.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -144,11 +145,17 @@ const VexSB* VexExec::doNextSB(void)
 		}
 	}
 
-	if(to_flush.first.o) {
+	if (to_flush.first.o) {
 		jit_cache->flush(
 			guest_ptr(to_flush.first.o - MAX_CODE_BYTES),
 			guest_ptr(to_flush.second.o + MAX_CODE_BYTES));
 		to_flush = std::make_pair(guest_ptr(0), guest_ptr(0));
+	}
+
+	/* trying to jump to the null pointer is always a bad idea */
+	if (elfptr.o == 0) {
+		fprintf(stderr, "[VEXLLVM] Error: Trying to jump to NULL\n");
+		return NULL;
 	}
 
 	vsb = getSBFromGuestAddr(elfptr);
@@ -243,7 +250,9 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 		}
 		if (m.cur_prot & PROT_WRITE) {
 			m.cur_prot = m.req_prot & ~PROT_WRITE;
-			mprotect(gs->getMem()->getBase() + m.offset, m.length,
+			mprotect(
+				gs->getMem()->getHostPtr(m.offset),
+				m.length,
 				m.cur_prot);
 			gs->getMem()->recordMapping(m);
 		}

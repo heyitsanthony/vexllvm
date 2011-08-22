@@ -198,7 +198,6 @@ void PTImgMapEntry::mapLib(pid_t pid)
 {
 	int			prot, flags;
 
-
 	if (strcmp(libname, "[vsyscall]") == 0) {
 		/* the infamous syspage */
 		GuestMem::Mapping m(
@@ -206,8 +205,8 @@ void PTImgMapEntry::mapLib(pid_t pid)
 		mem->recordMapping(m);
 		return;
 	}
+
 	if (strcmp(libname, "[stack]") == 0) {
-		is_stack = true;
 		mapStack(pid);
 		return;
 	}
@@ -221,7 +220,6 @@ void PTImgMapEntry::mapLib(pid_t pid)
 		assert (rc == -1);
 
 		mapAnon(pid);
-
 		return;
 	}
 
@@ -287,10 +285,9 @@ void PTImgMapEntry::ptraceCopy(pid_t pid, int prot)
 PTImgMapEntry::PTImgMapEntry(GuestMem* in_mem, pid_t pid, const char* mapline)
 : mmap_base(0)
 , mmap_fd(-1)
-, is_stack(false)
 , mem(in_mem)
 {
-	int                     rc;
+	int		rc;
 
 	libname[0] = '\0';
 	rc = sscanf(mapline, "%p-%p %s %x %d:%d %d %s",
@@ -308,10 +305,17 @@ PTImgMapEntry::PTImgMapEntry(GuestMem* in_mem, pid_t pid, const char* mapline)
 	if (dump_maps) fprintf(stderr, "PTImgMapEntry: %s", mapline);
 
 	/* now map it in */
-	if (strlen(libname) > 0)
-		mapLib(pid);
-	else
+	if (strlen(libname) <= 0) {
 		mapAnon(pid);
+		return;
+	}
+
+	mapLib(pid);
+	if (strcmp(libname, "[stack]") == 0) {
+		mem->setType(getBase(), GuestMem::Mapping::STACK);
+	} else if (strcmp(libname, "[heap]") == 0) {
+		mem->setType(getBase(), GuestMem::Mapping::HEAP);
+	}
 }
 
 PTImgMapEntry::~PTImgMapEntry(void)

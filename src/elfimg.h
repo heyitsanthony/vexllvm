@@ -44,12 +44,7 @@ public:
 		return readHeader(fname, false);
 	}
 
-	GuestMem* takeMem(void)
-	{
-		GuestMem *m = mem;
-		mem = NULL;
-		return m;
-	}
+	GuestMem* takeMem(void);
 
 private:
 	ElfImg(const char* fname, Arch::Arch arch, bool linked);
