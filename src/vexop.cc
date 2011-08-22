@@ -1011,7 +1011,6 @@ Value* VexExprBinop##x::emit(void) const				\
 		get_i(w));						\
 	Constant	*shuffle_v[] = { get_32i(0), get_32i(2) };	\
 	Constant	*cv = get_cv(shuffle_v);			\
-	fprintf(stderr, "HEY %s\n", #x);	\
 	return builder->CreateBitCast( 					\
 		builder->CreateShuffleVector(				\
 			builder->CreateBitCast(div, get_vt(2, w / 2)),	\
