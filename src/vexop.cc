@@ -5,6 +5,7 @@
 #include "vexop_macros.h"
 #include "vexhelpers.h"
 #include <llvm/Intrinsics.h>
+#include <llvm/Analysis/ConstantFolding.h>
 
 using namespace llvm;
 
@@ -778,24 +779,10 @@ X_TO_Y_EMIT(ReinterpI32asF32, CreateBitCast, get_i(32), get_f())
 
 Value* VexExprUnopV128to64::emit(void) const
 {
-	Value		*v_hilo;
-	Constant	*shuffle_v[] = {
-		get_32i(0), get_32i(1),
-		get_32i(2), get_32i(3),
-		get_32i(4), get_32i(5),
-		get_32i(6), get_32i(7),
-	};
-	Constant	*cv;
-
 	UNOP_SETUP
-	v1 = builder->CreateBitCast(v1, get_vt(16, 8));
-	cv = get_cv(shuffle_v);
-	v_hilo = builder->CreateShuffleVector(v1, v1, cv, "v128extractlow_shuffle");
-
-	return builder->CreateBitCast(
-		v_hilo,
-		get_i(64), 
-		"V128to64");
+	return builder->CreateExtractElement(
+		builder->CreateBitCast(v1, get_vt(2, 64)),
+		get_32i(0));
 }
 
 Value* VexExprUnopV128HIto64::emit(void) const
@@ -1024,11 +1011,12 @@ Value* VexExprBinop##x::emit(void) const				\
 		get_i(w));						\
 	Constant	*shuffle_v[] = { get_32i(0), get_32i(2) };	\
 	Constant	*cv = get_cv(shuffle_v);			\
+	fprintf(stderr, "HEY %s\n", #x);	\
 	return builder->CreateBitCast( 					\
 		builder->CreateShuffleVector(				\
 			builder->CreateBitCast(div, get_vt(2, w / 2)),	\
 			builder->CreateBitCast(rem, get_vt(2, w / 2)),	\
-			cv),						\
+			cv, "divmod"),					\
 		get_i(w));						\
 }
 
@@ -1470,29 +1458,41 @@ OPV_CMP_EMIT(CmpGT32Ux2, get_vt(2, 32), ICmpUGT)
 OPV_CMP_EMIT(CmpGT32Ux4, get_vt(4, 32), ICmpUGT)
 
 //note max vector elements of 16
+// op(v1, splat(v2 <const i8>))
 #define OPVS_EMIT(x, y, z)				\
 Value* VexExprBinop##x::emit(void) const		\
 {							\
+	Value	*ret;					\
 	BINOP_SETUP					\
 	assert(y->getNumElements() <= 16);		\
 	v1 = builder->CreateBitCast(v1, y);		\
 	v2 = builder->CreateZExt(v2, 			\
 		get_i(y->getBitWidth()));		\
-	v2 = builder->CreateBitCast(v2, y);		\
-	Constant *shuffle_v[] = {   			\
-		get_32i(0), get_32i(0),			\
-		get_32i(0), get_32i(0),			\
-		get_32i(0), get_32i(0),			\
-		get_32i(0), get_32i(0),			\
-		get_32i(0), get_32i(0),			\
-		get_32i(0), get_32i(0),			\
-		get_32i(0), get_32i(0),			\
-		get_32i(0), get_32i(0),			\
-	};						\
-	Constant *cv = get_cvl(shuffle_v, 		\
-		y->getNumElements());			\
-	v2 = builder->CreateShuffleVector(v2, v2, cv);	\
-	return builder->Create##z(v1, v2);		\
+	if (!isa<Constant>(v2)) {			\
+		v2 = builder->CreateBitCast(v2, y);		\
+		Constant *shuffle_v[] = {   			\
+			get_32i(0), get_32i(0),			\
+			get_32i(0), get_32i(0),			\
+			get_32i(0), get_32i(0),			\
+			get_32i(0), get_32i(0),			\
+			get_32i(0), get_32i(0),			\
+			get_32i(0), get_32i(0),			\
+			get_32i(0), get_32i(0),			\
+			get_32i(0), get_32i(0),			\
+		};						\
+		Constant	*cv;				\
+		cv = get_cvl(shuffle_v, y->getNumElements());	\
+		v2 = builder->CreateShuffleVector(v2, v2, cv);	\
+	} else { \
+		std::vector<Constant*>	c_v(			\
+			y->getNumElements(), 			\
+			builder->getFolder().CreateTruncOrBitCast(	\
+				dyn_cast<Constant>(v2),		\
+				get_i(y->getBitWidth()/y->getNumElements())));	\
+		v2 = ConstantVector::get(c_v);			\
+	} \
+	ret = builder->Create##z(v1, v2);		\
+	return ret;	\
 }
 
 OPVS_EMIT(ShlN8x8, get_vt(8, 8), Shl )
@@ -1535,15 +1535,20 @@ Value* VexExprBinop##x::emit(void) const				\
 	Value* result = get_c(y->getBitWidth(), 0);			\
 	result = builder->CreateBitCast(result, y);			\
 	for(unsigned i = 0; i < y->getNumElements(); ++i) {		\
-		result = builder->CreateInsertElement(result,		\
-			builder->CreateExtractElement(v1,		\
-				builder->CreateZExt(			\
-					builder->CreateExtractElement(	\
-						v2, get_32i(i)),	\
-						get_i(32))),		\
-			get_32i(i));					\
-	}								\
-	return result;							\
+		Value	*perm_idx;					\
+		Value	*ext_elem;					\
+		perm_idx = builder->CreateZExt(				\
+			builder->CreateExtractElement(			\
+				v2,					\
+				get_32i(i)),				\
+			get_i(32));					\
+		ext_elem = builder->CreateExtractElement(v1, perm_idx);	\
+		result = builder->CreateInsertElement(		\
+			result,					\
+			ext_elem,				\
+			get_32i(i));			\
+	}						\
+	return result;					\
 }
 
 OPSHUF_EMIT(Perm8x8, get_vt(8, 8), get_vt(8, 8))
