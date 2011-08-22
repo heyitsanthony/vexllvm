@@ -323,8 +323,9 @@ GuestMem* ElfImg::takeMem(void)
 {
 	GuestMem *m = mem;
 
-	interp = NULL;
 	mem = NULL;
+
+	if (interp) interp->takeMem();
 	foreach (it, segments.begin(), segments.end()) {
 		ElfSegment *es = *it;
 		es->takeMem();

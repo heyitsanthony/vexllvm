@@ -15,11 +15,11 @@
 #define BRK_RESERVE 256 * 1024 * 1024
 
 GuestMem::GuestMem(void)
-: top_brick(0)
+: base(NULL)
+, top_brick(0)
 , base_brick(0)
-, is_32_bit(false)
 , reserve_brick(0)
-, base(NULL)
+, is_32_bit(false)
 , force_flat(getenv("VEXLLVM_4GB_REBASE") == NULL)
 {
 	const char	*base_str;
