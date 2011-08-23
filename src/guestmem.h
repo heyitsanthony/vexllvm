@@ -15,7 +15,7 @@ public:
 class Mapping
 {
 public:
-	enum MapType { REG = 0, STACK = 1, HEAP = 2, UNMAPPED = 3 };
+	enum MapType { REG = 0, STACK = 1, HEAP = 2, UNMAPPED = 3, VSYSPAGE = 4 };
 
 	Mapping(void) : offset(0), length(0), type(REG) {}
 

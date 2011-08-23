@@ -126,13 +126,42 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 	}
 
 #ifdef __amd64__
-	/* cheat so sys page shows up even though we skip it on save */
-	GuestMem::Mapping	sys_page(
-		SYSPAGE_ADDR, 4096, PROT_READ | PROT_EXEC);
-	mem->recordMapping(sys_page);
+	loadSysPage();
 #endif
 	END_F()
 }
+
+#ifdef __amd64__
+/* cheat so sys page shows up even though we skip it on save */
+void GuestSnapshot::loadSysPage(void)
+{
+	GuestMem::Mapping	sys_page(
+		SYSPAGE_ADDR, 4096, PROT_READ | PROT_EXEC);
+	guest_ptr		ret_page;
+
+	if (mem->getBase() == NULL) {
+		/* already have it mapped, use identity mapping */
+		mem->recordMapping(sys_page);
+		return;
+	}
+
+	int res = mem->mmap(
+		ret_page,
+		sys_page.offset,
+		sys_page.length,
+		PROT_READ | PROT_WRITE,
+		MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS,
+		-1,
+		0);
+
+	assert (res == 0 && "failed to map vsyspage on ss load");
+	assert (ret_page == sys_page.offset);
+
+	/* don't already have it mapped, copy in from vsyspage area */
+	mem->memcpy(ret_page, (void*)SYSPAGE_ADDR.o, 4096);
+	mem->setType(ret_page, GuestMem::Mapping::VSYSPAGE);
+}
+#endif
 
 void GuestSnapshot::loadSymbols(const char* dirpath)
 {
