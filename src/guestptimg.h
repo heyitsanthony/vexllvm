@@ -23,7 +23,6 @@ public:
 	guest_ptr getBase(void) const { return mem_begin; }
 	guest_ptr getEnd(void) const { return getBase() + getByteCount(); }
 	int getProt(void) const;
-	bool isStack(void) const { return is_stack; }
 	std::string getLib() const { return libname; }
 private:
 	void ptraceCopy(pid_t pid, int prot);
@@ -42,7 +41,6 @@ private:
 	guest_ptr	mmap_base;
 	int		mmap_fd;
 
-	bool		is_stack;
 	GuestMem	*mem;
 };
 

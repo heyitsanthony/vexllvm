@@ -2,7 +2,6 @@
 #define ELFSEG_H
 
 #include "elfimg.h"
-#include "guestmem.h"
 
 class ElfSegment
 {
@@ -17,7 +16,8 @@ public:
 	guest_ptr base() const { return es_mmapbase; }
 	unsigned int length() const { return es_len; }
 	int protection() const { return prot; }
-	void clearEnd() { mem->memset(my_end, 0, extra_bytes); }
+	void clearEnd();
+	void takeMem(void) { mem = NULL; }
 
 protected:
 	template <typename Elf_Phdr>

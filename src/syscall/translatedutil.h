@@ -54,9 +54,9 @@
 #endif
 
 /* oh poo, shoud be caught by upper layers */
-#define target_munmap(a, l)	({assert(!"qemu target_munmap"); 0})
-#define target_mprotect(a, l, p) 	({assert(!"qemu target_mprotect"); 0})
-#define target_mremap(oa, ol, ns, f, na) ({assert(!"qemu target_mremap"); 0})
+#define target_munmap(a, l)		{assert(!"qemu target_munmap"); 0}
+#define target_mprotect(a, l, p) 	{assert(!"qemu target_mprotect"); 0}
+#define target_mremap(oa, ol, ns, f, na) {assert(!"qemu target_mremap"); 0}
 
 #define tswapl(s) s
 #define tswap16(s) s
@@ -119,93 +119,60 @@ static inline int copy_to_user(abi_ulong d, void* s, abi_ulong l) {
     0;\
 })
 
+#define DECL_USER_READ_T(x,y,z)				\
+static inline int get_user_##x(y& v, abi_ulong a)	\
+{							\
+	v = g_mem->read<z>(guest_ptr(a));		\
+	return 0; }
+#define DECL_USER_WRITE_T(x,y,z)			\
+static inline int put_user_##x(y v, abi_ulong a)	\
+{							\
+	g_mem->write<z>(guest_ptr(a), v);		\
+	return 0; }
+
+#define DECL_USER_READ(x,y)	DECL_USER_READ_T(x,y,y)
+#define DECL_USER_WRITE(x,y)	DECL_USER_WRITE_T(x,y,y)
 
 #ifdef TARGET_ABI64
 /* icky bastards are doing weird stuff with native size
    chunks in do_socket call... maybe fix them later */
-static inline int get_user_ual(socklen_t& v, abi_ulong a) {
-	v = g_mem->read<socklen_t>(guest_ptr(a));
-	return 0;
-}
+DECL_USER_READ(ual, socklen_t)
+DECL_USER_READ_T(u8, int, char)
+#else
+DECL_USER_READ(ual, size_t)
 #endif
-static inline int get_user_sal(abi_long& v, abi_ulong a) {
-	v = g_mem->read<abi_long>(guest_ptr(a));
-	return 0;
-}
-static inline int get_user_ual(abi_ulong& v, abi_ulong a) {
-	v = g_mem->read<abi_ulong>(guest_ptr(a));
-	return 0;
-}
-#ifndef TARGET_ABI64
-static inline int get_user_ual(size_t& v, abi_ulong a) {
-	v = g_mem->read<abi_ulong>(guest_ptr(a));
-	return 0;
-}
-#endif
-static inline int get_user_u8(char& v, abi_ulong a) {
-	v = g_mem->read<char>(guest_ptr(a));
-	return 0;
-}
-static inline int get_user_u8(abi_long& v, abi_ulong a) {
-	v = g_mem->read<char>(guest_ptr(a));
-	return 0;
-}
-#ifdef TARGET_ABI64
-static inline int get_user_u8(int& v, abi_ulong a) {
-	v = g_mem->read<char>(guest_ptr(a));
-	return 0;
-}
-#endif
-static inline int get_user_u32(unsigned int& v, abi_ulong a) {
-	v = g_mem->read<unsigned int>(guest_ptr(a));
-	return 0;
-}
-static inline int get_user_s32(int& v, abi_ulong a) {
-	v = g_mem->read<int>(guest_ptr(a));
-	return 0;
-}
-static inline int put_user_ual(abi_ulong v, abi_ulong a) {
-	g_mem->write<abi_ulong>(guest_ptr(a), v);
-	return 0;
-}
-static inline int put_user_sal(abi_long v, abi_ulong a) {
-	g_mem->write<abi_long>(guest_ptr(a), v);
-	return 0;
-}
-static inline int put_user_s32(int v, abi_ulong a) {
-	g_mem->write<int>(guest_ptr(a), v);
-	return 0;
-}
-static inline int put_user_u32(unsigned int v, abi_ulong a) {
-	g_mem->write<unsigned int>(guest_ptr(a), v);
-	return 0;
-}
-static inline int put_user_u16(unsigned short v, abi_ulong a) {
-	g_mem->write<unsigned short>(guest_ptr(a), v);
-	return 0;
-}
-static inline int put_user_s64(long long v, abi_ulong a) {
-	g_mem->write<long long>(guest_ptr(a), v);
-	return 0;
-}
-static inline int put_user_u8(abi_long v, abi_ulong a) {
-	g_mem->write<char>(guest_ptr(a), v);
-	return 0;
-	
-}
+
+DECL_USER_READ(sal, abi_long)
+DECL_USER_READ(ual, abi_ulong)
+DECL_USER_READ(u8, char)
+DECL_USER_READ_T(u8, abi_long, char)
+DECL_USER_READ(u32, uint32_t)
+DECL_USER_READ(s32, int32_t)
+DECL_USER_WRITE(ual, abi_ulong)
+DECL_USER_WRITE(sal, abi_long)
+DECL_USER_WRITE(s32, int32_t)
+DECL_USER_WRITE(u32, uint32_t)
+DECL_USER_WRITE(u16, uint16_t)
+DECL_USER_WRITE(s64, int64_t)
+DECL_USER_WRITE_T(u8, abi_long, char)
+
 static int host_to_target_errno(int err);
-abi_ulong mmap_find_vma_flags(abi_ulong start, abi_ulong size,
-	int flags) 
+
+/* XXX I'm not sure what this should do, but I assume it's wrong. -AJR */
+/* TODO: try their proposed start sometime? */
+abi_ulong mmap_find_vma_flags(
+	abi_ulong start, abi_ulong size, int flags)
 {
-	GuestMem::Mapping m;
-	/* TODO: try their proposed start sometime? */
-	bool found = g_mem->findRegion(size, m);
-	if(!found)
-		return (abi_ulong)(uintptr_t)(long)-ENOMEM;
+	GuestMem::Mapping	m;
+	bool			found;
+
+	found = g_mem->findFreeRegion(size, m);
+	if (!found) return (abi_ulong)(uintptr_t)(long)-ENOMEM;
 	return (abi_ulong)m.offset;
 }
-void page_set_flags(target_ulong start, target_ulong end, 
-	int flags)
+
+void page_set_flags(
+	target_ulong start, target_ulong end, int flags)
 {
 	int res = g_mem->mprotect(guest_ptr(start), end - start, flags);
 	assert(res == 0 && "failed to set page flags as requested");
@@ -229,20 +196,14 @@ typedef struct target_siginfo target_siginfo_t;
 int queue_signal(int sig, target_siginfo_t *info) {
 	assert(!"signal propagation not implemented");
 }
-abi_ulong get_sp() {
-	assert(!"fetching platform sp not implemented");	
-}
+abi_ulong get_sp() { assert(!"fetching platform sp not implemented"); }
 /* a few signal handling definitions that came from qemu.h */
 void host_to_target_siginfo(target_siginfo_t *tinfo, const siginfo_t *info);
 void target_to_host_siginfo(siginfo_t *info, const target_siginfo_t *tinfo);
 int target_to_host_signal(int sig);
 int host_to_target_signal(int sig);
-long do_sigreturn() {
-	assert(!"signal return not implemented");	
-}
-long do_rt_sigreturn() {
-	assert(!"signal rt return not implemented");
-}
+long do_sigreturn() { assert(!"signal return not implemented");	}
+long do_rt_sigreturn() { assert(!"signal rt return not implemented"); }
 abi_long do_sigaltstack(abi_ulong uss_addr, abi_ulong uoss_addr, abi_ulong sp);
 
 #define unlikely(x)     __builtin_expect((x),false)

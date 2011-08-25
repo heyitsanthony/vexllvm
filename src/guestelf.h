@@ -23,7 +23,8 @@ public:
 
 private:
 	void setupMem(void);
-	void setupArgPages();
+	void setupMemARM(void);
+	void setupArgPages(void);
 	void createElfTables(int argc, int envc);
 	void copyElfStrings(int argc, const char **argv);
 	void loaderBuildArgptr(int envc, int argc,

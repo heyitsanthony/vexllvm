@@ -387,17 +387,16 @@ bool PTImgChk::doStep(
 
 long PTImgChk::getInsOp(long rip)
 {
-	if ((uintptr_t)rip == chk_addr) return chk_opcode;
+	if ((uintptr_t)rip == chk_addr.o) return chk_opcode;
 
-	chk_addr = (uintptr_t)rip;
+	chk_addr = guest_ptr(rip);
 // SLOW WAY:
 // Don't need to do this so long as we have the data at chk_addr in the guest
 // process also mapped into the parent process at chk_addr.
 //	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
 
 // FAST WAY: read it off like a boss
-	chk_opcode = *((const long*)chk_addr);
-
+	chk_opcode = *((const long*)getMem()->getHostPtr(chk_addr));
 	return chk_opcode;
 }
 

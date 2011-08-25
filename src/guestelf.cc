@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <sstream>
 
+#include "cpu/elf.h"
 #include "elfimg.h"
 #include "elfsegment.h"
 #include "guestelf.h"
@@ -153,25 +154,6 @@ void GuestELF::setupArgPages()
 			<< (void*)size << std::endl;
 	}
 }
-
-/* dunno where to get these that i know they will be on
-   any system, so just stickem here */
-#define ARM_HWCAP_SWP       1
-#define ARM_HWCAP_HALF      2
-#define ARM_HWCAP_THUMB     4
-#define ARM_HWCAP_26BIT     8       /* Play it safe */
-#define ARM_HWCAP_FAST_MULT 16
-#define ARM_HWCAP_FPA       32
-#define ARM_HWCAP_VFP       64
-#define ARM_HWCAP_EDSP      128
-#define ARM_HWCAP_JAVA      256
-#define ARM_HWCAP_IWMMXT    512
-#define ARM_HWCAP_CRUNCH    1024
-#define ARM_HWCAP_THUMBEE   2048
-#define ARM_HWCAP_NEON      4096
-#define ARM_HWCAP_VFPv3     8192
-#define ARM_HWCAP_VFPv3D16  16384
-#define ARM_HWCAP_TLS       32768
 
 class ElfTable : public std::vector<std::pair<uintptr_t, uintptr_t> >
 {
@@ -386,17 +368,14 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 	setupMem();
 }
 
-void GuestELF::setupMem(void)
+/* This should be given more thought. I don't like it that much
+ * but it seems/seemed to work for TJ. -AJR */
+void GuestELF::setupMemARM(void)
 {
-	/* now this just fills in static pages ... elf segment builds
-	   the real guest mappings on the fly via calls to the GuestMem
-	   class */
-	if(img->getArch() != Arch::ARM) return;
-
 	guest_ptr tls;
 	int res = mem->mmap(tls, guest_ptr(0xffff0000), PAGE_SIZE,
 		PROT_WRITE | PROT_EXEC | PROT_READ,
-		MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+		MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
 
 	assert(res == 0 && "failed to allocate arm tls");
 	/* put the kernel helpers: see arch/arm/kernel/entry-armv.S */
@@ -424,6 +403,18 @@ void GuestELF::setupMem(void)
 	/* note: there are others that we may need */
 	mem->mprotect(guest_ptr(0xffff0000), PAGE_SIZE,
 		PROT_EXEC | PROT_READ);
+
+}
+
+void GuestELF::setupMem(void)
+{
+	/* now this just fills in static pages ... elf segment builds
+	   the real guest mappings on the fly via calls to the GuestMem
+	   class */
+	if (img->getArch() == Arch::ARM) {
+		setupMemARM();
+		return;
+	}
 }
 
 Arch::Arch GuestELF::getArch() const {

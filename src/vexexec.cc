@@ -8,6 +8,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
+#include "guestptimg.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -144,11 +145,17 @@ const VexSB* VexExec::doNextSB(void)
 		}
 	}
 
-	if(to_flush.first.o) {
+	if (to_flush.first.o) {
 		jit_cache->flush(
 			guest_ptr(to_flush.first.o - MAX_CODE_BYTES),
 			guest_ptr(to_flush.second.o + MAX_CODE_BYTES));
 		to_flush = std::make_pair(guest_ptr(0), guest_ptr(0));
+	}
+
+	/* trying to jump to the null pointer is always a bad idea */
+	if (elfptr.o == 0) {
+		fprintf(stderr, "[VEXLLVM] Error: Trying to jump to NULL\n");
+		return NULL;
 	}
 
 	vsb = getSBFromGuestAddr(elfptr);
@@ -196,7 +203,6 @@ const VexSB* VexExec::doNextSB(void)
 
 	/* next address to go to */
 	next_addr = new_jmpaddr;
-
 	return vsb;
 }
 
@@ -224,13 +230,7 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 	GuestMem::Mapping		m;
 	bool				found;
 
-	hostptr = gs->getMem()->getBase() + elfptr.o;
-
-	if (exit_addrs.count(elfptr)) {
-		setExit(gs->getExitCode());
-		return NULL;
-	}
-
+	hostptr = gs->getMem()->getHostPtr(elfptr);
 	found = gs->getMem()->lookupMapping(elfptr, m);
 
 	/* assuming !found means its ok... but that's not totally true */
@@ -250,7 +250,9 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 		}
 		if (m.cur_prot & PROT_WRITE) {
 			m.cur_prot = m.req_prot & ~PROT_WRITE;
-			mprotect(gs->getMem()->getBase() + m.offset, m.length,
+			mprotect(
+				gs->getMem()->getHostPtr(m.offset),
+				m.length,
 				m.cur_prot);
 			gs->getMem()->recordMapping(m);
 		}
@@ -259,7 +261,9 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 	/* compile it + get vsb */
 	vsb = jit_cache->getVSB(hostptr, elfptr);
 	if (vsb == NULL) {
-		fprintf(stderr, "Could not get VSB for %p\n",  (void*)elfptr.o);
+		fprintf(stderr,
+			"Could not get VSB for %p. Bad decode?\n",
+			(void*)elfptr.o);
 		return NULL;
 	}
 
@@ -279,11 +283,10 @@ guest_ptr VexExec::doVexSBAux(VexSB* vsb, void* aux)
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);
 
-	sb_executed_c++;
-
-	sb_executed_c++;
 	new_ip = ((vexauxfunc_t)(func_ptr))
 		(gs->getCPUState()->getStateData(), aux);
+	sb_executed_c++;
+
 	return new_ip;
 }
 
@@ -295,8 +298,8 @@ guest_ptr VexExec::doVexSB(VexSB* vsb)
 	func_ptr = jit_cache->getCachedFPtr(vsb->getGuestAddr());
 	assert (func_ptr != NULL);
 
-	sb_executed_c++;
 	new_ip = func_ptr(gs->getCPUState()->getStateData());
+	sb_executed_c++;
 
 	return new_ip;
 }

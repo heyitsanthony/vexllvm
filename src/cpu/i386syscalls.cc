@@ -125,12 +125,7 @@ uintptr_t Syscalls::applyI386Syscall(
 		break;
 	}
 
-	/* if the host and guest are identical, then just pass through */
-	if(mappings->isFlat() && !force_translation && 
-		guest->getArch() == Arch::getHostArch()) 
-	{
-		return passthroughSyscall(args);
-	}
+	if (tryPassthrough(args, sc_ret)) return sc_ret;
 	
 	g_mem = mappings;
 	sc_ret = I386::do_syscall(NULL,

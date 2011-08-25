@@ -41,6 +41,10 @@ ElfImg* ElfImg::create(GuestMem* m, const char* fname, bool linked)
 
 ElfImg::~ElfImg(void)
 {
+	if (interp) {
+		delete interp;
+		interp = NULL;
+	}
 	free(img_path);
 
 	if (fd < 0) return;
@@ -95,7 +99,7 @@ void ElfImg::setup(void)
 	assert(img_mmap != MAP_FAILED);
 
 	hdr_raw = img_mmap;
-	
+
 	if(getenv("VEXLLVM_LIBRARY_ROOT"))
 		library_root.assign(getenv("VEXLLVM_LIBRARY_ROOT"));
 
@@ -117,9 +121,9 @@ void ElfImg::setup(void)
 
 int ElfImg::getHeaderCount() const {
 	if(address_bits == 32) {
-		return hdr32->e_phnum; 
+		return hdr32->e_phnum;
 	} else if(address_bits == 64) {
-		return hdr64->e_phnum; 
+		return hdr64->e_phnum;
 	} else {
 		assert(!"address bits corrupted");
 	}
@@ -145,16 +149,20 @@ void ElfImg::setupSegments(void)
 
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
 		ElfSegment	*es;
-		
+
 		if (phdr[i].p_type == PT_INTERP) {
 			std::string path((char*)img_mmap + phdr[i].p_offset);
 			path = library_root + path;
-			interp = ElfImg::create(mem, path.c_str(), false); 
+			interp = ElfImg::create(mem, path.c_str(), false);
 			continue;
 		}
-		es = ElfSegment::load(mem, fd, phdr[i], 
-			segments.empty() ? uintptr_t(0)
-			: getFirstSegment()->relocation());
+		es = ElfSegment::load(
+			mem,
+			fd,
+			phdr[i],
+			segments.empty()
+				? uintptr_t(0)
+				: getFirstSegment()->relocation());
 		if (!es) continue;
 
 		segments.push_back(es);
@@ -185,9 +193,9 @@ guest_ptr ElfImg::getEntryPoint(void) const
 	   as is the case for the interp which specified a load address
 	   base of 0 */
 	if(address_bits == 32) {
-		return xlateAddr(guest_ptr(hdr32->e_entry)); 
+		return xlateAddr(guest_ptr(hdr32->e_entry));
 	} else if(address_bits == 64) {
-		return xlateAddr(guest_ptr(hdr64->e_entry)); 
+		return xlateAddr(guest_ptr(hdr64->e_entry));
 	} else {
 		assert(!"address bits corrupted");
 	}
@@ -209,7 +217,7 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 		void* data;
 		size_t size;
 	} header;
-	
+
 	header.fd = open(fname, O_RDONLY);
 	if (header.fd == -1) {
 		return Arch::Unknown;
@@ -217,7 +225,7 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 
 	unsigned char ident[IDENT_SIZE];
 	int res = read(header.fd, &ident[0], IDENT_SIZE);
-	
+
 	if(res < IDENT_SIZE) {
 		return Arch::Unknown;
 	}
@@ -230,7 +238,7 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 	} else {
 		return Arch::Unknown;
 	}
-	
+
 	if(sizeof(void*) < address_bits / 8) {
 		EXPECTED("Host with matching addressing capabilities");
 		return Arch::Unknown;
@@ -242,7 +250,7 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 	if (header.data == MAP_FAILED) {
 		return Arch::Unknown;
 	}
-	
+
 	if(address_bits == 32) {
 		return readHeader32((Elf32_Ehdr*)header.data, require_exe);
 	} else if (address_bits == 64) {
@@ -259,13 +267,13 @@ Arch::Arch ElfImg::readHeader32(const Elf32_Ehdr* hdr, bool require_exe)
 		EXPECTED("ET_EXEC");
 		return Arch::Unknown;
 	}
-	
+
 	if(hdr->e_machine == EM_ARM) {
 		return Arch::ARM;
 	} else if(hdr->e_machine == EM_386) {
 		return Arch::I386;
 	}
-	
+
 	/* just don't care about the rest, slutty is fun */
 	return Arch::Unknown;
 }
@@ -276,11 +284,11 @@ Arch::Arch ElfImg::readHeader64(const Elf64_Ehdr* hdr, bool require_exe)
 		EXPECTED("ET_EXEC");
 		return Arch::Unknown;
 	}
-	
+
 	if(hdr->e_machine == EM_X86_64) {
 		return Arch::X86_64;
 	}
-	
+
 	/* just don't care about the rest, slutty is fun */
 	return Arch::Unknown;
 }
@@ -308,5 +316,20 @@ void ElfImg::getSegments(std::list<ElfSegment*>& r) const
 
 	foreach (it, segments.begin(), segments.end()) {
 		r.push_back(*it);
-	}	
+	}
+}
+
+GuestMem* ElfImg::takeMem(void)
+{
+	GuestMem *m = mem;
+
+	mem = NULL;
+
+	if (interp) interp->takeMem();
+	foreach (it, segments.begin(), segments.end()) {
+		ElfSegment *es = *it;
+		es->takeMem();
+	}
+
+	return m;
 }

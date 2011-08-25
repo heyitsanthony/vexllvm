@@ -46,8 +46,9 @@ protected:
 		int sys_nr,
 		SyscallParams& args,
 		unsigned long& sc_ret);
-	uintptr_t passthroughSyscall(
-		SyscallParams& args);
+
+	bool tryPassthrough(SyscallParams& args, uintptr_t& sc_ret);
+	uintptr_t passthroughSyscall(SyscallParams& args);
 
 	/* map a guest syscall number to the host equivalent */
 	int translateARMSyscall(int sys_nr) const;
@@ -71,7 +72,7 @@ protected:
 	GuestMem*			mappings;
 	const std::string		binary;
 	bool				log_syscalls;
-	bool				force_translation;
+	bool				force_qemu_syscalls;
 public:
 	const static std::string	chroot;
 	

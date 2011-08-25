@@ -19,7 +19,7 @@ Syscalls::Syscalls(Guest* g)
 , mappings(g->getMem())
 , binary(g->getBinaryPath())
 , log_syscalls(getenv("VEXLLVM_SYSCALLS") ? true : false)
-, force_translation(getenv("VEXLLVM_XLATE_SYSCALLS") ? true : false)
+, force_qemu_syscalls(getenv("VEXLLVM_XLATE_SYSCALLS") ? true : false)
 {
 }
 
@@ -126,7 +126,7 @@ std::string Syscalls::getSyscallName(int sys_nr) const {
 /* it is disallowed to implement any syscall which requires access to
    data in a structure within this function.  this function does not
    understand the potentially different layout of the guests syscalls
-   so, syscalls with non-raw pointer data must be handled in the 
+   so, syscalls with non-raw pointer data must be handled in the
    architecture specific code */
 bool Syscalls::interceptSyscall(
 	int sys_nr,
@@ -163,18 +163,19 @@ bool Syscalls::interceptSyscall(
 			sc_ret = -ENOMEM;
 		return true;
 	case SYS_rt_sigaction:
-		/* for now totally lie so that code doesn't get 
+		/* for now totally lie so that code doesn't get
 		   executed without us.  we'd rather crash! */
 		sc_ret = 0;
 		return true;
 	case SYS_mmap: {
 		guest_ptr m;
-		sc_ret = mappings->mmap(m, 
+		sc_ret = mappings->mmap(
+			m,
 			guest_ptr(args.getArg(0)),
-			args.getArg(1), 
-			args.getArg(2), 
-			args.getArg(3), 
-			args.getArg(4), 
+			args.getArg(1),
+			args.getArg(2),
+			args.getArg(3),
+			args.getArg(4),
 			args.getArg(5));
 		if(sc_ret == 0)
 			sc_ret = m;
@@ -182,11 +183,11 @@ bool Syscalls::interceptSyscall(
 	}
 	case SYS_mremap: {
 		guest_ptr m;
-		sc_ret = mappings->mremap(m, 
+		sc_ret = mappings->mremap(m,
 			guest_ptr(args.getArg(0)),
-			args.getArg(1), 
-			args.getArg(2), 
-			args.getArg(3), 
+			args.getArg(1),
+			args.getArg(2),
+			args.getArg(3),
 			guest_ptr(args.getArg(4)));
 		if(sc_ret == 0)
 			sc_ret = m;
@@ -229,10 +230,27 @@ bool Syscalls::interceptSyscall(
 	return false;
 }
 
+bool Syscalls::tryPassthrough(SyscallParams& args, uintptr_t& sc_ret)
+{
+	/* if the host and guest are identical, then just pass through */
+	if (	mappings->isFlat() &&
+		!force_qemu_syscalls &&
+		mappings->getBase() == NULL &&
+		guest->getArch() == Arch::getHostArch())
+	{
+		sc_ret = passthroughSyscall(args);
+		return true;
+	}
+
+	return false;
+}
+
 uintptr_t Syscalls::passthroughSyscall(
 	SyscallParams& args)
 {
-	uintptr_t sc_ret = syscall(
+	uintptr_t sc_ret;
+
+	sc_ret = syscall(
 		args.getSyscall(),
 		args.getArg(0),
 		args.getArg(1),
@@ -241,7 +259,7 @@ uintptr_t Syscalls::passthroughSyscall(
 		args.getArg(4),
 		args.getArg(5));
 	/* the low level sycall interface actually returns the error code
-	   so we have to extract it from errno if we did blind syscall 
+	   so we have to extract it from errno if we did blind syscall
 	   pass through */
 	if(sc_ret >= 0xfffffffffffff001ULL) {
 		return -errno;
@@ -256,7 +274,7 @@ void Syscalls::print(std::ostream& os) const
 		print(os, sp, NULL);
 	}
 }
-void Syscalls::print(std::ostream& os, const SyscallParams& sp, 
+void Syscalls::print(std::ostream& os, const SyscallParams& sp,
 	uintptr_t* result) const
 {
 	os << "Syscall: " << sp.getSyscall() << " : " << getSyscallName(sp.getSyscall());
