@@ -244,7 +244,7 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 		if (!(m.req_prot & PROT_EXEC)) {
 			std::cerr
 				<< "[VEXLLVM] Tried to run non-exec memory @"
-				<< elfptr
+				<< (void*)elfptr.o
 				<< "\n";
 			return NULL;
 		}
