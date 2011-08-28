@@ -70,8 +70,8 @@ int main(int argc, char* argv[], char* envp[])
 	vexexec->run();
 
 	delete vexexec;
-	delete gs;
 	delete img;
+	delete gs;
 
 	return 0;
 }
