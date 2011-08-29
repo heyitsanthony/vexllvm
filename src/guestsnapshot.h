@@ -24,9 +24,6 @@ private:
 	static void saveMappings(const Guest* g, const char* dirpath);
 	static void saveSymbols(const Guest* g, const char* dirpath);
 	void loadSymbols(const char* dirname);
-#ifdef __amd64__
-	void loadSysPage(void);
-#endif
 	void loadMappings(const char* dirname);
 
 	bool			is_valid;

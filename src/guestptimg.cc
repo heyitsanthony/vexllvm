@@ -200,9 +200,9 @@ void PTImgMapEntry::mapLib(pid_t pid)
 
 	if (strcmp(libname, "[vsyscall]") == 0) {
 		/* the infamous syspage */
-		GuestMem::Mapping m(
-			getBase(), getByteCount(), PROT_READ | PROT_EXEC);
-		mem->recordMapping(m);
+		char	*sysbuf = new char[getByteCount()];
+		memcpy(sysbuf, (void*)(getBase().o), getByteCount());
+		mem->addSysPage(getBase(), sysbuf, getByteCount());
 		return;
 	}
 

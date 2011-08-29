@@ -21,6 +21,7 @@ GuestMem::GuestMem(void)
 , reserve_brick(0)
 , is_32_bit(false)
 , force_flat(getenv("VEXLLVM_4GB_REBASE") == NULL)
+, syspage_data(NULL)
 {
 	const char	*base_str;
 #ifdef __amd64__
@@ -53,6 +54,8 @@ GuestMem::~GuestMem(void)
 {
 	foreach (it, maps.begin(), maps.end())
 		delete it->second;
+
+	if (syspage_data) delete [] syspage_data;
 }
 
 /* XXX I haven't audited this, so it's very likely that it's wrong. -AJR */
@@ -680,6 +683,8 @@ void GuestMem::setType(guest_ptr addr, GuestMem::Mapping::MapType mt)
 	mapmap_t::iterator	it;
 	Mapping			*m;
 
+	assert (mt != Mapping::VSYSPAGE);
+
 	it = maps.lower_bound(addr);
 	assert (it != maps.end() && "Setting type for unmapped guest addr");
 
@@ -690,4 +695,41 @@ void GuestMem::setType(guest_ptr addr, GuestMem::Mapping::MapType mt)
 		base_brick = m->offset;
 		top_brick = m->end();
 	}
+}
+
+const void* GuestMem::getSysHostAddr(guest_ptr p) const
+{
+	const Mapping	*owner;
+
+	owner = findOwner(p);
+	if (owner == NULL) return NULL;
+	if (owner->type != Mapping::VSYSPAGE) return NULL;
+
+	return (const void*)(syspage_data + (p.o - owner->offset.o));
+}
+
+void GuestMem::addSysPage(guest_ptr p, char* host_data, unsigned int len)
+{
+	GuestMem::Mapping	m(p, len, PROT_READ | PROT_EXEC);
+	void			*mmap_ret;
+
+	assert (host_data && syspage_data == NULL);
+
+	syspage_data = host_data;
+	m.type = Mapping::VSYSPAGE;
+	recordMapping(m);
+
+	if (getBase() == NULL)
+		return;
+
+	/* try to map it in if relocated */
+	mmap_ret = ::mmap(
+		getHostPtr(m.offset),
+		len,
+		PROT_READ | PROT_EXEC | PROT_WRITE,
+		MAP_PRIVATE | MAP_ANONYMOUS,
+		-1,
+		0);
+	assert (mmap_ret != MAP_FAILED);
+	memcpy(m.offset, host_data, len);
 }

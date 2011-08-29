@@ -54,6 +54,7 @@ public:
 	void setExitType(uint8_t exit_type);
 	llvm::Value* to16x8i(llvm::Value*) const;
 	void memFence(void);
+	void setFakeSysReads(void) { fake_vsys_reads = true; }
 private:
 	void mkFuncTy(void);
 
@@ -70,6 +71,7 @@ private:
 	llvm::BasicBlock*	cur_bb;
 	bool			log_last_store;
 
+	bool			fake_vsys_reads;
 };
 
 extern class GenLLVM* theGenLLVM;

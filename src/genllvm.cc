@@ -26,6 +26,7 @@ GenLLVM::GenLLVM(const Guest* gs, const char* name)
 , cur_f(NULL)
 , cur_bb(NULL)
 , log_last_store(getenv("VEXLLVM_LAST_STORE"))
+, fake_vsys_reads(getenv("VEXLLVM_FAKE_VSYS") != NULL)
 {
 	builder = new IRBuilder<>(getGlobalContext());
 	assert (builder != NULL && "Could not create builder");
@@ -242,14 +243,14 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 	}
 
 	ptrTy = PointerType::get(data_v->getType(), 0);
-#ifdef __amd64__ 
+#ifdef __amd64__
 	if(guest->getMem()->is32Bit()) {
 		addr_v = builder->CreateZExt(addr_v, IntegerType::get(
 			getGlobalContext(), sizeof(void*)*8));
 	}
 #endif
 	if (guest->getMem()->getBase()) {
-		addr_v = builder->CreateAdd(addr_v, 
+		addr_v = builder->CreateAdd(addr_v,
 			ConstantInt::get(getGlobalContext(),
 				APInt(sizeof(intptr_t)*8,
 				(uintptr_t)guest->getMem()->getBase())));
@@ -267,14 +268,40 @@ Value* GenLLVM::load(Value* addr_v, const Type* ty)
 	LoadInst	*loadInst;
 
 	ptrTy = PointerType::get(ty, 0);
-#ifdef __amd64__ 
+#ifdef __amd64__
 	if(guest->getMem()->is32Bit()) {
 		addr_v = builder->CreateZExt(addr_v, IntegerType::get(
 			getGlobalContext(), sizeof(void*)*8));
 	}
+
 #endif
+	/* XXX this is the worst hack but it's necessary for xchk until
+	 * we get vsyspage stuff disabled programmatically -AJR */
+	ConstantInt	*addr_ci;
+	if (	fake_vsys_reads &&
+		(addr_ci = dyn_cast<ConstantInt>(addr_v)) &&
+		addr_ci->getBitWidth() <= 64)
+	{
+		const void	*sys_addr;
+		sys_addr = guest->getMem()->getSysHostAddr(
+			guest_ptr(addr_ci->getLimitedValue()));
+		if (sys_addr != NULL) {
+			unsigned int	ty_sz;
+			uint64_t	out_v;
+
+			ty_sz = ty->getPrimitiveSizeInBits();
+			assert (ty_sz > 0 && ty_sz <= 64);
+			memcpy(&out_v, sys_addr, ty_sz / 8);
+
+			return ConstantInt::get(
+				getGlobalContext(),
+				APInt(ty_sz, out_v));
+		}
+	}
+
+
 	if (guest->getMem()->getBase()) {
-		addr_v = builder->CreateAdd(addr_v, 
+		addr_v = builder->CreateAdd(addr_v,
 			ConstantInt::get(getGlobalContext(),
 				APInt(sizeof(intptr_t)*8,
 				(uintptr_t)guest->getMem()->getBase())));

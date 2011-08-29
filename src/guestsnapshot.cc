@@ -103,7 +103,7 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 		item_c = sscanf(
 			buf,
 			"%p-%p %d %d\n",
-			(void**)&begin, (void**)&end, &prot, &map_type);
+			(void**)&begin, (void**)&end, &prot, (int*)&map_type);
 		assert (item_c == 4);
 
 		length =(uintptr_t)end - (uintptr_t)begin;
@@ -111,6 +111,17 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 		snprintf(buf, 512, "%s/maps/%p", dirpath, (void*)begin.o);
 		fd = open(buf, O_RDONLY);
 		assert (fd != -1);
+
+		if (map_type == GuestMem::Mapping::VSYSPAGE) {
+			char	*sysp_buf = new char[length];
+			ssize_t	sz;
+			sz = read(fd, sysp_buf, length);
+			assert (sz == length);
+			mem->addSysPage(guest_ptr(begin), sysp_buf, length);
+			close(fd);
+			continue;
+		}
+
 		int res = mem->mmap(mmap_addr,
 			begin,
 			length,
@@ -125,43 +136,8 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 		fd_list.push_back(fd);
 	}
 
-#ifdef __amd64__
-	loadSysPage();
-#endif
 	END_F()
 }
-
-#ifdef __amd64__
-/* cheat so sys page shows up even though we skip it on save */
-void GuestSnapshot::loadSysPage(void)
-{
-	GuestMem::Mapping	sys_page(
-		SYSPAGE_ADDR, 4096, PROT_READ | PROT_EXEC);
-	guest_ptr		ret_page;
-
-	if (mem->getBase() == NULL) {
-		/* already have it mapped, use identity mapping */
-		mem->recordMapping(sys_page);
-		return;
-	}
-
-	int res = mem->mmap(
-		ret_page,
-		sys_page.offset,
-		sys_page.length,
-		PROT_READ | PROT_WRITE,
-		MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS,
-		-1,
-		0);
-
-	assert (res == 0 && "failed to map vsyspage on ss load");
-	assert (ret_page == sys_page.offset);
-
-	/* don't already have it mapped, copy in from vsyspage area */
-	mem->memcpy(ret_page, (void*)SYSPAGE_ADDR.o, 4096);
-	mem->setType(ret_page, GuestMem::Mapping::VSYSPAGE);
-}
-#endif
 
 void GuestSnapshot::loadSymbols(const char* dirpath)
 {
@@ -278,19 +254,6 @@ void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 		GuestMem::Mapping	mapping(*it);
 		ssize_t			sz;
 
-#ifdef __amd64__
-		/* XXX stupid hack for kernel page; arch specific */
-		/* would like to write it out, but
-		 * 1. fwrite will fail it since it's kernel space addr
-		 * 2. it'll already be mapped on load()
-		 *
-		 * If we ever get cross platform snapshots, it'll 
-		 * need to actually be written out with a bounce buffer.
-		 */
-		if (mapping.offset == SYSPAGE_ADDR)
-			continue;
-#endif
-
 		/* range, prot, type */
 		fprintf(f, "%p-%p %d %d\n",
 			(void*)mapping.offset.o,
@@ -303,10 +266,17 @@ void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 		map_f = fopen(buf, "w");
 		assert (map_f && "Couldn't open mem range file");
 
-		char* buffer = new char[mapping.length];
-		g->getMem()->memcpy(buffer, mapping.offset, mapping.length);
-		sz = fwrite(buffer, mapping.length, 1, map_f);
-		delete [] buffer;
+		const void *syspage_buf;
+		syspage_buf = g->getMem()->getSysHostAddr(mapping.offset);
+		if (!syspage_buf) {
+			char* buffer = new char[mapping.length];
+			g->getMem()->memcpy(buffer, mapping.offset, mapping.length);
+			sz = fwrite(buffer, mapping.length, 1, map_f);
+			delete [] buffer;
+		} else {
+			sz = fwrite(syspage_buf, mapping.length, 1, map_f);
+		}
+
 		assert (sz == 1 && "Failed to write mapping");
 
 		fclose(map_f);

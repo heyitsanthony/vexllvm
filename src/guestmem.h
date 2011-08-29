@@ -118,6 +118,9 @@ public:
 		size_t old_length, size_t new_length,
 		int flags, guest_ptr new_offset);
 
+	const void* getSysHostAddr(guest_ptr p) const;
+	void addSysPage(guest_ptr p, char* host_data, unsigned int len);
+
 private:
 	bool sbrkInitial();
 	bool sbrkInitial(guest_ptr new_top);
@@ -141,6 +144,8 @@ private:
 
 	bool		is_32_bit;
 	bool		force_flat;
+
+	char*		syspage_data;
 };
 
 #endif
