@@ -51,12 +51,15 @@ public:
 	guest_ptr getJmp(void) const;
 	guest_ptr getEndAddr(void) const;
 	/* hopefully VEX only puts one syscall in each block... */
-	bool isSyscall(void) const { 
-		return (jump_kind == Ijk_Sys_syscall || 
-			jump_kind == Ijk_Sys_int128); 
+	bool isSyscall(void) const {
+		return (jump_kind == Ijk_Sys_syscall ||
+			jump_kind == Ijk_Sys_int128);
 	}
 	guest_ptr getGuestAddr(void) const { return guest_addr; }
-
+	unsigned int getSize(void) const
+	{
+		return getEndAddr().o - getGuestAddr();
+	}
 protected:
 	VexSB(guest_ptr guess_addr, const IRSB* in_irsb);
 private:

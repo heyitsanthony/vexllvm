@@ -63,6 +63,13 @@ void VexExec::setupStatics(Guest* in_gs)
 	}
 }
 
+const VexSB* VexExec::getCachedVSB(guest_ptr p) const
+{
+	return jit_cache->getVSB(
+		gs->getMem()->getHostPtr(p),
+		p);
+}
+
 VexExec::~VexExec()
 {
 	if (gs == NULL) return;
@@ -349,7 +356,7 @@ done_with_all:
 	if (!exited) return false;
 
 	/* exited */
-	std::cerr 
+	std::cerr
 		<< "[VEXLLVM] Exit call. This should be fixed. "
 		<< "Exitcode=" << exit_code
 		<< std::endl;

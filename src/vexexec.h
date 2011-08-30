@@ -57,6 +57,7 @@ public:
 	void run(void);
 	void dumpLogs(std::ostream& os) const;
 	unsigned int getSBExecutedCount(void) const { return sb_executed_c; }
+	const VexSB* getCachedVSB(guest_ptr p) const;
 
 	void beginStepping(void);
 	bool stepVSB(void);
