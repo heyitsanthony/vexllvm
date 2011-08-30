@@ -100,6 +100,7 @@ SOFTFLOATDIRDEPS=$(SOFTFLOATDEPS:%=obj/%)
 #TODO: use better config options
 BINTARGETS=	elf_run jit_test	\
 		ss_run			\
+		frag_run		\
 		pt_run pt_xchk		\
 		dump_loader
 

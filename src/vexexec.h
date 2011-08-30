@@ -11,6 +11,7 @@
 #include <iostream>
 #include "vexjitcache.h"
 #include "guestmem.h"
+#include "guestcpustate.h"
 
 class Guest;
 class Syscalls;
@@ -45,6 +46,7 @@ public:
 			delete ve;
 			return NULL;
 		}
+		ve->gs->getCPUState()->setPC(ve->gs->getEntryPoint());
 
 		return ve;
 	}

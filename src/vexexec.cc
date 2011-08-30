@@ -323,7 +323,7 @@ void VexExec::beginStepping(void)
 	sigemptyset(&sa.sa_mask);
    	sigaction(SIGSEGV, &sa, NULL);
 
-	next_addr = guest_ptr(gs->getEntryPoint());
+	next_addr = gs->getCPUState()->getPC();
 	call_depth = 0;
 }
 
