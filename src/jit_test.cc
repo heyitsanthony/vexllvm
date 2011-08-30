@@ -5,7 +5,6 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Intrinsics.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
@@ -507,13 +506,11 @@ int main(int argc, char* argv[])
 {
 	Guest*	gs;
 
-	/* for the JIT */
-	InitializeNativeTarget();
-
 	gs = new GuestIdent();
 	theGenLLVM = new GenLLVM(gs);
 	theVexHelpers = VexHelpers::create(Arch::getHostArch());
 
+	InitializeNativeTarget();
 	EngineBuilder	eb(theGenLLVM->getModule());
 	std::string	err_str;
 

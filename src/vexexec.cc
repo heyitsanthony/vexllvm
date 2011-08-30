@@ -81,6 +81,7 @@ VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 , owns_xlate(in_xlate == NULL)
 , xlate(in_xlate)
 {
+	InitializeNativeTarget();
 	EngineBuilder	eb(theGenLLVM->getModule());
 	ExecutionEngine	*exeEngine;
 	std::string	err_str;

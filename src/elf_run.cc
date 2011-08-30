@@ -1,7 +1,3 @@
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include "llvm/Target/TargetSelect.h"
-#include "llvm/ExecutionEngine/JIT.h"
-
 #include "Sugar.h"
 
 #include <stdint.h>
@@ -31,9 +27,6 @@ int main(int argc, char* argv[], char* envp[])
 {
 	GuestELF	*gs;
 	ElfImg		*img;
-
-	/* for the JIT */
-	InitializeNativeTarget();
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s elf_path <cmdline>\n", argv[0]);

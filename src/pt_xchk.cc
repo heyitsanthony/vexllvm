@@ -1,7 +1,3 @@
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include "llvm/Target/TargetSelect.h"
-#include "llvm/ExecutionEngine/JIT.h"
-
 #include "Sugar.h"
 
 #include <stdint.h>
@@ -28,9 +24,6 @@ void dumpIRSBs(void)
 int main(int argc, char* argv[], char* envp[])
 {
 	PTImgChk	*gs;
-
-	/* for the JIT */
-	InitializeNativeTarget();
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s program_path <args>\n", argv[0]);

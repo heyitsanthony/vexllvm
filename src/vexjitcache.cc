@@ -1,5 +1,4 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include "llvm/Target/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
 #include "Sugar.h"

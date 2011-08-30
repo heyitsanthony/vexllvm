@@ -1,7 +1,3 @@
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include "llvm/Target/TargetSelect.h"
-#include "llvm/ExecutionEngine/JIT.h"
-
 #include "Sugar.h"
 
 #include <stdint.h>
@@ -29,9 +25,6 @@ void dumpIRSBs(void)
 int main(int argc, char* argv[], char* envp[])
 {
 	Guest	*g;
-
-	/* for the JIT */
-	InitializeNativeTarget();
 
 	if (argc == 1) {
 		g = Guest::load();
