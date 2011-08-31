@@ -59,9 +59,9 @@ int main(int argc, char* argv[])
 	assert (vexexec && "Could not create vexexec");
 
 	g->getCPUState()->setPC(guest_ptr(addr));
-	vexexec->beginStepping();
-	bool ok_step = vexexec->stepVSB();
-	std::cout << "[frag-run] OK-STEP=" << ok_step << std::endl;
+//	vexexec->beginStepping();
+//	bool ok_step = vexexec->stepVSB();
+//	std::cout << "[frag-run] OK-STEP=" << ok_step << std::endl;
 	const VexSB* vsb = vexexec->getCachedVSB(guest_ptr(addr));
 	if (vsb != NULL) {
 		std::cout << "[frag-run] VSB Size=" << vsb->getSize() << std::endl;
