@@ -1,6 +1,6 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-
+#include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -12,6 +12,7 @@
 #include "util.h"
 #include "guestcpustate.h"
 #include "guestsnapshot.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -116,7 +117,7 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 			char	*sysp_buf = new char[length];
 			ssize_t	sz;
 			sz = read(fd, sysp_buf, length);
-			assert (sz == length);
+			assert (sz == (ssize_t)length);
 			mem->addSysPage(guest_ptr(begin), sysp_buf, length);
 			close(fd);
 			continue;
@@ -283,4 +284,55 @@ void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 	}
 
 	END_F()
+}
+
+
+char* GuestSnapshot::readMemory(
+	const char* dirpath, guest_ptr p, unsigned int len)
+{
+	char			*read_mem;
+	FILE			*f;
+	size_t			sz;
+	char			buf[256];
+	DIR			*dir;
+	struct dirent		*de;
+	std::vector<uint64_t>	addrs;
+
+	snprintf(buf, 256, "%s/maps", dirpath);
+	dir = opendir(buf);
+	assert (dir != NULL);
+	while ((de = readdir(dir)) != NULL) {
+		uint64_t	addr;
+		sz = sscanf(de->d_name, "0x%"PRIx64, &addr);
+		if (sz != 1)
+			continue;
+		addrs.push_back(addr);
+
+	}
+	closedir(dir);
+
+	std::sort(addrs.begin(), addrs.end());
+	uint64_t target_addr = 0;
+	for (unsigned int i = 0; i < addrs[i]; i++) {
+		if (addrs[i] > p.o)
+			break;
+		target_addr = addrs[i];
+	}
+
+	if (target_addr == 0)
+		return NULL;
+
+	snprintf(buf, 256, "%s/maps/0x%"PRIx64, dirpath, target_addr);
+	f = fopen(buf, "rb");
+	assert (f != NULL);
+	if (fseek(f, p.o - target_addr, SEEK_SET) != 0) {
+		fclose(f);
+		return NULL;
+	}
+	read_mem = new char[len];
+	sz = fread(read_mem, len, 1, f);
+	assert (sz == 1);
+	fclose(f);
+
+	return read_mem;
 }

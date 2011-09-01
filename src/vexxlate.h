@@ -12,6 +12,7 @@ extern void dispatch_asm_amd64(void);
 #include "arch.h"
 
 class VexSB;
+class FragCache;
 
 /* vexlate! */
 class VexXlate
@@ -40,6 +41,9 @@ private:
 
 	/* Only TJ knows what this does. */
 	bool			trace_fe;
+
+	bool			store_fragments;
+	FragCache		*frag_cache;
 };
 
 #endif

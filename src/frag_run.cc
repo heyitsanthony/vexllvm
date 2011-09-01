@@ -11,6 +11,7 @@
 #include "vexexec.h"
 #include "guestcpustate.h"
 #include "guestsnapshot.h"
+#include "fragcache.h"
 
 using namespace llvm;
 
@@ -40,6 +41,30 @@ int main(int argc, char* argv[])
 		return -2;
 	}
 	printf("[frag-run] Fragment=%p\n", (void*)((intptr_t)addr));
+
+	FragCache* fc = FragCache::create(NULL);
+	if (fc) {
+		char	*buf;
+		int	len;
+		buf = GuestSnapshot::readMemory(
+			(argc >= 3)
+				? argv[2]
+				: "guest-last",
+			guest_ptr(addr),
+			2048);
+		assert (buf != NULL);
+		len = fc->findLength(buf);
+		delete [] buf;
+		delete fc;
+		if (len != -1) {
+			std::cout <<
+				"[frag-run] VSB Size=" << len << std::endl;
+			return 0;
+		}
+
+		/* force storage */
+		setenv("VEXLLVM_STORE_FRAGS", "1", 1);
+	}
 
 	if (argc == 2) {
 		g = Guest::load();

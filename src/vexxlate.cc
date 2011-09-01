@@ -10,6 +10,7 @@
 #include "vexexpr.h"
 #include "vexsb.h"
 #include "vexxlate.h"
+#include "fragcache.h"
 
 #define VEX_DEBUG_LEVEL	0
 #define VEX_TRACE_FLAGS	0
@@ -81,6 +82,8 @@ static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
 
 VexXlate::VexXlate(Arch::Arch in_arch)
 : trace_fe(getenv("VEXLLVM_TRACE_FE") != NULL)
+, store_fragments(getenv("VEXLLVM_STORE_FRAGS") != NULL)
+, frag_cache(NULL)
 {
 	LibVEX_default_VexArchInfo(&vai_host);
 	vai_host.hwcaps = VEX_HOST_HWCAPS;
@@ -115,19 +118,27 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 	LibVEX_default_VexAbiInfo(&vbi);
 
 	loadLogType();
+
+	if (store_fragments) {
+		frag_cache = FragCache::create(NULL);
+		assert (frag_cache != NULL);
+	}
 }
 
 VexXlate::~VexXlate()
 {
-	if (getenv("VEXLLVM_DUMP_XLATESTATS")) {
-		std::cerr << "VexLate: Dumping op stats\n";
-		for (unsigned int i = Iop_INVALID+1; i < Iop_Rsqrte32x4 /* XXX */; ++i) {
-			IROp	op = (IROp)i;
-			std::cerr <<
-				"[VEXLLVM] [VEXXLATESTAT] " <<
-				getVexOpName(op) << ": " <<
-				VexExpr::getOpCount(op) << std::endl;
-		}
+	if (frag_cache) delete frag_cache;
+
+	if (getenv("VEXLLVM_DUMP_XLATESTATS") == NULL)
+		return;
+
+	std::cerr << "VexLate: Dumping op stats\n";
+	for (unsigned i = Iop_INVALID+1; i < Iop_Rsqrte32x4 /* XXX */; ++i) {
+		IROp	op = (IROp)i;
+		std::cerr <<
+			"[VEXLLVM] [VEXXLATESTAT] " <<
+			getVexOpName(op) << ": " <<
+			VexExpr::getOpCount(op) << std::endl;
 	}
 }
 
@@ -199,6 +210,12 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	res = LibVEX_Translate(&vta);
 	if (res.status == VexTranslateResult::VexTransAccessFail) return NULL;
 #endif
+	if (g_cb.cb_vexsb == NULL)
+		return NULL;
+
+	if (frag_cache && g_cb.cb_vexsb->getSize()) {
+		frag_cache->addFragment(guest_bytes, g_cb.cb_vexsb->getSize());
+	}
 
 	return g_cb.cb_vexsb;
 }

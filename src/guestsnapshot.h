@@ -8,6 +8,7 @@ class GuestSnapshot : public Guest
 {
 public:
 	static GuestSnapshot* create(const char* dirname);
+	static char* readMemory(const char* dirname, guest_ptr p, unsigned int len);
 	virtual ~GuestSnapshot(void);
 	static void save(const Guest*, const char* dirname);
 	virtual guest_ptr getEntryPoint(void) const { return entry_pt; }

@@ -64,6 +64,7 @@ OBJDEPS=	vexxlate.o		\
 		cpu/i386syscalls.o		\
 		cpu/armsyscalls.o		\
 		cpu/amd64syscalls.o		\
+		fragcache.o		\
 		memlog.o		\
 		vex_dispatch.o		\
 		syscall/syscalls.o		\

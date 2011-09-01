@@ -68,7 +68,7 @@ def loadVisitedByRun(guestpath):
 	return visited_tab
 
 from optparse import OptionParser
-op = OptionParser("usage: %prog istats-file guestpath")
+op = OptionParser("usage: %prog guestpath istats-file")
 op.add_option(
 	'-v',
 	'--visited-file',
@@ -124,7 +124,7 @@ def ent2img(visited_tab, m):
 
 	im = Image.new("RGB", target_dim, ImageColor.getrgb("black"))
 	for (k, num_bytes) in visited_tab.items():
-		if k < m.begin or k+num_bytes > m.end: 
+		if k < m.begin or k+num_bytes > m.end:
 			continue
 		offset=int(pixels_per_byte*(k-m.begin))
 		for i in range(0, int(num_bytes*pixels_per_byte)):
@@ -141,4 +141,4 @@ for m in maptab.values():
 	outfname = ('cov-0x%x' % m.begin) + '.png'
 	if opts.outputDir:
 		outfname = "%s/%s" % (opts.outputDir,outfname)
-	im.save(outfname) 
+	im.save(outfname)
