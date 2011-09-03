@@ -69,6 +69,9 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	virtual void print(std::ostream& os, const void* regctx) const = 0;
 
 	virtual const char* off2Name(unsigned int off) const = 0;
+
+	virtual bool load(const char* fname);
+	virtual bool save(const char* fname);
 protected:
 	llvm::Type* mkFromFields(struct guest_ctx_field* f,
 		byte2elem_map&);
