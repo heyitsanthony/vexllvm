@@ -95,3 +95,42 @@ void GuestCPUState::print(std::ostream& os) const
 {
 	print(os, getStateData());
 }
+
+bool GuestCPUState::load(const char* fname)
+{
+	unsigned int	len = getStateSize();
+	uint8_t		*data = (uint8_t*)getStateData();
+	size_t		br;
+	FILE		*f;
+
+	f = fopen(fname, "rb");
+	assert (f != NULL && "Could not load register file");
+	if (f == NULL) return false;
+
+	br = fread(data, len, 1, f);
+	fclose(f);
+
+	assert (br == 1 && "Error reading all register bytes");
+	if (br != 1) return false;
+
+	return true;
+}
+
+bool GuestCPUState::save(const char* fname)
+{
+	unsigned int	len = getStateSize();
+	const uint8_t	*data = (const uint8_t*)getStateData();
+	size_t		br;
+	FILE		*f;
+
+	f = fopen(fname, "w");
+	if (!f) return false;
+
+	assert (f != NULL);
+	br = fwrite(data, len, 1, f);
+	assert (br == 1);
+	fclose(f);
+	if (br != 1) return false;
+
+	return true;
+}
