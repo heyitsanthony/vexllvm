@@ -67,38 +67,56 @@ def loadVisitedByRun(guestpath):
 		visited_tab[a] = int(vsb_sz)
 	return visited_tab
 
-from optparse import OptionParser
-op = OptionParser("usage: %prog guestpath istats-file")
-op.add_option(
-	'-v',
-	'--visited-file',
-	dest='visitedFile',
-        action="store",
-	type="string")
-op.add_option(
-	'-o',
-	'--output-dir',
-	dest='outputDir',
-	action='store',
-	type='string')
-opts,args = op.parse_args()
+# symtab is a list sorted by address of (address, func_name, length) tuples
+def loadSyms(guestpath):
+	symtab = []
+	f = open(guestpath + "/syms", 'r')
+	# example: xdr_netobj 7f17cac14b70-7f17cac14b81
+	for l in f:
+		(func_name, addr_range) = l.split(' ')
+		(addr_begin, addr_end) = addr_range.split('-')
+		addr_begin = int('0x'+addr_begin,0)
+		addr_end = int('0x'+addr_end,0)
+		symtab.append((addr_begin, func_name, addr_end-addr_begin))
+	f.close()
+	symtab.sort()
+	return symtab
 
-if len(args) != 2:
-	op.error("invalid arguments")
+# TODO: Binary search
+def addr2sym(symtab, addr):
+	last_s = symtab[0]
+	for s in symtab:
+		if s[0] > addr:
+			if addr < (last_s[0]+last_s[2]):
+				return last_s
+			return None
+		last_s = s
 
-guestpath=args[0]
-istatspath=args[1]
+	if last_s[0] > addr or addr > (last_s[0]+last_s[2]):
+		return None
 
-maptab = MemEnt.loadFromFile(guestpath+"/mapinfo")
-funclist = loadFuncList(istatspath)
-if opts.visitedFile:
-	print "Visit file: " + opts.visitedFile
-	visited_tab = loadVisitedByFile(opts.visitedFile)
-else:
-	visited_tab = loadVisitedByRun(guestpath)
+	return last_s
 
+# Format
+# function <total bytes> <total bytes covered>
+# ex: malloc 200 100
+def saveFuncCov(symtab, visited_tab):
+	funcs_map = dict()
+	for (v_addr, v_bytes) in visited_tab.items():
+		sym = addr2sym(symtab, v_addr)
+		if sym is None:
+			continue
 
-red =  ImageColor.getrgb("red")
+		if sym[1] not in funcs_map:
+			funcs_map[sym[1]] = (sym[2], 0)
+		(tot,cov) = funcs_map[sym[1]]
+		funcs_map[sym[1]] = (tot, cov + v_bytes)
+
+	outfname = 'funcov.txt'
+	f = open(outfname, 'w')
+	for (func_name, (tot, cov)) in funcs_map.items():
+		f.write("%s %d %d\n" % (func_name, tot, cov))
+	f.close()
 
 def ent2img(visited_tab, m):
 	global red
@@ -134,6 +152,42 @@ def ent2img(visited_tab, m):
 	return im
 
 
+from optparse import OptionParser
+op = OptionParser("usage: %prog guestpath istats-file")
+op.add_option(
+	'-v',
+	'--visited-file',
+	dest='visitedFile',
+        action="store",
+	type="string")
+op.add_option(
+	'-o',
+	'--output-dir',
+	dest='outputDir',
+	action='store',
+	type='string')
+opts,args = op.parse_args()
+
+if len(args) != 2:
+	op.error("invalid arguments")
+
+guestpath=args[0]
+istatspath=args[1]
+
+maptab = MemEnt.loadFromFile(guestpath+"/mapinfo")
+symtab = loadSyms(guestpath)
+
+funclist = loadFuncList(istatspath)
+if opts.visitedFile:
+	print "Visit file: " + opts.visitedFile
+	visited_tab = loadVisitedByFile(opts.visitedFile)
+else:
+	visited_tab = loadVisitedByRun(guestpath)
+
+
+red =  ImageColor.getrgb("red")
+
+saveFuncCov(symtab, visited_tab)
 for m in maptab.values():
 	im = ent2img(visited_tab, m)
 	if im is None:
@@ -142,3 +196,4 @@ for m in maptab.values():
 	if opts.outputDir:
 		outfname = "%s/%s" % (opts.outputDir,outfname)
 	im.save(outfname)
+
