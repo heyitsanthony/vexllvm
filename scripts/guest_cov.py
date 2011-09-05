@@ -100,7 +100,7 @@ def addr2sym(symtab, addr):
 # Format
 # function <total bytes> <total bytes covered>
 # ex: malloc 200 100
-def saveFuncCov(symtab, visited_tab):
+def saveFuncCov(symtab, visited_tab, outdir):
 	funcs_map = dict()
 	for (v_addr, v_bytes) in visited_tab.items():
 		sym = addr2sym(symtab, v_addr)
@@ -112,7 +112,7 @@ def saveFuncCov(symtab, visited_tab):
 		(tot,cov) = funcs_map[sym[1]]
 		funcs_map[sym[1]] = (tot, cov + v_bytes)
 
-	outfname = 'funcov.txt'
+	outfname = outdir + '/funcov.txt'
 	f = open(outfname, 'w')
 	for (func_name, (tot, cov)) in funcs_map.items():
 		f.write("%s %d %d\n" % (func_name, tot, cov))
@@ -165,6 +165,7 @@ op.add_option(
 	'--output-dir',
 	dest='outputDir',
 	action='store',
+	default='.',
 	type='string')
 opts,args = op.parse_args()
 
@@ -187,7 +188,7 @@ else:
 
 red =  ImageColor.getrgb("red")
 
-saveFuncCov(symtab, visited_tab)
+saveFuncCov(symtab, visited_tab, opts.outputDir)
 for m in maptab.values():
 	im = ent2img(visited_tab, m)
 	if im is None:
