@@ -1,3 +1,6 @@
+#include <sys/types.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,6 +87,7 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 : trace_fe(getenv("VEXLLVM_TRACE_FE") != NULL)
 , store_fragments(getenv("VEXLLVM_STORE_FRAGS") != NULL)
 , frag_cache(NULL)
+, frag_log_fd(-1)
 {
 	LibVEX_default_VexArchInfo(&vai_host);
 	vai_host.hwcaps = VEX_HOST_HWCAPS;
@@ -95,11 +99,11 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 		break;
 	case Arch::ARM:
 		arch = VexArchARM;
-		vai_guest.hwcaps = 
-			VEX_HWCAPS_ARM_NEON | 
-			VEX_HWCAPS_ARM_VFP3 | 
-			VEX_HWCAPS_ARM_VFP2 | 
-			VEX_HWCAPS_ARM_VFP | 
+		vai_guest.hwcaps =
+			VEX_HWCAPS_ARM_NEON |
+			VEX_HWCAPS_ARM_VFP3 |
+			VEX_HWCAPS_ARM_VFP2 |
+			VEX_HWCAPS_ARM_VFP |
 			7;
 		break;
 	case Arch::I386:
@@ -123,11 +127,25 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 		frag_cache = FragCache::create(NULL);
 		assert (frag_cache != NULL);
 	}
+
+	if (const char* frag_log_fname=getenv("VEXLLVM_FRAG_LOG")) {
+		fprintf(stderr,
+			"[VEXLLVM] Logging fragments to %s\n",
+			frag_log_fname);
+		frag_log_fd = open(
+			frag_log_fname,
+			O_WRONLY | O_CREAT,
+			0660);
+		lseek(frag_log_fd, 0, SEEK_END);
+		assert (frag_log_fd != -1);
+	}
 }
 
 VexXlate::~VexXlate()
 {
 	if (frag_cache) delete frag_cache;
+
+	if (frag_log_fd != -1) close(frag_log_fd);
 
 	if (getenv("VEXLLVM_DUMP_XLATESTATS") == NULL)
 		return;
@@ -213,8 +231,19 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	if (g_cb.cb_vexsb == NULL)
 		return NULL;
 
-	if (frag_cache && g_cb.cb_vexsb->getSize()) {
-		frag_cache->addFragment(guest_bytes, g_cb.cb_vexsb->getSize());
+	if (g_cb.cb_vexsb->getSize()) {
+		if (frag_cache)
+			frag_cache->addFragment(
+				guest_bytes, g_cb.cb_vexsb->getSize());
+		if (frag_log_fd != -1) {
+			ssize_t	bw;
+
+			bw = write(
+				frag_log_fd,
+				guest_bytes,
+				g_cb.cb_vexsb->getSize());
+			/* bw == -1 when we run the fucking syscall page */
+		}
 	}
 
 	return g_cb.cb_vexsb;

@@ -44,6 +44,8 @@ private:
 
 	bool			store_fragments;
 	FragCache		*frag_cache;
+
+	int			frag_log_fd;
 };
 
 #endif

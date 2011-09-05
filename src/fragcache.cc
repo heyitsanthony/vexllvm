@@ -24,6 +24,9 @@
 
 #include "fragcache.h"
 
+#define FLUSH_FCF_TRIGGER	1024
+#define FLUSH_FCH_TRIGGER	1024
+
 static int fchash_cmp(const void* v1, const void* v2)
 {
 	return memcmp(v1, v2, sizeof(fchash_rec));
@@ -235,7 +238,6 @@ FCFile::~FCFile()
 			f_mmap = NULL;
 		}
 		flush();
-		sort();
 		close(fd);
 	}
 	if (f_mmap != NULL) munmap(f_mmap, f_mmap_sz);
@@ -278,8 +280,10 @@ void FCFile::flush(void)
 		assert (bw == len);
 		delete [] buffer[i];
 	}
-	buffer.clear();
 	lseek(fd, 0, SEEK_SET);
+	buffer.clear();
+
+	sort();
 }
 
 bool FCFile::containsBuffer(const void* guest_bytes) const
@@ -344,6 +348,9 @@ void FCFile::add(const void* guest_bytes)
 	buffered_guest_bytes = new char[len];
 	memcpy(buffered_guest_bytes, guest_bytes, len);
 	buffer.push_back(buffered_guest_bytes);
+
+	if (buffer.size() > FLUSH_FCF_TRIGGER)
+		flush();
 }
 
 FCHash* FCHash::create(const char* fname)
@@ -391,7 +398,7 @@ void FCHash::flush(void)
 			continue;
 		}
 
-		/* need to mark a collision */
+		/* mark a collision in the hashtable at the entry */
 		fchash_rec	*r;
 		r = findHashRec((*it).first.md);
 		assert (r != NULL && r->len != 0);
@@ -405,6 +412,7 @@ void FCHash::flush(void)
 	if (pending.size() == 0)
 		return;
 
+	lseek(fd, 0, SEEK_END);
 	foreach (i, pending.begin(), pending.end()) {
 		struct fchash_rec	r((*i).first);
 		size_t			bw;
@@ -412,9 +420,10 @@ void FCHash::flush(void)
 		bw = write(fd, &r, sizeof(fchash_rec));
 		assert (bw == sizeof(fchash_rec));
 	}
+	lseek(fd, 0, SEEK_SET);
 	pending.clear();
 
-	/* changed the size of the file; reload the mmap */
+	/* changed the size of the file; need to reload */
 	if (f_mmap != NULL) {
 		munmap(f_mmap, f_mmap_sz);
 		f_mmap = NULL;
@@ -428,7 +437,6 @@ void FCHash::flush(void)
 		sizeof(fchash_rec),
 		fchash_cmp);
 }
-
 
 void FCHash::mmapFD(void)
 {
@@ -491,6 +499,9 @@ void FCHash::add(const void* guest_bytes, unsigned int len)
 		(unsigned char*)&rec.first.md);
 	rec.second = rc;
 	pending.push_back(rec);
+
+	if (pending.size() > FLUSH_FCH_TRIGGER)
+		flush();
 }
 
 int FCHash::findHash(const unsigned char* md) const
