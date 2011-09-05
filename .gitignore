@@ -4,3 +4,4 @@ src/cpu/._*
 src/syscall/._*
 bitcode/vexops.bc
 bitcode/softfloat.bc
+guest-*

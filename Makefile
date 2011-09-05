@@ -3,7 +3,7 @@ BIN_BASE2="0xc000000"
 ifndef CFLAGS
 CFLAGS=
 endif
-CFLAGS += -g -O3 -I`pwd`/src/
+CFLAGS += -lssl -g -O3 -I`pwd`/src/
 
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
