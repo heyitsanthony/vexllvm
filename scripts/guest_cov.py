@@ -32,16 +32,33 @@ class MemEnt:
 		mapf.close()
 		return maptab
 
-def loadFuncList(fname):
-	funclist=[]
+def loadBBlockList(fname):
+	bblist=[]
 	funcf=open(fname, 'r')
 	for l in funcf:
 		if not l.startswith("fn=sb_0x"):
 			continue
 		addr=l.replace('fn=sb_','')[:-1]
-		funclist.append(int(addr, 0))
+		bblist.append(int(addr, 0))
 	funcf.close()
-	return funclist
+	return bblist
+
+
+def loadVisitedByInsAddrFile(insAddrFile):
+	visited_tab = dict()
+	f = open(insAddrFile, 'r')
+	last_ins_addr=0
+	for l in f:
+		cur_ins_addr=int(l,0)
+		dist=last_ins_addr-cur_ins_addr
+		if dist < 0 or dist > 16:
+			visited_tab[last_ins_addr] = 16
+		else:
+			visited_tab[last_ins_addr] = cur_ins_addr - last_ins_addr
+		last_ins_addr = cur_ins_addr
+	visited_tab.pop(0)
+	print "Loaded ins addr file"
+	return visited_tab
 
 def loadVisitedByFile(fname):
 	visited_tab = dict()
@@ -53,9 +70,9 @@ def loadVisitedByFile(fname):
 	f.close()
 	return visited_tab
 
-def loadVisitedByRun(guestpath):
+def loadVisitedByRun(guestpath, bblist):
 	visited_tab = dict()
-	for a in funclist:
+	for a in bblist:
 		s = os.popen('frag_run '+ ('0x%x' % a) +' '+guestpath).read()
 		w = filter(lambda x : x.count('VSB') == 1, s.split('\n'))
 		if len(w) == 0:
@@ -83,11 +100,20 @@ def loadSyms(guestpath):
 	return symtab
 
 # TODO: Binary search
+addr2sym_memo = (0, 'DERP DERP BAD FUNC', 1)
 def addr2sym(symtab, addr):
+	global addr2sym_memo
+
+	if addr < addr2sym_memo[0]+addr2sym_memo[2] and \
+	   addr > addr2sym_memo[0]:
+	  	return addr2sym_memo
+
+
 	last_s = symtab[0]
 	for s in symtab:
 		if s[0] > addr:
 			if addr < (last_s[0]+last_s[2]):
+				addr2sym_memo = last_s
 				return last_s
 			return None
 		last_s = s
@@ -95,6 +121,7 @@ def addr2sym(symtab, addr):
 	if last_s[0] > addr or addr > (last_s[0]+last_s[2]):
 		return None
 
+	addr2sym_memo = last_s
 	return last_s
 
 # Format
@@ -102,9 +129,14 @@ def addr2sym(symtab, addr):
 # ex: malloc 200 100
 def saveFuncCov(symtab, visited_tab, outdir):
 	funcs_map = dict()
-	for (v_addr, v_bytes) in visited_tab.items():
+	print "Assigning coverages (get some coffee)"
+
+	visited_list = list(set(visited_tab.items()))
+	visited_list.sort()
+	for (v_addr, v_bytes) in visited_list:
 		sym = addr2sym(symtab, v_addr)
 		if sym is None:
+			print 'NOTFOUND '+ str(v_addr)
 			continue
 
 		if sym[1] not in funcs_map:
@@ -112,6 +144,7 @@ def saveFuncCov(symtab, visited_tab, outdir):
 		(tot,cov) = funcs_map[sym[1]]
 		funcs_map[sym[1]] = (tot, cov + v_bytes)
 
+	print "Coverages assigned. Back to work."
 	outfname = outdir + '/funcov.txt'
 	f = open(outfname, 'w')
 	for (func_name, (tot, cov)) in funcs_map.items():
@@ -153,13 +186,19 @@ def ent2img(visited_tab, m):
 
 
 from optparse import OptionParser
-op = OptionParser("usage: %prog guestpath istats-file")
+op = OptionParser("usage: %prog guestpath [istats-file]")
 op.add_option(
 	'-v',
 	'--visited-file',
 	dest='visitedFile',
         action="store",
 	type="string")
+op.add_option(
+	'-i',
+	'--insaddr-file',
+	dest='insAddrFile',
+	action="store",
+	type='string')
 op.add_option(
 	'-o',
 	'--output-dir',
@@ -169,25 +208,28 @@ op.add_option(
 	type='string')
 opts,args = op.parse_args()
 
-if len(args) != 2:
+if len(args) == 0:
 	op.error("invalid arguments")
 
 guestpath=args[0]
-istatspath=args[1]
 
 maptab = MemEnt.loadFromFile(guestpath+"/mapinfo")
 symtab = loadSyms(guestpath)
 
-funclist = loadFuncList(istatspath)
 if opts.visitedFile:
 	print "Visit file: " + opts.visitedFile
 	visited_tab = loadVisitedByFile(opts.visitedFile)
+elif opts.insAddrFile:
+	visited_tab = loadVisitedByInsAddrFile(opts.insAddrFile)
 else:
-	visited_tab = loadVisitedByRun(guestpath)
+	istatspath=args[1]
+	bblist = loadBBlockList(istatspath)
+	visited_tab = loadVisitedByRun(guestpath, bblist)
 
 
 red =  ImageColor.getrgb("red")
 
+print "SaveFuncCov"
 saveFuncCov(symtab, visited_tab, opts.outputDir)
 for m in maptab.values():
 	im = ent2img(visited_tab, m)
