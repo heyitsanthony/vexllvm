@@ -371,7 +371,41 @@ void GuestPTImg::slurpRegisters(pid_t pid)
 
 #ifdef __amd64__
 	AMD64CPUState* amd64_cpu_state = (AMD64CPUState*)cpu_state;
+
+	/* linux is busted, quirks ahead */
+	if (regs.fs_base == 0) {
+		/* if it's static, it'll probably be using
+		 * some native register bullshit for the TLS and it'll read 0.
+		 *
+		 * Patch this transgression up by allocating some pages
+		 * to do the work.
+		 * (if N/A, the show goes on as normal)
+		 */
+
+		/* Yes, I tried ptrace/ARCH_GET_FS. NO DICE. */
+		//err = ptrace(
+		//	PTRACE_ARCH_PRCTL, pid, &regs.fs_base, ARCH_GET_FS);
+		// fprintf(stderr, "%d %p\n",  err, regs.fs_base);
+
+		int		res;
+		guest_ptr	base_addr;
+
+		/* I saw some negative offsets when grabbing errno,
+		 * so allow for at least 4KB in either direction */
+		res = mem->mmap(
+			base_addr,
+			guest_ptr(0),
+			4096*2,
+			PROT_READ | PROT_WRITE,
+			MAP_PRIVATE | MAP_ANONYMOUS,
+			-1,
+			0);
+		assert (res == 0);
+		regs.fs_base = base_addr.o + 4096;
+	}
 	amd64_cpu_state->setRegs(regs, fpregs);
+#else
+#error arch not supported in ptrace yet
 #endif
 }
 

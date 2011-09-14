@@ -299,6 +299,7 @@ void AMD64CPUState::setRegs(
 	//mess of broken apart state.
 
 	//valgrind/vex seems to not really fully segments them, how sneaky
+	assert (regs.fs_base != 0 && "TLS is important to have!!!");
 	state2amd64()->guest_FS_ZERO = regs.fs_base;
 
 	memcpy(	&state2amd64()->guest_XMM0,
