@@ -39,8 +39,10 @@ public:
 	llvm::Value* writeCtx(
 		unsigned int byteOff, int bias, int len,
 		llvm::Value* ix, llvm::Value* v);
-	llvm::Value* getCtxGEP(unsigned int byteOff, const llvm::Type* ty);
-	llvm::Value* getCtxGEP(llvm::Value* byteOff, const llvm::Type* ty);
+	llvm::Value* getCtxByteGEP(
+		unsigned int byteOff, const llvm::Type* ty);
+	llvm::Value* getCtxTyGEP(
+		llvm::Value* tyOff, const llvm::Type* ty);
 	llvm::Value* getCtxBase(void) const { return cur_guest_ctx; }
 
 	void markLinked();
