@@ -250,7 +250,12 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 	assert (err != -1 && "couldn't PTRACE_GETFPREGS");
 
 	x86_fail = isRegMismatch(state, regs);
-	seg_fail = (regs.fs_base ^ state.guest_FS_ZERO);
+
+	// if ptrace fs_base == 0, then we have a fixup but the ptraced
+	// process doesn't-- don't flag as an error!
+	seg_fail = (regs.fs_base != 0)
+		? (regs.fs_base ^ state.guest_FS_ZERO)
+		: false;
 
 	//TODO: consider evaluating CC fields, ACFLAG, etc?
 	//TODO: segments? shouldn't pop up on user progs..
