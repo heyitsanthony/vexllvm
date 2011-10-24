@@ -590,11 +590,14 @@ int GuestMem::munmap(guest_ptr addr, size_t len)
 	int	err;
 
 	if ((addr & (PAGE_SIZE - 1))) return -EINVAL;
-	if ((len & (PAGE_SIZE - 1))) return -EINVAL;
+
+	// old behavior was to return an -EINVAL on a
+	// non-multiple of PAGE_SIZE, correct behavior is given by man page:
+	// "All pages containing a part of the indicated range are unmapped"
+	len = (len + PAGE_SIZE - 1) & ~((size_t)PAGE_SIZE - 1);
 
 	/* TODO make sure this is a real mapped region in a better
 	   way then if munmap fails? */
-
 	if (!lookupMapping(addr, cur_mapping)) {
 		std::cerr << "[VEXLLVM] trying to munmap missing mapping: ";
 		m.print(std::cerr);
