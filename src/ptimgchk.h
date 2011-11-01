@@ -100,6 +100,7 @@ private:
 	bool		hit_syscall;
 
 	MemLog		*mem_log;
+	bool		xchk_eflags;
 };
 
 #endif

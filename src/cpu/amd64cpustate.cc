@@ -21,6 +21,8 @@ AMD64CPUState::AMD64CPUState()
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
 	state2amd64()->guest_DFLAG = 1;
+	state2amd64()->guest_CC_OP = 0 /* AMD64G_CC_OP_COPY */;
+	state2amd64()->guest_CC_DEP1 = (1 << 2);
 }
 
 AMD64CPUState::~AMD64CPUState()
@@ -233,6 +235,8 @@ void AMD64CPUState::print(std::ostream& os, const void* regctx) const
 	os << "R14: " << (void*)s->guest_R14 << "\n";
 	os << "R15: " << (void*)s->guest_R15 << "\n";
 
+	os << "EFLAGS: " << (void*)LibVEX_GuestAMD64_get_rflags(s) << '\n';
+
 	for (int i = 0; i < 16; i++) {
 		os
 		<< "XMM" << i << ": "
@@ -313,5 +317,10 @@ void AMD64CPUState::setRegs(
 		sizeof(state2amd64()->guest_FPREG));
 
 	//TODO: floating point flags and extra fp state, sse  rounding
+	//
+
+	state2amd64()->guest_CC_OP = 0 /* AMD64G_CC_OP_COPY */;
+	state2amd64()->guest_CC_DEP1 = regs.eflags & (0xff | (3 << 10)) ;
+
 }
 #endif

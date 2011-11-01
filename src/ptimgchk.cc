@@ -94,6 +94,7 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 , steps(0), bp_steps(0), blocks(0)
 , hit_syscall(false)
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
+, xchk_eflags(getenv("VEXLLVM_XCHK_EFLAGS") ? true : false)
 {
 	const char	*step_gauge;
 
@@ -201,6 +202,16 @@ bool PTImgChk::fixup(const guest_ptr ip_begin, const guest_ptr ip_end)
 		mem->memcpy(&op, cur_window, sizeof(long));
 		op16 = op & 0xffff;
 		switch (op16) {
+		case 0x6948: /* IMUL */
+		case 0x6b48:
+		case 0x6b4c:
+		case 0x0f48:
+		case 0xc06b:
+		case 0xd349: /* SHL 49 d3 e1   */
+		case 0xc148: /* ROLQ */
+		case 0xa30f: /* BT */
+			if (!xchk_eflags)
+				break;
 		case 0xbc0f: /* BSF */
 		case 0xbd0f: /* BSR */
 			fprintf(stderr,
@@ -209,6 +220,7 @@ bool PTImgChk::fixup(const guest_ptr ip_begin, const guest_ptr ip_end)
 				(void*)cur_window.o);
 			slurpRegisters(child_pid);
 			return true;
+
 		default:
 			break;
 		}
@@ -237,6 +249,17 @@ static inline bool fcompare(unsigned int* a, long d) {
 		a[3] == 0) ||
 		ldeqd(&a[0], d);
 }
+
+#define FLAGS_MASK	(0xff | (1 << 10) | (1 << 11))
+static uint64_t get_rflags(const VexGuestAMD64State& state)
+{
+	uint64_t guest_rflags = LibVEX_GuestAMD64_get_rflags(
+		&const_cast<VexGuestAMD64State&>(state));
+	guest_rflags &= FLAGS_MASK;
+	guest_rflags |= (1 << 1);
+	return guest_rflags;
+}
+
 bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 {
 	user_regs_struct	regs;
@@ -261,6 +284,14 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 	//TODO: segments? shouldn't pop up on user progs..
 	//TODO: what is this for? well besides the obvious
 	// /* 192 */ULong guest_SSEROUND;
+	if (xchk_eflags) {
+		uint64_t guest_rflags, eflags;
+		eflags = regs.eflags;
+		eflags &= FLAGS_MASK;
+		guest_rflags = get_rflags(state);
+		if (eflags != guest_rflags)
+			return false;
+	}
 
 	sse_ok = !memcmp(
 		&state.guest_XMM0,
@@ -643,6 +674,14 @@ void PTImgChk::printUserRegs(
 		os	<< user_regs_desc_tab[i].name << ": "
 			<< (void*)user_reg << std::endl;
 	}
+
+	uint64_t guest_eflags = get_rflags(ref);
+	if ((regs.eflags & FLAGS_MASK) != guest_eflags)
+		os << "***";
+	os << "EFLAGS: " << (void*)(regs.eflags & FLAGS_MASK);
+	if ((regs.eflags & FLAGS_MASK) != guest_eflags)
+		os << " vs VEX:" << (void*)guest_eflags;
+	os << '\n';
 }
 
 
