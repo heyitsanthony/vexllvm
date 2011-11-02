@@ -156,3 +156,9 @@ void VexHelpers::bindToExeEngine(ExecutionEngine* exe)
 	exe->addModule(vexop_mod);
 #endif
 }
+
+llvm::Module* VexHelperDummy::loadMod(const char* path)
+{
+	fprintf(stderr, "FAILING LOAD MOD %s\n", path);
+	return NULL;
+}

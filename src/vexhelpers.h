@@ -36,6 +36,24 @@ private:
 	const char		*bc_dirpath;
 };
 
+class VexHelperDummy : public VexHelpers
+{
+public:
+	VexHelperDummy(Arch::Arch a) : VexHelpers(a)
+	{}
+	virtual ~VexHelperDummy() {}
+	virtual llvm::Function* getHelper(const char* s) const
+	{
+		/* can't be null or we'll wind up
+		 * terminating early when we hit a ccall */
+		return (llvm::Function*)0xb055cafe;
+	}
+
+protected:
+	virtual llvm::Module* loadMod(const char* path);
+};
+
+
 extern VexHelpers* theVexHelpers;
 
 #endif
