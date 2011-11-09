@@ -101,6 +101,7 @@ private:
 
 	MemLog		*mem_log;
 	bool		xchk_eflags;
+	bool		fixup_eflags;
 };
 
 #endif

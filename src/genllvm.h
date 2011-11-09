@@ -68,6 +68,7 @@ private:
 	/* current state data */
 	llvm::Value*		cur_guest_ctx;
 	llvm::Value*		cur_memory_log;
+	unsigned int		memlog_slot;
 
 	llvm::Function*		cur_f;
 	llvm::BasicBlock*	cur_bb;

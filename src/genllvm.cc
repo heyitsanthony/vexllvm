@@ -71,6 +71,7 @@ void GenLLVM::beginBB(const char* name)
 	cur_guest_ctx = arg++;
 	if (log_last_store) {
 		cur_memory_log = arg++;
+		memlog_slot = 0;
 	}
 }
 
@@ -237,8 +238,10 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 	Value		*addr_ptr;
 	StoreInst	*si;
 
-	if(cur_memory_log) {
-		MemLog::recordStore(cur_memory_log, addr_v, data_v);
+	if (cur_memory_log) {
+		MemLog::recordStore(
+			cur_memory_log, addr_v, data_v, memlog_slot);
+		memlog_slot++;
 	}
 
 	ptrTy = PointerType::get(data_v->getType(), 0);

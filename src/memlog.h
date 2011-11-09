@@ -12,6 +12,8 @@ namespace llvm {
 	class PointerType;
 	class VectorType;
 }
+
+
 class MemLog {
 public:
 	MemLog() { clear(); }
@@ -25,13 +27,16 @@ public:
 
 	/* interface for llvm code gen to record stored */
 	static const llvm::StructType* getType();
-	static void recordStore(llvm::Value* log_v, llvm::Value* addr_v, 
-		llvm::Value* data_v);
+	static void recordStore(
+		llvm::Value* log_v,
+		llvm::Value* addr_v,
+		llvm::Value* data_v,
+		unsigned int mem_slot);
 
 	/* x86 specific thing... */
 	static const unsigned int MAX_STORE_SIZE = 128;
 private:
-
+	/* XXX: TODO MAKE THIS A PROPER LOG!! */
 	guest_ptr 	address;
 	unsigned long 	size;
 	char		data[MAX_STORE_SIZE / 8];

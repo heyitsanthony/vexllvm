@@ -95,6 +95,7 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 , hit_syscall(false)
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 , xchk_eflags(getenv("VEXLLVM_XCHK_EFLAGS") ? true : false)
+, fixup_eflags(getenv("VEXLLVM_NO_EFLAGS_FIXUP") ? false : true)
 {
 	const char	*step_gauge;
 
@@ -210,7 +211,7 @@ bool PTImgChk::fixup(const guest_ptr ip_begin, const guest_ptr ip_end)
 		case 0xd349: /* SHL 49 d3 e1   */
 		case 0xc148: /* ROLQ */
 		case 0xa30f: /* BT */
-			if (!xchk_eflags)
+			if (!fixup_eflags)
 				break;
 		case 0xbc0f: /* BSF */
 		case 0xbd0f: /* BSR */
@@ -219,6 +220,8 @@ bool PTImgChk::fixup(const guest_ptr ip_begin, const guest_ptr ip_end)
 				(void*)op16,
 				(void*)cur_window.o);
 			slurpRegisters(child_pid);
+
+			if (mem_log) mem_log->clear();
 			return true;
 
 		default:
@@ -342,7 +345,9 @@ bool PTImgChk::isMatchMemLog() const
 	unsigned int extra = base - aligned;
 
 	for(long* mem = (long*)&data[0];
-		aligned < end; aligned += sizeof(long), ++mem) {
+		aligned < end;
+		aligned += sizeof(long), ++mem)
+	{
 		*mem = ptrace(PTRACE_PEEKTEXT, child_pid, aligned, NULL);
 	}
 
