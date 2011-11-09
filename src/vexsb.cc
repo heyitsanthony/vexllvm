@@ -156,7 +156,7 @@ llvm::Function* VexSB::emit(const char* fname)
 	memset(values, 0, sizeof(Value*)*getNumRegs());
 
 	theGenLLVM->beginBB(fname);
-	
+
 	/* instructions */
 	foreach (it, stmts.begin(), stmts.end()) (*it)->emit();
 
@@ -213,12 +213,31 @@ VexStmt* VexSB::loadNextInstruction(const IRStmt* stmt)
 	TAGOP(LLSC);
 	TAGOP(Dirty);
 	TAGOP(MBE);
-	default: 
+	default:
 	printf("???\n");
 	assert (0 && "SIMPLE HUMAN");
 	break;
 	}
 	return vs;
+}
+
+std::vector<InstExtent>	VexSB::getInstExtents(void) const
+{
+	std::vector<InstExtent>	ret;
+
+	foreach (it, stmts.begin(), stmts.end()) {
+		VexStmt		*vs = *it;
+		VexStmtIMark	*im;
+
+		im = dynamic_cast<VexStmtIMark*>(vs);
+		if (im == NULL)
+			continue;
+
+		ret.push_back(
+			InstExtent(im->getAddr(), (uint8_t)im->getLen()));
+	}
+
+	return ret;
 }
 
 void VexSB::loadInstructions(const IRSB* irsb)

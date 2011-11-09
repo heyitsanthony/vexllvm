@@ -24,16 +24,16 @@ public:
 		guest_ptr start, guest_ptr end,
 		const VexGuestAMD64State& state);
 	void printSubservient(
-		std::ostream& os, 
+		std::ostream& os,
 		const VexGuestAMD64State& ref) const;
-	void stackTraceSubservient(std::ostream& os, 
+	void stackTraceSubservient(std::ostream& os,
 		guest_ptr b = guest_ptr(0), guest_ptr e = guest_ptr(0));
 	void printTraceStats(std::ostream& os);
 
 	bool isMatch(const VexGuestAMD64State& state) const;
 	bool isMatchMemLog() const;
 
-	bool fixup(guest_ptr ip_begin, guest_ptr ip_end);
+	bool fixup(const std::vector<InstExtent>& insts);
 
 	bool breakpointSysCalls(guest_ptr ip_begin, guest_ptr ip_end);
 
@@ -71,7 +71,7 @@ private:
 	bool isPushF(const user_regs_struct& regs);
 
 	void printUserRegs(
-		std::ostream& os, 
+		std::ostream& os,
 		user_regs_struct& regs,
 		const VexGuestAMD64State& ref) const;
 
@@ -82,10 +82,11 @@ private:
 
 	void printMemory(std::ostream& os) const;
 
+	void readMemLogData(char* data) const;
 	void copyIn(guest_ptr dst, const void* src, unsigned int bytes);
 
 	pid_t		child_pid;
-	
+
 	uint64_t	steps;
 	uint64_t	bp_steps;
 	uint64_t	blocks;

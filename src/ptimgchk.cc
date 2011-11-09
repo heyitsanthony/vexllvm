@@ -13,6 +13,7 @@
 
 #include <sstream>
 
+#include "Sugar.h"
 #include "syscall/syscallsmarshalled.h"
 #include "ptimgchk.h"
 #include "memlog.h"
@@ -65,30 +66,8 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 #define get_reg_name(y)		user_regs_desc_tab[y].name
 
 /*
-the basic concept here is to single step the subservient copy of the program
-while the program counter is within a specific range.  that range will
-correspond to the original range of addresses contained within the translation
-block.  this will allow things to work properly in cases where the exit from
-the block at the IR level re-enters the block.  this is nicer than the
-alternative of injecting breakpoint instructions into the original process
-because it avoids the need for actually parsing the opcodes at this level of
-the code.  it's bad from the perspective of performance because a long running
-loop that could have been entirely contained within a translation block won't
-be able to fully execute without repeated syscalls to grab the process state
-
-a nice alternative style of doing this type of partial checking would be to run until the next system call.  this can happen extremely efficiently as the
-ptrace api provides a simple call to stop at that point.  identifying the
-errant code that causes a divergence would be tricker, but the caller of such
-a utility could track all of the involved translation blocks and produce
-a summary of the type of instructions included in the IR.  as long as the bug
-was an instruction misimplementation this would probably catch it rapidly.
-this approach might be more desirable if we have divergent behavior that
-happens much later in the execution cycle.  unfortunately, there are probably
-many other malloc, getpid, gettimeofday type calls that will cause divergence
-early enough to cause the cross checking technique to fail before the speed of
-the mechanism really made an impact in how far it can check.
-*/
-
+ * single step shadow program while counter is in specific range
+ */
 PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 : GuestPTImg(argc, argv, envp)
 , steps(0), bp_steps(0), blocks(0)
@@ -189,55 +168,92 @@ bool PTImgChk::isRegMismatch(
 /* if we find an opcode that is causing problems, we'll replace the vexllvm
  * state with the pt state (since the pt state is by definition correct)
  */
-bool PTImgChk::fixup(const guest_ptr ip_begin, const guest_ptr ip_end)
+#define MAX_INS_BUF	32
+bool PTImgChk::fixup(const std::vector<InstExtent>& insts)
 {
-	guest_ptr cur_window, last_window;
+	uint64_t	fix_op;
+	guest_ptr	fix_addr;
+	uint8_t		ins_buf[MAX_INS_BUF];
 
-	/* guest ip's are mapped in our addr space, no need for IPC */
-	cur_window = ip_begin;
-	last_window = guest_ptr(ip_end.o - (sizeof(long) - 1));
-	while (cur_window < ip_end) {
-		long		op;
-		uint16_t	op16;
+	foreach (it, insts.begin(), insts.end()) {
+		const InstExtent	&inst(*it);
+		uint16_t		op16;
+		uint8_t			op8;
+		int			off;
 
-		mem->memcpy(&op, cur_window, sizeof(long));
-		op16 = op & 0xffff;
+		assert (inst.second < MAX_INS_BUF);
+		/* guest ip's are mapped in our addr space, no need for IPC */
+		mem->memcpy(ins_buf, inst.first, inst.second);
+		fix_addr = inst.first;
+
+		/* filter out fucking prefix byte */
+		off = ( ins_buf[0] == 0x41 ||
+			ins_buf[0] == 0x44 ||
+			ins_buf[0] == 0x48 ||
+			ins_buf[0] == 0x49) ? 1 : 0;
+		op8 = ins_buf[off];
+		switch (op8) {
+		case 0xd3: /* shl    %cl,%rsi */
+		case 0xc1: /* shl */
+		case 0xf7: /* idiv */
+			if (!fixup_eflags)
+				break;
+
+		case 0x69: /* IMUL */
+		case 0x6b: /* IMUL */
+			fix_op = op8;
+			goto do_fixup;
+		default:
+			break;
+		}
+
+
+		op16 = ins_buf[off] | (ins_buf[off+1] << 8);
 		switch (op16) {
-		case 0x6948: /* IMUL */
-		case 0x6b48:
 		case 0x6b4c:
-		case 0x0f48:
+		case 0xaf0f: /* imul   0x24(%r14),%edx */
 		case 0xc06b:
-		case 0xd349: /* SHL 49 d3 e1   */
-		case 0xc148: /* ROLQ */
 		case 0xa30f: /* BT */
 			if (!fixup_eflags)
 				break;
 		case 0xbc0f: /* BSF */
 		case 0xbd0f: /* BSR */
-			fprintf(stderr,
-				"[VEXLLVM] fixing up op=%p@IP=%p\n",
-				(void*)op16,
-				(void*)cur_window.o);
-			slurpRegisters(child_pid);
-
-			if (mem_log) mem_log->clear();
-			return true;
-
+			fix_op = op16;
+			goto do_fixup;
 		default:
 			break;
 		}
 
-		cur_window.o++;
+		if (mem_log != NULL) {
+			switch(op16) {
+			case 0xa30f: /* fucking BT writes to stack! */
+				fix_op = op16;
+				goto do_fixup;
+			default:
+				break;
+			}
+		}
 	}
 
-	fprintf(stderr, "VAIN ATTEMPT TO FIXUP %p-%p\n", 
-		(void*)ip_begin.o, (void*)ip_end.o);
+	fprintf(stderr, "VAIN ATTEMPT TO FIXUP %p-%p\n",
+		(void*)(insts.front().first.o),
+		(void*)(insts.back().first.o));
 	/* couldn't figure out how to fix */
 	return false;
+
+do_fixup:
+	fprintf(stderr,
+		"[VEXLLVM] fixing up op=%p@IP=%p\n",
+		(void*)fix_op,
+		(void*)fix_addr.o);
+	slurpRegisters(child_pid);
+
+	if (mem_log) mem_log->clear();
+	return true;
 }
 
-static inline bool ldeqd(void* ld, long d) {
+static inline bool ldeqd(void* ld, long d)
+{
 	long double* real = (long double*)ld;
 	union {
 		double d;
@@ -246,7 +262,9 @@ static inline bool ldeqd(void* ld, long d) {
 	alias.d = *real;
 	return alias.l == d;
 }
-static inline bool fcompare(unsigned int* a, long d) {
+
+static inline bool fcompare(unsigned int* a, long d)
+{
 	return (*(long*)&d == *(long*)&a[0] &&
 		(a[2] == 0 || a[2] == 0xFFFF) &&
 		a[3] == 0) ||
@@ -334,15 +352,19 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 	return !x86_fail && x87_ok & sse_ok && !seg_fail && mem_ok;
 }
 
-bool PTImgChk::isMatchMemLog() const
-{
-	if (!mem_log) return true;
 
-	char data[MemLog::MAX_STORE_SIZE / 8 + sizeof(long)];
-	uintptr_t base = (uintptr_t)mem_log->getAddress();
-	uintptr_t aligned = base & ~(sizeof(long) - 1);
-	uintptr_t end = base + mem_log->getSize();
-	unsigned int extra = base - aligned;
+#define MEMLOG_BUF_SZ	(MemLog::MAX_STORE_SIZE / 8 + sizeof(long))
+void PTImgChk::readMemLogData(char* data) const
+{
+	uintptr_t	base, aligned, end;
+	unsigned int	extra;
+
+	memset(data, 0, MEMLOG_BUF_SZ);
+
+	base = (uintptr_t)mem_log->getAddress();
+	aligned = base & ~(sizeof(long) - 1);
+	end = base + mem_log->getSize();
+	extra = base - aligned;
 
 	for(long* mem = (long*)&data[0];
 		aligned < end;
@@ -351,7 +373,26 @@ bool PTImgChk::isMatchMemLog() const
 		*mem = ptrace(PTRACE_PEEKTEXT, child_pid, aligned, NULL);
 	}
 
-	return memcmp(&data[extra], (char*)base, mem_log->getSize()) == 0;
+	if (extra != 0)
+		memmove(&data[0], &data[extra], mem_log->getSize());
+}
+
+bool PTImgChk::isMatchMemLog() const
+{
+	char	data[MEMLOG_BUF_SZ];
+	int	cmp;
+
+	if (!mem_log)
+		return true;
+
+	readMemLogData(data);
+
+	cmp = memcmp(
+		data,
+		mem->getHostPtr(mem_log->getAddress()),
+		mem_log->getSize());
+
+	return (cmp == 0);
 }
 
 
@@ -594,7 +635,7 @@ void PTImgChk::copyIn(guest_ptr dst, const void* src, unsigned int bytes)
 
 	while (out_addr < end_addr) {
 		long data = *(long*)in_addr;
-		int err = ptrace(PTRACE_POKEDATA, child_pid, 
+		int err = ptrace(PTRACE_POKEDATA, child_pid,
 			out_addr.o, data);
 		assert(err == 0);
 		in_addr += sizeof(long);
@@ -701,6 +742,8 @@ void PTImgChk::printFPRegs(
 	//TODO: what is this for? well besides the obvious
 	// /* 192 */ULong guest_SSEROUND;
 
+#define XMM_TO_64(x,i,k) (void*)(x[i*4+k] | (((uint64_t)x[i*4+(k+1)]) << 32L))
+
 	for(int i = 0; i < 16; ++i) {
 		if (memcmp(
 			&fpregs.xmm_space[i * 4],
@@ -711,8 +754,10 @@ void PTImgChk::printFPRegs(
 		}
 
 		os	<< "xmm" << i << ": "
-			<< *((void**)&fpregs.xmm_space[i*4+2]) << "|"
-			<< *((void**)&fpregs.xmm_space[i*4+0]) << std::endl;
+			<< XMM_TO_64(fpregs.xmm_space, i, 2)
+			<< "|"
+			<< XMM_TO_64(fpregs.xmm_space, i, 0)
+			<< std::endl;
 	}
 
 	//TODO: check the top pointer of the floating point stack..
@@ -729,43 +774,33 @@ void PTImgChk::printFPRegs(
 			os << "***";
 		}
 		os << "st" << i << ": "
-			<< *(void**)&fpregs.st_space[i * 4 + 2] << "|"
-			<< *(void**)&fpregs.st_space[i * 4 + 0] << std::endl;
+			<< XMM_TO_64(fpregs.st_space, i, 2) << "|"
+			<< XMM_TO_64(fpregs.st_space, i, 0) << std::endl;
 	}
 }
 
 void PTImgChk::printMemory(std::ostream& os) const
 {
+	char	data[MEMLOG_BUF_SZ];
+	void	*databuf[2] = {0, 0};
+
 	if (!mem_log) return;
 
 	if(!isMatchMemLog())
 		os << "***";
 	os << "last write @ " << (void*)mem_log->getAddress().o
-		<< " size: " << mem_log->getSize();
+		<< " size: " << mem_log->getSize() << ". ";
 
-	char data[MemLog::MAX_STORE_SIZE / 8 + sizeof(long)];
-	memset(&data[0], 0, sizeof(data));
-	uintptr_t base = (uintptr_t)mem_log->getAddress();
-	uintptr_t aligned = base & ~(sizeof(long) - 1);
-	uintptr_t end = base + mem_log->getSize();
-	unsigned int extra = base - aligned;
-	for(long* lmem = (long*)&data[0];
-		aligned < end; aligned += sizeof(long), ++lmem) {
-		*lmem = ptrace(PTRACE_PEEKTEXT, child_pid,
-			aligned, NULL);
-	}
-	memmove(&data[0], &data[extra], mem_log->getSize());
-	os << " data: " << *(void**)&data[sizeof(void*)] << "|"
-		<< *(void**)&data[0];
+	readMemLogData(data);
 
-	void* vexdata[2] = {0, 0};
-	mem->memcpy(&vexdata[0], mem_log->getAddress(),
-		mem_log->getSize());
-	os << " vexdata: " << vexdata[1] << "|" << vexdata[0];
+	memcpy(databuf, data, mem_log->getSize());
+	os << "ptrace_value: " << databuf[1] << "|" << databuf[0];
 
-	memcpy(&vexdata[0], mem_log->getData(),
-		mem_log->getSize());
-	os << " logged: " << vexdata[1] << "|" << vexdata[0];
+	mem->memcpy(&databuf[0], mem_log->getAddress(), mem_log->getSize());
+	os << " vex_value: " << databuf[1] << "|" << databuf[0];
+
+	memcpy(&databuf[0], mem_log->getData(), mem_log->getSize());
+	os << " log_value: " << databuf[1] << "|" << databuf[0];
 
 	os << std::endl;
 }
@@ -817,7 +852,7 @@ void PTImgChk::printTraceStats(std::ostream& os)
 		<< steps << " instructions" << std::endl;
 }
 
-bool PTImgChk::breakpointSysCalls(const guest_ptr ip_begin, 
+bool PTImgChk::breakpointSysCalls(const guest_ptr ip_begin,
 	const guest_ptr ip_end)
 {
 	guest_ptr	rip = ip_begin;

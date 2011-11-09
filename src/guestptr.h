@@ -25,4 +25,7 @@ inline bool operator > (const guest_ptr& g, guest_ptr h) {
 	return g.o > h.o;
 }
 
+#include <utility>
+typedef std::pair<guest_ptr, uint8_t>	InstExtent;
+
 #endif

@@ -126,9 +126,7 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 		 return;
 	}
 
-	fixed = cross_check->fixup(
-		vsb->getGuestAddr(), 
-		vsb->getEndAddr());
+	fixed = cross_check->fixup(vsb->getInstExtents());
 	if (fixed) return;
 
 	fprintf(stderr, "MISMATCH: END OF BLOCK. FIND NEW EMU BUG.\n");

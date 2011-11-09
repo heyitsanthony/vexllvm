@@ -1,6 +1,7 @@
 #ifndef VEXSB_H
 #define VEXSB_H
 
+#include <vector>
 #include <stdint.h>
 #include <iostream>
 
@@ -60,6 +61,9 @@ public:
 	{
 		return getEndAddr().o - getGuestAddr();
 	}
+
+	std::vector<InstExtent>	getInstExtents(void) const;
+
 protected:
 	VexSB(guest_ptr guess_addr, const IRSB* in_irsb);
 private:
