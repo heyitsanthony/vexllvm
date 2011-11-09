@@ -69,7 +69,7 @@ public:
 
 	/* access small bits of guest memory */
 	template <typename T>
-	T read(guest_ptr offset) { return *(T*)(base + offset.o); }
+	T read(guest_ptr offset) const { return *(T*)(base + offset.o); }
 	uintptr_t readNative(guest_ptr offset, int idx = 0) {
 		if(is_32_bit)
 			return *(uint32_t*)(base + offset.o + idx*4);

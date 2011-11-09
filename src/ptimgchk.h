@@ -32,6 +32,7 @@ public:
 
 	bool isMatch(const VexGuestAMD64State& state) const;
 	bool isMatchMemLog() const;
+	bool isStackMatch(const user_regs_struct& regs) const;
 
 	bool fixup(const std::vector<InstExtent>& insts);
 
@@ -103,6 +104,7 @@ private:
 	MemLog		*mem_log;
 	bool		xchk_eflags;
 	bool		fixup_eflags;
+	bool		xchk_stack;
 };
 
 #endif

@@ -75,6 +75,7 @@ PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 , xchk_eflags(getenv("VEXLLVM_XCHK_EFLAGS") ? true : false)
 , fixup_eflags(getenv("VEXLLVM_NO_EFLAGS_FIXUP") ? false : true)
+, xchk_stack(getenv("VEXLLVM_XCHK_STACK") ? true : false)
 {
 	const char	*step_gauge;
 
@@ -286,7 +287,8 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 	user_regs_struct	regs;
 	user_fpregs_struct	fpregs;
 	int			err;
-	bool			x86_fail, sse_ok, seg_fail, x87_ok, mem_ok;
+	bool			x86_fail, sse_ok, seg_fail,
+				x87_ok, mem_ok, stack_ok;
 
 	getRegs(regs);
 
@@ -348,8 +350,10 @@ bool PTImgChk::isMatch(const VexGuestAMD64State& state) const
 	// other vex internal state (tistart, nraddr, etc)
 
 	mem_ok = isMatchMemLog();
+	stack_ok = isStackMatch(regs);
 
-	return !x86_fail && x87_ok & sse_ok && !seg_fail && mem_ok;
+	return 	!x86_fail && x87_ok & sse_ok &&
+		!seg_fail && mem_ok && stack_ok;
 }
 
 
@@ -395,6 +399,35 @@ bool PTImgChk::isMatchMemLog() const
 	return (cmp == 0);
 }
 
+/* was seeing errors at 0x2f0 in cc1, so 0x400 seems like a good place */
+#define STACK_XCHK_BYTES	(1024+128)
+#define STACK_XCHK_LONGS	STACK_XCHK_BYTES/sizeof(long)
+
+bool PTImgChk::isStackMatch(const user_regs_struct& regs) const
+{
+	if (!xchk_stack)
+		return true;
+
+	/* -128 for amd64 redzone */
+	for (int i = -128/sizeof(long); i < STACK_XCHK_LONGS; i++) {
+		guest_ptr	stack_ptr(regs.rsp+sizeof(long)*i);
+		long		pt_val, guest_val;
+
+		pt_val = ptrace(
+			PTRACE_PEEKTEXT, child_pid, stack_ptr.o, NULL);
+
+		guest_val = getMem()->read<long>(stack_ptr);
+		if (pt_val != guest_val) {
+			fprintf(stderr, "Stack mismatch@%p (pt=%p!=%p=vex)\n",
+				stack_ptr.o,
+				(void*)pt_val,
+				(void*)guest_val);
+			return false;
+		}
+	}
+
+	return true;
+}
 
 bool PTImgChk::doStep(
 	guest_ptr start, guest_ptr end,
