@@ -62,9 +62,7 @@ static IRSB* vex_finaltidy(IRSB* irsb)
 	return irsb;
 }
 
-#if defined(VALGRIND_TRUNK)
 static UInt vex_needs_self_check(void*, VexGuestExtents* ) { return 0; }
-#endif
 
 static void vex_log(HChar* hc, Int nbytes)
 {
@@ -216,18 +214,17 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 
 	vta.traceflags = VEX_TRACE_FLAGS;
 	if (trace_fe) vta.traceflags |= (1 << 7);
-#if !defined(VALGRIND_TRUNK)
-	vta.dispatch = (void*)dispatch_asm_amd64;
-	res = LibVEX_Translate(&vta);
-	if (res == VexTransAccessFail) return NULL;
-#else
 	vta.dispatch_assisted = (void*)dispatch_asm_amd64;
 	vta.dispatch_unassisted = (void*)dispatch_asm_amd64;
-	vta.irsb_only = true;
+
+	/* XXX: TJ's trunk only? Delete if you don't remember TJ */
+	// vta.irsb_only = true;
+
 	vta.needs_self_check = vex_needs_self_check;
 	res = LibVEX_Translate(&vta);
-	if (res.status == VexTranslateResult::VexTransAccessFail) return NULL;
-#endif
+	if (res.status == VexTranslateResult::VexTransAccessFail)
+		return NULL;
+
 	if (g_cb.cb_vexsb == NULL)
 		return NULL;
 

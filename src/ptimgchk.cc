@@ -401,7 +401,7 @@ bool PTImgChk::isMatchMemLog() const
 
 /* was seeing errors at 0x2f0 in cc1, so 0x400 seems like a good place */
 #define STACK_XCHK_BYTES	(1024+128)
-#define STACK_XCHK_LONGS	STACK_XCHK_BYTES/sizeof(long)
+#define STACK_XCHK_LONGS	(int)(STACK_XCHK_BYTES/sizeof(long))
 
 bool PTImgChk::isStackMatch(const user_regs_struct& regs) const
 {
@@ -409,7 +409,7 @@ bool PTImgChk::isStackMatch(const user_regs_struct& regs) const
 		return true;
 
 	/* -128 for amd64 redzone */
-	for (int i = -128/sizeof(long); i < STACK_XCHK_LONGS; i++) {
+	for (int i = -128/((int)sizeof(long)); i < STACK_XCHK_LONGS; i++) {
 		guest_ptr	stack_ptr(regs.rsp+sizeof(long)*i);
 		long		pt_val, guest_val;
 
@@ -419,7 +419,7 @@ bool PTImgChk::isStackMatch(const user_regs_struct& regs) const
 		guest_val = getMem()->read<long>(stack_ptr);
 		if (pt_val != guest_val) {
 			fprintf(stderr, "Stack mismatch@%p (pt=%p!=%p=vex)\n",
-				stack_ptr.o,
+				(void*)stack_ptr.o,
 				(void*)pt_val,
 				(void*)guest_val);
 			return false;

@@ -384,16 +384,30 @@ BINOP_CLASS(MulHi16Sx8);
 BINOP_CLASS(MulHi32Ux4);
 BINOP_CLASS(MulHi32Sx4);
 
+#if 0
+#define Iop_QNarrow16Sx4	Iop_QNarrowBin16Sto8Sx8
+#define Iop_QNarrow16Sx8	Iop_QNarrowBin16Sto8Sx16
+#define Iop_QNarrow32Sx2	Iop_QNarrowBin32Sto16Sx4
+#define Iop_QNarrow32Sx4	Iop_QNarrowBin32Sto16Sx8
+#define Iop_QNarrow16Ux4	Iop_QNarrowUn16Sto8Ux8
+#define Iop_QNarrow16Ux8	Iop_QNarrowBin16Sto8Ux16
+#define Iop_QNarrow32Ux4	Iop_QNarrowBin32Sto16Ux8
+#define Iop_Narrow16x8		Iop_NarrowBin16to8x16
+#define Iop_Narrow32x4		Iop_NarrowBin32to16x8
+#endif
 
-BINOP_CLASS(Narrow16x8);
-BINOP_CLASS(Narrow32x4);
-BINOP_CLASS(QNarrow16Ux8);
-BINOP_CLASS(QNarrow32Ux4);
-BINOP_CLASS(QNarrow16Sx8);
-BINOP_CLASS(QNarrow32Sx4);
-BINOP_CLASS(QNarrow16Ux4);
-BINOP_CLASS(QNarrow16Sx4);
-BINOP_CLASS(QNarrow32Sx2);
+
+
+BINOP_CLASS(NarrowBin16to8x16);
+BINOP_CLASS(NarrowBin32to16x8);
+
+BINOP_CLASS(QNarrowBin16Sto8Sx8);
+BINOP_CLASS(QNarrowBin16Sto8Sx16);
+BINOP_CLASS(QNarrowBin32Sto16Sx4);
+BINOP_CLASS(QNarrowBin32Sto16Sx8);
+BINOP_CLASS(QNarrowUn16Sto8Ux8);
+BINOP_CLASS(QNarrowBin16Sto8Ux16);
+BINOP_CLASS(QNarrowBin32Sto16Ux8);
 
 BINOP_CLASS(QAdd64Sx1);
 BINOP_CLASS(QAdd64Sx2);

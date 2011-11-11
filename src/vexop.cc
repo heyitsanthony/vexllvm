@@ -419,9 +419,17 @@ CASE_OP(QSalN8x8)
 CASE_OP(QSalN16x4)
 CASE_OP(QSalN32x2)
 CASE_OP(QSalN64x1)
-CASE_OP(QNarrow16Ux4)
-CASE_OP(QNarrow16Sx4)
-CASE_OP(QNarrow32Sx2)
+
+CASE_OP(NarrowBin16to8x16);
+CASE_OP(NarrowBin32to16x8);
+CASE_OP(QNarrowBin16Sto8Sx8);
+CASE_OP(QNarrowBin16Sto8Sx16);
+CASE_OP(QNarrowBin32Sto16Sx4);
+CASE_OP(QNarrowBin32Sto16Sx8);
+CASE_OP(QNarrowUn16Sto8Ux8);
+CASE_OP(QNarrowBin16Sto8Ux16);
+CASE_OP(QNarrowBin32Sto16Ux8);
+
 CASE_OP(InterleaveHI8x8)
 CASE_OP(InterleaveHI16x4)
 CASE_OP(InterleaveHI32x2)
@@ -670,32 +678,7 @@ CASE_OP(QSalN8x16)
 CASE_OP(QSalN16x8)
 CASE_OP(QSalN32x4)
 CASE_OP(QSalN64x2)
-CASE_OP(QNarrow16Ux8)
-CASE_OP(QNarrow32Ux4)
-CASE_OP(QNarrow16Sx8)
-CASE_OP(QNarrow32Sx4)
-CASE_OP(Narrow16x8)
-CASE_OP(Narrow32x4)
-#ifndef VALGRIND_TRUNK
-CASE_OP(Shorten16x8)
-CASE_OP(Shorten32x4)
-CASE_OP(Shorten64x2)
-CASE_OP(QShortenS16Sx8)
-CASE_OP(QShortenS32Sx4)
-CASE_OP(QShortenS64Sx2)
-CASE_OP(QShortenU16Sx8)
-CASE_OP(QShortenU32Sx4)
-CASE_OP(QShortenU64Sx2)
-CASE_OP(QShortenU16Ux8)
-CASE_OP(QShortenU32Ux4)
-CASE_OP(QShortenU64Ux2)
-CASE_OP(Longen8Ux8)
-CASE_OP(Longen16Ux4)
-CASE_OP(Longen32Ux2)
-CASE_OP(Longen8Sx8)
-CASE_OP(Longen16Sx4)
-CASE_OP(Longen32Sx2)
-#endif
+
 CASE_OP(InterleaveHI8x16)
 CASE_OP(InterleaveHI16x8)
 CASE_OP(InterleaveHI32x4)
@@ -1268,8 +1251,8 @@ Value* VexExprBinop##x::emit(void) const			\
 	return builder->CreateShuffleVector(v1, v2, cv);	\
 }
 
-OPNRW_EMIT(Narrow16x8, get_vt(16, 8));
-OPNRW_EMIT(Narrow32x4, get_vt(8, 16));
+OPNRW_EMIT(NarrowBin16to8x16, get_vt(16, 8));
+OPNRW_EMIT(NarrowBin32to16x8, get_vt(8, 16));
 
 //LLVM is busted and doesnt work properly with a vector SELECT opcode...
 
@@ -1314,14 +1297,33 @@ Value* VexExprBinop##x::emit(void) const			\
 	return result;						\
 }
 
-OPNRWSS_EMIT(QNarrow16Ux4, get_vt(4, 16), get_vt(8 , 8 ), get_c(16, 0x00FF), get_c(16, 0));
-OPNRWSS_EMIT(QNarrow16Ux8, get_vt(8, 16), get_vt(16, 8 ), get_c(16, 0x00FF), get_c(16, 0));
-OPNRWSS_EMIT(QNarrow32Ux4, get_vt(4, 32), get_vt(8 , 16), get_c(32, 0xFFFF), get_c(32, 0));
+OPNRWSS_EMIT(
+	QNarrowUn16Sto8Ux8, get_vt(4, 16), get_vt(8 , 8 ),
+	get_c(16, 0x00FF), get_c(16, 0));
 
-OPNRWSS_EMIT(QNarrow16Sx4, get_vt(4, 16), get_vt(8 , 8 ), get_c(16, 0x7F)  , get_c(16, 0xFF80    ));
-OPNRWSS_EMIT(QNarrow16Sx8, get_vt(8, 16), get_vt(16, 8 ), get_c(16, 0x7F)  , get_c(16, 0xFF80    ));
-OPNRWSS_EMIT(QNarrow32Sx2, get_vt(2, 32), get_vt(4 , 16), get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
-OPNRWSS_EMIT(QNarrow32Sx4, get_vt(4, 32), get_vt(8 , 16), get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
+OPNRWSS_EMIT(
+	QNarrowBin16Sto8Ux16, get_vt(8, 16), get_vt(16, 8),
+	get_c(16, 0x00FF), get_c(16, 0));
+
+OPNRWSS_EMIT(
+	QNarrowBin32Sto16Ux8, get_vt(4, 32), get_vt(8 , 16),
+	get_c(32, 0xFFFF), get_c(32, 0));
+
+OPNRWSS_EMIT(
+	QNarrowBin16Sto8Sx8, get_vt(4, 16), get_vt(8 , 8),
+	get_c(16, 0x7F)  , get_c(16, 0xFF80));
+
+OPNRWSS_EMIT(
+	QNarrowBin16Sto8Sx16, get_vt(8, 16), get_vt(16, 8),
+	get_c(16, 0x7F)  , get_c(16, 0xFF80));
+
+OPNRWSS_EMIT(
+	QNarrowBin32Sto16Sx4, get_vt(2, 32), get_vt(4 , 16),
+	get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
+
+OPNRWSS_EMIT(
+	QNarrowBin32Sto16Sx8, get_vt(4, 32), get_vt(8 , 16),
+	get_c(32, 0x7FFF), get_c(32, 0xFFFF8000));
 
 #define SHIGH(w, c, x, e, v) 					\
 	Value *hi = get_c(w, c);				\
