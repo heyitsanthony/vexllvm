@@ -262,16 +262,18 @@ uintptr_t AMD64CPUState::getFSBase() const {
 	return state2amd64()->guest_FS_ZERO;
 }
 
+static const int arg2reg[] =
+{
+	offsetof(VexGuestAMD64State, guest_RDI),
+	offsetof(VexGuestAMD64State, guest_RSI),
+	offsetof(VexGuestAMD64State, guest_RDX),
+	offsetof(VexGuestAMD64State, guest_RCX)
+};
+
+
 /* set a function argument */
 void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 {
-	const int arg2reg[] = {
-		offsetof(VexGuestAMD64State, guest_RDI),
-		offsetof(VexGuestAMD64State, guest_RSI),
-		offsetof(VexGuestAMD64State, guest_RDX),
-		offsetof(VexGuestAMD64State, guest_RCX)
-		};
-
 	assert (arg_num <= 3);
 	*((uint64_t*)((uintptr_t)state_data + arg2reg[arg_num])) = arg_val;
 }
@@ -324,3 +326,9 @@ void AMD64CPUState::setRegs(
 
 }
 #endif
+
+unsigned int AMD64CPUState::getFuncArgOff(unsigned int arg_num) const
+{
+	assert (arg_num <= 3);
+	return arg2reg[arg_num];
+}

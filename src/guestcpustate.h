@@ -64,6 +64,8 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	GuestExitType getExitType(void) { return (GuestExitType)*exit_type; }
 
 	virtual void setFuncArg(uintptr_t arg_val, unsigned int arg_num) = 0;
+	virtual unsigned int getFuncArgOff(unsigned int arg_num) const
+	{ assert (0 == 1 && "STUB"); return 0; }
 
 	void print(std::ostream& os) const;
 	virtual void print(std::ostream& os, const void* regctx) const = 0;

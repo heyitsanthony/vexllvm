@@ -26,6 +26,8 @@ public:
 	uint64_t getExitCode(void) const;
 
 	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
+	virtual unsigned int getFuncArgOff(unsigned int arg_num) const;
+
 #ifdef __amd64__
 	void setRegs(const user_regs_struct& regs, 
 		const user_fpregs_struct& fpregs);
