@@ -38,6 +38,7 @@ static bool dump_maps;
 GuestPTImg::GuestPTImg(int argc, char *const argv[], char *const envp[])
 : Guest(argv[0])
 , symbols(NULL)
+, dyn_symbols(NULL)
 {
 	ElfImg		*img;
 
@@ -57,6 +58,7 @@ GuestPTImg::GuestPTImg(int argc, char *const argv[], char *const envp[])
 GuestPTImg::~GuestPTImg(void)
 {
 	if (symbols != NULL) delete symbols;
+	if (dyn_symbols != NULL) delete dyn_symbols;
 }
 
 void GuestPTImg::handleChild(pid_t pid)
@@ -567,4 +569,27 @@ const Symbols* GuestPTImg::getSymbols(void) const
 {
 	if (!symbols) loadSymbols();
 	return symbols;
+}
+
+const Symbols* GuestPTImg::getDynSymbols(void) const
+{
+	if (!dyn_symbols) loadDynSymbols();
+	return dyn_symbols;
+}
+
+void GuestPTImg::loadDynSymbols(void) const
+{
+	Symbols	*exec_syms;
+
+	assert (dyn_symbols == NULL && "symbols already loaded");
+	dyn_symbols = new Symbols();
+
+	/* XXX, in the future, we should look at what is in the 
+	 * jump slots, for now, we rely on the symbol and hope no one
+	 * is jacking the jump table */
+	exec_syms = ElfDebug::getLinkageSyms(getMem(), getBinaryPath());
+	if (exec_syms) {
+		dyn_symbols->addSyms(exec_syms);
+		delete exec_syms;
+	}
 }

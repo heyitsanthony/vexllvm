@@ -79,6 +79,8 @@ public:
 	virtual Arch::Arch getArch() const;
 
 	virtual const Symbols* getSymbols(void) const;
+	virtual const Symbols* getDynSymbols(void) const;
+
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return argv_ptrs; }
 
@@ -97,11 +99,13 @@ private:
 	void slurpBrains(pid_t pid);
 	void slurpMappings(pid_t pid);
 	void loadSymbols(void) const;
+	void loadDynSymbols(void) const;
 
 	guest_ptr			entry_pt;
 	PtrList<PTImgMapEntry>		mappings;
 	std::map<guest_ptr, uint64_t>	breakpoints;
 	mutable Symbols			*symbols; // lazy loaded
+	mutable Symbols			*dyn_symbols;
 	std::vector<guest_ptr>		argv_ptrs;
 };
 

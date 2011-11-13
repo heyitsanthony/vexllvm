@@ -45,6 +45,7 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 : Guest(NULL)
 , is_valid(false)
 , syms(NULL)
+, dyn_syms(NULL)
 {
 	ssize_t	sz;
 
@@ -84,7 +85,8 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	END_F()
 
 	loadMappings(dirpath);
-	loadSymbols(dirpath);
+	syms = loadSymbols(dirpath, "syms");
+	dyn_syms = loadSymbols(dirpath, "dynsyms");
 
 	is_valid = true;
 }
@@ -140,10 +142,12 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 	END_F()
 }
 
-void GuestSnapshot::loadSymbols(const char* dirpath)
+Symbols* GuestSnapshot::loadSymbols(const char* dirpath, const char* name)
 {
-	syms = new Symbols();
-	SETUP_F_R("syms");
+	Symbols	*ret;
+
+	ret = new Symbols();
+	SETUP_F_R(name);
 
 	do {
 		unsigned int	elems;
@@ -152,9 +156,11 @@ void GuestSnapshot::loadSymbols(const char* dirpath)
 		elems = fscanf(f, "%s %"PRIx64"-%"PRIx64"\n", buf, &begin, &end);
 		if (elems != 3)
 			break;
-		syms->addSym(buf, begin, end - begin);
+		ret->addSym(buf, begin, end - begin);
 	} while (1);
 	END_F();
+
+	return ret;
 }
 
 GuestSnapshot::~GuestSnapshot(void)
@@ -164,6 +170,7 @@ GuestSnapshot::~GuestSnapshot(void)
 	}
 
 	if (syms != NULL) delete syms;
+	if (dyn_syms != NULL) delete dyn_syms;
 }
 
 #define SETUP_F_W(x)			\
@@ -216,15 +223,16 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 	END_F()
 
 	saveMappings(g, dirpath);
-	saveSymbols(g, dirpath);
+	saveSymbols(g->getSymbols(), dirpath, "syms");
+	saveSymbols(g->getDynSymbols(), dirpath, "dynsyms");
 }
 
-void GuestSnapshot::saveSymbols(const Guest* g, const char* dirpath)
+void GuestSnapshot::saveSymbols(
+	const Symbols* g_syms,
+	const char* dirpath,
+	const char* name)
 {
-	const Symbols	*g_syms;
-
-	SETUP_F_W("syms");
-	g_syms = g->getSymbols();
+	SETUP_F_W(name);
 	if (g_syms == NULL) goto done;
 
 	foreach (it, g_syms->begin(), g_syms->end()) {

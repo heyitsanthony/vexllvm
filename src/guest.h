@@ -39,6 +39,7 @@ public:
 	void setSyscallResult(uint64_t ret);
 	virtual std::string getName(guest_ptr) const;
 	virtual const Symbols* getSymbols(void) const { return NULL; }
+	virtual const Symbols* getDynSymbols(void) const { return NULL; }
 
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;

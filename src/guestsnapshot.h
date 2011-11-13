@@ -15,6 +15,7 @@ public:
 	virtual Arch::Arch getArch(void) const { return arch; }
 
 	virtual const Symbols* getSymbols(void) const { return syms; }
+	virtual const Symbols* getDynSymbols(void) const { return dyn_syms; }
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return argv_ptrs; }
 
@@ -23,8 +24,12 @@ protected:
 
 private:
 	static void saveMappings(const Guest* g, const char* dirpath);
-	static void saveSymbols(const Guest* g, const char* dirpath);
-	void loadSymbols(const char* dirname);
+	static void saveSymbols(
+		const Symbols* g_syms,
+		const char* dirpath,
+		const char* name);
+
+	Symbols* loadSymbols(const char* dirname, const char* name);
 	void loadMappings(const char* dirname);
 
 	bool			is_valid;
@@ -32,6 +37,7 @@ private:
 	Arch::Arch		arch;
 	std::list<int>		fd_list;
 	Symbols			*syms;
+	Symbols			*dyn_syms;
 	std::vector<guest_ptr>	argv_ptrs;
 };
 

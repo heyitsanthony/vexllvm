@@ -7,6 +7,7 @@
 #include <string.h>
 #include "arch.h"
 #include "symbols.h"
+#include "guestmem.h"
 #include "elfimg.h"
 #include "elfdebug.h"
 
@@ -40,8 +41,34 @@ Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 	return ret;
 }
 
+Symbols* ElfDebug::getLinkageSyms(
+	const GuestMem* m, const char* elf_path)
+{
+	Symbols		*ret;
+	Symbol		*s;
+	ElfDebug	*ed;
+
+	ed = new ElfDebug(elf_path);
+	if (ed->is_valid == false) {
+		delete ed;
+		return NULL;
+	}
+
+	ret = new Symbols();
+	while ((s = ed->nextLinkageSym(m)) != NULL) {
+		ret->addSym(s->getName(), s->getBaseAddr(), s->getLength());
+		delete s;
+	}
+
+	delete ed;
+	return ret;
+
+}
+
 ElfDebug::ElfDebug(const char* path)
 : is_valid(false)
+, rela_tab(NULL)
+, dynsymtab(NULL)
 {
 	Arch::Arch	elf_arch;
 	struct stat	s;
@@ -89,23 +116,52 @@ void ElfDebug::setupTables(void)
 	strtab = NULL;
 	sym_count = 0;
 	sym = NULL;
+	rela_tab = NULL;
+
 	for (int i = 0; i < hdr->e_shnum; i++) {
 		if (i == hdr->e_shstrndx) continue;
+
+		if (shdr[i].sh_type == SHT_DYNSYM) {
+			dynsymtab = (Elf_Sym*)(img + shdr[i].sh_offset);
+			dynsym_count = shdr[i].sh_size / shdr[i].sh_entsize;
+			continue;
+		}
+
+		if (	shdr[i].sh_type == SHT_STRTAB &&
+			strcmp(&strtab_sh[shdr[i].sh_name], ".dynstr") == 0)
+		{
+			dynstrtab = (const char*)(img + shdr[i].sh_offset);
+			continue;
+		}
+
 		if (shdr[i].sh_type == SHT_STRTAB) {
 			strtab = (const char*)(img + shdr[i].sh_offset);
 			continue;
 		}
-		if ((shdr[i].sh_type == SHT_DYNSYM && sym == NULL) ||
-		    (shdr[i].sh_type == SHT_SYMTAB) ) {
+
+
+		if (shdr[i].sh_type == SHT_SYMTAB) {
 			sym = (Elf_Sym*)(img + shdr[i].sh_offset);
 			sym_count = shdr[i].sh_size / shdr[i].sh_entsize;
 			assert (sizeof(Elf_Sym) == shdr[i].sh_entsize);
-			is_dyn = (shdr[i].sh_type == SHT_DYNSYM);
+			continue;
 		}
+
+		if (	shdr[i].sh_type == SHT_RELA && 
+			shdr[i].sh_info == 12 /* XXX ??? */)
+		{
+			rela_tab = (void*)(img + shdr[i].sh_offset);
+			rela_count = shdr[i].sh_size / shdr[i].sh_entsize;
+			continue;
+		}
+
 	}
 
-	symtab = sym;
+	symtab = (sym) ? sym : dynsymtab;
+	sym_count = (sym) ? sym_count : dynsym_count;
+
 	next_sym_idx = 0;
+	next_rela_idx = 0;
 
 	/* missing some data we expect; don't try to grab any symbols */
 	if (symtab == NULL || strtab == NULL)
@@ -116,12 +172,19 @@ Symbol* ElfDebug::nextSym(void)
 {
 	Elf64_Sym	*sym = (Elf64_Sym*)symtab;	/* FIXME */
 	Elf64_Sym	*cur_sym;
+	const char	*name_c, *atat;
 	std::string	name;
 
 	if (next_sym_idx >= sym_count) return NULL;
 
 	cur_sym = &sym[next_sym_idx++];
-	name = std::string(&strtab[cur_sym->st_name]);
+
+	name_c = &strtab[cur_sym->st_name];
+	name = std::string(name_c);
+	atat = strstr(name_c, "@@");
+	if (atat) {
+		name = name.substr(0, atat - name_c);
+	}
 
 	return new Symbol(
 		name,
@@ -129,4 +192,29 @@ Symbol* ElfDebug::nextSym(void)
 		cur_sym->st_size,
 		is_dyn,
 		(ELF64_ST_TYPE(cur_sym->st_info) == STT_FUNC));
+}
+
+Symbol* ElfDebug::nextLinkageSym(const GuestMem* m)
+{
+	Elf64_Sym	*cur_sym;
+	guest_ptr	guest_sym;
+	Elf64_Sym	*sym = (Elf64_Sym*)dynsymtab;
+	Elf64_Rela	*rela;
+	const char	*name_c;
+
+	if (!rela_tab || next_rela_idx >= rela_count)
+		return NULL;
+
+	rela = &((Elf64_Rela*)rela_tab)[next_rela_idx++];
+	cur_sym = &sym[ELF64_R_SYM(rela->r_info)];
+	name_c = &dynstrtab[cur_sym->st_name];
+	guest_sym = guest_ptr(rela->r_offset);
+
+	return new Symbol(
+		name_c,
+		m->read<uint64_t>(guest_sym)-6,
+		6,
+		false,
+		(ELF64_ST_TYPE(cur_sym->st_info) == STT_FUNC));
+
 }
