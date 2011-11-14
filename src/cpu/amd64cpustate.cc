@@ -336,3 +336,8 @@ unsigned int AMD64CPUState::getStackRegOff(void) const
 {
 	return offsetof(VexGuestAMD64State, guest_RSP);
 }
+
+unsigned int AMD64CPUState::getRetOff(void) const
+{
+	return offsetof(VexGuestAMD64State, guest_RAX);
+}

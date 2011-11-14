@@ -105,7 +105,6 @@ void ElfDebug::setupTables(void)
 {
 	Elf_Ehdr	*hdr;
 	Elf_Shdr	*shdr;
-	Elf_Sym		*sym;
 	const char	*strtab_sh;
 
 	hdr = (Elf_Ehdr*)img;
@@ -114,8 +113,10 @@ void ElfDebug::setupTables(void)
 
 	/* pull data from section headers */
 	strtab = NULL;
+	dynstrtab = NULL;
+	dynsymtab = NULL;
+	symtab = NULL;
 	sym_count = 0;
-	sym = NULL;
 	rela_tab = NULL;
 
 	for (int i = 0; i < hdr->e_shnum; i++) {
@@ -141,7 +142,7 @@ void ElfDebug::setupTables(void)
 
 
 		if (shdr[i].sh_type == SHT_SYMTAB) {
-			sym = (Elf_Sym*)(img + shdr[i].sh_offset);
+			symtab = (void*)(img + shdr[i].sh_offset);
 			sym_count = shdr[i].sh_size / shdr[i].sh_entsize;
 			assert (sizeof(Elf_Sym) == shdr[i].sh_entsize);
 			continue;
@@ -157,8 +158,12 @@ void ElfDebug::setupTables(void)
 
 	}
 
-	symtab = (sym) ? sym : dynsymtab;
-	sym_count = (sym) ? sym_count : dynsym_count;
+	if (symtab == NULL) {
+		symtab = dynsymtab;
+		sym_count = dynsym_count;
+		strtab = dynstrtab;
+		is_dyn = true;
+	}
 
 	next_sym_idx = 0;
 	next_rela_idx = 0;
@@ -175,7 +180,8 @@ Symbol* ElfDebug::nextSym(void)
 	const char	*name_c, *atat;
 	std::string	name;
 
-	if (next_sym_idx >= sym_count) return NULL;
+	if (next_sym_idx >= sym_count)
+		return NULL;
 
 	cur_sym = &sym[next_sym_idx++];
 
