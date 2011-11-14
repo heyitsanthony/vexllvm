@@ -270,7 +270,6 @@ static const int arg2reg[] =
 	offsetof(VexGuestAMD64State, guest_RCX)
 };
 
-
 /* set a function argument */
 void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 {
@@ -331,4 +330,9 @@ unsigned int AMD64CPUState::getFuncArgOff(unsigned int arg_num) const
 {
 	assert (arg_num <= 3);
 	return arg2reg[arg_num];
+}
+
+unsigned int AMD64CPUState::getStackRegOff(void) const
+{
+	return offsetof(VexGuestAMD64State, guest_RSP);
 }
