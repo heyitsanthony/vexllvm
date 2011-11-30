@@ -162,7 +162,9 @@ void ElfDebug::setupTables(void)
 		symtab = dynsymtab;
 		sym_count = dynsym_count;
 		strtab = dynstrtab;
-		is_dyn = true;
+		is_reloc = false;
+	} else {
+		is_reloc = true;
 	}
 
 	next_sym_idx = 0;
@@ -196,7 +198,7 @@ Symbol* ElfDebug::nextSym(void)
 		name,
 		cur_sym->st_value,
 		cur_sym->st_size,
-		is_dyn,
+		is_reloc,
 		(ELF64_ST_TYPE(cur_sym->st_info) == STT_FUNC));
 }
 

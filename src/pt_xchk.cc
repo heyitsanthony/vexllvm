@@ -31,6 +31,10 @@ int main(int argc, char* argv[], char* envp[])
 	}
 
 	gs = GuestPTImg::create<PTImgChk>(argc - 1, argv + 1, envp);
+	if (getenv("VEXLLVM_XCHK_SAVE")) {
+		fprintf(stderr, "XCHK SAVING\n");
+		gs->save();
+	}
 
 	if (getenv("VEXLLVM_FASTCHK"))
 		vexexec = VexExec::create<VexExecFastChk,PTImgChk>(gs);

@@ -38,7 +38,7 @@ private:
 	unsigned int	next_sym_idx;
 	unsigned int	sym_count;
 	const char	*strtab;
-	bool		is_dyn;
+	bool		is_reloc;
 
 	void		*rela_tab;
 	unsigned int	next_rela_idx;
