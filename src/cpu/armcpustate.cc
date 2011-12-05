@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stddef.h>
 #include "Sugar.h"
 
 #include <iostream>
@@ -286,28 +287,14 @@ void ARMCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 }
 
 #ifdef __arm__
-void ARMCPUState::setRegs(const user& regs, const user_fp& fpregs, 
-	const user_vfp& vfpregs) {
-	state2arm()->guest_R0 = regs.rax;
-	state2arm()->guest_R1 = regs.rcx;
-	state2arm()->guest_R2 = regs.rdx;
-	state2arm()->guest_R3 = regs.rbx;
-	state2arm()->guest_R4 = regs.rsp;
-	state2arm()->guest_R5 = regs.rbp;
-	state2arm()->guest_R6 = regs.rsi;
-	state2arm()->guest_R7 = regs.rdi;
-	state2arm()->guest_R8  = regs.r8;
-	state2arm()->guest_R9  = regs.r9;
-	state2arm()->guest_R10 = regs.r10;
-	state2arm()->guest_R11 = regs.fp;
-	state2arm()->guest_R12 = regs.ip;
-	state2arm()->guest_R13 = regs.sp;
-	state2arm()->guest_R14 = regs.lr;
-	state2arm()->guest_R15 = regs.pc;
+void ARMCPUState::setRegs(
+	const user_regs& regs,
+	const user_fpregs& fpregs)
+{
+	memcpy(&state2arm()->guest_R0, &regs, 16*4);
 
 	//TODO: some kind of flags, checking but i don't yet understand this
 	//mess of broken apart state.
-
 
 	//TODO: vector data registers
 	//TODO: float registers

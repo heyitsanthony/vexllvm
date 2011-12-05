@@ -1,7 +1,9 @@
 #include <sys/syscall.h>
 #include <sys/errno.h>
 #include <sys/prctl.h>
-#include <asm/prctl.h> 
+#ifndef __arm__
+#include <asm/prctl.h>
+#endif
 #include <vector>
 #include <sstream>
 #include "Sugar.h"
@@ -108,10 +110,17 @@ std::string Syscalls::getAMD64SyscallName(int sys_nr) const {
 	return AMD64::g_guest_syscall_names[sys_nr];
 }
 
-uintptr_t Syscalls::applyAMD64Syscall(
-	SyscallParams& args)
+/* XXX fucking arm */
+#ifdef __arm__
+#define SYS_arch_prctl	158
+#define ARCH_SET_FS	0x1002
+#define ARCH_GET_FS	0x1003
+#endif
+
+
+uintptr_t Syscalls::applyAMD64Syscall(SyscallParams& args)
 {
-	uintptr_t sc_ret = ~0ULL;
+	unsigned long sc_ret = ~0UL;
 
 	/* special syscalls that we handle per arch, these
 	   generally supersede any pass through or translated 
@@ -126,7 +135,7 @@ uintptr_t Syscalls::applyAMD64Syscall(
 		break;
 	}
 
-	if (tryPassthrough(args, sc_ret)) return sc_ret;
+	if (tryPassthrough(args, (uintptr_t&)sc_ret)) return sc_ret;
 	
 	g_mem = mappings;
 	sc_ret = AMD64::do_syscall(NULL,
@@ -145,7 +154,8 @@ uintptr_t Syscalls::applyAMD64Syscall(
 	return sc_ret;
 }
 
-SYSCALL_BODY(AMD64, arch_prctl) {
+SYSCALL_BODY(AMD64, arch_prctl)
+{
 	AMD64CPUState* cpu_state = (AMD64CPUState*)this->cpu_state;
 	if(args.getArg(0) == ARCH_GET_FS) {
 		sc_ret = cpu_state->getFSBase();

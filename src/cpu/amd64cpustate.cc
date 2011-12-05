@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include "Sugar.h"
-
+#include <stddef.h>
 #include <iostream>
 #include <cstring>
 #include <vector>
 
-#include "amd64cpustate.h"
+#include "cpu/amd64cpustate.h"
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
 }
@@ -96,10 +96,10 @@ const char* AMD64CPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
 #define CASE_OFF2NAME(x)	\
-	case offsetof(VexGuestAMD64State, guest_##x) ... 7+offsetof(VexGuestAMD64State, guest_##x): \
+	case offsetof(VexGuestAMD64State, guest_##x) ... (7+offsetof(VexGuestAMD64State, guest_##x)): \
 	return #x;
 #define CASE_OFF2NAMEN(x,y)	\
-	case offsetof(VexGuestAMD64State, guest_##x##y) ... 7+offsetof(VexGuestAMD64State, guest_##x##y): \
+	case offsetof(VexGuestAMD64State, guest_##x##y) ... (7+offsetof(VexGuestAMD64State, guest_##x##y)): \
 	return #x"["#y"]";
 
 
@@ -340,4 +340,11 @@ unsigned int AMD64CPUState::getStackRegOff(void) const
 unsigned int AMD64CPUState::getRetOff(void) const
 {
 	return offsetof(VexGuestAMD64State, guest_RAX);
+}
+
+/* after a syscall, rcx and r11 are reset by the linux kernel */
+void AMD64CPUState::resetSyscall(void)
+{
+	state2amd64()->guest_RCX = 0;
+	state2amd64()->guest_R11 = 0;
 }

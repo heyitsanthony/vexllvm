@@ -116,7 +116,7 @@ std::string Syscalls::getARMSyscallName(int sys_nr) const {
 uintptr_t Syscalls::applyARMSyscall(
 	SyscallParams& args)
 {
-	uintptr_t sc_ret = ~0ULL;
+	unsigned long sc_ret = ~0UL;
 
 	/* special syscalls that we handle per arch, these
 	   generally supersede any pass through or translated 
@@ -139,7 +139,7 @@ uintptr_t Syscalls::applyARMSyscall(
 		break;
 	}
 
-	if (tryPassthrough(args, sc_ret)) return sc_ret;
+	if (tryPassthrough(args, (uintptr_t&)sc_ret)) return sc_ret;
 
 	g_mem = mappings;
 	sc_ret = ARM::do_syscall(NULL,

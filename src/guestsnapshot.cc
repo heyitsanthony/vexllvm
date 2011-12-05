@@ -16,8 +16,10 @@
 
 using namespace std;
 
-#ifdef __amd64__
+#if defined(__amd64__)
 #define SYSPAGE_ADDR	guest_ptr(0xffffffffff600000)
+#elif defined(__arm__)
+#define SYSPAGE_ADDR	guest_ptr(0xffff0000)
 #endif
 
 GuestSnapshot* GuestSnapshot::create(const char* dirpath)

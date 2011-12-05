@@ -5,11 +5,9 @@
 #include <map>
 #include "collection.h"
 #include "guest.h"
-extern "C" {
-#include <valgrind/libvex_guest_amd64.h>
-}
 
 class Symbols;
+class PTImgArch;
 
 class PTImgMapEntry
 {
@@ -84,15 +82,19 @@ public:
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return argv_ptrs; }
 
+	void setBreakpoint(pid_t pid, guest_ptr addr);
+	void resetBreakpoint(pid_t pid, guest_ptr addr);
+
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);
 
 	void slurpRegisters(pid_t pid);
 
-	void setBreakpoint(pid_t pid, guest_ptr addr);
-	void resetBreakpoint(pid_t pid, guest_ptr addr);
 	guest_ptr undoBreakpoint(pid_t pid);
+
+	PTImgArch	*pt_arch;
+
 private:
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);

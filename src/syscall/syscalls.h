@@ -13,17 +13,13 @@
 class Guest;
 class GuestCPUState;
 
-#define SYSCALL_HANDLER(arch, call) SYSCALL_HANDLER_TRICK(arch, call, _)
-
-#define SYSCALL_HANDLER_TRICK(arch, call, underbar) \
-	bool arch##underbar##call(		\
+#define SYSCALL_HANDLER(arch, call)		\
+	bool arch##_##call(			\
 		SyscallParams&		args,	\
 		unsigned long&		sc_ret)
 
-#define SYSCALL_BODY(arch, call) SYSCALL_BODY_TRICK(arch, call, _)
-
-#define SYSCALL_BODY_TRICK(arch, call, underbar) \
-	bool Syscalls::arch##underbar##call(	\
+#define SYSCALL_BODY(arch, call)	 \
+	bool Syscalls::arch##_##call(	\
 		SyscallParams&		args,	\
 		unsigned long&		sc_ret)
 

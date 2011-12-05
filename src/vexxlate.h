@@ -7,7 +7,7 @@
 extern "C" {
 #include <valgrind/libvex.h>
 #include <valgrind/libvex_ir.h>
-extern void dispatch_asm_amd64(void);
+extern void dispatch_asm_arch(void);
 }
 #include "arch.h"
 

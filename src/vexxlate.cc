@@ -214,14 +214,18 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 
 	vta.traceflags = VEX_TRACE_FLAGS;
 	if (trace_fe) vta.traceflags |= (1 << 7);
-	vta.dispatch_assisted = (void*)dispatch_asm_amd64;
-	vta.dispatch_unassisted = (void*)dispatch_asm_amd64;
+
+//	vta.dispatch_assisted = (void*)dispatch_asm_arch;
+//	vta.dispatch_unassisted = (void*)dispatch_asm_arch;
+	vta.dispatch_assisted = (void*)(0x123);
+	vta.dispatch_unassisted = (void*)(0x123);
 
 	/* XXX: TJ's trunk only? Delete if you don't remember TJ */
 	// vta.irsb_only = true;
-
 	vta.needs_self_check = vex_needs_self_check;
+
 	res = LibVEX_Translate(&vta);
+
 	if (res.status == VexTranslateResult::VexTransAccessFail)
 		return NULL;
 

@@ -38,8 +38,8 @@ uint64_t Syscalls::apply(void)
 uint64_t Syscalls::apply(SyscallParams& args)
 {
 	bool			fakedSyscall;
-	uint64_t		sys_nr;
-	uintptr_t 		sc_ret = ~0ULL;
+	int			sys_nr;
+	unsigned long		sc_ret = ~0UL;
 
 	/* translate the syscall number by architecture so that
 	   we can have boiler plate implementations centralized
@@ -91,7 +91,7 @@ uint64_t Syscalls::apply(SyscallParams& args)
 	}
 
 	if (log_syscalls) {
-		print(std::cerr, args, &sc_ret);
+		print(std::cerr, args, (uintptr_t*)&sc_ret);
 	}
 
 	return sc_ret;
@@ -167,6 +167,11 @@ bool Syscalls::interceptSyscall(
 		   executed without us.  we'd rather crash! */
 		sc_ret = 0;
 		return true;
+
+#ifdef __arm__
+#define SYS_mmap	9
+#endif
+
 	case SYS_mmap: {
 		guest_ptr m;
 		sc_ret = mappings->mmap(
@@ -274,10 +279,12 @@ void Syscalls::print(std::ostream& os) const
 		print(os, sp, NULL);
 	}
 }
+
 void Syscalls::print(std::ostream& os, const SyscallParams& sp,
 	uintptr_t* result) const
 {
-	os << "Syscall: " << sp.getSyscall() << " : " << getSyscallName(sp.getSyscall());
+	os <<	"Syscall: " << sp.getSyscall() << " : "
+		<< getSyscallName(sp.getSyscall());
 	os << " {"
 		<< (void*)sp.getArg(0) << ", "
 		<< (void*)sp.getArg(1) << ", "

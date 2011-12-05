@@ -71,6 +71,9 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	virtual unsigned int getStackRegOff(void) const
 	{ assert (0 == 1 && "STUB"); return 0; }
 
+	virtual void resetSyscall(void)
+	{ assert (0 == 1 && "STUB"); }
+
 	void print(std::ostream& os) const;
 	virtual void print(std::ostream& os, const void* regctx) const = 0;
 

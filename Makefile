@@ -3,6 +3,12 @@ BIN_BASE2="0xc000000"
 ifndef CFLAGS
 CFLAGS=
 endif
+
+ifeq ($(shell uname -m), armv7l)
+#fucking ubuntu mystery commands
+CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed 
+endif
+
 CFLAGS += -lssl -g -O3 -I`pwd`/src/
 
 ifndef TRACE_CFLAGS
@@ -25,20 +31,6 @@ endif
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
 LDRELOC2="-Wl,-Ttext-segment=$(BIN_BASE2)"
 #LDFLAGS=
-VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
-LLVMCONFIG_PATH=llvm-config
-CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)
-LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
-LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
-LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
-LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
-
-VALGRIND_TRUNK=/opt/valgrind-trunk
-HAS_VALGRIND_TRUNK=$(shell [ -d $(VALGRIND_TRUNK) ] && echo \'yes\' )
-ifeq ($(HAS_VALGRIND_TRUNK), 'yes')
-	VEXLIB=$(VALGRIND_TRUNK)/lib/valgrind/libvex-amd64-linux.a
-	CFLAGS += -I$(VALGRIND_TRUNK)/include -DVALGRIND_TRUNK
-endif 
 
 ##  ### ### ###
 # # # #  #  # #
@@ -66,7 +58,6 @@ OBJDEPS=	vexxlate.o		\
 		cpu/amd64syscalls.o		\
 		fragcache.o		\
 		memlog.o		\
-		vex_dispatch.o		\
 		syscall/syscalls.o		\
 		syscall/syscallsmarshalled.o	\
 		vexfcache.o		\
@@ -83,6 +74,33 @@ OBJDEPS=	vexxlate.o		\
 		elfsegment.o		\
 #		libvex_amd64_helpers.o	\
 #
+
+ifeq ($(shell uname -m), armv7l)
+CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/ -lrt -lcrypto -lcrypt 
+OBJDEPS += cpu/ptimgarm.o
+VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
+endif
+
+ifeq ($(shell uname -m), x86_64)
+VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
+OBJDEPS +=	cpu/ptimgamd64.o	\
+		vex_dispatch.o
+endif
+
+LLVMCONFIG_PATH=llvm-config
+CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)
+LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
+LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
+LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
+LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
+
+VALGRIND_TRUNK=/opt/valgrind-trunk
+HAS_VALGRIND_TRUNK=$(shell [ -d $(VALGRIND_TRUNK) ] && echo \'yes\' )
+ifeq ($(HAS_VALGRIND_TRUNK), 'yes')
+	VEXLIB=$(VALGRIND_TRUNK)/lib/valgrind/libvex-amd64-linux.a
+	CFLAGS += -I$(VALGRIND_TRUNK)/include -DVALGRIND_TRUNK
+endif 
+
 
 FPDEPS= vexop_fp.o
 SOFTFLOATDEPS=vexop_softfloat.o

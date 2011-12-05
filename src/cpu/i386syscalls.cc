@@ -1,7 +1,9 @@
 #include <sys/syscall.h>
 #include <sys/errno.h>
 #include <sys/prctl.h>
-#include <asm/prctl.h> 
+#ifndef __arm__
+#include <asm/prctl.h>
+#endif
 #include <vector>
 #include <sstream>
 #include "Sugar.h"
@@ -13,6 +15,10 @@
 
 /* this header loads all of the system headers outside of the namespace */
 #include "syscall/translatedsyscall.h"
+
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 4096
+#endif
 
 static GuestMem* g_mem = NULL;
 static std::vector<char*> g_to_delete;
@@ -70,8 +76,8 @@ namespace I386 {
 			g_host_to_guest_syscalls.end()) *it = -1;
 		foreach(it, g_guest_to_host_syscalls.begin(),
 			g_guest_to_host_syscalls.end()) *it = -1;
-		for(unsigned sys_nr = 0; 
-			sys_nr < g_guest_syscall_names.size(); ++sys_nr) 
+		for(unsigned sys_nr = 0;
+			sys_nr < g_guest_syscall_names.size(); ++sys_nr)
 		{
 			std::ostringstream o;
 			o << sys_nr;
@@ -107,18 +113,34 @@ std::string Syscalls::getI386SyscallName(int sys_nr) const {
 	return I386::g_guest_syscall_names[sys_nr];
 }
 
-uintptr_t Syscalls::applyI386Syscall(
-	SyscallParams& args)
+SYSCALL_BODY(I386, mmap2)
 {
-	uintptr_t sc_ret = ~0ULL;
+	guest_ptr m;
+	sc_ret = mappings->mmap(m,
+		guest_ptr(args.getArg(0)),
+		args.getArg(1),
+		args.getArg(2),
+		args.getArg(3),
+		args.getArg(4),
+		args.getArg(5) * PAGE_SIZE);
+	if(sc_ret == 0)
+		sc_ret = m;
+	return true;
+}
+
+uintptr_t Syscalls::applyI386Syscall(SyscallParams& args)
+{
+	uintptr_t sc_ret = 0;
+
+	sc_ret = ~sc_ret;
 
 	/* special syscalls that we handle per arch, these
-	   generally supersede any pass through or translated 
+	   generally supersede any pass through or translated
 	   behaviors, but they can just alter the args and let
 	   the other mechanisms finish the job */
 	switch (args.getSyscall()) {
 	case TARGET_NR_mmap2:
-		if(I386_mmap2(args, sc_ret))
+		if(I386_mmap2(args, (unsigned long&)sc_ret))
 			return sc_ret;
 		break;
 	default:
@@ -142,17 +164,4 @@ uintptr_t Syscalls::applyI386Syscall(
 	g_to_delete.clear();
 	
 	return sc_ret;
-}
-SYSCALL_BODY(I386, mmap2) {
-	guest_ptr m;
-	sc_ret = mappings->mmap(m, 
-		guest_ptr(args.getArg(0)),
-		args.getArg(1), 
-		args.getArg(2), 
-		args.getArg(3), 
-		args.getArg(4), 
-		args.getArg(5) * PAGE_SIZE);
-	if(sc_ret == 0)
-		sc_ret = m;
-	return true;
 }

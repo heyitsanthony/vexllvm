@@ -32,8 +32,13 @@ guest_ptr VexExecFastChk::doVexSB(VexSB* vsb)
 	return new_ip;
 }
 
+extern "C" {
+#include <valgrind/libvex_guest_amd64.h>
+}
+
 void VexExecFastChk::doSysCall(VexSB* vsb)
 {
+#if __amd64__
 	VexGuestAMD64State*	state;
 	bool			matched;
 	guest_ptr		bp_addr;
@@ -85,4 +90,7 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 	}
 
 	cross_check->setBreakpoint(bp_addr);
+#else
+	assert (0 == 1 && "ARCH STUB");
+#endif
 }

@@ -2,6 +2,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stddef.h>
 #include <sys/mman.h>
 #include <signal.h>
 #include <stdio.h>
@@ -37,6 +38,7 @@ static bool dump_maps;
 
 GuestPTImg::GuestPTImg(int argc, char *const argv[], char *const envp[])
 : Guest(argv[0])
+, pt_arch(NULL)
 , symbols(NULL)
 , dyn_symbols(NULL)
 {
@@ -57,6 +59,7 @@ GuestPTImg::GuestPTImg(int argc, char *const argv[], char *const envp[])
 
 GuestPTImg::~GuestPTImg(void)
 {
+	if (pt_arch != NULL) delete pt_arch;
 	if (symbols != NULL) delete symbols;
 	if (dyn_symbols != NULL) delete dyn_symbols;
 }
@@ -85,6 +88,14 @@ pid_t GuestPTImg::createSlurpedChild(
 
 	/* failed to create child */
 	if (pid < 0) return pid;
+
+#if defined(__amd64__)
+	pt_arch = new PTImgAMD64(this, pid);
+#elif defined(__arm)
+	pt_arch = new PTImgARM(this, pid);
+#else
+	assert (0 == 1 && "UNKNOWN ARCHITECTURE");
+#endif
 
 	/* wait for child to call execve and send us a trap signal */
 	wait(&status);
@@ -117,23 +128,6 @@ pid_t GuestPTImg::createSlurpedChild(
 	return pid;
 }
 
-guest_ptr GuestPTImg::undoBreakpoint(pid_t pid)
-{
-	struct user_regs_struct	regs;
-	int			err;
-
-	/* should be halted on our trapcode. need to set rip prior to
-	 * trapcode addr */
-	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-	assert (err != -1);
-
-	regs.rip--; /* backtrack before int3 opcode */
-	err = ptrace(PTRACE_SETREGS, pid, NULL, &regs);
-
-	/* run again w/out reseting BP and you'll end up back here.. */
-	return guest_ptr(regs.rip);
-}
-
 int PTImgMapEntry::getProt(void) const
 {
 	int	prot = 0;
@@ -147,6 +141,15 @@ int PTImgMapEntry::getProt(void) const
 
 #define STACK_EXTEND_BYTES 0x200000
 
+#if defined(__arm__)
+#define STACK_MAP_FLAGS	\
+	(MAP_GROWSDOWN | MAP_PRIVATE | MAP_ANONYMOUS)
+#else
+#define STACK_MAP_FLAGS \
+	(MAP_GROWSDOWN | MAP_STACK | MAP_PRIVATE | MAP_ANONYMOUS)
+#endif
+
+
 void PTImgMapEntry::mapStack(pid_t pid)
 {
 	int			prot, flags;
@@ -154,7 +157,7 @@ void PTImgMapEntry::mapStack(pid_t pid)
 	assert (mmap_fd == -1);
 
 	prot = getProt();
-	flags = MAP_GROWSDOWN | MAP_STACK | MAP_PRIVATE | MAP_ANONYMOUS;
+	flags = STACK_MAP_FLAGS;
 
 	mem_begin.o -= STACK_EXTEND_BYTES;
 
@@ -200,7 +203,9 @@ void PTImgMapEntry::mapLib(pid_t pid)
 {
 	int			prot, flags;
 
-	if (strcmp(libname, "[vsyscall]") == 0) {
+	if (	strcmp(libname, "[vsyscall]") == 0 ||
+		strcmp(libname, "[vectors]") == 0)
+	{
 		/* the infamous syspage */
 		char	*sysbuf = new char[getByteCount()];
 		memcpy(sysbuf, (void*)(getBase().o), getByteCount());
@@ -362,78 +367,25 @@ void GuestPTImg::slurpMappings(pid_t pid)
 
 void GuestPTImg::slurpRegisters(pid_t pid)
 {
-	int				err;
-	struct user_regs_struct		regs;
-	struct user_fpregs_struct	fpregs;
-
-	err = ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-	assert(err != -1);
-	err = ptrace(PTRACE_GETFPREGS, pid, NULL, &fpregs);
-	assert(err != -1);
-
-#ifdef __amd64__
-	AMD64CPUState* amd64_cpu_state = (AMD64CPUState*)cpu_state;
-
-	/* linux is busted, quirks ahead */
-	if (regs.fs_base == 0) {
-		/* if it's static, it'll probably be using
-		 * some native register bullshit for the TLS and it'll read 0.
-		 *
-		 * Patch this transgression up by allocating some pages
-		 * to do the work.
-		 * (if N/A, the show goes on as normal)
-		 */
-
-		/* Yes, I tried ptrace/ARCH_GET_FS. NO DICE. */
-		//err = ptrace(
-		//	PTRACE_ARCH_PRCTL, pid, &regs.fs_base, ARCH_GET_FS);
-		// fprintf(stderr, "%d %p\n",  err, regs.fs_base);
-
-		int		res;
-		guest_ptr	base_addr;
-
-		/* I saw some negative offsets when grabbing errno,
-		 * so allow for at least 4KB in either direction */
-		res = mem->mmap(
-			base_addr,
-			guest_ptr(0),
-			4096*2,
-			PROT_READ | PROT_WRITE,
-			MAP_PRIVATE | MAP_ANONYMOUS,
-			-1,
-			0);
-		assert (res == 0);
-		regs.fs_base = base_addr.o + 4096;
-	}
-	amd64_cpu_state->setRegs(regs, fpregs);
-#else
-#error arch not supported in ptrace yet
-#endif
+	pt_arch->slurpRegisters();
 }
-
-#ifdef __amd64__
-extern "C" {
-#include <valgrind/libvex_guest_amd64.h>
-}
-#endif
 
 void GuestPTImg::slurpBrains(pid_t pid)
 {
 	slurpMappings(pid);
 	slurpRegisters(pid);
+
 #ifdef __amd64__
 	/* XXX there should be a better place for this */
 	/* from glibc, sysdeps/x86_64/elf/start.S
 	 * argc = rsi
 	 * argv = rdx */
-	VexGuestAMD64State	*amd64regs;
 	guest_ptr		argv;
 	unsigned int		argc;
 
-	amd64regs = (VexGuestAMD64State*)cpu_state->getStateData();
 	argv_ptrs.clear();
-	argc = mem->readNative(guest_ptr(amd64regs->guest_RSP));
-	argv = guest_ptr(mem->readNative(guest_ptr(amd64regs->guest_RSP), 1));
+	argc = mem->readNative(pt_arch->getStackPtr());
+	argv = guest_ptr(mem->readNative(pt_arch->getStackPtr(), 1));
 	for (unsigned int i = 0; i < argc; i++) {
 		argv_ptrs.push_back(argv);
 		argv.o += mem->strlen(argv) + 1;
@@ -505,37 +457,6 @@ void GuestPTImg::stackTrace(
 		os.write(buffer, bytes);
 }
 
-/* TODO: only change a single character */
-void GuestPTImg::setBreakpoint(pid_t pid, guest_ptr addr)
-{
-	uint64_t		old_v, new_v;
-	int			err;
-
-	/* already set? */
-	if (breakpoints.count(addr)) return;
-
-	old_v = ptrace(PTRACE_PEEKTEXT, pid, addr.o, NULL);
-	new_v = old_v & ~0xff;
-	new_v |= 0xcc;
-
-	err = ptrace(PTRACE_POKETEXT, pid, addr.o, new_v);
-	assert (err != -1 && "Failed to set breakpoint");
-	breakpoints[addr] = old_v;
-}
-
-void GuestPTImg::resetBreakpoint(pid_t pid, guest_ptr addr)
-{
-	uint64_t	old_v;
-	int		err;
-
-	assert (breakpoints.count(addr) && "Resetting non-BP!");
-
-	old_v = breakpoints[addr];
-	err = ptrace(PTRACE_POKETEXT, pid, addr.o, old_v);
-	assert (err != -1 && "Failed to reset breakpoint");
-	breakpoints.erase(addr);
-}
-
 Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }
 
 void GuestPTImg::loadSymbols(void) const
@@ -563,6 +484,31 @@ void GuestPTImg::loadSymbols(void) const
 
 		mmap_fnames.insert(libname);
 	}
+}
+
+void GuestPTImg::setBreakpoint(pid_t pid, guest_ptr addr)
+{
+	if (breakpoints.count(addr))
+		return;
+
+	breakpoints[addr] = pt_arch->setBreakpoint(addr);
+}
+
+
+guest_ptr GuestPTImg::undoBreakpoint(pid_t pid)
+{ return pt_arch->undoBreakpoint(); }
+
+void GuestPTImg::resetBreakpoint(pid_t pid, guest_ptr addr)
+{
+	uint64_t	old_v;
+	int		err;
+
+	assert (breakpoints.count(addr) && "Resetting non-BP!");
+
+	old_v = breakpoints[addr];
+	err = ptrace(PTRACE_POKETEXT, pid, addr.o, old_v);
+	assert (err != -1 && "Failed to reset breakpoint");
+	breakpoints.erase(addr);
 }
 
 const Symbols* GuestPTImg::getSymbols(void) const

@@ -47,7 +47,7 @@ public:
 	Symbols() {}
 	virtual ~Symbols();
 	const Symbol* findSym(const std::string& s) const;
-	const Symbol* findSym(uintptr_t ptr) const;
+	const Symbol* findSym(uint64_t ptr) const;
 	bool addSym(
 		const std::string& name,
 		symaddr_t addr,

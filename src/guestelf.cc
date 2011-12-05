@@ -18,6 +18,10 @@
 
 using namespace llvm;
 
+#if defined(__arm__)
+#define PAGE_SIZE	4096
+#endif
+
 #define STACK_BYTES (2 * 1024 * 1024)
 /* these macros are largely cheap shortcuts to get something working.
    eventually, the code in here will do a better job discerning between

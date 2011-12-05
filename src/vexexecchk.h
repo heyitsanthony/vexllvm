@@ -21,7 +21,7 @@ protected:
 	void doSysCallCore(VexSB* vsb);
 	void verifyBlockRun(VexSB* vsb);
 	void stepSysCall(VexSB* vsb);
-	void dumpSubservient(VexSB* vsb);
+	void dumpShadow(VexSB* vsb);
 
 	PTImgChk		*cross_check;
 	SyscallsMarshalled	*sc_marshall;

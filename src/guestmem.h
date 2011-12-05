@@ -7,6 +7,11 @@
 #include <string.h>
 #include "guestptr.h"
 
+/* oh good, MAP_32BIT isn't defined in the ARM headers */
+#if defined(__arm__)
+#define MAP_32BIT 0
+#endif
+
 class GuestMem
 {
 public:
