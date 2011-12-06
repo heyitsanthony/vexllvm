@@ -32,17 +32,22 @@ guest_ptr VexExecFastChk::doVexSB(VexSB* vsb)
 	return new_ip;
 }
 
+#if __amd64__
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
 }
+#include "cpu/ptimgamd64.h"
+#endif
 
 void VexExecFastChk::doSysCall(VexSB* vsb)
 {
 #if __amd64__
 	VexGuestAMD64State*	state;
+	PTImgAMD64		*pt_arch;
 	bool			matched;
 	guest_ptr		bp_addr;
 
+	pt_arch = static_cast<PTImgAMD64*>(cross_check->getPTArch());
 	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
 	/* shadow process has seen k syscall opcodes (and executed k); 
 	 * vexllvm process has seen k+1 syscall opcodes (and executed k)
@@ -59,19 +64,20 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 	 * VexExecChk doesn't care about this since it only checks after 
 	 * the syscall is complete. */
 	user_regs_struct	regs;
-	cross_check->getRegs(regs);
+
+	pt_arch->getRegs(regs);
 	regs.rcx = state->guest_RCX;
-	cross_check->setRegs(regs);
+	pt_arch->setRegs(regs);
 	cross_check->resetBreakpoint(bp_addr);
 
 	/* OK to check for match now-- fixups done */
-	matched = cross_check->isMatch(*state);
+	matched = cross_check->isMatch();
 	if (!matched) {
 		/* instead of dying, we want to be smarter here by
 		 * restarting the process, fastforwarding to last OK
 		 * syscall, then finally single step up to bad syscall. */
 		fprintf(stderr, "MISMATCH: BEGINNING OF SYSCALL\n");
-		dumpSubservient(vsb);
+		dumpShadow(vsb);
 		assert (0 == 1 && "FIXME LATER");
 	}
 
@@ -84,9 +90,9 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 
 	/* now both should be equal and at the instruction immediately following
 	 * the breaking syscall */
-	if (!cross_check->isMatch(*state)) {
+	if (!cross_check->isMatch()) {
 		fprintf(stderr, "MISMATCH: END OF SYSCALL.\n");
-		dumpSubservient(vsb);
+		dumpShadow(vsb);
 	}
 
 	cross_check->setBreakpoint(bp_addr);

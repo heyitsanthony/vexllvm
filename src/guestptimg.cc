@@ -30,6 +30,11 @@
 
 #ifdef __amd64__
 #include "cpu/amd64cpustate.h"
+#include "cpu/ptimgamd64.h"
+#endif
+
+#ifdef __arm__
+#include "cpu/ptimgarm.h"
 #endif
 
 using namespace llvm;
@@ -91,10 +96,10 @@ pid_t GuestPTImg::createSlurpedChild(
 
 #if defined(__amd64__)
 	pt_arch = new PTImgAMD64(this, pid);
-#elif defined(__arm)
+#elif defined(__arm__)
 	pt_arch = new PTImgARM(this, pid);
 #else
-	assert (0 == 1 && "UNKNOWN ARCHITECTURE");
+	assert (0 == 1 && "UNKNOWN PTRACE HOST ARCHITECTURE! AIEE");
 #endif
 
 	/* wait for child to call execve and send us a trap signal */

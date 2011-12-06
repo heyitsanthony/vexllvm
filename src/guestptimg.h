@@ -85,6 +85,8 @@ public:
 	void setBreakpoint(pid_t pid, guest_ptr addr);
 	void resetBreakpoint(pid_t pid, guest_ptr addr);
 
+	PTImgArch* getPTArch(void) { return pt_arch; }
+
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[]);
 	virtual void handleChild(pid_t pid);

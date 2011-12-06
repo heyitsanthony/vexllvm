@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #include <sys/syscall.h>
 #include <sys/mman.h>
 
@@ -23,25 +21,13 @@
  */
 PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
 : GuestPTImg(argc, argv, envp)
-, steps(0)
 , bp_steps(0)
 , blocks(0)
 , hit_syscall(false)
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 , xchk_stack(getenv("VEXLLVM_XCHK_STACK") ? true : false)
 {
-	const char	*step_gauge;
-
 	log_steps = (getenv("VEXLLVM_LOG_STEPS")) ? true : false;
-	step_gauge = getenv("VEXLLVM_STEP_GAUGE");
-	if (step_gauge == NULL) {
-		log_gauge_overflow = 0;
-	} else {
-		log_gauge_overflow = atoi(step_gauge);
-		fprintf(stderr,
-			"STEPS BETWEEN UPDATE: %d.\n",
-			log_gauge_overflow);
-	}
 }
 
 PTImgChk::~PTImgChk()
@@ -88,7 +74,7 @@ guest_ptr PTImgChk::continueForwardWithBounds(guest_ptr start, guest_ptr end)
 			start = pc;
 	}
 
-	blocks++;
+	pt_arch->incBlocks();
 	return pt_arch->getPC();
 }
 
@@ -116,7 +102,16 @@ bool PTImgChk::fixup(const std::vector<InstExtent>& insts)
 
 bool PTImgChk::isMatch() const
 {
-	assert (0 == 1 && "STUB");
+	if (!pt_arch->isMatch())
+		return false;
+
+	if (!isStackMatch())
+		return false;
+
+	if (!isMatchMemLog())
+		return false;
+
+	return true;
 }
 
 #define MEMLOG_BUF_SZ	(MemLog::MAX_STORE_SIZE / 8 + sizeof(long))
@@ -196,45 +191,8 @@ bool PTImgChk::isStackMatch(void) const
 	return true;
 }
 
-long PTImgChk::getInsOp(long pc)
-{
-	if ((uintptr_t)pc== chk_addr.o)
-		return chk_opcode;
-
-	chk_addr = guest_ptr(pc);
-// SLOW WAY:
-// Don't need to do this so long as we have the data at chk_addr in the guest
-// process also mapped into the parent process at chk_addr.
-//	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
-
-// FAST WAY: read it off like a boss
-	chk_opcode = *((const long*)getMem()->getHostPtr(chk_addr));
-	return chk_opcode;
-}
-
-
 uintptr_t PTImgChk::getSysCallResult(void) const
 { return pt_arch->getSysCallResult(); }
-
-void PTImgChk::copyIn(guest_ptr dst, const void* src, unsigned int bytes)
-{
-	char*		in_addr;
-	guest_ptr	out_addr, end_addr;
-
-	assert ((bytes % sizeof(long)) == 0);
-
-	in_addr = (char*)src;
-	out_addr = dst;
-	end_addr = out_addr + bytes;
-
-	while (out_addr < end_addr) {
-		long data = *(long*)in_addr;
-		int err = ptrace(PTRACE_POKEDATA, child_pid, out_addr.o, data);
-		assert(err == 0);
-		in_addr += sizeof(long);
-		out_addr.o += sizeof(long);
-	}
-}
 
 guest_ptr PTImgChk::stepToBreakpoint(void)
 {
@@ -265,31 +223,6 @@ bool PTImgChk::breakpointSysCalls(
 	const guest_ptr ip_end)
 {
 	return pt_arch->breakpointSysCalls(ip_begin, ip_end);
-}
-
-void PTImgChk::waitForSingleStep(void)
-{
-	int	err, status;
-
-	steps++;
-	err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
-	if(err < 0) {
-		perror("PTImgChk::doStep ptrace single step");
-		exit(1);
-	}
-	wait(&status);
-
-	//TODO: real signal handling needed, but the main process
-	//doesn't really have that yet...
-	// 1407
-	assert(	WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP &&
-		"child received a signal or ptrace can't single step");
-
-	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
-		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
-		fprintf(stderr, "STEPS %09"PRIu64" %c %09"PRIu64" BLOCKS\r",
-			steps, c, blocks);
-	}
 }
 
 void PTImgChk::stackTraceShadow(
@@ -335,7 +268,7 @@ void PTImgChk::printTraceStats(std::ostream& os)
 {
 	os	<< "Traced "
 		<< blocks << " blocks, stepped "
-		<< steps << " instructions" << std::endl;
+		<< pt_arch->getSteps() << " instructions" << std::endl;
 }
 
 void PTImgChk::stepSysCall(SyscallsMarshalled* sc_m)

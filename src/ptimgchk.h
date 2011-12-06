@@ -29,10 +29,16 @@ public:
 	void printTraceStats(std::ostream& os);
 
 	bool isMatch() const;
-	bool isMatchMemLog() const;
 
 	bool fixup(const std::vector<InstExtent>& insts);
 	bool breakpointSysCalls(guest_ptr ip_begin, guest_ptr ip_end);
+	void resetBreakpoint(guest_ptr addr)
+	{ GuestPTImg::resetBreakpoint(child_pid, addr); }
+
+	void setBreakpoint(guest_ptr addr)
+	{ GuestPTImg::setBreakpoint(child_pid, addr); }
+
+
 
 	uintptr_t getSysCallResult() const;
 	MemLog* getMemLog(void) { return mem_log; }
@@ -42,28 +48,20 @@ protected:
 
 private:
 	bool isStackMatch(void) const;
+	bool isMatchMemLog() const;
 
 	void waitForSingleStep(void);
-
-	long getInsOp(long rip);
 
 	void printMemory(std::ostream& os) const;
 
 	void readMemLogData(char* data) const;
-	void copyIn(guest_ptr dst, const void* src, unsigned int bytes);
 
 	pid_t		child_pid;
 
-	uint64_t	steps;
 	uint64_t	bp_steps;
 	uint64_t	blocks;
 
 	bool		log_steps;
-	unsigned int	log_gauge_overflow;
-
-	/* caches check for opcodes */
-	guest_ptr	chk_addr;
-	long		chk_opcode;
 
 	bool		hit_syscall;
 

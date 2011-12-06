@@ -1,7 +1,17 @@
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/ptrace.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <sys/user.h>
+#include <sys/wait.h>
+#include <sys/mman.h>
+#include "Sugar.h"
+#include "guestcpustate.h"
 #include "cpu/ptimgamd64.h"
-extern "C" {
-#include <valgrind/libvex_guest_amd64.h>
-}
+#include "cpu/amd64cpustate.h"
+#include "syscall/syscallsmarshalled.h"
 
 extern "C" {
 extern void amd64g_dirtyhelper_CPUID_baseline ( VexGuestAMD64State* st );
@@ -50,21 +60,50 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 #define get_reg_vex(x,y)	*((uint64_t*)&x[user_regs_desc_tab[y].vex_off])
 #define get_reg_name(y)		user_regs_desc_tab[y].name
 
-PTImgAMD64::PTImgAMD64(Guest* gs, int in_pid)
+#define FLAGS_MASK	(0xff | (1 << 10) | (1 << 11))
+
+static inline bool ldeqd(void* ld, long d)
+{
+	long double* real = (long double*)ld;
+	union {
+		double d;
+		long l;
+	} alias;
+	alias.d = *real;
+	return alias.l == d;
+}
+
+static inline bool fcompare(unsigned int* a, long d)
+{
+	return (*(long*)&d == *(long*)&a[0] &&
+		(a[2] == 0 || a[2] == 0xFFFF) &&
+		a[3] == 0) ||
+		ldeqd(&a[0], d);
+}
+
+static uint64_t get_rflags(const VexGuestAMD64State& state)
+{
+	uint64_t guest_rflags = LibVEX_GuestAMD64_get_rflags(
+		&const_cast<VexGuestAMD64State&>(state));
+	guest_rflags &= FLAGS_MASK;
+	guest_rflags |= (1 << 1);
+	return guest_rflags;
+}
+
+PTImgAMD64::PTImgAMD64(GuestPTImg* gs, int in_pid)
 : PTImgArch(gs, in_pid)
+, recent_shadow(false)
 , xchk_eflags(getenv("VEXLLVM_XCHK_EFLAGS") ? true : false)
 , fixup_eflags(getenv("VEXLLVM_NO_EFLAGS_FIXUP") ? false : true)
 {}
 
-bool PTImgAMD64::isRegMismatch(
-	const VexGuestAMD64State& state,
-	const user_regs_struct& regs) const
+bool PTImgAMD64::isRegMismatch(void) const
 {
-	uint8_t		*user_regs_ctx;
-	uint8_t		*vex_reg_ctx;
+	const uint8_t *user_regs_ctx;
+	const uint8_t *vex_reg_ctx;
 
-	vex_reg_ctx = (uint8_t*)&state;
-	user_regs_ctx = (uint8_t*)&regs;
+	vex_reg_ctx = (const uint8_t*)&getVexState();
+	user_regs_ctx = (const uint8_t*)&getRegs();
 
 	for (unsigned int i = 0; i < GPR_COUNT; i++) {
 		uint64_t	ureg, vreg;
@@ -77,13 +116,17 @@ bool PTImgAMD64::isRegMismatch(
 	return false;
 }
 
-
-void PTImgAMD64::getRegs(user_regs_struct& regs) const
+struct user_regs_struct& PTImgAMD64::getRegs(void) const
 {
 	int	err;
 
-	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	if (err >= 0) return;
+	if (recent_shadow)
+		return shadow_reg_cache;
+
+	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &shadow_reg_cache);
+	recent_shadow = true;
+	if (err >= 0)
+		return shadow_reg_cache;
 
 	perror("PTImgAMD64::getRegs");
 
@@ -96,33 +139,34 @@ void PTImgAMD64::getRegs(user_regs_struct& regs) const
 	raise(SIGKILL);
 	_exit(-1);
 	abort();
+
+	return shadow_reg_cache;
 }
 
-const VexGuestAMD64State& getVexState(void) const
+const VexGuestAMD64State& PTImgAMD64::getVexState(void) const
 {
 	return *((const VexGuestAMD64State*)gs->getCPUState()->getStateData());
 }
 
 bool PTImgAMD64::isMatch(void) const
 {
-	user_regs_struct	regs;
+	const user_regs_struct	*regs;
 	user_fpregs_struct	fpregs;
 	int			err;
-	bool			x86_fail, sse_ok, seg_fail,
-				x87_ok, mem_ok, stack_ok;a
+	bool			x86_fail, sse_ok, seg_fail, x87_ok;
 	const VexGuestAMD64State& state(getVexState());
 
-	getRegs(regs);
+	regs = &getRegs();
 
 	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
 	assert (err != -1 && "couldn't PTRACE_GETFPREGS");
 
-	x86_fail = isRegMismatch(state, regs);
+	x86_fail = isRegMismatch();
 
 	// if ptrace fs_base == 0, then we have a fixup but the ptraced
 	// process doesn't-- don't flag as an error!
-	seg_fail = (regs.fs_base != 0)
-		? (regs.fs_base ^ state.guest_FS_ZERO)
+	seg_fail = (regs->fs_base != 0)
+		? (regs->fs_base ^ state.guest_FS_ZERO)
 		: false;
 
 	//TODO: consider evaluating CC fields, ACFLAG, etc?
@@ -131,7 +175,7 @@ bool PTImgAMD64::isMatch(void) const
 	// /* 192 */ULong guest_SSEROUND;
 	if (xchk_eflags) {
 		uint64_t guest_rflags, eflags;
-		eflags = regs.eflags;
+		eflags = regs->eflags;
 		eflags &= FLAGS_MASK;
 		guest_rflags = get_rflags(state);
 		if (eflags != guest_rflags)
@@ -171,17 +215,13 @@ bool PTImgAMD64::isMatch(void) const
 	//TODO: more stuff that is likely unneeded
 	// other vex internal state (tistart, nraddr, etc)
 
-	mem_ok = isMatchMemLog();
-	stack_ok = isStackMatch(regs);
-
-	return 	!x86_fail && x87_ok & sse_ok &&
-		!seg_fail && mem_ok && stack_ok;
+	return 	!x86_fail && x87_ok & sse_ok &&	!seg_fail;
 }
 
 #define MAX_INS_BUF	32
 bool PTImgAMD64::canFixup(
 	const std::vector<InstExtent>& insts,
-	bool has_memlog)
+	bool has_memlog) const
 {
 	uint64_t	fix_op;
 	guest_ptr	fix_addr;
@@ -195,7 +235,7 @@ bool PTImgAMD64::canFixup(
 
 		assert (inst.second < MAX_INS_BUF);
 		/* guest ip's are mapped in our addr space, no need for IPC */
-		mem->memcpy(ins_buf, inst.first, inst.second);
+		gs->getMem()->memcpy(ins_buf, inst.first, inst.second);
 		fix_addr = inst.first;
 
 		/* filter out fucking prefix byte */
@@ -258,11 +298,16 @@ do_fixup:
 	return true;
 }
 
-void PTImgAMD64::printFPRegs(
-	std::ostream& os,
-	user_fpregs_struct& fpregs,
-	const VexGuestAMD64State& ref) const
+void PTImgAMD64::printFPRegs(std::ostream& os) const
 {
+	int			err;
+	user_fpregs_struct	fpregs;
+	const VexGuestAMD64State& ref(getVexState());
+
+
+	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
+	assert (err != -1 && "couldn't PTRACE_GETFPREGS");
+
 	//TODO: some kind of eflags, checking but i don't yet understand this
 	//mess of broken apart state.
 
@@ -306,39 +351,20 @@ void PTImgAMD64::printFPRegs(
 	}
 }
 
-uintptr_t PTImgAMD64::getSysCallResult() const
-{
-	user_regs_struct	regs;
-	getRegs(regs);
-	return regs.rax;
-}
+uintptr_t PTImgAMD64::getSysCallResult() const { return getRegs().rax; }
+guest_ptr PTImgAMD64::getPC(void) { return guest_ptr(getRegs().rip); }
+guest_ptr PTImgAMD64::getStackPtr(void) const {return guest_ptr(getRegs().rsp);}
 
-static inline bool ldeqd(void* ld, long d)
-{
-	long double* real = (long double*)ld;
-	union {
-		double d;
-		long l;
-	} alias;
-	alias.d = *real;
-	return alias.l == d;
-}
-
-static inline bool fcompare(unsigned int* a, long d)
-{
-	return (*(long*)&d == *(long*)&a[0] &&
-		(a[2] == 0 || a[2] == 0xFFFF) &&
-		a[3] == 0) ||
-		ldeqd(&a[0], d);
-}
 
 void PTImgAMD64::printUserRegs(std::ostream& os) const
 {
 	const uint8_t	*user_regs_ctx;
 	const uint8_t	*vex_reg_ctx;
+	uint64_t	guest_eflags;
 	const VexGuestAMD64State& ref(getVexState());
+	const user_regs_struct& regs(getRegs());
 
-	user_regs_ctx = (const uint8_t*)&shadow_reg_cache;
+	user_regs_ctx = (const uint8_t*)&regs;
 	vex_reg_ctx = (const uint8_t*)&ref;
 
 	for (unsigned int i = 0; i < REG_COUNT; i++) {
@@ -352,7 +378,7 @@ void PTImgAMD64::printUserRegs(std::ostream& os) const
 			<< (void*)user_reg << std::endl;
 	}
 
-	uint64_t guest_eflags = get_rflags(ref);
+	guest_eflags = get_rflags(ref);
 	if ((regs.eflags & FLAGS_MASK) != guest_eflags)
 		os << "***";
 	os << "EFLAGS: " << (void*)(regs.eflags & FLAGS_MASK);
@@ -361,55 +387,61 @@ void PTImgAMD64::printUserRegs(std::ostream& os) const
 	os << '\n';
 }
 
+long PTImgAMD64::getInsOp(void) { return getInsOp(getRegs().rip); }
 
-#define FLAGS_MASK	(0xff | (1 << 10) | (1 << 11))
-static uint64_t get_rflags(const VexGuestAMD64State& state)
+long PTImgAMD64::getInsOp(long pc)
 {
-	uint64_t guest_rflags = LibVEX_GuestAMD64_get_rflags(
-		&const_cast<VexGuestAMD64State&>(state));
-	guest_rflags &= FLAGS_MASK;
-	guest_rflags |= (1 << 1);
-	return guest_rflags;
+	if ((uintptr_t)pc== chk_addr.o)
+		return chk_opcode;
+
+	chk_addr = guest_ptr(pc);
+// SLOW WAY:
+// Don't need to do this so long as we have the data at chk_addr in the guest
+// process also mapped into the parent process at chk_addr.
+//	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+
+// FAST WAY: read it off like a boss
+	chk_opcode = *((const long*)gs->getMem()->getHostPtr(chk_addr));
+	return chk_opcode;
 }
 
 
 #define OPCODE_SYSCALL	0x050f
 
-bool PTImgAMD64::isOnSysCall(const user_regs_struct& regs)
+bool PTImgAMD64::isOnSysCall()
 {
 	long	cur_opcode;
 	bool	is_chk_addr_syscall;
 
-	cur_opcode = getInsOp(regs);
-
+	cur_opcode = getInsOp();
 	is_chk_addr_syscall = ((cur_opcode & 0xffff) == OPCODE_SYSCALL);
 	return is_chk_addr_syscall;
 }
 
-bool PTImgAMD64::isOnRDTSC(const user_regs_struct& regs)
+bool PTImgAMD64::isOnRDTSC()
 {
 	long	cur_opcode;
-	cur_opcode = getInsOp(regs);
+	cur_opcode = getInsOp();
 	return (cur_opcode & 0xffff) == 0x310f;
 }
 
-bool PTImgAMD64::isOnCPUID(const user_regs_struct& regs)
+bool PTImgAMD64::isOnCPUID()
 {
 	long	cur_opcode;
-	cur_opcode = getInsOp(regs);
+	cur_opcode = getInsOp();
 	return (cur_opcode & 0xffff) == 0xA20F;
 }
 
-bool PTImgAMD64::isPushF(const user_regs_struct& regs)
+bool PTImgAMD64::isPushF()
 {
 	long	cur_opcode;
-	cur_opcode = getInsOp(regs);
+	cur_opcode = getInsOp();
 	return (cur_opcode & 0xff) == 0x9C;
 }
 
 bool PTImgAMD64::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
 {
-	getRegs(regs);
+	struct user_regs_struct	&regs(getRegs());
 
 	/* check rip before executing possibly out of bounds instruction*/
 	if (regs.rip < start || regs.rip >= end) {
@@ -428,13 +460,13 @@ bool PTImgAMD64::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
 	if (log_steps)
 		std::cerr << "STEPPING: " << (void*)regs.rip << std::endl;
 
-	if (isOnSysCall(regs)) {
+	if (isOnSysCall()) {
 		/* break on syscall */
 		hit_syscall = true;
 		return false;
 	}
 
-	if (isOnRDTSC(regs)) {
+	if (isOnRDTSC()) {
 		/* fake rdtsc to match vexhelpers.. */
 		regs.rip += 2;
 		regs.rax = 1;
@@ -443,7 +475,7 @@ bool PTImgAMD64::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
 		return true;
 	}
 
-	if (isPushF(regs)) {
+	if (isPushF()) {
 		/* patch out the single step flag for perfect matching..
 		   other flags (IF, reserved bit 1) need vex patch */
 		waitForSingleStep();
@@ -466,7 +498,7 @@ bool PTImgAMD64::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
 		return true;
 	}
 
-	if (isOnCPUID(regs)) {
+	if (isOnCPUID()) {
 		/* fake cpuid to match vexhelpers */
 		VexGuestAMD64State	fakeState;
 		regs.rip += 2;
@@ -521,44 +553,44 @@ bool PTImgAMD64::filterSysCall(
 
 void PTImgAMD64::stepSysCall(SyscallsMarshalled* sc_m)
 {
-	user_regs_struct	regs;
+	user_regs_struct	*regs;
 	long			old_rdi, old_r10;
 	bool			syscall_restore_rdi_r10;
 	int			sys_nr;
 
-	getRegs(regs);
+	regs = &getRegs();
 
 	/* do special syscallhandling if we're on an opcode */
-	assert (isOnSysCall(regs));
+	assert (isOnSysCall());
 
 	syscall_restore_rdi_r10 = false;
-	old_rdi = regs.rdi;
-	old_r10 = regs.r10;
+	old_rdi = regs->rdi;
+	old_r10 = regs->r10;
 
-	if (filterSysCall(state, regs)) {
-		regs.rip += 2;
+	if (filterSysCall(getVexState(), *regs)) {
+		regs->rip += 2;
 		/* kernel clobbers these */
-		regs.rcx = regs.r11 = 0;
-		setRegs(regs);
+		regs->rcx = regs->r11 = 0;
+		setRegs(*regs);
 		return;
 	}
 
-	sys_nr = regs.rax;
+	sys_nr = regs->rax;
 	if (sys_nr == SYS_mmap || sys_nr == SYS_brk) {
 		syscall_restore_rdi_r10 = true;
 	}
 
 	waitForSingleStep();
 
-	getRegs(regs);
+	regs = &getRegs();
 	if (syscall_restore_rdi_r10) {
-		regs.r10 = old_r10;
-		regs.rdi = old_rdi;
+		regs->r10 = old_r10;
+		regs->rdi = old_rdi;
 	}
 
 	//kernel clobbers these, assuming that the generated code, causes
-	regs.rcx = regs.r11 = 0;
-	setRegs(regs);
+	regs->rcx = regs->r11 = 0;
+	setRegs(*regs);
 
 	/* fixup any calls that affect memory */
 	if (sc_m->isSyscallMarshalled(sys_nr)) {
@@ -577,6 +609,12 @@ void PTImgAMD64::setRegs(const user_regs_struct& regs)
 		perror("PTImgAMD64::setregs");
 		exit(1);
 	}
+
+	if (&regs != &shadow_reg_cache) {
+		memcpy(&shadow_reg_cache, &regs, sizeof(regs));
+	}
+
+	recent_shadow = true;
 }
 
 bool PTImgAMD64::breakpointSysCalls(
@@ -588,7 +626,7 @@ bool PTImgAMD64::breakpointSysCalls(
 
 	while (rip != ip_end) {
 		if (((getInsOp(rip) & 0xffff) == 0x050f)) {
-			gs->setBreakpoint(rip);
+			gs->setBreakpoint(child_pid, rip);
 			set_bp = true;
 		}
 		rip.o++;
@@ -619,7 +657,7 @@ long PTImgAMD64::setBreakpoint(guest_ptr addr)
 	uint64_t		old_v, new_v;
 	int			err;
 
-	old_v = ptrace(PTRACE_PEEKTEXT, pid, addr.o, NULL);
+	old_v = ptrace(PTRACE_PEEKTEXT, child_pid, addr.o, NULL);
 	new_v = old_v & ~0xff;
 	new_v |= 0xcc;
 
@@ -663,7 +701,7 @@ void PTImgAMD64::slurpRegisters(void)
 
 		/* I saw some negative offsets when grabbing errno,
 		 * so allow for at least 4KB in either direction */
-		res = mem->mmap(
+		res = gs->getMem()->mmap(
 			base_addr,
 			guest_ptr(0),
 			4096*2,
@@ -676,3 +714,13 @@ void PTImgAMD64::slurpRegisters(void)
 	}
 	amd64_cpu_state->setRegs(regs, fpregs);
 }
+
+void PTImgAMD64::waitForSingleStep(void)
+{
+	PTImgArch::waitForSingleStep();
+	recent_shadow = false;
+}
+
+void PTImgAMD64::getRegs(user_regs_struct& r) const
+{ memcpy(&r, &getRegs(), sizeof(r)); }
+

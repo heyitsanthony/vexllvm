@@ -139,7 +139,9 @@ static inline int put_user_##x(y v, abi_ulong a)	\
 DECL_USER_READ(ual, socklen_t)
 DECL_USER_READ_T(u8, int, char)
 #else
-//DECL_USER_READ(ual, size_t) XXX wtf
+#ifndef __arm__
+DECL_USER_READ(ual, size_t)
+#endif
 #endif
 
 DECL_USER_READ(sal, abi_long)

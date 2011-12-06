@@ -71,6 +71,7 @@ OBJDEPS=	vexxlate.o		\
 		elfdebug.o		\
 		dllib.o			\
 		ptimgchk.o		\
+		ptimgarch.o		\
 		elfsegment.o		\
 #		libvex_amd64_helpers.o	\
 #
