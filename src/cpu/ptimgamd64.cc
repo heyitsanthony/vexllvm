@@ -730,6 +730,6 @@ void PTImgAMD64::getRegs(user_regs_struct& r) const
 
 void PTImgAMD64::resetBreakpoint(guest_ptr addr, long v)
 {
-	err = ptrace(PTRACE_POKETEXT, child_pid, addr.o, v);
+	int err = ptrace(PTRACE_POKETEXT, child_pid, addr.o, v);
 	assert (err != -1 && "Failed to reset breakpoint");
 }
