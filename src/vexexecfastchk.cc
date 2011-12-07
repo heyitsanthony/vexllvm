@@ -27,6 +27,7 @@ guest_ptr VexExecFastChk::doVexSB(VexSB* vsb)
 	} else {
 		new_ip = VexExec::doVexSB(vsb);
 	}
+
 	gs->getCPUState()->setPC(new_ip);
 
 	return new_ip;
@@ -49,7 +50,7 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 
 	pt_arch = static_cast<PTImgAMD64*>(cross_check->getPTArch());
 	state = (VexGuestAMD64State*)gs->getCPUState()->getStateData();
-	/* shadow process has seen k syscall opcodes (and executed k); 
+	/* shadow process has seen k syscall opcodes (and executed k);
 	 * vexllvm process has seen k+1 syscall opcodes (and executed k)
 	 */
 
@@ -57,11 +58,11 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 	bp_addr = cross_check->stepToBreakpoint();
 	pt_sc_req_c++;
 
-	/* vexllvm state expects to be past syscall, we are currently 
+	/* vexllvm state expects to be past syscall, we are currently
 	 * on it. Temporarily move vexllvm back to be on syscall. */
 	state->guest_RIP -= 2;
-	/* In addition, vexllvm has set its RCX to the next RIP. 
-	 * VexExecChk doesn't care about this since it only checks after 
+	/* In addition, vexllvm has set its RCX to the next RIP.
+	 * VexExecChk doesn't care about this since it only checks after
 	 * the syscall is complete. */
 	user_regs_struct	regs;
 
@@ -83,10 +84,10 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 
 	/* restore vexllvm IP to *after* syscall */
 	state->guest_RIP += 2;
-	
+
 	doSysCallCore(vsb);
-	
-	pt_sc_done_c++;	
+
+	pt_sc_done_c++;
 
 	/* now both should be equal and at the instruction immediately following
 	 * the breaking syscall */

@@ -199,6 +199,7 @@ guest_ptr PTImgChk::stepToBreakpoint(void)
 	int	err, status;
 
 	bp_steps++;
+	pt_arch->revokeRegs();
 	err = ptrace(PTRACE_CONT, child_pid, NULL, NULL);
 	if(err < 0) {
 		perror("PTImgChk::doStep ptrace single step");

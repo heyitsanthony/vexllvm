@@ -141,10 +141,7 @@ void VexExecChk::doSysCallCore(VexSB* vsb)
 	int		sys_nr;
 
 	sys_nr = sc_marshall->translateSyscall(sp.getSyscall());
-	if (sys_nr != SYS_brk) {
-		VexExec::doSysCall(vsb, sp);
-		stepSysCall(vsb);
-	} else {
+	if (sys_nr == SYS_brk) {
 		/* XXX audit this code. I don't trust it-- AJR */
 
 		/* but for brk, we really need to copy the state over
@@ -155,13 +152,17 @@ void VexExecChk::doSysCallCore(VexSB* vsb)
 		stepSysCall(vsb);
 		sp.setArg(0, cross_check->getSysCallResult());
 		VexExec::doSysCall(vsb, sp);
+		return;
 	}
+
+	VexExec::doSysCall(vsb, sp);
+	stepSysCall(vsb);
 }
 
 void VexExecChk::doSysCall(VexSB* vsb)
 {
 	assert (hit_syscall && !is_deferred);
-		
+
 	doSysCallCore(vsb);
 
 	/* now both should be equal and at the instruction following

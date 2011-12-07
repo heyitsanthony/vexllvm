@@ -38,7 +38,7 @@ public:
 
 	long setBreakpoint(guest_ptr addr);
 	guest_ptr undoBreakpoint(void);
-
+	void revokeRegs(void);
 
 protected:
 	virtual void waitForSingleStep(void);

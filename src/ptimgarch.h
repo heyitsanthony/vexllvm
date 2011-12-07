@@ -37,6 +37,7 @@ public:
 
 	uint64_t getSteps(void) const { return steps; }
 	void incBlocks(void) { blocks++; }
+	virtual void revokeRegs(void) = 0;
 
 protected:
 	PTImgArch(GuestPTImg* in_gs, int in_pid);

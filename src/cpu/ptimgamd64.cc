@@ -120,8 +120,9 @@ struct user_regs_struct& PTImgAMD64::getRegs(void) const
 {
 	int	err;
 
-	if (recent_shadow)
+	if (recent_shadow) {
 		return shadow_reg_cache;
+	}
 
 	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &shadow_reg_cache);
 	recent_shadow = true;
@@ -720,6 +721,9 @@ void PTImgAMD64::waitForSingleStep(void)
 	PTImgArch::waitForSingleStep();
 	recent_shadow = false;
 }
+
+void PTImgAMD64::revokeRegs(void)
+{ recent_shadow = false; }
 
 void PTImgAMD64::getRegs(user_regs_struct& r) const
 { memcpy(&r, &getRegs(), sizeof(r)); }
