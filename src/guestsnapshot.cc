@@ -241,8 +241,8 @@ void GuestSnapshot::saveSymbols(
 		const Symbol	*cur_sym = it->second;
 		fprintf(f, "%s %"PRIx64"-%"PRIx64"\n",
 			it->first.c_str(),
-			cur_sym->getBaseAddr(),
-			cur_sym->getEndAddr());
+			(uint64_t)cur_sym->getBaseAddr(),
+			(uint64_t)cur_sym->getEndAddr());
 	}
 
 done:

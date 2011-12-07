@@ -31,7 +31,13 @@ Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 
 		addr = s->getBaseAddr();
 		if (s->isCode() && s->getName().size() > 0 && addr) {
-			if (s->isDynamic()) addr += base;
+			fprintf(stderr,
+				"GOT SYM %s. ADDR=%p\n", s->getName().c_str(),
+				(void*)addr);
+			//if (s->isDynamic()) addr += base;
+			addr += base;
+			fprintf(stderr, "FINALLY: %p. BASE=%p\n",
+				(void*)addr, (void*)base);
 			ret->addSym(s->getName(), addr, s->getLength());
 		}
 		delete s;
@@ -70,7 +76,6 @@ ElfDebug::ElfDebug(const char* path)
 , rela_tab(NULL)
 , dynsymtab(NULL)
 {
-	Arch::Arch	elf_arch;
 	struct stat	s;
 	int		err;
 
@@ -88,7 +93,18 @@ ElfDebug::ElfDebug(const char* path)
 	assert (img != MAP_FAILED && "Couldn't map elf ANYWHERE?");
 
 	/* plow through headers */
-	setupTables<Elf64_Ehdr, Elf64_Shdr, Elf64_Sym>();
+	switch (elf_arch) {
+	case Arch::ARM:
+	case Arch::I386:
+		setupTables<Elf32_Ehdr, Elf32_Shdr, Elf32_Sym>();
+		break;
+
+	case Arch::X86_64:
+		setupTables<Elf64_Ehdr, Elf64_Shdr, Elf64_Sym>();
+		break;
+	default:
+		assert (0 ==1 && "elf no bueno");
+	}
 
 	is_valid = true;
 }
@@ -177,52 +193,91 @@ void ElfDebug::setupTables(void)
 
 Symbol* ElfDebug::nextSym(void)
 {
-	Elf64_Sym	*sym = (Elf64_Sym*)symtab;	/* FIXME */
-	Elf64_Sym	*cur_sym;
-	const char	*name_c, *atat;
-	std::string	name;
+	switch (elf_arch) {
+	case Arch::ARM:
+	case Arch::I386:
+		return nextSym32();
 
-	if (next_sym_idx >= sym_count)
-		return NULL;
-
-	cur_sym = &sym[next_sym_idx++];
-
-	name_c = &strtab[cur_sym->st_name];
-	name = std::string(name_c);
-	atat = strstr(name_c, "@@");
-	if (atat) {
-		name = name.substr(0, atat - name_c);
+	case Arch::X86_64:
+		return nextSym64();
+	default:
+		assert (0 ==1 && "elf no bueno");
 	}
 
-	return new Symbol(
-		name,
-		cur_sym->st_value,
-		cur_sym->st_size,
-		is_reloc,
-		(ELF64_ST_TYPE(cur_sym->st_info) == STT_FUNC));
+	return NULL;
 }
+
+#define NEXTSYM_BITS(x)	\
+Symbol* ElfDebug::nextSym##x(void)		\
+{	\
+	Elf##x##_Sym	*sym = (Elf##x##_Sym*)symtab;	/* FIXME */	\
+	Elf##x##_Sym	*cur_sym;	\
+	const char	*name_c, *atat;	\
+	std::string	name;		\
+\
+	if (next_sym_idx >= sym_count)	\
+		return NULL;		\
+\
+	cur_sym = &sym[next_sym_idx++];	\
+\
+	name_c = &strtab[cur_sym->st_name];	\
+	name = std::string(name_c);		\
+	atat = strstr(name_c, "@@");		\
+	if (atat) {				\
+		name = name.substr(0, atat - name_c);	\
+	}	\
+\
+	return new Symbol(	\
+		name,	\
+		cur_sym->st_value,	\
+		cur_sym->st_size,	\
+		is_reloc,	\
+		(ELF##x##_ST_TYPE(cur_sym->st_info) == STT_FUNC));	\
+}
+
+NEXTSYM_BITS(32)
+NEXTSYM_BITS(64)
+
+#define NEXTLINKSYM_BITS(x)	\
+Symbol* ElfDebug::nextLinkageSym##x(const GuestMem* m)	\
+{	\
+	Elf##x##_Sym	*cur_sym;	\
+	guest_ptr	guest_sym;	\
+	Elf##x##_Sym	*sym = (Elf##x##_Sym*)dynsymtab;	\
+	Elf##x##_Rela	*rela;	\
+	const char	*name_c;	\
+\
+	if (!rela_tab || next_rela_idx >= rela_count)\
+		return NULL;\
+\
+	rela = &((Elf##x##_Rela*)rela_tab)[next_rela_idx++];\
+	cur_sym = &sym[ELF##x##_R_SYM(rela->r_info)];	\
+	name_c = &dynstrtab[cur_sym->st_name];	\
+	guest_sym = guest_ptr(rela->r_offset);	\
+\
+	return new Symbol(	\
+		name_c,	\
+		m->read<uint64_t>(guest_sym)-6,	\
+		6,	\
+		false,	\
+		(ELF##x##_ST_TYPE(cur_sym->st_info) == STT_FUNC));	\
+}
+
+NEXTLINKSYM_BITS(32)
+NEXTLINKSYM_BITS(64)
 
 Symbol* ElfDebug::nextLinkageSym(const GuestMem* m)
 {
-	Elf64_Sym	*cur_sym;
-	guest_ptr	guest_sym;
-	Elf64_Sym	*sym = (Elf64_Sym*)dynsymtab;
-	Elf64_Rela	*rela;
-	const char	*name_c;
+	switch (elf_arch) {
+	case Arch::ARM:
+	case Arch::I386:
+		return nextLinkageSym32(m);
 
-	if (!rela_tab || next_rela_idx >= rela_count)
-		return NULL;
+	case Arch::X86_64:
+		return nextLinkageSym64(m);
+	default:
+		assert (0 ==1 && "elf no bueno");
+	}
 
-	rela = &((Elf64_Rela*)rela_tab)[next_rela_idx++];
-	cur_sym = &sym[ELF64_R_SYM(rela->r_info)];
-	name_c = &dynstrtab[cur_sym->st_name];
-	guest_sym = guest_ptr(rela->r_offset);
-
-	return new Symbol(
-		name_c,
-		m->read<uint64_t>(guest_sym)-6,
-		6,
-		false,
-		(ELF64_ST_TYPE(cur_sym->st_info) == STT_FUNC));
-
+	return NULL;
 }

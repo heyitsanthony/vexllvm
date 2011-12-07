@@ -26,7 +26,12 @@ private:
 		void setupTables(void);
 
 	Symbol	*nextSym(void);
+	Symbol	*nextSym32(void);
+	Symbol	*nextSym64(void);
+
 	Symbol	*nextLinkageSym(const GuestMem* m);
+	Symbol	*nextLinkageSym32(const GuestMem* m);
+	Symbol	*nextLinkageSym64(const GuestMem* m);
 
 	bool	is_valid;
 
@@ -47,6 +52,7 @@ private:
 	unsigned int	dynsym_count;
 	const char	*dynstrtab;
 
+	Arch::Arch	elf_arch;
 };
 
 #endif
