@@ -32,6 +32,7 @@ public:
 		bool has_memlog) const;
 	bool breakpointSysCalls(guest_ptr, guest_ptr);
 	void revokeRegs();
+	void resetBreakpoint(guest_ptr addr, long v);
 
 private:
 	const VexGuestARMState& getVexState(void) const;

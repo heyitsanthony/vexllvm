@@ -32,6 +32,7 @@ public:
 	guest_ptr getPC(void);
 	guest_ptr getStackPtr(void) const;
 
+	void resetBreakpoint(guest_ptr addr, long v);
 	void printFPRegs(std::ostream& os) const;
 	void printUserRegs(std::ostream& os) const;
 	void slurpRegisters(void);

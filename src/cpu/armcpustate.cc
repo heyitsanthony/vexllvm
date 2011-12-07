@@ -287,18 +287,12 @@ void ARMCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 }
 
 #ifdef __arm__
-void ARMCPUState::setRegs(
-	const user_regs& regs,
-	const user_fpregs& fpregs)
+void ARMCPUState::setRegs(const user_regs* regs, const uint8_t* vfpregs)
 {
-	memcpy(&state2arm()->guest_R0, &regs, 16*4);
+	memcpy(&state2arm()->guest_R0, regs, 16*4);
+	memcpy(&state2arm()->guest_D0, vfpregs, 32*8/*fpreg*/+4/*fpscr*/);
 
 	//TODO: some kind of flags, checking but i don't yet understand this
 	//mess of broken apart state.
-
-	//TODO: vector data registers
-	//TODO: float registers
-
-
 }
 #endif

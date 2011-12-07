@@ -16,6 +16,7 @@ public:
 	virtual void stepSysCall(SyscallsMarshalled* sc_m) = 0;
 
 	virtual long setBreakpoint(guest_ptr addr) = 0;
+	virtual void resetBreakpoint(guest_ptr addr, long v) = 0;
 	virtual guest_ptr undoBreakpoint() = 0;
 	virtual bool doStep(
 		guest_ptr start, guest_ptr end, bool& hit_syscall) = 0;

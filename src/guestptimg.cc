@@ -144,7 +144,11 @@ int PTImgMapEntry::getProt(void) const
 	return prot;
 }
 
-#define STACK_EXTEND_BYTES 0x200000
+#ifdef __amd64__
+#define STACK_EXTEND_BYTES	0x200000
+#else
+#define STACK_EXTEND_BYTES	0x1000
+#endif
 
 #if defined(__arm__)
 #define STACK_MAP_FLAGS	\
@@ -157,12 +161,11 @@ int PTImgMapEntry::getProt(void) const
 
 void PTImgMapEntry::mapStack(pid_t pid)
 {
-	int			prot, flags;
+	int			prot;
 
 	assert (mmap_fd == -1);
 
 	prot = getProt();
-	flags = STACK_MAP_FLAGS;
 
 	mem_begin.o -= STACK_EXTEND_BYTES;
 
@@ -171,7 +174,7 @@ void PTImgMapEntry::mapStack(pid_t pid)
 		mem_begin,
 		getByteCount(),
 		prot,
-		flags | MAP_FIXED,
+		STACK_MAP_FLAGS | MAP_FIXED,
 		-1,
 		0);
 
@@ -506,13 +509,11 @@ guest_ptr GuestPTImg::undoBreakpoint(pid_t pid)
 void GuestPTImg::resetBreakpoint(pid_t pid, guest_ptr addr)
 {
 	uint64_t	old_v;
-	int		err;
 
 	assert (breakpoints.count(addr) && "Resetting non-BP!");
 
 	old_v = breakpoints[addr];
-	err = ptrace(PTRACE_POKETEXT, pid, addr.o, old_v);
-	assert (err != -1 && "Failed to reset breakpoint");
+	pt_arch->resetBreakpoint(addr, old_v);
 	breakpoints.erase(addr);
 }
 

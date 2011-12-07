@@ -26,7 +26,7 @@ public:
 
 	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
 #ifdef __arm__
-	void setRegs(const user_regs& regs, const user_fpregs& fpregs);
+	void setRegs(const user_regs* regs, const uint8_t* vfpregs);
 #endif
 	void setThreadPointer(uint32_t v);
 	virtual void print(std::ostream& os, const void*) const;
