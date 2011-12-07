@@ -1,21 +1,37 @@
-#ifndef PTIMGARM_H
-#define PTIMGARM_H
+#include <assert.h>
+#include "cpu/ptimgarm.h"
+#include "guestcpustate.h"
 
-#include <sys/user.h>
-#include "ptimgarch.h"
+extern "C" {
+#include "valgrind/libvex_guest_arm.h"
+}
 
-struct VexGuestARMState;
+PTImgARM::PTImgARM(GuestPTImg* gs, int in_pid)
+: PTImgArch(gs, in_pid)
+{}
 
-class PTImgARM : public PTImgArch
-{
-public:
-	bool isMatch(void) const;
-	bool doStep(guest_ptr start, guest_ptr end, bool& hit_syscall);
-	uintptr_t getSysCallResult() const;
+PTImgARM::~PTImgARM() {}
 
-private:
-	const VexGuestARMState& getVexState(void) const;
-	struct user_regs	shadow_reg_cache;
-};
+bool PTImgARM::isMatch(void) const { assert (0 == 1 && "STUB"); }
+bool PTImgARM::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
+{ assert (0 == 1 && "STUB"); }
 
-#endif
+uintptr_t PTImgARM::getSysCallResult() const { assert (0 == 1 && "STUB"); }
+
+const VexGuestARMState& PTImgARM::getVexState(void) const
+{ return *((const VexGuestARMState*)gs->getCPUState()->getStateData()); }
+
+bool PTImgARM::isRegMismatch() const { assert (0 == 1 && "STUB"); }
+void PTImgARM::printFPRegs(std::ostream&) const { assert (0 == 1 && "STUB"); }
+void PTImgARM::printUserRegs(std::ostream&) const { assert (0 == 1 && "STUB"); }
+guest_ptr PTImgARM::getStackPtr() const { assert (0 == 1 && "STUB"); }
+void PTImgARM::slurpRegisters() { assert (0 == 1 && "STUB"); }
+void PTImgARM::stepSysCall(SyscallsMarshalled*) { assert (0 == 1 && "STUB"); }
+long int PTImgARM::setBreakpoint(guest_ptr) { assert (0 == 1 && "STUB"); }
+guest_ptr PTImgARM::undoBreakpoint() { assert (0 == 1 && "STUB"); }
+guest_ptr PTImgARM::getPC() { assert (0 == 1 && "STUB"); }
+bool PTImgARM::canFixup(
+	const std::vector<std::pair<guest_ptr, unsigned char> >&,
+	bool has_memlog) const { assert (0 == 1 && "STUB"); }
+bool PTImgARM::breakpointSysCalls(guest_ptr, guest_ptr) { assert (0 == 1 && "STUB"); }
+void PTImgARM::revokeRegs() { assert (0 == 1 && "STUB"); }
