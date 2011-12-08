@@ -36,6 +36,7 @@ void PTImgARM::slurpRegisters(void)
 	int				err;
 	struct user_regs		regs;
 	uint8_t				vfpregs[ARM_VFPREGS_SIZE];
+	void				*thread_area;
 
 	err = ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
 	assert(err != -1);
@@ -44,8 +45,14 @@ void PTImgARM::slurpRegisters(void)
 		child_pid, NULL, &vfpregs);
 	assert(err != -1);
 
+	err = ptrace(
+		(__ptrace_request)PTRACE_GET_THREAD_AREA,
+		child_pid, NULL, &thread_area);
+	assert(err != -1);
+
+
 	arm_cpu_state = (ARMCPUState*)gs->getCPUState();
-	arm_cpu_state->setRegs(&regs, vfpregs);
+	arm_cpu_state->setRegs(&regs, vfpregs, thread_area);
 }
 
 void PTImgARM::stepSysCall(SyscallsMarshalled*) { assert (0 == 1 && "STUB"); }

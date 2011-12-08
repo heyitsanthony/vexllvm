@@ -290,11 +290,14 @@ void ARMCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 }
 
 #ifdef __arm__
-void ARMCPUState::setRegs(const user_regs* regs, const uint8_t* vfpregs)
+void ARMCPUState::setRegs(
+	const user_regs* regs, const uint8_t* vfpregs,
+	void* thread_area)
 {
 	memcpy(&state2arm()->guest_R0, regs, 16*4);
 	memcpy(&state2arm()->guest_D0, vfpregs, 32*8/*fpreg*/+4/*fpscr*/);
 
+	state2arm()->guest_TPIDRURO = (long)thread_area;
 	//TODO: some kind of flags, checking but i don't yet understand this
 	//mess of broken apart state.
 }

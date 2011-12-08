@@ -31,13 +31,8 @@ Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 
 		addr = s->getBaseAddr();
 		if (s->isCode() && s->getName().size() > 0 && addr) {
-			fprintf(stderr,
-				"GOT SYM %s. ADDR=%p\n", s->getName().c_str(),
-				(void*)addr);
 			//if (s->isDynamic()) addr += base;
 			addr += base;
-			fprintf(stderr, "FINALLY: %p. BASE=%p\n",
-				(void*)addr, (void*)base);
 			ret->addSym(s->getName(), addr, s->getLength());
 		}
 		delete s;
