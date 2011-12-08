@@ -81,6 +81,13 @@ static void vex_log(HChar* hc, Int nbytes)
 
 static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
 
+#define ARM_HWCAPS	\
+			VEX_HWCAPS_ARM_NEON |	\
+			VEX_HWCAPS_ARM_VFP3 |	\
+			VEX_HWCAPS_ARM_VFP2 |	\
+			VEX_HWCAPS_ARM_VFP |	\
+			7
+
 VexXlate::VexXlate(Arch::Arch in_arch)
 : trace_fe(getenv("VEXLLVM_TRACE_FE") != NULL)
 , store_fragments(getenv("VEXLLVM_STORE_FRAGS") != NULL)
@@ -88,21 +95,21 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 , frag_log_fd(-1)
 {
 	LibVEX_default_VexArchInfo(&vai_host);
+
 	vai_host.hwcaps = VEX_HOST_HWCAPS;
+	if (in_arch == Arch::ARM)
+		vai_host.hwcaps = ARM_HWCAPS;
 
 	LibVEX_default_VexArchInfo(&vai_guest);
+
 	switch(in_arch) {
 	case Arch::X86_64:
 		arch = VexArchAMD64;
 		break;
 	case Arch::ARM:
 		arch = VexArchARM;
-		vai_guest.hwcaps =
-			VEX_HWCAPS_ARM_NEON |
-			VEX_HWCAPS_ARM_VFP3 |
-			VEX_HWCAPS_ARM_VFP2 |
-			VEX_HWCAPS_ARM_VFP |
-			7;
+		std::cerr << "USING ARCH ARM!\n";
+		vai_guest.hwcaps = ARM_HWCAPS;
 		break;
 	case Arch::I386:
 		arch = VexArchX86;
@@ -110,11 +117,13 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 	default:
 		assert(!"valid VEX architecture");
 	}
+
 	LibVEX_default_VexControl(&vc);
 	if(getenv("VEXLLVM_SINGLE_STEP")) {
 		vc.guest_max_insns = 1;
 		vc.guest_chase_thresh = 0;
 	}
+
 	LibVEX_Init(vex_exit, vex_log, VEX_DEBUG_LEVEL, false, &vc);
 
 	LibVEX_default_VexAbiInfo(&vbi);
@@ -189,9 +198,12 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	memset(&vta, 0, sizeof(vta));
 	vta.arch_guest = arch;
 	vta.archinfo_guest = vai_guest;
-	vta.arch_host = VEX_HOST_ARCH;
+
+	//vta.arch_host = VEX_HOST_ARCH;
+	vta.arch_host = arch;
+
 	vta.archinfo_host = vai_host;
-	vbi.guest_stack_redzone_size = 128;		/* I LOVE RED ZONE. BEST ABI BEST.*/
+	vbi.guest_stack_redzone_size = 128;	/* I LOVE RED ZONE. BEST ABI BEST.*/
 	vbi.guest_amd64_assume_fs_is_zero = true;	/* XXX LIBVEX FIXME */
 	vta.abiinfo_both = vbi;
 
@@ -216,15 +228,19 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	if (trace_fe) vta.traceflags |= (1 << 7);
 
 	/* lipservice -- never actually used */
-	vta.dispatch_assisted = (void*)(0x1234dead);
-	vta.dispatch_unassisted = (void*)(0x1234beef);
+	if (arch == VexArchARM) {
+		vta.dispatch_assisted = NULL;
+		vta.dispatch_unassisted = NULL;
+	} else {
+		vta.dispatch_assisted = (void*)(0x1234dead);
+		vta.dispatch_unassisted = (void*)(0x1234beef);
+	}
 
 	/* XXX: TJ's trunk only? Delete if you don't remember TJ */
 	// vta.irsb_only = true;
 	vta.needs_self_check = vex_needs_self_check;
 
 	res = LibVEX_Translate(&vta);
-
 	if (res.status == VexTranslateResult::VexTransAccessFail)
 		return NULL;
 
