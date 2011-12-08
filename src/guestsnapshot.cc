@@ -97,7 +97,14 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 {
 	SETUP_F_R("mapinfo")
 	assert (mem == NULL);
+
 	mem = new GuestMem();
+	switch (arch) {
+	case Arch::ARM:
+	case Arch::I386:
+		mem->mark32Bit();
+		break;
+	}
 
 	while (fgets(buf, 512, f) != NULL) {
 		guest_ptr			begin, end, mmap_addr;

@@ -108,7 +108,6 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 		break;
 	case Arch::ARM:
 		arch = VexArchARM;
-		std::cerr << "USING ARCH ARM!\n";
 		vai_guest.hwcaps = ARM_HWCAPS;
 		break;
 	case Arch::I386:

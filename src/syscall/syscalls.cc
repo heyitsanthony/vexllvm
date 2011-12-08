@@ -38,16 +38,19 @@ uint64_t Syscalls::apply(void)
 uint64_t Syscalls::apply(SyscallParams& args)
 {
 	bool			fakedSyscall;
-	int			sys_nr;
+	int			sys_nr, xlate_sys_nr;
 	unsigned long		sc_ret = ~0UL;
 
 	/* translate the syscall number by architecture so that
 	   we can have boiler plate implementations centralized
 	   in this file */
 	sys_nr = args.getSyscall();
-	sys_nr = translateSyscall(sys_nr);
+	xlate_sys_nr = translateSyscall(sys_nr);
 
-	
+	if (xlate_sys_nr != -1)
+		sys_nr = xlate_sys_nr;
+
+
 	/* check for syscalls which would mess with the thread or process
 	   state and otherwise render us useless */
 	switch (sys_nr) {
@@ -123,7 +126,7 @@ std::string Syscalls::getSyscallName(int sys_nr) const {
 	}
 }
 
-/* it is disallowed to implement any syscall which requires access to
+/* DON'T implement any syscall which requires access to
    data in a structure within this function.  this function does not
    understand the potentially different layout of the guests syscalls
    so, syscalls with non-raw pointer data must be handled in the

@@ -113,8 +113,7 @@ std::string Syscalls::getARMSyscallName(int sys_nr) const {
 }
 
 
-uintptr_t Syscalls::applyARMSyscall(
-	SyscallParams& args)
+uintptr_t Syscalls::applyARMSyscall(SyscallParams& args)
 {
 	unsigned long sc_ret = ~0UL;
 
@@ -157,10 +156,11 @@ uintptr_t Syscalls::applyARMSyscall(
 	
 	return sc_ret;
 }
-SYSCALL_BODY(ARM, cacheflush) {
-	return true;
-}
-SYSCALL_BODY(ARM, set_tls) {
+
+SYSCALL_BODY(ARM, cacheflush) { return true; }
+
+SYSCALL_BODY(ARM, set_tls)
+{
 	ARMCPUState* cpu_state = (ARMCPUState*)this->cpu_state;
 	cpu_state->setThreadPointer(args.getArg(0));
 	//also set the emulation location
@@ -174,7 +174,9 @@ SYSCALL_BODY(ARM, set_tls) {
 	sc_ret = 0;
 	return true;
 }
-SYSCALL_BODY(ARM, mmap2) {
+
+SYSCALL_BODY(ARM, mmap2)
+{
 	guest_ptr m;
 	sc_ret = mappings->mmap(m, 
 		guest_ptr(args.getArg(0)),
