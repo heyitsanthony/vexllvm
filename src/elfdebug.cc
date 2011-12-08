@@ -19,6 +19,8 @@ Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 	Symbol		*s;
 	ElfDebug	*ed;
 
+	fprintf(stderr, "GETSYMS: %s\n", elf_path);
+
 	ed = new ElfDebug(elf_path);
 	if (ed->is_valid == false) {
 		delete ed;
@@ -31,8 +33,8 @@ Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 
 		addr = s->getBaseAddr();
 		if (s->isCode() && s->getName().size() > 0 && addr) {
-			//if (s->isDynamic()) addr += base;
-			addr += base;
+			if (!ed->isExec())
+				addr += base;
 			ret->addSym(s->getName(), addr, s->getLength());
 		}
 		delete s;
@@ -121,6 +123,8 @@ void ElfDebug::setupTables(void)
 	hdr = (Elf_Ehdr*)img;
 	shdr = (Elf_Shdr*)(img + hdr->e_shoff);
 	strtab_sh = (const char*)(img + shdr[hdr->e_shstrndx].sh_offset);
+
+	is_exec = (hdr->e_type == ET_EXEC);
 
 	/* pull data from section headers */
 	strtab = NULL;

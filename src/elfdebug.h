@@ -32,8 +32,10 @@ private:
 	Symbol	*nextLinkageSym(const GuestMem* m);
 	Symbol	*nextLinkageSym32(const GuestMem* m);
 	Symbol	*nextLinkageSym64(const GuestMem* m);
+	bool isExec(void) const { return is_exec; }
 
 	bool	is_valid;
+	bool	is_exec;
 
 	int		fd;
 	char		*img;
