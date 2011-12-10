@@ -104,6 +104,8 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 	case Arch::I386:
 		mem->mark32Bit();
 		break;
+	default:
+		break;
 	}
 
 	while (fgets(buf, 512, f) != NULL) {
@@ -124,7 +126,9 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 		fd = open(buf, O_RDONLY);
 		assert (fd != -1);
 
-		if (map_type == GuestMem::Mapping::VSYSPAGE) {
+		if (	map_type == GuestMem::Mapping::VSYSPAGE &&
+			Arch::getHostArch() == arch)
+		{
 			char	*sysp_buf = new char[length];
 			ssize_t	sz;
 			sz = read(fd, sysp_buf, length);
@@ -133,6 +137,9 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 			close(fd);
 			continue;
 		}
+
+		if (map_type == GuestMem::Mapping::VSYSPAGE)
+			map_type = GuestMem::Mapping::REG;
 
 		int res = mem->mmap(mmap_addr,
 			begin,
