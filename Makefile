@@ -128,15 +128,19 @@ BINTARGETS_FP=$(BINTARGETS:%=bin/%)
 BINTARGETS_FP_REBASE=$(BINTARGETS:%=bin/%_rebase)
 BINTARGETS_SOFTFLOAT=$(BINTARGETS:%=bin/softfloat/%)
 BINTARGETS_SOFTFLOAT_REBASE=$(BINTARGETS:%=bin/softfloat/%_rebase)
-BINTARGETS_ALL=	$(BINTARGETS_FP) $(BINTARGETS_FP_REBASE)		\
-		$(BINTARGETS_SOFTFLOAT) $(BINTARGETS_SOFTFLOAT_REBASE)
+BINTARGETS_REBASE=$(BINTARGETS_SOFTFLOAT_REBASE) $(BINTARGETS_FP_REBASE)
+BINTARGETS_STDBASE=$(BINTARGETS_FP) $(BINTARGETS_SOFTFLOAT)
+BINTARGETS_ALL=$(BINTARGETS_STDBASE) $(BINTARGETS_REBASE)
+
 LIBTARGETS=	bin/vexllvm.a 			\
 		bin/vexllvm-softfloat.a
 
 all:	bitcode 				\
 	$(BINOBJS)				\
 	$(LIBTARGETS)				\
-	$(BINTARGETS_ALL)			\
+	$(BINTARGETS_STDBASE)			\
+
+all-rebase: all $(BINTARGETS_REBASE)
 
 clean:
 	rm -f $(BINOBJS) obj/*vexop*.o $(OBJDIRDEPS) $(BINTARGETS_ALL) $(LIBTARGETS) bitcode/*softfloat*
@@ -264,7 +268,7 @@ I386TRACEDEPS_PATH=					\
 	$(TRACEDEPS:%=tests/traces-i386-bin/%)		\
 	$(TRACEDEPS:%=tests/traces-i386-bin/%-static)
 
-test-traces: all $(TRACEDEPS_PATH)
+test-traces: all $(BINTARGETS_REBASE) $(TRACEDEPS_PATH)
 	tests/traces.sh
 
 test-built-traces: all $(TRACEDEPS_PATH)
