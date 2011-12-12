@@ -46,7 +46,6 @@ GenLLVM::GenLLVM(const Guest* gs, const char* name)
 		"128-a0:0:64-s0:64:64-f80:128:128");
 
 	assert (guest->getCPUState() && "No CPU state set in Guest");
-	mod->addTypeName("guestCtxTy", guest->getCPUState()->getTy());
 	mkFuncTy();
 }
 
@@ -92,7 +91,7 @@ Function* GenLLVM::endBB(Value* retVal)
 	return ret_f;
 }
 
-const Type* GenLLVM::vexTy2LLVM(IRType ty)
+Type* GenLLVM::vexTy2LLVM(IRType ty)
 {
 	switch(ty) {
 	case Ity_I1:	return IntegerType::get(getGlobalContext(), 1);
@@ -123,13 +122,14 @@ Value* GenLLVM::readCtx(unsigned int byteOff, IRType ty)
 	return ret;
 }
 
-Value* GenLLVM::readCtx(unsigned int byteOff, int bias, int len,
-	Value* ix, const Type* accessTy)
+Value* GenLLVM::readCtx(
+	unsigned int byteOff, int bias, int len,
+	Value* ix,  Type* accessTy)
 {
 	Value		*ret, *addr;
 
 	assert(byteOff % (accessTy->getPrimitiveSizeInBits() / 8) == 0);
-	const Type* offset_type = IntegerType::get(
+	Type* offset_type = IntegerType::get(
 		getGlobalContext(), sizeof(int)*8);
 	Value* bias_v = ConstantInt::get(
 		getGlobalContext(), APInt(sizeof(int)*8, bias));
@@ -170,7 +170,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len,
 	StoreInst	*si;
 
 	assert(byteOff % (v->getType()->getPrimitiveSizeInBits() / 8) == 0);
-	const Type* offset_type = IntegerType::get(
+	Type* offset_type = IntegerType::get(
 		getGlobalContext(), sizeof(int)*8);
 	Value* bias_v = ConstantInt::get(
 		getGlobalContext(), APInt(sizeof(int)*8, bias));
@@ -191,7 +191,7 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len,
 	return ret;
 }
 
-Value* GenLLVM::getCtxByteGEP(unsigned int byteOff, const Type* accessTy)
+Value* GenLLVM::getCtxByteGEP(unsigned int byteOff, Type* accessTy)
 {
 	unsigned int	tyBytes;
 	tyBytes = accessTy->getPrimitiveSizeInBits()/8;
@@ -204,9 +204,9 @@ Value* GenLLVM::getCtxByteGEP(unsigned int byteOff, const Type* accessTy)
 }
 
 /* NOTE: offset is in units of accessTy! */
-Value* GenLLVM::getCtxTyGEP(Value* off, const Type* accessTy)
+Value* GenLLVM::getCtxTyGEP(Value* off, Type* accessTy)
 {
-	const Type	*ptrTy;
+	Type*	ptrTy;
 	Value		*addr_ptr, *ret; /* XXX assuming access are aligned */
 	const char	*gep_name;
 	unsigned int	access_bytes;
@@ -263,7 +263,7 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 	
 }
 
-Value* GenLLVM::load(Value* addr_v, const Type* ty)
+Value* GenLLVM::load(Value* addr_v, Type* ty)
 {
 	Type		*ptrTy;
 	Value		*addr_ptr;
@@ -326,7 +326,7 @@ void GenLLVM::markLinked() {
 	return;
 }
 
-llvm::Value* GenLLVM::getLinked() {
+Value* GenLLVM::getLinked() {
 	return ConstantInt::get(getGlobalContext(), APInt(1, 1));
 }
 
@@ -343,7 +343,7 @@ void GenLLVM::setExitType(uint8_t exit_type)
  * guestaddr_t f(guest*) {  ...bullshit...; return ctrl_xfer_addr; } */
 void GenLLVM::mkFuncTy(void)
 {
-	std::vector<const Type*>	f_args;
+	std::vector<Type*>	f_args;
 
 	f_args.push_back(PointerType::get(guest->getCPUState()->getTy(), 0));
 	if(log_last_store) {
@@ -361,15 +361,4 @@ Value* GenLLVM::to16x8i(Value* v) const
 			Type::getInt8Ty(getGlobalContext()), 16));
 }
 
-void GenLLVM::memFence(void)
-{
-	Function  *fence_f;
-
-	/* fence everything! */
-	Value* args[5];
-	for (int i = 0; i < 5; i++)
-		args[i] = ConstantInt::get(builder->getInt1Ty(), 1),
-
-	fence_f = Intrinsic::getDeclaration(mod, Intrinsic::memory_barrier);
-	builder->CreateCall(fence_f, args, args+5);
-}
+void GenLLVM::memFence(void) { builder->CreateFence(SequentiallyConsistent); }

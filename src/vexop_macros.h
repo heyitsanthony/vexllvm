@@ -162,10 +162,11 @@ Value* VexExprUnop##x::emit(void) const					\
 
 #define F0XINT(y,z)							\
 	Function	*f;						\
-	std::vector<const Type*> call_args;				\
+	std::vector<llvm::Type*> call_args;				\
 	call_args.push_back(y->getScalarType());			\
-	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), 		\
-		Intrinsic::z, &call_args[0], 1);			\
+	f = Intrinsic::getDeclaration(					\
+		theGenLLVM->getModule(),				\
+		Intrinsic::z, ArrayRef<Type*>(call_args));		\
 	assert (f != NULL);						\
 	a1 = builder->CreateCall(f, a1);
 

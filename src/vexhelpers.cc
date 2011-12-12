@@ -87,6 +87,11 @@ Module* VexHelpers::loadMod(const char* path)
 	}
 
 	ret_mod = ParseBitcodeFile(Buffer.get(), getGlobalContext(), &ErrorMsg);
+	if (ret_mod == NULL) {
+		std::cerr
+			<< "Error Parsing Bitcode File '"
+			<< path << "': " << ErrorMsg << '\n';
+	}
 	assert (ret_mod && "Couldn't parse bitcode mod");
 	materialize_fail = ret_mod->MaterializeAllPermanently(&ErrorMsg);
 	if (materialize_fail) {
@@ -124,13 +129,10 @@ void VexHelpers::loadUserMod(const char* path)
 
 VexHelpers::~VexHelpers()
 {
-/* XXX. Kill when KLEE is updated; modules are deleted with builder */
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
 	if (helper_mod) delete helper_mod;
 	if (vexop_mod) delete vexop_mod;
 	foreach (it, user_mods.begin(), user_mods.end())
 		delete (*it);
-#endif
 }
 
 Function* VexHelpers::getHelper(const char* s) const
@@ -150,11 +152,8 @@ Function* VexHelpers::getHelper(const char* s) const
 
 void VexHelpers::bindToExeEngine(ExecutionEngine* exe)
 {
-/* XXX. Kill when KLEE is updated */
-#if !(LLVM_VERSION_MAJOR == 2 && LLVM_VERSION_MINOR == 6)
 	exe->addModule(helper_mod);
 	exe->addModule(vexop_mod);
-#endif
 }
 
 llvm::Module* VexHelperDummy::loadMod(const char* path)

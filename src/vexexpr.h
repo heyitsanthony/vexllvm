@@ -26,7 +26,6 @@ extern "C" {
 
 #endif
 
-
 class VexStmt;
 
 namespace llvm
@@ -96,7 +95,7 @@ private:
 	int			len;
 	VexExpr			*ix_expr; /* Variable part of index into array */
 	int			bias;  /* Const offset part of index into array */
-	const llvm::Type	*elem_type;
+	llvm::Type*		elem_type;
 };
 
 class VexExprRdTmp : public VexExpr

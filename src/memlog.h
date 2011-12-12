@@ -26,7 +26,7 @@ public:
 	const char* getData() const { return &data[0]; }
 
 	/* interface for llvm code gen to record stored */
-	static const llvm::StructType* getType();
+	static llvm::StructType* getType();
 	static void recordStore(
 		llvm::Value* log_v,
 		llvm::Value* addr_v,
@@ -42,12 +42,12 @@ private:
 	char		data[MAX_STORE_SIZE / 8];
 
 	/* code generation cache of llvm things */
-	static const llvm::StructType* type;
-	static const llvm::PointerType* addr_type;
-	static const llvm::IntegerType* size_type;
-	static const llvm::VectorType* data_type;
-	static const unsigned int address_index = 0;
-	static const unsigned int size_index = 1;
-	static const unsigned int data_index = 2;
+	static llvm::StructType		*type;
+	static llvm::PointerType	*addr_type;
+	static llvm::IntegerType*size_type;
+	static llvm::VectorType		*data_type;
+	static const unsigned int address_index;
+	static const unsigned int size_index;
+	static const unsigned int data_index;
 };
 #endif

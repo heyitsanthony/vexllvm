@@ -6,8 +6,8 @@
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Intrinsics.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include "llvm/Target/TargetSelect.h"
-#include "llvm/ExecutionEngine/JIT.h"
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/ExecutionEngine/JIT.h>
 #include "guestptimg.h"
 
 #include <inttypes.h>

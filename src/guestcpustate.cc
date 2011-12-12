@@ -46,8 +46,8 @@ Type* GuestCPUState::mkFromFields(
 	struct guest_ctx_field* f,
 	byte2elem_map& offmap)
 {
-	std::vector<const Type*>	types;
-	const Type		*i8ty, *i16ty, *i32ty, *i64ty, *i128ty;
+	std::vector<Type*>	types;
+	Type			*i8ty, *i16ty, *i32ty, *i64ty, *i128ty;
 	LLVMContext		&gctx(getGlobalContext());
 	int			i;
 	unsigned int		cur_byte_off, total_elems;
@@ -64,7 +64,7 @@ Type* GuestCPUState::mkFromFields(
 	total_elems = 0;
 	offmap.clear();
 	while (f[i].f_len != 0) {
-		const Type	*t;
+		Type*	t;
 
 		switch (f[i].f_len) {
 		case 8:		t = i8ty;	break;

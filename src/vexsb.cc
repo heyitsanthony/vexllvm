@@ -267,10 +267,8 @@ Value* VexSB::getRegValue(unsigned int reg_idx) const
 	return values[reg_idx];
 }
 
-const Type* VexSB::getRegType(unsigned int reg_idx) const
-{
-	return theGenLLVM->vexTy2LLVM(types[reg_idx]);
-}
+llvm::Type* VexSB::getRegType(unsigned int reg_idx) const
+{ return theGenLLVM->vexTy2LLVM(types[reg_idx]); }
 
 void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 {

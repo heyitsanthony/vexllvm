@@ -4,12 +4,17 @@
 
 using namespace llvm;
 
-const StructType*	MemLog::type = NULL;
-const PointerType*	MemLog::addr_type = NULL;
-const IntegerType*	MemLog::size_type = NULL;
-const VectorType*	MemLog::data_type = NULL;
+StructType*	MemLog::type = NULL;
+PointerType*	MemLog::addr_type = NULL;
+IntegerType*	MemLog::size_type = NULL;
+VectorType*	MemLog::data_type = NULL;
 
-const StructType* MemLog::getType(void)
+const unsigned int MemLog::address_index = 0;
+const unsigned int MemLog::size_index = 1;
+const unsigned int MemLog::data_index = 2;
+
+
+StructType* MemLog::getType(void)
 {
 	if(type)
 		return type;
@@ -23,7 +28,7 @@ const StructType* MemLog::getType(void)
 		IntegerType::get(gctx, 8), MAX_STORE_SIZE / 8 );
 
 	/* add all fields to types vector from structure */
-	std::vector<const Type*> types;
+	std::vector<Type*> types;
 
 	types.push_back(addr_type);
 	types.push_back(size_type);

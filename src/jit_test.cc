@@ -5,8 +5,8 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/IRBuilder.h>
 #include <llvm/Intrinsics.h>
-#include "llvm/Target/TargetSelect.h"
-#include "llvm/ExecutionEngine/JIT.h"
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/ExecutionEngine/JIT.h>
 
 #include "Sugar.h"
 
@@ -103,6 +103,8 @@ public:
 		memset(	gs->getCPUState()->getStateData(),
 			0,
 			gs->getCPUState()->getStateSize());
+
+		getVexState(gs)->guest_DFLAG = 1;
 	}
 
 	virtual bool isGoodState(Guest* gs) const = 0;
@@ -482,7 +484,7 @@ void doTest(Guest* gs, TestSB* tsb)
 	char		emitstr[1024];
 
 	guest = TEST_VSB_GUESTADDR;
-	sprintf(emitstr, "sb_%p", guest);
+	sprintf(emitstr, "sb_%p", (void*)guest.o);
 
 	vsb = tsb->getSB();
 	f = vsb->emit(emitstr);

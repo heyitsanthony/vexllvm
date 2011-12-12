@@ -11,10 +11,11 @@ void vexop_setup_fp(VexHelpers* vh) {}
 
 #define VINT(y,z)							\
 	Function	*f;						\
-	std::vector<const Type*> call_args;				\
+	std::vector<llvm::Type*> call_args;				\
 	call_args.push_back(y);						\
-	f = Intrinsic::getDeclaration(theGenLLVM->getModule(), 		\
-		Intrinsic::z, &call_args[0], 1);			\
+	f = Intrinsic::getDeclaration(					\
+		theGenLLVM->getModule(),				\
+		Intrinsic::z, ArrayRef<Type*>(call_args)); 		\
 	assert (f != NULL);						\
 	v1 = builder->CreateCall(f, v1);				
 

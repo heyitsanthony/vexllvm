@@ -327,9 +327,11 @@ void VexStmtDirty::emit(void) const
 				theGenLLVM->getCtxBase(),
 				func->arg_begin()->getType()));
 	}
+
 	foreach (it, args.begin(), args.end())
 		args_v.push_back((*it)->emit());
-	v_call = builder->CreateCall(func, args_v.begin(), args_v.end());
+	v_call = builder->CreateCall(
+		func, llvm::ArrayRef<llvm::Value*>(args_v));
 
 	/* sometimes dirty calls don't set temporaries */
 	if (tmp_reg != -1) {
@@ -341,13 +343,13 @@ void VexStmtDirty::emit(void) const
 		   so I elected to just do an autocast here rather then modify
 		   vex to strip out the type or change the generated ir. */
 		Value* result = v_call;
-		const Type* ret_type = func->getReturnType();
-		const Type* tmp_type = parent->getRegType(tmp_reg);		
+		Type* ret_type = func->getReturnType();
+		Type* tmp_type = parent->getRegType(tmp_reg);
 		unsigned ret_bits = ret_type->getPrimitiveSizeInBits();
 		unsigned tmp_bits = tmp_type->getPrimitiveSizeInBits();
-		const Type* compat_type = IntegerType::get(
+		Type* compat_type = IntegerType::get(
 			getGlobalContext(), ret_bits);
-		
+
 		if(ret_bits < tmp_bits) {
 			result = builder->CreateBitCast(result, compat_type);
 			result = builder->CreateZExt(result, tmp_type);
@@ -357,8 +359,8 @@ void VexStmtDirty::emit(void) const
 		}
 		parent->setRegValue(tmp_reg, result);
 	}
-	builder->CreateBr(bb_merge);
 
+	builder->CreateBr(bb_merge);
 	builder->SetInsertPoint(bb_merge);
 }
 
@@ -441,7 +443,7 @@ void VexStmtExit::emit(void) const
 	/* XXX for calls we're going to need some more info */
 	builder->SetInsertPoint(bb_then);
 
-	if (jk != Ijk_Boring) {	
+	if (jk != Ijk_Boring) {
 		/* special exits set exit type */
 		theGenLLVM->setExitType((GuestExitType)exit_type);
 	}

@@ -770,7 +770,7 @@ Value* VexExprCCall::emit(void) const
 		args_v.push_back((*it)->emit());
 
 	return theGenLLVM->getBuilder()->CreateCall(
-		func, args_v.begin(), args_v.end());
+		func, llvm::ArrayRef<llvm::Value*>(args_v));
 }
 
 void VexExprCCall::print(std::ostream& os) const
@@ -857,11 +857,8 @@ Value* VexExprMux0X::emit(void) const
 
 	/* phi node on the mux */
 	builder->SetInsertPoint(bb_merge);
-#if (LLVM_VERSION_MAJOR == 3)
 	pn = builder->CreatePHI(zero_val->getType(), 0, "mux0x_phi");
-#else
-	pn = builder->CreatePHI(zero_val->getType(), "mux0x_phi");
-#endif
+
 	pn->addIncoming(zero_val, bb_z);
 	pn->addIncoming(nonzero_val, bb_nz);
 

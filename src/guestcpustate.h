@@ -42,7 +42,8 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	static GuestCPUState* create(Arch::Arch arch);
 	GuestCPUState();
 	virtual ~GuestCPUState() {};
-	const llvm::Type* getTy(void) const { return guestCtxTy; }
+
+	llvm::Type* getTy(void) const { return guestCtxTy; }
 	virtual unsigned int byteOffset2ElemIdx(unsigned int off) const = 0;
 
 	void* getStateData(void) { return state_data; }
@@ -82,11 +83,10 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	virtual bool load(const char* fname);
 	virtual bool save(const char* fname);
 protected:
-	llvm::Type* mkFromFields(struct guest_ctx_field* f,
-		byte2elem_map&);
+	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);
 protected:
 	byte2elem_map	off2ElemMap;
-	llvm::Type	*guestCtxTy;
+	llvm::Type*	guestCtxTy;
 	uint8_t		*state_data;
 	uint8_t		*exit_type;
 	unsigned int	state_byte_c;

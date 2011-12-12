@@ -30,19 +30,18 @@ public:
 	llvm::IRBuilder<>* getBuilder(void) { return builder; }
 	llvm::Module* getModule(void) { return mod; }
 
-	static const llvm::Type* vexTy2LLVM(IRType ty);
+	static llvm::Type* vexTy2LLVM(IRType ty);
 	
 	llvm::Value* readCtx(unsigned int byteOff, IRType ty);
 	llvm::Value* readCtx(
-		unsigned int byteOff, int bias, int len, llvm::Value* ix, const llvm::Type* t);
+		unsigned int byteOff, int bias, int len, llvm::Value* ix,
+		llvm::Type* t);
 	llvm::Value* writeCtx(unsigned int byteOff, llvm::Value* v);
 	llvm::Value* writeCtx(
 		unsigned int byteOff, int bias, int len,
 		llvm::Value* ix, llvm::Value* v);
-	llvm::Value* getCtxByteGEP(
-		unsigned int byteOff, const llvm::Type* ty);
-	llvm::Value* getCtxTyGEP(
-		llvm::Value* tyOff, const llvm::Type* ty);
+	llvm::Value* getCtxByteGEP(unsigned int byteOff, llvm::Type* ty);
+	llvm::Value* getCtxTyGEP(llvm::Value* tyOff, llvm::Type* ty);
 	llvm::Value* getCtxBase(void) const { return cur_guest_ctx; }
 
 	void markLinked();
@@ -50,7 +49,7 @@ public:
 	
 	void store(llvm::Value* addr, llvm::Value* data);
 	llvm::Value* load(llvm::Value* addr_v, IRType vex_type);
-	llvm::Value* load(llvm::Value* addr_v, const llvm::Type* ty);
+	llvm::Value* load(llvm::Value* addr_v, llvm::Type* ty);
 	void beginBB(const char* name);
 	llvm::Function* endBB(llvm::Value*);
 	void setExitType(uint8_t exit_type);
@@ -61,9 +60,9 @@ private:
 	void mkFuncTy(void);
 
 	const Guest		*guest;
-	llvm::IRBuilder<>*	builder;
-	llvm::Module*		mod;
-	const llvm::FunctionType*	funcTy;
+	llvm::IRBuilder<>	*builder;
+	llvm::Module		*mod;
+	llvm::FunctionType	*funcTy;
 
 	/* current state data */
 	llvm::Value*		cur_guest_ctx;

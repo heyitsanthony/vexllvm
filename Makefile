@@ -23,9 +23,14 @@ ifndef ARMTRACECC
 ARMTRACECC=arm-linux-gnueabi-gcc
 endif
 
-ifeq ($(shell llvm-config --version),2.6)
-CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=6
+ifeq ($(shell llvm-config --version),2.9)
+CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=9
 endif
+
+ifeq ($(shell llvm-config --version),3.0)
+CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=0
+endif
+
 
 # XXX, MAKES BINARY SIZE EXPLODE
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
