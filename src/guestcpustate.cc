@@ -88,7 +88,7 @@ Type* GuestCPUState::mkFromFields(
 	}
 	state_byte_c = cur_byte_off;
 
-	return StructType::get(gctx, types, "guestCtxTy");
+	return StructType::create(gctx, types, "guestCtxTy");
 }
 
 void GuestCPUState::print(std::ostream& os) const
