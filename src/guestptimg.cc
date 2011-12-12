@@ -29,11 +29,13 @@
 #include "guestcpustate.h"
 
 #ifdef __amd64__
+#include <sys/prctl.h>
 #include "cpu/amd64cpustate.h"
 #include "cpu/ptimgamd64.h"
 #endif
 
 #ifdef __arm__
+#include <linux/prctl.h>
 #include "cpu/ptimgarm.h"
 #endif
 
@@ -86,6 +88,13 @@ pid_t GuestPTImg::createSlurpedChild(
 	if (pid == 0) {
 		/* child */
 		int     err;
+
+		/* don't keep running if parent dies */
+                prctl(PR_SET_PDEATHSIG, SIGKILL);
+                prctl(PR_SET_PDEATHSIG, SIGSEGV);
+                prctl(PR_SET_PDEATHSIG, SIGILL);
+                prctl(PR_SET_PDEATHSIG, SIGBUS);
+                prctl(PR_SET_PDEATHSIG, SIGABRT);
 		ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 		err = execvpe(argv[0], argv, envp);
 		assert (err != -1 && "EXECVE FAILED. NO PTIMG!");
