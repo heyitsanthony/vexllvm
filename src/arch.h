@@ -12,11 +12,11 @@ enum Arch {
 static inline Arch getHostArch(void)
 {
 	#if defined(__amd64__)
-		return Arch::X86_64;
+		return X86_64;
 	#elif defined(__i386__)
-		return Arch::I386;
+		return I386;
 	#elif defined(__arm__)
-		return Arch::ARM;
+		return ARM;
 	#else
 		#error Unsupported Host Architecture
 	#endif
