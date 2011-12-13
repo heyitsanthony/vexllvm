@@ -26,6 +26,7 @@ VexHelpers::VexHelpers(Arch::Arch in_arch)
 : arch(in_arch)
 , helper_mod(0)
 , vexop_mod(0)
+, ext_mod(0)
 {
 	/* env not set => assume running from git root */
 	bc_dirpath = getenv("VEXLLVM_HELPER_PATH");
@@ -127,17 +128,30 @@ void VexHelpers::loadUserMod(const char* path)
 	user_mods.push_back(m);
 }
 
-VexHelpers::~VexHelpers()
+void VexHelpers::destroyMods(void)
 {
 	if (helper_mod) delete helper_mod;
 	if (vexop_mod) delete vexop_mod;
 	foreach (it, user_mods.begin(), user_mods.end())
 		delete (*it);
+
+	helper_mod = NULL;
+	vexop_mod = NULL;
+	user_mods.clear();
+}
+
+VexHelpers::~VexHelpers()
+{
+	destroyMods();
 }
 
 Function* VexHelpers::getHelper(const char* s) const
 {
 	Function	*f;
+
+	if (ext_mod) {
+		return ext_mod->getFunction(s);
+	}
 
 	/* TODO why not start using a better algorithm sometime */
 	if ((f = helper_mod->getFunction(s))) return f;
@@ -160,4 +174,11 @@ llvm::Module* VexHelperDummy::loadMod(const char* path)
 {
 	fprintf(stderr, "FAILING LOAD MOD %s\n", path);
 	return NULL;
+}
+
+void VexHelpers::useExternalMod(Module* m)
+{
+	assert (ext_mod == NULL);
+	destroyMods();
+	ext_mod = m;
 }

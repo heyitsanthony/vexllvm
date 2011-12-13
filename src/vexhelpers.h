@@ -24,16 +24,21 @@ public:
 	virtual llvm::Function* getHelper(const char* s) const;
 	void bindToExeEngine(llvm::ExecutionEngine*);
 	void loadUserMod(const char* path);
+	void useExternalMod(llvm::Module* m);
 protected:
 	VexHelpers(Arch::Arch arch);
 	virtual void loadDefaultModules(void);
 	virtual llvm::Module*	loadMod(const char* path);
 private:
+	void destroyMods(void);
+
 	Arch::Arch		arch;
 	llvm::Module*		helper_mod;
 	llvm::Module*		vexop_mod;
 	mod_list		user_mods;
 	const char		*bc_dirpath;
+
+	llvm::Module*		ext_mod;
 };
 
 class VexHelperDummy : public VexHelpers
