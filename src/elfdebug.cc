@@ -19,8 +19,6 @@ Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 	Symbol		*s;
 	ElfDebug	*ed;
 
-	fprintf(stderr, "GETSYMS: %s\n", elf_path);
-
 	ed = new ElfDebug(elf_path);
 	if (ed->is_valid == false) {
 		delete ed;
