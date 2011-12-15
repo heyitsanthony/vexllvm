@@ -24,7 +24,7 @@ GenLLVM::GenLLVM(const Guest* gs, const char* name)
 , cur_guest_ctx(NULL)
 , cur_memory_log(NULL)
 , cur_f(NULL)
-, cur_bb(NULL)
+, entry_bb(NULL)
 , log_last_store(getenv("VEXLLVM_LAST_STORE"))
 , fake_vsys_reads(getenv("VEXLLVM_FAKE_VSYS") != NULL)
 {
@@ -57,17 +57,21 @@ GenLLVM::~GenLLVM(void)
 
 void GenLLVM::beginBB(const char* name)
 {
-	assert (cur_bb == NULL && "nested beginBB");
+	assert (entry_bb == NULL && "nested beginBB");
 	cur_f = Function::Create(
 		funcTy,
 		Function::ExternalLinkage,
 		name,
 		mod);
 
-	cur_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
-	builder->SetInsertPoint(cur_bb);
+	entry_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
+	builder->SetInsertPoint(entry_bb);
+
 	Function::arg_iterator arg = cur_f->arg_begin();
+
+	arg->addAttr(llvm::Attribute::NoAlias);
 	cur_guest_ctx = arg++;
+
 	if (log_last_store) {
 		cur_memory_log = arg++;
 		memlog_slot = 0;
@@ -78,14 +82,15 @@ Function* GenLLVM::endBB(Value* retVal)
 {
 	Function	*ret_f;
 
-	assert (cur_bb != NULL && "ending missing bb");
+	assert (entry_bb != NULL && "ending missing bb");
 
 	/* FIXME. Should return next addr to jump to */
 	builder->CreateRet(retVal);
 
+	gepbyte_map.clear();
 	ret_f = cur_f;
 	cur_f = NULL;
-	cur_bb = NULL;
+	entry_bb = NULL;
 	cur_guest_ctx = NULL;
 	cur_memory_log = NULL;
 	return ret_f;
@@ -194,13 +199,28 @@ Value* GenLLVM::writeCtx(unsigned int byteOff, int bias, int len,
 Value* GenLLVM::getCtxByteGEP(unsigned int byteOff, Type* accessTy)
 {
 	unsigned int	tyBytes;
+	Value		*gep;
+	std::pair<unsigned, unsigned> key;
+	gepbyte_map_t::const_iterator it;
+
 	tyBytes = accessTy->getPrimitiveSizeInBits()/8;
 	assert (tyBytes && "Access type is 0 bytes???");
-	return getCtxTyGEP(
+
+	key.first = byteOff;
+	key.second = tyBytes;
+	it = gepbyte_map.find(key);
+	if (it != gepbyte_map.end() && entry_bb == builder->GetInsertBlock()) {
+		return it->second;
+	}
+
+	gep = getCtxTyGEP(
 		ConstantInt::get(
 			getGlobalContext(),
 			APInt(32, (byteOff/tyBytes))),
 		accessTy);
+	gepbyte_map.insert(std::make_pair(key, gep));
+
+	return gep;
 }
 
 /* NOTE: offset is in units of accessTy! */
@@ -260,7 +280,7 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "storePtr");
 	si = builder->CreateStore(data_v, addr_ptr);
 	si->setAlignment(8);
-	
+
 }
 
 Value* GenLLVM::load(Value* addr_v, Type* ty)

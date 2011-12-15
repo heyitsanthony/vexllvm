@@ -65,12 +65,19 @@ private:
 	llvm::FunctionType	*funcTy;
 
 	/* current state data */
+	typedef std::map<
+		std::pair<unsigned /*off */, unsigned /* bytes */>,
+		llvm::Value*
+		> gepbyte_map_t;
+
+	gepbyte_map_t		gepbyte_map;
+
 	llvm::Value*		cur_guest_ctx;
 	llvm::Value*		cur_memory_log;
 	unsigned int		memlog_slot;
 
 	llvm::Function*		cur_f;
-	llvm::BasicBlock*	cur_bb;
+	llvm::BasicBlock*	entry_bb;
 	bool			log_last_store;
 
 	bool			fake_vsys_reads;
