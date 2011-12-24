@@ -62,6 +62,8 @@ public:
 	void beginStepping(void);
 	bool stepVSB(void);
 
+	guest_ptr getNextAddr(void) const { return next_addr; }
+
 protected:
 	VexExec(Guest* gs, VexXlate* in_xlate = NULL);
 	virtual guest_ptr doVexSB(VexSB* vsb);
