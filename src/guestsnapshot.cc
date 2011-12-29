@@ -151,6 +151,11 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 			fd,
 			0);
 
+		if (res != 0) {
+			fprintf(stderr, "Failed to addr=%p--%p\n",
+				(void*)begin.o,
+				(void*)(begin.o + length));
+		}
 		assert (res == 0 && "failed to map region on ss load");
 		mem->setType(mmap_addr, map_type);
 
