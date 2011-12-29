@@ -96,7 +96,11 @@ pid_t GuestPTImg::createSlurpedChild(
                 prctl(PR_SET_PDEATHSIG, SIGBUS);
                 prctl(PR_SET_PDEATHSIG, SIGABRT);
 		ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-		err = execvpe(argv[0], argv, envp);
+		if (getenv("VEXLLVM_PRELOAD")) {
+			setenv("LD_PRELOAD", getenv("VEXLLVM_PRELOAD"), 1);
+			err = execvp(argv[0], argv);
+		} else
+			err = execvpe(argv[0], argv, envp);
 		assert (err != -1 && "EXECVE FAILED. NO PTIMG!");
 	}
 
