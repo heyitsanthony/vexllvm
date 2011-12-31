@@ -34,6 +34,9 @@ public:
 	virtual void print(std::ostream& os, const void*) const;
 
 	const char* off2Name(unsigned int off) const;
+
+	virtual unsigned int getRetOff(void) const;
+	virtual unsigned int getStackRegOff(void) const;
 protected:
 	void mkRegCtx(void);
 };

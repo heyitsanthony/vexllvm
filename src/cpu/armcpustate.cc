@@ -302,3 +302,14 @@ void ARMCPUState::setRegs(
 	//mess of broken apart state.
 }
 #endif
+
+unsigned int ARMCPUState::getStackRegOff(void) const
+{
+	return offsetof(VexGuestARMState, guest_R13);
+}
+
+unsigned int ARMCPUState::getRetOff(void) const
+{
+	return offsetof(VexGuestARMState, guest_R0);
+}
+
