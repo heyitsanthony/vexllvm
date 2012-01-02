@@ -31,6 +31,7 @@ ifeq ($(shell llvm-config --version),3.0)
 CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=0
 endif
 
+LLVMCC=clang
 
 # XXX, MAKES BINARY SIZE EXPLODE
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
@@ -178,7 +179,7 @@ bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
 
 SOFTFLOATDIR=support/softfloat/softfloat/bits64
 bitcode/softfloat_lib.bc: $(SOFTFLOATDIR)/softfloat.c
-	cd $(SOFTFLOATDIR)/SPARC-Solaris-GCC/ && llvm-gcc -emit-llvm -I. -I.. -O3 -c  \
+	cd $(SOFTFLOATDIR)/SPARC-Solaris-GCC/ && $(LLVMCC) -emit-llvm -I. -I.. -O3 -c  \
 		../softfloat.c \
 		-o ../../../../../$@
 
@@ -186,7 +187,7 @@ bitcode/softfloat.bc: bitcode/softfloat_lib.bc bitcode/vexops_softfloat.bc
 	$(LLVMLINK) -o $@ $^
 
 bitcode/%.bc: support/%.c
-	llvm-gcc -emit-llvm -O3 -c $< -o $@
+	$(LLVMCC) -emit-llvm -O3 -c $< -o $@
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<
