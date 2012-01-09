@@ -52,8 +52,11 @@ GuestMem::GuestMem(void)
 
 GuestMem::~GuestMem(void)
 {
-	foreach (it, maps.begin(), maps.end())
-		delete it->second;
+	foreach (it, maps.begin(), maps.end()) {
+		Mapping	*m = it->second;
+		::munmap(getHostPtr(m->offset), m->length);
+		delete m;
+	}
 
 	if (syspage_data) delete [] syspage_data;
 }
