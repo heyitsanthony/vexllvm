@@ -484,14 +484,45 @@ Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }
 void GuestPTImg::loadSymbols(void) const
 {
 	std::set<std::string>	mmap_fnames;
+	const char		*preload_lib;
 
 	assert (symbols == NULL && "symbols already loaded");
 	symbols = new Symbols();
+
+	/* This is a really shitty hack to force VEXLLVM_PRELOAD libraries
+	 * to override default symbols. In the future, we need to support
+	 * duplicate symbols */
+	preload_lib = getenv("VEXLLVM_PRELOAD");
+	if (preload_lib != NULL) {
+		guest_ptr	base(0);
+
+		foreach (it, mappings.begin(), mappings.end()) {
+			if ((*it)->getLib() == preload_lib) {
+				base = (*it)->getBase();
+				break;
+			}
+		}
+
+		if (base.o != 0) {
+			Symbols		*new_syms;
+
+			new_syms = ElfDebug::getSyms(preload_lib, base);
+			if (new_syms != NULL) {
+				symbols->addSyms(new_syms);
+				delete new_syms;
+			}
+
+			mmap_fnames.insert(preload_lib);
+		}
+	}
 
 	foreach (it, mappings.begin(), mappings.end()) {
 		std::string	libname((*it)->getLib());
 		guest_ptr	base((*it)->getBase());
 		Symbols		*new_syms;
+
+		if (libname.size() == 0)
+			continue;
 
 		/* already seen it? */
 		if (mmap_fnames.count(libname) != 0)
