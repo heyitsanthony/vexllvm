@@ -36,6 +36,7 @@
 
 #ifdef __arm__
 #include <linux/prctl.h>
+#include <sys/prctl.h>
 #include "cpu/ptimgarm.h"
 #endif
 
