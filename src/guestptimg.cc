@@ -494,6 +494,7 @@ void GuestPTImg::loadSymbols(void) const
 	 * duplicate symbols */
 	preload_lib = getenv("VEXLLVM_PRELOAD");
 	if (preload_lib != NULL) {
+		Symbols		*new_syms;
 		guest_ptr	base(0);
 
 		foreach (it, mappings.begin(), mappings.end()) {
@@ -503,17 +504,14 @@ void GuestPTImg::loadSymbols(void) const
 			}
 		}
 
-		if (base.o != 0) {
-			Symbols		*new_syms;
-
-			new_syms = ElfDebug::getSyms(preload_lib, base);
-			if (new_syms != NULL) {
-				symbols->addSyms(new_syms);
-				delete new_syms;
-			}
-
-			mmap_fnames.insert(preload_lib);
+		assert (base.o && "Could not find VEXLLVM_PRELOAD library!");
+		new_syms = ElfDebug::getSyms(preload_lib, base);
+		if (new_syms != NULL) {
+			symbols->addSyms(new_syms);
+			delete new_syms;
 		}
+
+		mmap_fnames.insert(preload_lib);
 	}
 
 	foreach (it, mappings.begin(), mappings.end()) {
