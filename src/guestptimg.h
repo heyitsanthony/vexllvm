@@ -67,6 +67,27 @@ public:
 		return pt_t;
 	}
 
+	template <class T>
+	static T* createAttached(
+		int pid,
+		int argc, char* const argv[], char* const envp[])
+	{
+		GuestPTImg		*pt_img;
+		T			*pt_t;
+		pid_t			slurped_pid;
+
+		pt_t = new T(argc, argv, envp);
+		pt_img = pt_t;
+		slurped_pid = pt_img->createSlurpedAttach(pid);
+		if (slurped_pid <= 0) {
+			delete pt_img;
+			return NULL;
+		}
+
+		pt_img->handleChild(slurped_pid);
+		return pt_t;
+	}
+
 	void printTraceStats(std::ostream& os);
 	static void stackTrace(
 		std::ostream& os, const char* binname, pid_t pid,
@@ -88,7 +109,8 @@ public:
 	PTImgArch* getPTArch(void) { return pt_arch; }
 
 protected:
-	GuestPTImg(int argc, char* const argv[], char* const envp[]);
+	GuestPTImg(int argc, char* const argv[], char* const envp[],
+		bool use_entry=true);
 	virtual void handleChild(pid_t pid);
 
 	void slurpRegisters(pid_t pid);
@@ -98,6 +120,7 @@ protected:
 	PTImgArch	*pt_arch;
 
 private:
+	pid_t createSlurpedAttach(int pid);
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);
 	void slurpBrains(pid_t pid);

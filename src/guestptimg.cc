@@ -44,7 +44,9 @@ using namespace llvm;
 
 static bool dump_maps;
 
-GuestPTImg::GuestPTImg(int argc, char *const argv[], char *const envp[])
+GuestPTImg::GuestPTImg(
+	int argc, char *const argv[], char *const envp[],
+	bool use_entry)
 : Guest(argv[0])
 , pt_arch(NULL)
 , symbols(NULL)
@@ -55,12 +57,15 @@ GuestPTImg::GuestPTImg(int argc, char *const argv[], char *const envp[])
 	mem = new GuestMem();
 	dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
 
-	img = ElfImg::create(argv[0], false);
-	assert (img != NULL && "DOES BINARY EXIST?");
-	assert(img->getArch() == getArch());
+	entry_pt = guest_ptr(0);
+	if (argv[0] != NULL && use_entry)  {
+		img = ElfImg::create(argv[0], false);
+		assert (img != NULL && "DOES BINARY EXIST?");
+		assert(img->getArch() == getArch());
 
-	entry_pt = img->getEntryPoint();
-	delete img;
+		entry_pt = img->getEntryPoint();
+		delete img;
+	}
 
 	cpu_state = GuestCPUState::create(getArch());
 }
@@ -78,12 +83,58 @@ void GuestPTImg::handleChild(pid_t pid)
 	wait(NULL);
 }
 
+
+#if defined(__amd64__)
+#define NEW_ARCH	new PTImgAMD64(this, pid);
+#elif defined(__arm__)
+#define NEW_ARCH	new PTImgARM(this, pid);
+#else
+#define NEW_ARCH	0; assert (0 == 1 && "UNKNOWN PTRACE HOST ARCHITECTURE! AIEE");
+#endif
+
+
+pid_t GuestPTImg::createSlurpedAttach(int pid)
+{
+	int	err, status;
+
+	// assert (entry_pt.o == 0 && "Only support attaching immediately");
+	fprintf(stderr, "Attaching to PID=%d\n", pid);
+
+	pt_arch = NEW_ARCH;
+
+	err = ptrace(PTRACE_ATTACH, pid, 0, NULL, NULL);
+	assert (err != -1 && "Couldn't attach to process");
+
+	wait(&status);
+	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSTOP);
+
+	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
+	wait(&status);
+	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+
+	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
+	wait(&status);
+	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+
+	/* slurp brains after trap code is removed so that we don't
+	 * copy the trap code into the parent process */
+	slurpBrains(pid);
+
+//	entry_pt = guest_ptr(getCPUState()->getPC().o - 2);
+	entry_pt = getCPUState()->getPC();
+
+
+	return pid;
+}
+
 pid_t GuestPTImg::createSlurpedChild(
 	int argc, char *const argv[], char *const envp[])
 {
 	int			err, status;
 	pid_t			pid;
 	guest_ptr		break_addr;
+
+	assert (entry_pt.o && "No entry point given to slurp");
 
 	pid = fork();
 	if (pid == 0) {
@@ -108,13 +159,7 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* failed to create child */
 	if (pid < 0) return pid;
 
-#if defined(__amd64__)
-	pt_arch = new PTImgAMD64(this, pid);
-#elif defined(__arm__)
-	pt_arch = new PTImgARM(this, pid);
-#else
-	assert (0 == 1 && "UNKNOWN PTRACE HOST ARCHITECTURE! AIEE");
-#endif
+	pt_arch = NEW_ARCH;
 
 	/* wait for child to call execve and send us a trap signal */
 	wait(&status);
