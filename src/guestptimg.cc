@@ -28,7 +28,8 @@
 #include "guestptimg.h"
 #include "guestcpustate.h"
 
-#ifdef __amd64__
+#if defined(__amd64__)
+#include <asm/ptrace-abi.h>
 #include <sys/prctl.h>
 #include "cpu/amd64cpustate.h"
 #include "cpu/ptimgamd64.h"
@@ -106,23 +107,37 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	assert (err != -1 && "Couldn't attach to process");
 
 	wait(&status);
+	fprintf(stderr, "ptrace status=%p\n", (void*)status);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSTOP);
+	fprintf(stderr, "Attached to PID=%d\n", pid);
 
 	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
 	wait(&status);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
-
-	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
-	wait(&status);
-	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+//	fprintf(stderr, "Got syscall from PID=%d\n", pid);
+//
+#if defined(__amd64__)
 
 	/* slurp brains after trap code is removed so that we don't
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
 
-//	entry_pt = guest_ptr(getCPUState()->getPC().o - 2);
+	/* URK. syscall's RAX isn't stored in RAX! */
+	struct user_regs_struct	r;
+	err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
+
+	uint8_t* x = (uint8_t*)r.rip;
+	assert (x[-1] == 0x05 && x[-2] == 0x0f && "not syscall opcode?");
+	getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-2));
+	getCPUState()->setSyscallResult(r.orig_rax);
+#else
+	assert (0 == 1 && "CAN'T HANDLE THIS");
+#endif
 	entry_pt = getCPUState()->getPC();
 
+	/* catch and release */
+	// ptrace(PTRACE_CONT, pid, 0, NULL, NULL);
+	ptrace(PTRACE_DETACH, pid, 0, NULL, NULL);
 
 	return pid;
 }
@@ -188,6 +203,26 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* slurp brains after trap code is removed so that we don't
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
+
+#ifdef __amd64__
+	/* XXX there should be a better place for this */
+	/* from glibc, sysdeps/x86_64/elf/start.S
+	 * argc = rsi
+	 * argv = rdx */
+	guest_ptr		in_argv;
+
+	argv_ptrs.clear();
+	argc = mem->readNative(pt_arch->getStackPtr());
+	in_argv = guest_ptr(mem->readNative(pt_arch->getStackPtr(), 1));
+	for (int i = 0; i < argc; i++) {
+		argv_ptrs.push_back(in_argv);
+		in_argv.o += mem->strlen(in_argv) + 1;
+	}
+#else
+	fprintf(stderr,
+		"[VEXLLVM] WARNING: can not get argv for current arch\n");
+#endif
+
 
 	return pid;
 }
@@ -441,26 +476,6 @@ void GuestPTImg::slurpBrains(pid_t pid)
 {
 	slurpMappings(pid);
 	slurpRegisters(pid);
-
-#ifdef __amd64__
-	/* XXX there should be a better place for this */
-	/* from glibc, sysdeps/x86_64/elf/start.S
-	 * argc = rsi
-	 * argv = rdx */
-	guest_ptr		argv;
-	unsigned int		argc;
-
-	argv_ptrs.clear();
-	argc = mem->readNative(pt_arch->getStackPtr());
-	argv = guest_ptr(mem->readNative(pt_arch->getStackPtr(), 1));
-	for (unsigned int i = 0; i < argc; i++) {
-		argv_ptrs.push_back(argv);
-		argv.o += mem->strlen(argv) + 1;
-	}
-#else
-	fprintf(stderr,
-		"[VEXLLVM] WARNING: can not get argv for current arch\n");
-#endif
 }
 
 void GuestPTImg::stackTrace(
@@ -512,8 +527,7 @@ void GuestPTImg::stackTrace(
 			"info registers all",
 			"--eval-command",
 			"kill",
-			NULL
-		);
+			(char*)NULL);
 		exit(1);
 	}
 
