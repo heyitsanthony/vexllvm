@@ -76,7 +76,7 @@ public:
 		T			*pt_t;
 		pid_t			slurped_pid;
 
-		pt_t = new T(argc, argv, envp);
+		pt_t = new T(argc, argv, envp, false /* ignore binary */);
 		pt_img = pt_t;
 		slurped_pid = pt_img->createSlurpedAttach(pid);
 		if (slurped_pid <= 0) {

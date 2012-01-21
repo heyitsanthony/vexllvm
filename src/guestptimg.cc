@@ -53,14 +53,12 @@ GuestPTImg::GuestPTImg(
 , symbols(NULL)
 , dyn_symbols(NULL)
 {
-	ElfImg		*img;
-
 	mem = new GuestMem();
 	dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
 
 	entry_pt = guest_ptr(0);
 	if (argv[0] != NULL && use_entry)  {
-		img = ElfImg::create(argv[0], false);
+		ElfImg	*img = ElfImg::create(argv[0], false);
 		assert (img != NULL && "DOES BINARY EXIST?");
 		assert(img->getArch() == getArch());
 
