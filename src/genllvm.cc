@@ -88,6 +88,7 @@ Function* GenLLVM::endBB(Value* retVal)
 	builder->CreateRet(retVal);
 
 	gepbyte_map.clear();
+	ctxcast_map.clear();
 	ret_f = cur_f;
 	cur_f = NULL;
 	entry_bb = NULL;
@@ -226,14 +227,24 @@ Value* GenLLVM::getCtxByteGEP(unsigned int byteOff, Type* accessTy)
 /* NOTE: offset is in units of accessTy! */
 Value* GenLLVM::getCtxTyGEP(Value* off, Type* accessTy)
 {
-	Type*	ptrTy;
+	ctxcast_map_t::const_iterator	cc_it;
+	Type		*ptrTy;
 	Value		*addr_ptr, *ret; /* XXX assuming access are aligned */
 	const char	*gep_name;
 	unsigned int	access_bytes;
 
 	ptrTy = PointerType::get(accessTy, 0);
-
-	addr_ptr = builder->CreateBitCast(cur_guest_ctx, ptrTy, "regCtxPtr");
+	cc_it = ctxcast_map.find(ptrTy);
+	if (entry_bb != builder->GetInsertBlock()) {
+		addr_ptr = builder->CreateBitCast(
+			cur_guest_ctx, ptrTy, "regCtxPtr");
+	} else if (cc_it == ctxcast_map.end()) {
+		addr_ptr = builder->CreateBitCast(
+			cur_guest_ctx, ptrTy, "regCtxPtr");
+		ctxcast_map[ptrTy] = addr_ptr;
+	} else {
+		addr_ptr = cc_it->second;
+	}
 
 	gep_name = NULL;
 	access_bytes = (accessTy->getPrimitiveSizeInBits()/8);

@@ -69,8 +69,10 @@ private:
 		std::pair<unsigned /*off */, unsigned /* bytes */>,
 		llvm::Value*
 		> gepbyte_map_t;
+	typedef std::map<llvm::Type*, llvm::Value*> ctxcast_map_t;
 
 	gepbyte_map_t		gepbyte_map;
+	ctxcast_map_t		ctxcast_map;
 
 	llvm::Value*		cur_guest_ctx;
 	llvm::Value*		cur_memory_log;
