@@ -24,6 +24,9 @@ using namespace std;
 #define SYSPAGE_ADDR	guest_ptr(0xffff0000)
 #endif
 
+#define BUFSZ		1024
+#define BUFSZ_STR	"1024"	/* ugh, stringification is fucked */
+
 GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 {
 	GuestSnapshot	*ret;
@@ -39,8 +42,8 @@ GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 
 #define SETUP_F_R(x)			\
 	{ FILE		*f;		\
-	char 		buf[512];	\
-	snprintf(buf, 512, "%s/%s", dirpath, x);	\
+	char 		buf[BUFSZ];	\
+	snprintf(buf, BUFSZ, "%s/%s", dirpath, x);	\
 	f = fopen(buf, "r");				\
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
@@ -55,7 +58,7 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 
 	SETUP_F_R("binpath")
 	const char	*fget_buf;
-	fget_buf = fgets(buf, 512, f);
+	fget_buf = fgets(buf, BUFSZ, f);
 	assert (fget_buf == buf);
 	setBinPath(buf);
 	END_F()
@@ -110,7 +113,7 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 		break;
 	}
 
-	while (fgets(buf, 512, f) != NULL) {
+	while (fgets(buf, BUFSZ, f) != NULL) {
 		guest_ptr			begin, end, mmap_addr;
 		size_t				length;
 		int				prot, fd, item_c;
@@ -124,7 +127,7 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 
 		length =(uintptr_t)end - (uintptr_t)begin;
 
-		snprintf(buf, 512, "%s/maps/%p", dirpath, (void*)begin.o);
+		snprintf(buf, BUFSZ, "%s/maps/%p", dirpath, (void*)begin.o);
 		fd = open(buf, O_RDONLY);
 		assert (fd != -1);
 
@@ -176,7 +179,10 @@ Symbols* GuestSnapshot::loadSymbols(const char* dirpath, const char* name)
 		unsigned int	elems;
 		uint64_t	begin, end;
 
-		elems = fscanf(f, "%s %"PRIx64"-%"PRIx64"\n", buf, &begin, &end);
+		elems = fscanf(
+			f,
+			"%"BUFSZ_STR"s %"PRIx64"-%"PRIx64"\n",
+			buf, &begin, &end);
 		if (elems != 3)
 			break;
 		ret->addSym(buf, begin, end - begin);
@@ -198,8 +204,8 @@ GuestSnapshot::~GuestSnapshot(void)
 
 #define SETUP_F_W(x)			\
 	{ FILE		*f;		\
-	char 		buf[512];	\
-	snprintf(buf, 512, "%s/%s", dirpath, x);	\
+	char 		buf[BUFSZ];	\
+	snprintf(buf, BUFSZ, "%s/%s", dirpath, x);	\
 	f = fopen(buf, "w");				\
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
@@ -276,7 +282,7 @@ void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 	SETUP_F_W("mapinfo")
 
 	/* force dir to exist */
-	snprintf(buf, 512, "%s/maps", dirpath);
+	snprintf(buf, BUFSZ, "%s/maps", dirpath);
 	mkdir(buf, 0755);
 
 	/* add mappings */
@@ -293,7 +299,7 @@ void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 			mapping.req_prot,
 			(int)mapping.type);
 
-		snprintf(buf, 512, "%s/maps/%p", dirpath,
+		snprintf(buf, BUFSZ, "%s/maps/%p", dirpath,
 			(void*)mapping.offset.o);
 		map_f = fopen(buf, "w");
 		assert (map_f && "Couldn't open mem range file");
