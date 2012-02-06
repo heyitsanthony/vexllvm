@@ -9,7 +9,7 @@ ifeq ($(shell uname -m), armv7l)
 CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed 
 endif
 
-CFLAGS += -lssl -g -O3 -I`pwd`/src/
+CFLAGS += -lssl -g -O3 -I`pwd`/src/ -lcrypto
 
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
@@ -100,7 +100,9 @@ LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
 LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
 
-VALGRIND_TRUNK=/opt/valgrind-trunk
+ifndef VALGRIND_TRUNK
+VALGRIND_TRUNK=/home4/ajromano/valgrind
+endif
 HAS_VALGRIND_TRUNK=$(shell [ -d $(VALGRIND_TRUNK) ] && echo \'yes\' )
 ifeq ($(HAS_VALGRIND_TRUNK), 'yes')
 	VEXLIB=$(VALGRIND_TRUNK)/lib/valgrind/libvex-amd64-linux.a
@@ -187,7 +189,7 @@ bitcode/softfloat.bc: bitcode/softfloat_lib.bc bitcode/vexops_softfloat.bc
 	$(LLVMLINK) -o $@ $^
 
 bitcode/%.bc: support/%.c
-	$(LLVMCC) -emit-llvm -O3 -c $< -o $@
+	$(LLVMCC) $(CFLAGS) -emit-llvm -O3 -c $< -o $@
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<
