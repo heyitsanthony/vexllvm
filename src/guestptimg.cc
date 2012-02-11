@@ -52,6 +52,7 @@ GuestPTImg::GuestPTImg(
 , pt_arch(NULL)
 , symbols(NULL)
 , dyn_symbols(NULL)
+, arch(Arch::getHostArch())
 {
 	mem = new GuestMem();
 	dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
@@ -125,9 +126,16 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
 
 	uint8_t* x = (uint8_t*)r.rip;
-	assert (x[-1] == 0x05 && x[-2] == 0x0f && "not syscall opcode?");
+	assert (((x[-1] == 0x05 && x[-2] == 0x0f) /* syscall */ ||
+		(x[-2] == 0xcd && x[-1] == 0x80) /* int0x80 */)
+		&& "not syscall opcode?");
 	getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-2));
 	getCPUState()->setSyscallResult(r.orig_rax);
+
+	if (x[-2] == 0xcd) {
+		/* XXX:int only used by i386, never amd64? */
+		arch = Arch::I386;
+	}
 #else
 	assert (0 == 1 && "CAN'T HANDLE THIS");
 #endif
@@ -535,8 +543,6 @@ void GuestPTImg::stackTrace(
 	while ((bytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
 		os.write(buffer, bytes);
 }
-
-Arch::Arch GuestPTImg::getArch() const {  return Arch::getHostArch(); }
 
 void GuestPTImg::loadSymbols(void) const
 {

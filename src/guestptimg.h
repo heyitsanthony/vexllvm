@@ -95,7 +95,7 @@ public:
 		guest_ptr range_end = guest_ptr(0));
 
 	static void dumpSelfMap(void);
-	virtual Arch::Arch getArch() const;
+	virtual Arch::Arch getArch() const { return arch; }
 
 	virtual const Symbols* getSymbols(void) const;
 	virtual const Symbols* getDynSymbols(void) const;
@@ -134,6 +134,8 @@ private:
 	mutable Symbols			*symbols; // lazy loaded
 	mutable Symbols			*dyn_symbols;
 	std::vector<guest_ptr>		argv_ptrs;
+
+	Arch::Arch			arch;
 };
 
 #endif
