@@ -117,13 +117,16 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 		guest_ptr			begin, end, mmap_addr;
 		size_t				length;
 		int				prot, fd, item_c;
+		char				name_buf[512];
 		GuestMem::Mapping::MapType	map_type;
 
+		name_buf[0] = '\0';
 		item_c = sscanf(
 			buf,
-			"%p-%p %d %d\n",
-			(void**)&begin, (void**)&end, &prot, (int*)&map_type);
-		assert (item_c == 4);
+			"%p-%p %d %d %s\n",
+			(void**)&begin, (void**)&end, &prot,
+			(int*)&map_type, name_buf);
+		assert (item_c >= 4);
 
 		length =(uintptr_t)end - (uintptr_t)begin;
 
@@ -138,7 +141,8 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 			ssize_t	sz;
 			sz = read(fd, sysp_buf, length);
 			assert (sz == (ssize_t)length);
-			mem->addSysPage(guest_ptr(begin), sysp_buf, length);
+			mem->addSysPage(begin, sysp_buf, length);
+			mem->nameMapping(begin, name_buf);
 			close(fd);
 			continue;
 		}
@@ -161,6 +165,7 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 		}
 		assert (res == 0 && "failed to map region on ss load");
 		mem->setType(mmap_addr, map_type);
+		mem->nameMapping(mmap_addr, name_buf);
 
 		fd_list.push_back(fd);
 	}
@@ -292,12 +297,13 @@ void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
 		GuestMem::Mapping	mapping(*it);
 		ssize_t			sz;
 
-		/* range, prot, type */
-		fprintf(f, "%p-%p %d %d\n",
+		/* range, prot, type, name */
+		fprintf(f, "%p-%p %d %d %s\n",
 			(void*)mapping.offset.o,
 			(void*)mapping.end().o,
 			mapping.req_prot,
-			(int)mapping.type);
+			(int)mapping.type,
+			mapping.getName().c_str());
 
 		snprintf(buf, BUFSZ, "%s/maps/%p", dirpath,
 			(void*)mapping.offset.o);

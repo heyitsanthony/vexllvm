@@ -469,6 +469,7 @@ void GuestPTImg::slurpMappings(pid_t pid)
 
 		mapping = new PTImgMapEntry(mem, pid, line_buf);
 		mappings.add(mapping);
+		mem->nameMapping(mapping->getBase(), mapping->getLib());
 	}
 	fclose(f);
 }

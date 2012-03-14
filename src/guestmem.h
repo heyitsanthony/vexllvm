@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <string.h>
+#include "collection.h"
 #include "guestptr.h"
 
 /* oh good, MAP_32BIT isn't defined in the ARM headers */
@@ -24,39 +25,43 @@ public:
 
 	Mapping(void) : offset(0), length(0), type(REG) {}
 
-	Mapping(guest_ptr in_off, size_t in_len, int prot)
+	Mapping(guest_ptr in_off, size_t in_len, int prot,
+		const std::string* _name=0)
 	: offset(in_off)
 	, length(in_len)
 	, req_prot(prot)
 	, cur_prot(prot)
-	, type(REG) {}
+	, type(REG)
+	, name(_name) {}
 
 	virtual ~Mapping(void) {}
 
 	guest_ptr end() const { return offset + length; }
 
 	bool contains(guest_ptr p) const
-	{
-		return (p >= offset && p < offset + length);
-	}
+	{ return (p >= offset && p < offset + length); }
 
 	unsigned int getBytes(void) const { return length; }
 	int getReqProt(void) const { return req_prot; }
 	int getCurProt(void) const { return cur_prot; }
 	void print(std::ostream& os) const;
 
+	std::string getName(void) const { return (name) ? *name : ""; }
+
 	bool isValid() const { return offset && length; }
 
-	guest_ptr	offset;
-	size_t		length;
-	int		req_prot;
-	int		cur_prot;
-	MapType		type;
+	guest_ptr		offset;
+	size_t			length;
+	int			req_prot;
+	int			cur_prot;
+	MapType			type;
+	const std::string	*name;
 };
 
 	GuestMem(void);
 	virtual ~GuestMem(void);
 
+	void nameMapping(guest_ptr addr, const std::string& s);
 	void recordMapping(Mapping& mapping);
 	bool lookupMapping(guest_ptr addr, Mapping& mapping);
 	std::list<Mapping> getMaps(void) const;
@@ -151,6 +156,8 @@ private:
 	bool		force_flat;
 
 	char*		syspage_data;
+
+	PtrList<std::string>	mapping_names;
 };
 
 #endif

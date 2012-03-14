@@ -739,3 +739,22 @@ void GuestMem::addSysPage(guest_ptr p, char* host_data, unsigned int len)
 	assert (mmap_ret != MAP_FAILED);
 	memcpy(m.offset, host_data, len);
 }
+
+void GuestMem::nameMapping(guest_ptr addr, const std::string& s)
+{
+	const GuestMem::Mapping* m;
+
+	if (s.size() == 0)
+		return;
+
+	if ((m = lookupMapping(addr)) == NULL)
+		return;
+
+	std::string	*new_s;
+
+	new_s = new std::string(s);
+	mapping_names.push_back(new_s);
+
+	/* fuck it */
+	const_cast<GuestMem::Mapping*>(m)->name = new_s;
+}
