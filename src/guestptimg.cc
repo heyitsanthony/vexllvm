@@ -371,7 +371,13 @@ void PTImgMapEntry::ptraceCopyRange(pid_t pid, guest_ptr m_beg,
 	while (copy_addr != m_end) {
 		long peek_data;
 		peek_data = ptrace(PTRACE_PEEKDATA, pid, copy_addr.o, NULL);
+		if (peek_data == -1 && errno) {
+			fprintf(stderr,
+				"Bad access: addr=%p err=%s\n", 
+				(void*)copy_addr.o, strerror(errno));
+		}
 		assert (peek_data != -1 || errno == 0);
+
 		if (mem->read<long>(copy_addr) != peek_data) {
 			mem->write(copy_addr, peek_data);
 		}
