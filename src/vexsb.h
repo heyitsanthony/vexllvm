@@ -54,7 +54,8 @@ public:
 	/* hopefully VEX only puts one syscall in each block... */
 	bool isSyscall(void) const {
 		return (jump_kind == Ijk_Sys_syscall ||
-			jump_kind == Ijk_Sys_int128);
+			jump_kind == Ijk_Sys_int128 ||
+			jump_kind == Ijk_Sys_sysenter);
 	}
 	guest_ptr getGuestAddr(void) const { return guest_addr; }
 	unsigned int getSize(void) const

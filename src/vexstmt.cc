@@ -389,6 +389,8 @@ VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 	case Ijk_Ret: exit_type = (uint8_t)GE_RETURN; break;
 	case Ijk_Sys_int128: exit_type = (uint8_t)GE_SYSCALL; break;
 	case Ijk_Sys_syscall: exit_type = (uint8_t)GE_SYSCALL; break;
+	case Ijk_Sys_sysenter: exit_type = (uint8_t)GE_SYSCALL; break;
+	case Ijk_MapFail: /* shows up with ldt/gdt stuff-- fake as sigsegv */
 	case Ijk_SigSEGV: exit_type = (uint8_t)GE_SIGSEGV; break;
 	case Ijk_EmWarn: exit_type = (uint8_t)GE_EMWARN; break;
 	/* it is allowed to have one of these show up in arm code. it has

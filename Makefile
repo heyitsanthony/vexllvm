@@ -90,7 +90,8 @@ endif
 
 ifeq ($(shell uname -m), x86_64)
 VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
-OBJDEPS +=	cpu/ptimgamd64.o
+OBJDEPS +=	cpu/ptimgamd64.o	\
+		cpu/ptimgi386.o
 endif
 
 LLVMCONFIG_PATH=llvm-config

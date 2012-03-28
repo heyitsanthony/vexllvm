@@ -25,12 +25,10 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
 	uint64_t getExitCode(void) const;
+	void setGDT(guest_ptr);
+	void setLDT(guest_ptr);
 	
 	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
-#ifdef __i386__
-	void setRegs(const user_regs_struct& regs, 
-		const user_fpregs_struct& fpregs);
-#endif
 	void print(std::ostream& os, const void*) const;
 
 	const char* off2Name(unsigned int off) const;

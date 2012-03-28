@@ -28,10 +28,10 @@ I386CPUState::I386CPUState()
 	state2i386()->guest_DFLAG = 1;
 }
 
-I386CPUState::~I386CPUState()
-{
-	delete [] state_data;
-}
+void I386CPUState::setGDT(guest_ptr g) { state2i386()->guest_GDT = g.o; }
+void I386CPUState::setLDT(guest_ptr g) { state2i386()->guest_LDT = g.o; }
+
+I386CPUState::~I386CPUState() {	delete [] state_data; }
 
 void I386CPUState::setPC(guest_ptr ip) { state2i386()->guest_EIP = ip; }
 

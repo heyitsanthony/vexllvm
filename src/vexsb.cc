@@ -176,6 +176,8 @@ llvm::Function* VexSB::emit(const char* fname)
 	case Ijk_Ret:
 		theGenLLVM->setExitType(GE_RETURN);
 		break;
+
+	case Ijk_Sys_sysenter:
 	case Ijk_Sys_syscall:
 	case Ijk_Sys_int128:
 		theGenLLVM->setExitType(GE_SYSCALL);
@@ -270,11 +272,21 @@ Value* VexSB::getRegValue(unsigned int reg_idx) const
 llvm::Type* VexSB::getRegType(unsigned int reg_idx) const
 { return theGenLLVM->vexTy2LLVM(types[reg_idx]); }
 
+
+/* jump past the backjump on the linux trampoline */
+#define LINUX_SYSENTER_TRAMPOLINE_OFFSET	9
 void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 {
 	jump_kind = jk;
 
 	switch(jk) {
+	case Ijk_Sys_sysenter:
+		delete blk_next;
+		/* stupid linuxism-- fake out the vsyscall page */
+		jump_expr = new VexExprConstU32(
+			stmts.back(),
+			getEndAddr().o+LINUX_SYSENTER_TRAMPOLINE_OFFSET);
+		break;
 	case Ijk_Call:
 	case Ijk_Ret:
 	case Ijk_Boring:

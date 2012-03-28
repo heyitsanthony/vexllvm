@@ -33,6 +33,7 @@
 #include <sys/prctl.h>
 #include "cpu/amd64cpustate.h"
 #include "cpu/ptimgamd64.h"
+#include "cpu/ptimgi386.h"
 #endif
 
 #ifdef __arm__
@@ -67,6 +68,13 @@ GuestPTImg::GuestPTImg(
 		delete img;
 	}
 
+#if defined(__amd64__)
+	if (getenv("VEXLLVM_32_ARCH")) {
+		arch = Arch::I386;
+		mem->mark32Bit();
+	}
+#endif
+
 	cpu_state = GuestCPUState::create(getArch());
 }
 
@@ -85,7 +93,10 @@ void GuestPTImg::handleChild(pid_t pid)
 
 
 #if defined(__amd64__)
-#define NEW_ARCH	new PTImgAMD64(this, pid);
+#define NEW_ARCH	\
+	(!getenv("VEXLLVM_32_ARCH"))	\
+	? (PTImgArch*)(new PTImgAMD64(this, pid))	\
+	: (PTImgArch*)(new PTImgI386(this, pid))
 #elif defined(__arm__)
 #define NEW_ARCH	new PTImgARM(this, pid);
 #else
@@ -121,20 +132,31 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
 
-	/* URK. syscall's RAX isn't stored in RAX! */
-	struct user_regs_struct	r;
-	err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
+	/* URK. syscall's RAX isn't stored in RAX!?? */
+	uint8_t* x = (uint8_t*)getMem()->getHostPtr(getCPUState()->getPC());
 
-	uint8_t* x = (uint8_t*)r.rip;
-	assert (((x[-1] == 0x05 && x[-2] == 0x0f) /* syscall */ ||
-		(x[-2] == 0xcd && x[-1] == 0x80) /* int0x80 */)
+	assert ((((x[-1] == 0x05 && x[-2] == 0x0f) /* syscall */ ||
+		(x[-2] == 0xcd && x[-1] == 0x80) /* int0x80 */) ||
+		(x[-2] == 0xeb && x[-1] == 0xf3)) /* sysenter nop trampoline*/
 		&& "not syscall opcode?");
-	getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-2));
-	getCPUState()->setSyscallResult(r.orig_rax);
 
-	if (x[-2] == 0xcd) {
+	if (x[-2] == 0xcd || x[-2] == 0xeb) {
 		/* XXX:int only used by i386, never amd64? */
-		arch = Arch::I386;
+		assert (arch == Arch::I386);
+
+		if (x[-2] == 0xcd) {
+			getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-2));
+		} else {
+			/* backup to sysenter */
+			getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-11));
+		}
+	} else {
+		struct user_regs_struct	r;
+		err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
+		assert (err == 0);
+
+		getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-2));
+		getCPUState()->setSyscallResult(r.orig_rax);
 	}
 #else
 	assert (0 == 1 && "CAN'T HANDLE THIS");
@@ -245,7 +267,7 @@ int PTImgMapEntry::getProt(void) const
 }
 
 #ifdef __amd64__
-#define STACK_EXTEND_BYTES	0x200000
+#define STACK_EXTEND_BYTES	0x20000
 #else
 #define STACK_EXTEND_BYTES	0x1000
 #endif
@@ -373,7 +395,7 @@ void PTImgMapEntry::ptraceCopyRange(pid_t pid, guest_ptr m_beg,
 		peek_data = ptrace(PTRACE_PEEKDATA, pid, copy_addr.o, NULL);
 		if (peek_data == -1 && errno) {
 			fprintf(stderr,
-				"Bad access: addr=%p err=%s\n", 
+				"Bad access: addr=%p err=%s\n",
 				(void*)copy_addr.o, strerror(errno));
 		}
 		assert (peek_data != -1 || errno == 0);
@@ -649,7 +671,7 @@ void GuestPTImg::loadDynSymbols(void) const
 	assert (dyn_symbols == NULL && "symbols already loaded");
 	dyn_symbols = new Symbols();
 
-	/* XXX, in the future, we should look at what is in the 
+	/* XXX, in the future, we should look at what is in the
 	 * jump slots, for now, we rely on the symbol and hope no one
 	 * is jacking the jump table */
 	exec_syms = ElfDebug::getLinkageSyms(getMem(), getBinaryPath());

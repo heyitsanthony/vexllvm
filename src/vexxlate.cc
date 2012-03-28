@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
 
 #include <string>
 #include <list>
@@ -24,7 +25,8 @@ struct vex_cb
 	VexSB*		cb_vexsb;
 };
 
-static vex_cb g_cb;
+static vex_cb 				g_cb;
+static jmp_buf				g_env;
 static std::list<std::string>		xlate_msg_log;
 static VexXlate::VexXlateLogType	log_type;
 
@@ -59,6 +61,11 @@ static IRSB* vex_finaltidy(IRSB* irsb)
 	x = 1;
 	g_cb.cb_vexsb = VexSB::create(guest_ptr(g_cb.cb_guestaddr), irsb);
 	x = 0;
+
+	/* shoot past vex's "mandatory" assembly generation
+	 * no need to worry about leaks-- vex cleans the arena on translate */
+	longjmp(g_env, 1);
+
 	return irsb;
 }
 
@@ -199,6 +206,7 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	vta.archinfo_guest = vai_guest;
 
 	//vta.arch_host = VEX_HOST_ARCH;
+	// this is just lipservice -- we longjmp out of host iselection
 	vta.arch_host = arch;
 
 	vta.archinfo_host = vai_host;
@@ -235,11 +243,15 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 		vta.dispatch_unassisted = (void*)(0x1234beef);
 	}
 
-	/* XXX: TJ's trunk only? Delete if you don't remember TJ */
-	// vta.irsb_only = true;
 	vta.needs_self_check = vex_needs_self_check;
 
-	res = LibVEX_Translate(&vta);
+	if (setjmp(g_env) == 0) {
+		res = LibVEX_Translate(&vta);
+	} else {
+		/* parachuted out of finaltidy */
+		res.status = VexTranslateResult::VexTransOK;
+	}
+
 	if (res.status == VexTranslateResult::VexTransAccessFail)
 		return NULL;
 
