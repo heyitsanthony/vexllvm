@@ -23,11 +23,15 @@ ifndef ARMTRACECC
 ARMTRACECC=arm-linux-gnueabi-gcc
 endif
 
-ifeq ($(shell llvm-config --version),2.9)
+ifndef LLVMCONFIG_PATH
+LLVMCONFIG_PATH = llvm-config
+endif
+
+ifeq ($(shell $(LLVMCONFIG_PATH) --version),2.9)
 CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=9
 endif
 
-ifeq ($(shell llvm-config --version),3.0)
+ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.0)
 CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=0
 endif
 
@@ -96,7 +100,7 @@ OBJDEPS +=	cpu/ptimgamd64.o	\
 		cpu/ptimgi386.o
 endif
 
-LLVMCONFIG_PATH=llvm-config
+#LLVMCONFIG_PATH=llvm-config
 CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)
 LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
 LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
