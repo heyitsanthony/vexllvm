@@ -46,13 +46,6 @@ ElfSegment* ElfSegment::load(GuestMem* mem, int fd, const Elf_Phdr& phdr,
 	return new ElfSegment(mem, fd, phdr, reloc);
 }
 
-template
-ElfSegment::ElfSegment<Elf32_Phdr>(GuestMem* mem, int fd, const Elf32_Phdr& phdr,
-	uintptr_t in_reloc);
-template
-ElfSegment::ElfSegment<Elf64_Phdr>(GuestMem* mem, int fd, const Elf64_Phdr& phdr,
-	uintptr_t in_reloc);
-
 /* Always mmap in the segment. */
 template <typename Elf_Phdr>
 ElfSegment::ElfSegment(GuestMem* in_mem, int fd, const Elf_Phdr& phdr,

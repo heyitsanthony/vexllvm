@@ -32,6 +32,8 @@ CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=0
 endif
 
 LLVMCC=clang
+#CORECC=g++-4.4.5
+CORECC=g++
 
 # XXX, MAKES BINARY SIZE EXPLODE
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
@@ -196,10 +198,10 @@ obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<
 
 obj/%.o: src/%.cc src/%.h
-	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
+	$(CORECC) $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
 
 obj/%.o: src/%.cc
-	g++ $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
+	$(CORECC) $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
 
 # TEST DATA
 TRACEDEPS= nested_call strlen strrchr 	\
