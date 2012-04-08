@@ -23,6 +23,8 @@ public:
 	int getProt(void) const;
 	std::string getLib() const { return libname; }
 private:
+	void copyRange(pid_t pid, guest_ptr m_beg, guest_ptr m_end);
+	bool procMemCopy(pid_t pid, guest_ptr m_beg, guest_ptr m_end);
 	void ptraceCopy(pid_t pid, int prot);
 	void ptraceCopyRange(pid_t pid, guest_ptr m_beg, guest_ptr m_end);
 	void mapLib(pid_t pid);

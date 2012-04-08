@@ -302,9 +302,36 @@ void PTImgMapEntry::mapStack(pid_t pid)
 
 	assert (!res && "Could not map stack region");
 
-	ptraceCopyRange(pid,
+	copyRange(pid,
 		mem_begin + STACK_EXTEND_BYTES,
 		mem_end);
+}
+
+bool PTImgMapEntry::procMemCopy(pid_t pid, guest_ptr m_beg, guest_ptr m_end)
+{
+	char	path[128];
+	off_t	off;
+	ssize_t	br;
+	int	fd;
+	bool	ret = false;
+
+	sprintf(path, "/proc/%d/mem", pid);
+	fd = open(path, O_RDONLY);
+	if (fd == -1)
+		return false;
+
+	off = lseek(fd, m_beg.o, SEEK_SET);
+	if (off != (off_t)m_beg.o)
+		goto done;
+
+	br = read(fd, mem->getHostPtr(m_beg), m_end - m_beg);
+	if (br != (ssize_t)(m_end - m_beg))
+		goto done;
+
+	ret = true;
+done:
+	close(fd);
+	return ret;
 }
 
 void PTImgMapEntry::mapAnon(pid_t pid)
@@ -324,6 +351,10 @@ void PTImgMapEntry::mapAnon(pid_t pid)
 		flags | MAP_FIXED,
 		mmap_fd,
 		off);
+	if (res) {
+		fprintf(stderr, "Failed to map base=%p. len=%p.\n",
+			(void*)mmap_base.o, (void*)getByteCount());
+	}
 	assert (!res && "Could not map anonymous region");
 
 	ptraceCopy(pid, prot);
@@ -380,8 +411,21 @@ void PTImgMapEntry::mapLib(pid_t pid)
 		ptraceCopy(pid, prot);
 }
 
-void PTImgMapEntry::ptraceCopyRange(pid_t pid, guest_ptr m_beg,
-	guest_ptr m_end)
+void PTImgMapEntry::copyRange(
+	pid_t pid, guest_ptr m_beg, guest_ptr m_end)
+{
+	/* no need to copy reserved pages */
+	if (getProt() == 0)
+		return;
+
+	if (procMemCopy(pid, m_beg, m_end))
+		return;
+
+	ptraceCopyRange(pid, m_beg, m_end);
+}
+
+void PTImgMapEntry::ptraceCopyRange(
+	pid_t pid, guest_ptr m_beg, guest_ptr m_end)
 {
 	assert((m_beg & (sizeof(long) - 1)) == 0);
 	assert((m_end & (sizeof(long) - 1)) == 0);
@@ -417,7 +461,7 @@ void PTImgMapEntry::ptraceCopy(pid_t pid, int prot)
 		assert(!res && "granting temporary write permission failed");
 	}
 
-	ptraceCopyRange(pid, mem_begin, mem_end);
+	copyRange(pid, mem_begin, mem_end);
 
 	if (!(prot & PROT_WRITE)) {
 		int res = mem->mprotect(mmap_base, getByteCount(), prot);
