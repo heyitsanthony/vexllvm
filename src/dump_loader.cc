@@ -25,7 +25,7 @@ static bool loadEntry(
 	if(is.fail()) return false;
 	is.get();
 
-	PTImgMapEntry m(mem, pid, line_buf);
+	ProcMap m(mem, pid, line_buf);
 
 	std::cerr << m.getBase()
 		<< " sz: " << (void*)m.getByteCount()

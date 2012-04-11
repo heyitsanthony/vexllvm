@@ -5,44 +5,10 @@
 #include <map>
 #include "collection.h"
 #include "guest.h"
+#include "procmap.h"
 
 class Symbols;
 class PTImgArch;
-
-class PTImgMapEntry
-{
-public:
-	PTImgMapEntry(GuestMem* mem, pid_t pid, const char* mapline);
-	virtual ~PTImgMapEntry(void);
-	unsigned int getByteCount() const
-	{
-		return ((uintptr_t)mem_end - (uintptr_t)mem_begin);
-	}
-	guest_ptr getBase(void) const { return mem_begin; }
-	guest_ptr getEnd(void) const { return getBase() + getByteCount(); }
-	int getProt(void) const;
-	std::string getLib() const { return libname; }
-private:
-	void copyRange(pid_t pid, guest_ptr m_beg, guest_ptr m_end);
-	bool procMemCopy(pid_t pid, guest_ptr m_beg, guest_ptr m_end);
-	void ptraceCopy(pid_t pid, int prot);
-	void ptraceCopyRange(pid_t pid, guest_ptr m_beg, guest_ptr m_end);
-	void mapLib(pid_t pid);
-	void mapAnon(pid_t pid);
-	void mapStack(pid_t pid);
-
-	guest_ptr	mem_begin, mem_end;
-	char		perms[5];
-	uint32_t	off;
-	int		t[2];
-	int		xxx;	/* XXX no idea */
-	char		libname[256];
-
-	guest_ptr	mmap_base;
-	int		mmap_fd;
-
-	GuestMem	*mem;
-};
 
 class GuestPTImg : public Guest
 {
@@ -110,6 +76,11 @@ public:
 
 	PTImgArch* getPTArch(void) { return pt_arch; }
 
+	static Symbols* loadSymbols(const PtrList<ProcMap>& mappings);
+	static Symbols* loadDynSymbols(
+		GuestMem	*mem,
+		const char	*binpath);
+
 protected:
 	GuestPTImg(int argc, char* const argv[], char* const envp[],
 		bool use_entry=true);
@@ -123,15 +94,13 @@ protected:
 
 private:
 	pid_t createSlurpedAttach(int pid);
+	void attachSyscall(int pid);
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);
 	void slurpBrains(pid_t pid);
-	void slurpMappings(pid_t pid);
-	void loadSymbols(void) const;
-	void loadDynSymbols(void) const;
 
 	guest_ptr			entry_pt;
-	PtrList<PTImgMapEntry>		mappings;
+	PtrList<ProcMap>		mappings;
 	std::map<guest_ptr, uint64_t>	breakpoints;
 	mutable Symbols			*symbols; // lazy loaded
 	mutable Symbols			*dyn_symbols;

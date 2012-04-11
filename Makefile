@@ -62,6 +62,8 @@ OBJDEPS=	vexxlate.o		\
 		guestfragment.o		\
 		guestptimg.o		\
 		guestsnapshot.o		\
+		procmap.o		\
+		procargs.o		\
 		cpu/amd64cpustate.o	\
 		cpu/i386cpustate.o	\
 		cpu/armcpustate.o	\
