@@ -466,6 +466,19 @@ BINOP_CLASS(Avg16Sx8);
 BINOP_CLASS(Avg32Ux4);
 BINOP_CLASS(Avg32Sx4);
 
+/* 8x4; 16x2 signed/unsigned halving add/sub. 
+ * For each lane in 8x4,
+ * these compute bits 8:1 of (eg) sx(argL) + sx(argR)
+ * or zx(argL) - zx(argR) etc. */
+BINOP_CLASS(HAdd16Ux2);
+BINOP_CLASS(HAdd16Sx2);
+BINOP_CLASS(HSub16Ux2);
+BINOP_CLASS(HSub16Sx2);
+BINOP_CLASS(HAdd8Ux4);
+BINOP_CLASS(HAdd8Sx4);
+BINOP_CLASS(HSub8Ux4);
+BINOP_CLASS(HSub8Sx4);
+
 BINOP_CLASS(CmpEQ8x8);
 BINOP_CLASS(CmpEQ8x16);
 BINOP_CLASS(CmpEQ16x4);

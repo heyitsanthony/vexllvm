@@ -1436,6 +1436,39 @@ OPAVG_EMIT(Avg16Sx8, get_vt(8 , 16), SExt, get_vt(8 , 32));
 OPAVG_EMIT(Avg32Ux4, get_vt(4 , 32), ZExt, get_vt(4 , 64));
 OPAVG_EMIT(Avg32Sx4, get_vt(4 , 32), SExt, get_vt(4 , 64));
 
+
+#define OPHOP_EMIT(x, vt, aop, ext)				\
+Value* VexExprBinop##x::emit(void) const			\
+{								\
+	BINOP_SETUP						\
+	int	prim_sz = vt->getBitWidth() / vt->getNumElements(); \
+	v1 = builder->CreateBitCast(v1, vt);			\
+	v2 = builder->CreateBitCast(v2, vt);			\
+	Value* ret;						\
+	ret = builder->CreateBitCast(get_c(vt->getBitWidth(), 0), vt); \
+	for(unsigned i = 0; i < vt->getNumElements(); ++i) {	\
+		Value	*e, *lhs, *rhs;	\
+		lhs = builder->CreateExtractElement(v1, get_32i(i));	\
+		rhs = builder->CreateExtractElement(v2, get_32i(i));	\
+		lhs = builder->Create##ext(lhs, get_i(2*prim_sz));	\
+		rhs = builder->Create##ext(rhs, get_i(2*prim_sz));	\
+		e = builder->Create##aop(lhs, rhs);		\
+		e = builder->CreateLShr(e, get_c(prim_sz*2, 1)); \
+		e = builder->CreateTrunc(e, vt->getScalarType()); \
+		ret = builder->CreateInsertElement(ret, e, get_32i(i)); \
+	} \
+	return builder->CreateBitCast(ret, get_i(vt->getBitWidth())); \
+}
+
+OPHOP_EMIT(HAdd16Ux2, get_vt(2, 16), Add, ZExt);
+OPHOP_EMIT(HAdd16Sx2, get_vt(2, 16), Add, SExt);
+OPHOP_EMIT(HSub16Ux2, get_vt(2, 16), Sub, ZExt);
+OPHOP_EMIT(HSub16Sx2, get_vt(2, 16), Sub, SExt);
+OPHOP_EMIT(HAdd8Ux4, get_vt(4, 8), Add, ZExt);
+OPHOP_EMIT(HAdd8Sx4, get_vt(4, 8), Add, SExt);
+OPHOP_EMIT(HSub8Ux4, get_vt(4, 8), Sub, ZExt);
+OPHOP_EMIT(HSub8Sx4, get_vt(4, 8), Sub, SExt);
+
 OPV_CMP_EMIT(CmpEQ8x8 , get_vt(8, 8) , ICmpEQ)
 OPV_CMP_EMIT(CmpEQ8x16, get_vt(16, 8), ICmpEQ)
 OPV_CMP_EMIT(CmpEQ16x4, get_vt(4, 16), ICmpEQ)
