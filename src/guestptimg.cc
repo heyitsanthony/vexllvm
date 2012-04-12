@@ -236,11 +236,18 @@ pid_t GuestPTImg::createSlurpedChild(
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
 
-#ifdef __amd64__
+#if (defined(__amd64__) || defined(__arm__))
 	/* XXX there should be a better place for this */
 	/* from glibc, sysdeps/x86_64/elf/start.S
 	 * argc = rsi
 	 * argv = rdx */
+
+	/* from glibc-ports
+	 * 0(sp)	argc
+	 * 4(sp)	argv[0]
+	 * ...
+	 * (4*argc)(sp)	NULL
+	 */
 	guest_ptr		in_argv;
 
 	argv_ptrs.clear();

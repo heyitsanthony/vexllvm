@@ -27,7 +27,8 @@ const VexGuestARMState& PTImgARM::getVexState(void) const
 bool PTImgARM::isRegMismatch() const { assert (0 == 1 && "STUB"); }
 void PTImgARM::printFPRegs(std::ostream&) const { assert (0 == 1 && "STUB"); }
 void PTImgARM::printUserRegs(std::ostream&) const { assert (0 == 1 && "STUB"); }
-guest_ptr PTImgARM::getStackPtr() const { assert (0 == 1 && "STUB"); }
+guest_ptr PTImgARM::getStackPtr() const
+{ return guest_ptr(getVexState().guest_R13); }
 
 void PTImgARM::slurpRegisters(void)
 {
@@ -49,7 +50,6 @@ void PTImgARM::slurpRegisters(void)
 		(__ptrace_request)PTRACE_GET_THREAD_AREA,
 		child_pid, NULL, &thread_area);
 	assert(err != -1);
-
 
 	arm_cpu_state = (ARMCPUState*)gs->getCPUState();
 	arm_cpu_state->setRegs(&regs, vfpregs, thread_area);
