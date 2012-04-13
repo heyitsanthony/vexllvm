@@ -49,25 +49,29 @@ GuestPTImg::GuestPTImg(
 , dyn_symbols(NULL)
 , arch(Arch::getHostArch())
 {
+	bool	use_32bit_arch;
+
 	mem = new GuestMem();
 	ProcMap::dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
+
+
+	use_32bit_arch = (getenv("VEXLLVM_32_ARCH") != NULL);
 
 	entry_pt = guest_ptr(0);
 	if (argv[0] != NULL && use_entry)  {
 		ElfImg	*img = ElfImg::create(argv[0], false);
 		assert (img != NULL && "DOES BINARY EXIST?");
-		assert(img->getArch() == getArch());
+		assert(img->getArch() == getArch() || use_32bit_arch);
 
 		entry_pt = img->getEntryPoint();
 		delete img;
 	}
 
-#if defined(__amd64__)
-	if (getenv("VEXLLVM_32_ARCH")) {
+	if (use_32bit_arch) {
+		assert (arch == Arch::X86_64);
 		arch = Arch::I386;
 		mem->mark32Bit();
 	}
-#endif
 
 	cpu_state = GuestCPUState::create(getArch());
 }
@@ -88,7 +92,7 @@ void GuestPTImg::handleChild(pid_t pid)
 
 #if defined(__amd64__)
 #define NEW_ARCH	\
-	(!getenv("VEXLLVM_32_ARCH"))	\
+	(arch != Arch::I386)	\
 	? (PTImgArch*)(new PTImgAMD64(this, pid))	\
 	: (PTImgArch*)(new PTImgI386(this, pid))
 #elif defined(__arm__)
@@ -236,7 +240,7 @@ pid_t GuestPTImg::createSlurpedChild(
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
 
-#if (defined(__amd64__) || defined(__arm__))
+#if (defined(__amd64__) || defined(__arm__) || defined(__x86__))
 	/* XXX there should be a better place for this */
 	/* from glibc, sysdeps/x86_64/elf/start.S
 	 * argc = rsi
@@ -261,7 +265,6 @@ pid_t GuestPTImg::createSlurpedChild(
 	fprintf(stderr,
 		"[VEXLLVM] WARNING: can not get argv for current arch\n");
 #endif
-
 
 	return pid;
 }

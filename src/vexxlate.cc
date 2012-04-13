@@ -210,7 +210,14 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	vta.arch_host = arch;
 
 	vta.archinfo_host = vai_host;
-	vbi.guest_stack_redzone_size = 128;	/* I LOVE RED ZONE. BEST ABI BEST.*/
+	if (arch == VexArchX86) {
+		/* vex yelled at me to zero this */
+		vbi.guest_stack_redzone_size = 0;
+	} else {
+		/* amd64 reserves 128 bytes below the stack frame
+		 * for turbo-nerd functions like memcpy. kind of breaks things */
+		vbi.guest_stack_redzone_size = 128;
+	}
 	vbi.guest_amd64_assume_fs_is_zero = true;	/* XXX LIBVEX FIXME */
 	vta.abiinfo_both = vbi;
 

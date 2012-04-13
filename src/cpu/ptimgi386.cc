@@ -9,6 +9,9 @@
 #include "cpu/ptimgi386.h"
 #include "cpu/i386cpustate.h"
 
+#define WARNSTR "[PTimgI386] Warning: "
+#define INFOSTR "[PTimgI386] Info: "
+
 extern "C" {
 #include "valgrind/libvex_guest_x86.h"
 }
@@ -73,9 +76,15 @@ const VexGuestX86State& PTImgI386::getVexState(void) const
 bool PTImgI386::isRegMismatch() const { assert (0 == 1 && "STUB"); }
 void PTImgI386::printFPRegs(std::ostream&) const { assert (0 == 1 && "STUB"); }
 void PTImgI386::printUserRegs(std::ostream&) const { assert (0 == 1 && "STUB"); }
-guest_ptr PTImgI386::getStackPtr() const { assert (0 == 1 && "STUB"); }
 
 #define I386CPU	((I386CPUState*)gs->getCPUState())
+
+guest_ptr PTImgI386::getStackPtr() const
+{
+	uint32_t esp;
+	esp = ((const VexGuestX86State*)I386CPU->getStateData())->guest_ESP;
+	return guest_ptr(esp);
+}
 
 void PTImgI386::slurpRegisters(void)
 {
@@ -119,10 +128,9 @@ void PTImgI386::slurpRegisters(void)
 		setupGDT();
 	}
 
-	fprintf(stderr, "[PTimgI386] Warning: eflags not computed\n");
-	fprintf(stderr, "[PTimgI386] Warning: FP, TLS, etc not supported\n");
+	fprintf(stderr, WARNSTR "eflags not computed\n");
+	fprintf(stderr, WARNSTR "FP, TLS, etc not supported\n");
 }
-
 
 /* I might as well be writing an OS! */
 void PTImgI386::setupGDT(void)
@@ -130,7 +138,7 @@ void PTImgI386::setupGDT(void)
 	guest_ptr	gdt, ldt;
 	VEXSEG		default_ent;
 
-	fprintf(stderr, "[PTimgI386] Warning: Bogus GDT. Bogus LDT\n");
+	fprintf(stderr, WARNSTR "Bogus GDT. Bogus LDT\n");
 
 	default_ent.LdtEnt.Bits.LimitLow = 0xffff;
 	default_ent.LdtEnt.Bits.BaseLow = 0;
@@ -216,8 +224,9 @@ bool PTImgI386::readThreadEntry(unsigned idx, VEXSEG* buf)
 	if (err == -1)
 		return false;
 
-	fprintf(stderr, "TLS[%d]: base=%p. limit=%p\n"
-		"seg_32=%d. contents=%d. seg_not_present=%d. useable=%d\n",
+	fprintf(stderr,
+		INFOSTR "[TLS[%d]: base=%p. limit=%p\n"
+		INFOSTR "seg32=%d. contents=%d. not_present=%d. useable=%d\n",
 		idx, (void*)ud.base_addr, (void*)ud.limit,
 		ud.seg_32bit, ud.contents, ud.seg_not_present, ud.useable);
 
@@ -264,19 +273,20 @@ void PTImgI386::resetBreakpoint(guest_ptr addr, long v)
 
 guest_ptr PTImgI386::undoBreakpoint()
 {
-	struct x86_user_regs	regs;
-	int			err;
+	// struct x86_user_regs	regs;
+	struct user_regs_struct		regs;
+	int				err;
 
 	/* should be halted on our trapcode. need to set rip prior to
 	 * trapcode addr */
 	err = ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
 	assert (err != -1);
 
-	regs.eip--; /* backtrack before int3 opcode */
+	regs.rip--; /* backtrack before int3 opcode */
 	err = ptrace((__ptrace_request)PTRACE_SETREGS, child_pid, NULL, &regs);
 
 	/* run again w/out reseting BP and you'll end up back here.. */
-	return guest_ptr(regs.eip);
+	return guest_ptr((uint32_t)regs.rip);
 }
 
 guest_ptr PTImgI386::getPC() { assert (0 == 1 && "STUB"); }
