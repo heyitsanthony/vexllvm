@@ -119,6 +119,10 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 		break;
 	case Arch::I386:
 		arch = VexArchX86;
+		vai_guest.hwcaps |= VEX_HWCAPS_X86_SSE1;
+		vai_guest.hwcaps |= VEX_HWCAPS_X86_SSE2;
+		vai_guest.hwcaps |= VEX_HWCAPS_X86_SSE3;
+		vai_guest.hwcaps |= VEX_HWCAPS_X86_LZCNT;
 		break;
 	default:
 		assert(!"valid VEX architecture");
@@ -213,6 +217,7 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	if (arch == VexArchX86) {
 		/* vex yelled at me to zero this */
 		vbi.guest_stack_redzone_size = 0;
+		vta.archinfo_host.hwcaps = vai_guest.hwcaps;
 	} else {
 		/* amd64 reserves 128 bytes below the stack frame
 		 * for turbo-nerd functions like memcpy. kind of breaks things */

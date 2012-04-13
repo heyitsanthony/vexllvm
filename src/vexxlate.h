@@ -39,7 +39,8 @@ private:
 	VexAbiInfo		vbi;
 	VexArch			arch;
 
-	/* Only TJ knows what this does. */
+	/* TJ's mystery flag. Traces the front end with super-detailed 
+	 * information for debugging idiot deceoder errors. */
 	bool			trace_fe;
 
 	bool			store_fragments;
