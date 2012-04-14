@@ -719,9 +719,10 @@ void GuestMem::addSysPage(guest_ptr p, char* host_data, unsigned int len)
 	GuestMem::Mapping	m(p, len, PROT_READ | PROT_EXEC);
 	void			*mmap_ret;
 
-	assert (host_data && syspage_data == NULL);
+//	assert (host_data && syspage_data == NULL);
+	if (syspage_data == NULL)
+		syspage_data = host_data;
 
-	syspage_data = host_data;
 	m.type = Mapping::VSYSPAGE;
 	recordMapping(m);
 

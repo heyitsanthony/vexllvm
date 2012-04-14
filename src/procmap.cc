@@ -131,7 +131,8 @@ void ProcMap::mapLib(pid_t pid)
 	int			prot, flags;
 
 	if (	strcmp(libname, "[vsyscall]") == 0 ||
-		strcmp(libname, "[vectors]") == 0)
+		strcmp(libname, "[vectors]") == 0 ||
+		strcmp(libname, "[FAKEtimers]") == 0)
 	{
 		/* the infamous syspage */
 		char	*sysbuf = new char[getByteCount()];
@@ -282,6 +283,7 @@ void ProcMap::slurpMappings(
 	GuestMem* m,
 	PtrList<ProcMap>& ents)
 {
+	ProcMap	*mapping;
 	FILE	*f;
 	char	map_fname[256];
 
@@ -291,7 +293,6 @@ void ProcMap::slurpMappings(
 
 	while (!feof(f)) {
 		char		line_buf[256];
-		ProcMap	*mapping;
 
 		if (fgets(line_buf, 256, f) == NULL)
 			break;
@@ -301,4 +302,19 @@ void ProcMap::slurpMappings(
 		m->nameMapping(mapping->getBase(), mapping->getLib());
 	}
 	fclose(f);
+
+#ifdef __amd64__
+	/* one more, to handle the hidden timers page */
+	/* there is nothing I don't hate about this */
+	
+	/* XXX: fogger seems to only map f000 and not e000. Probably
+	 * going to need a sigsegv handler. Fuckk */
+	mapping = new ProcMap(
+		m,
+		pid,
+		"ffffffffff5fe000-ffffffffff600000  "
+		"r--p 00000000 00:00 0 [FAKEtimers]");
+	ents.add(mapping);
+	m->nameMapping(mapping->getBase(), mapping->getLib());
+#endif
 }
