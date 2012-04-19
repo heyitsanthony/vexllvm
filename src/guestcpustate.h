@@ -82,6 +82,12 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 
 	virtual bool load(const char* fname);
 	virtual bool save(const char* fname);
+
+	/* returns byte offset into raw cpu data that maps to
+	 * corresponding gdb register file offset; returns -1
+	 * if exceeds bounds */
+	virtual int cpu2gdb(int gdb_off) const
+	{ assert (0 ==1 && "STUB"); return -1; }
 protected:
 	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);
 protected:

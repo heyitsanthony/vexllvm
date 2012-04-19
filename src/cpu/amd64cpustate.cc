@@ -279,7 +279,7 @@ void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 
 #ifdef __amd64__
 void AMD64CPUState::setRegs(
-	const user_regs_struct& regs, 
+	const user_regs_struct& regs,
 	const user_fpregs_struct& fpregs)
 {
 	state2amd64()->guest_RAX = regs.rax;
@@ -347,4 +347,47 @@ void AMD64CPUState::resetSyscall(void)
 {
 	state2amd64()->guest_RCX = 0;
 	state2amd64()->guest_R11 = 0;
+}
+
+
+
+#define CPU2GDB_DECL(x)	offsetof(VexGuestAMD64State, guest_##x)
+int cpu2gdb_gpr[16] =
+{
+CPU2GDB_DECL(RAX),
+CPU2GDB_DECL(RBX),
+CPU2GDB_DECL(RCX),
+CPU2GDB_DECL(RDX),
+CPU2GDB_DECL(RSI),
+CPU2GDB_DECL(RDI),
+CPU2GDB_DECL(RBP),
+CPU2GDB_DECL(RSP),
+CPU2GDB_DECL(R8),
+CPU2GDB_DECL(R9),
+CPU2GDB_DECL(R10),
+CPU2GDB_DECL(R11),
+CPU2GDB_DECL(R12),
+CPU2GDB_DECL(R13),
+CPU2GDB_DECL(R14),
+CPU2GDB_DECL(R15)
+};
+
+int AMD64CPUState::cpu2gdb(int gdb_off) const
+{
+	if (gdb_off < 8*16)
+		return cpu2gdb_gpr[gdb_off/8] + (gdb_off % 8);
+
+	if (gdb_off < 8*17)	/* rip */
+		return CPU2GDB_DECL(RIP) + (gdb_off % 8);
+
+	if (gdb_off < 8*18)	/* rflags */
+		return -2;	/* virtual value; no offset. how to populate? */
+
+	/* cs, ss, ds, es, fs, gs */
+	// uint16_t cpu2gdb_seg[6] = {0x33, 0x2b, 0, 0, 0, 0};
+	if (gdb_off < (8*19 + 6*2))
+		return -2;	/* again; virtual-- we don't know it */
+
+	/* out of reg */
+	return -1;
 }

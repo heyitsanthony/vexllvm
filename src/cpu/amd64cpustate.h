@@ -41,6 +41,8 @@ public:
 	uintptr_t getFSBase() const;
 
 	const char* off2Name(unsigned int off) const;
+
+	virtual int cpu2gdb(int gdb_off) const;
 protected:
 	void mkRegCtx(void);
 };
