@@ -333,14 +333,13 @@ unsigned int AMD64CPUState::getFuncArgOff(unsigned int arg_num) const
 }
 
 unsigned int AMD64CPUState::getStackRegOff(void) const
-{
-	return offsetof(VexGuestAMD64State, guest_RSP);
-}
+{ return offsetof(VexGuestAMD64State, guest_RSP); }
 
 unsigned int AMD64CPUState::getRetOff(void) const
-{
-	return offsetof(VexGuestAMD64State, guest_RAX);
-}
+{ return offsetof(VexGuestAMD64State, guest_RAX); }
+
+unsigned int AMD64CPUState::getPCOff(void) const
+{ return offsetof(VexGuestAMD64State, guest_RIP); }
 
 /* after a syscall, rcx and r11 are reset by the linux kernel */
 void AMD64CPUState::resetSyscall(void)

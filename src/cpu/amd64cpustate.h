@@ -29,6 +29,8 @@ public:
 	virtual unsigned int getFuncArgOff(unsigned int arg_num) const;
 	virtual unsigned int getRetOff(void) const;
 	virtual unsigned int getStackRegOff(void) const;
+	virtual unsigned int getPCOff(void) const;
+
 	virtual void resetSyscall(void);
 
 #ifdef __amd64__
