@@ -146,14 +146,19 @@ void ProcMap::mapLib(pid_t pid)
 		return;
 	}
 
-	mmap_fd = open(libname, O_RDONLY);
-	if (mmap_fd == -1) {
+	/* don't load /dev/ files-- had a problem with alsa stuff in dosbox */
+	if (strncmp(libname, "/dev/", 5) == 0) {
+		fprintf(stderr, "[ProcMap] Ignoring device file %s\n", libname);
+		libname[0] = 'X';
+		libname[1] = '\0';
+		mmap_fd = -1;
+	} else {
 		struct stat	s;
-		int		rc;
+		mmap_fd = open(libname, O_RDONLY);
+		assert (mmap_fd != -1 || stat(libname, &s) == -1);
+	}
 
-		rc = stat(libname, &s);
-		assert (rc == -1);
-
+	if (mmap_fd == -1) {
 		mapAnon(pid);
 		return;
 	}

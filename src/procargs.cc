@@ -71,6 +71,9 @@ static int splitFile(const char* fname, char* argv[])
 		return -1;
 
 	sz = fread(argv_dat, 1, DAT_MAX, f);
+	assert (sz >= 0);
+	argv_dat[sz] = '\0';
+
 	fclose(f);
 
 	return splitToBuf(argv_dat, sz, argv);
