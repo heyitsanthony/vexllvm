@@ -134,6 +134,13 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 		fd = open(buf, O_RDONLY);
 		assert (fd != -1);
 
+		if (mem->is32Bit() && (begin.o > (1ULL << 32))) {
+			fprintf(stderr,
+				"[VEXLLVM] Snapshot ignoring %p\n",
+				(void*)begin.o);
+			continue;
+		}
+
 		if (	map_type == GuestMem::Mapping::VSYSPAGE &&
 			Arch::getHostArch() == arch)
 		{
