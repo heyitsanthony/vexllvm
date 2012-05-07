@@ -50,7 +50,8 @@ void PTImgArch::waitForSingleStep(void)
 	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
 		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
 		fprintf(stderr,
-			"STEPS %09"PRIu64" %c %09"PRIu64" BLOCKS\r",
+			//"STEPS %09"PRIu64" %c %09"PRIu64" BLOCKS\r",
+			"STEPS %09"PRIu64" %c %09"PRIu64" BLOCKS\n",
 			steps, c, blocks);
 	}
 }

@@ -176,6 +176,9 @@ llvm::Function* VexSB::emit(const char* fname)
 	case Ijk_Ret:
 		theGenLLVM->setExitType(GE_RETURN);
 		break;
+	case Ijk_Yield:
+		theGenLLVM->setExitType(GE_YIELD);
+		break;
 
 	case Ijk_Sys_sysenter:
 	case Ijk_Sys_syscall:
@@ -287,6 +290,7 @@ void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 			stmts.back(),
 			getEndAddr().o+LINUX_SYSENTER_TRAMPOLINE_OFFSET);
 		break;
+	case Ijk_Yield:
 	case Ijk_Call:
 	case Ijk_Ret:
 	case Ijk_Boring:
