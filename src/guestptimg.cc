@@ -202,8 +202,9 @@ pid_t GuestPTImg::createSlurpedChild(
 		if (getenv("VEXLLVM_PRELOAD")) {
 			setenv("LD_PRELOAD", getenv("VEXLLVM_PRELOAD"), 1);
 			err = execvp(argv[0], argv);
-		} else
+		} else {
 			err = execvpe(argv[0], argv, envp);
+		}
 		assert (err != -1 && "EXECVE FAILED. NO PTIMG!");
 	}
 
@@ -242,9 +243,7 @@ pid_t GuestPTImg::createSlurpedChild(
 
 #if (defined(__amd64__) || defined(__arm__) || defined(__x86__))
 	/* XXX there should be a better place for this */
-	/* from glibc, sysdeps/x86_64/elf/start.S
-	 * argc = rsi
-	 * argv = rdx */
+	/* from glibc, sysdeps/x86_64/elf/start.S */
 
 	/* from glibc-ports
 	 * 0(sp)	argc
@@ -257,8 +256,22 @@ pid_t GuestPTImg::createSlurpedChild(
 	argv_ptrs.clear();
 	argc = mem->readNative(pt_arch->getStackPtr());
 	in_argv = guest_ptr(mem->readNative(pt_arch->getStackPtr(), 1));
+#ifdef __arm__
+	/* so so stupid, but I can't figure out how to get argv[0]! */
+	if (!in_argv) {
+		in_argv = guest_ptr(
+			mem->readNative(pt_arch->getStackPtr(), 2));
+	}
+
+	while (strcmp((const char*)mem->getHostPtr(in_argv), argv[0]) != 0)
+		in_argv.o--;
+#endif
+
 	for (int i = 0; i < argc; i++) {
 		argv_ptrs.push_back(in_argv);
+		assert (strcmp(
+			(const char*)mem->getHostPtr(in_argv),
+			argv[i]) == 0);
 		in_argv.o += mem->strlen(in_argv) + 1;
 	}
 #else
