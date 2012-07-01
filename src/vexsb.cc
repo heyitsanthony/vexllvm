@@ -141,7 +141,7 @@ void VexSB::printRegisters(std::ostream& os) const
 
 		v = values[i];
 		if (v == NULL) continue;
-		std::string s = v->getNameStr();
+		std::string s = v->getName().str();
 		os << s;
 		v->dump();
 		os << "\n";

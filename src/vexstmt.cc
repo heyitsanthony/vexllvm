@@ -366,7 +366,7 @@ void VexStmtDirty::emit(void) const
 
 void VexStmtDirty::print(std::ostream& os) const
 {
-	os << "DirtyCall(" << func->getNameStr() << ")";
+	os << "DirtyCall(" << func->getName().str() << ")";
 }
 
 void VexStmtMBE::emit(void) const
