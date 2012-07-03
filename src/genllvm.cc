@@ -203,6 +203,7 @@ Value* GenLLVM::getCtxByteGEP(unsigned int byteOff, Type* accessTy)
 	Value		*gep;
 	std::pair<unsigned, unsigned> key;
 	gepbyte_map_t::const_iterator it;
+	bool		found;
 
 	tyBytes = accessTy->getPrimitiveSizeInBits()/8;
 	assert (tyBytes && "Access type is 0 bytes???");
@@ -210,7 +211,14 @@ Value* GenLLVM::getCtxByteGEP(unsigned int byteOff, Type* accessTy)
 	key.first = byteOff;
 	key.second = tyBytes;
 	it = gepbyte_map.find(key);
-	if (it != gepbyte_map.end() && entry_bb == builder->GetInsertBlock()) {
+
+	found = (it != gepbyte_map.end());
+
+	if (	found &&
+		entry_bb == builder->GetInsertBlock() &&
+		cast<PointerType>(it->second->getType())->getElementType()
+			 == accessTy)
+	{
 		return it->second;
 	}
 
@@ -219,7 +227,9 @@ Value* GenLLVM::getCtxByteGEP(unsigned int byteOff, Type* accessTy)
 			getGlobalContext(),
 			APInt(32, (byteOff/tyBytes))),
 		accessTy);
-	gepbyte_map.insert(std::make_pair(key, gep));
+
+	if (found == false)
+		gepbyte_map.insert(std::make_pair(key, gep));
 
 	return gep;
 }
