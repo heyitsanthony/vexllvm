@@ -27,15 +27,17 @@ ifndef LLVMCONFIG_PATH
 LLVMCONFIG_PATH = llvm-config
 endif
 
-ifeq ($(shell $(LLVMCONFIG_PATH) --version),2.9)
-CFLAGS += -DLLVM_VERSION_MAJOR=2 -DLLVM_VERSION_MINOR=9
-endif
-
 ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.0)
 CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=0
 endif
 
+ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.1)
+CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=1
+endif
+
+
 LLVMCC=clang
+LLVMCFLAGS=$(shell echo $(CFLAGS) | sed "s/-g//g")
 #CORECC=g++-4.4.5
 CORECC=g++
 
@@ -198,7 +200,7 @@ bitcode/softfloat.bc: bitcode/softfloat_lib.bc bitcode/vexops_softfloat.bc
 	$(LLVMLINK) -o $@ $^
 
 bitcode/%.bc: support/%.c
-	$(LLVMCC) $(CFLAGS) -emit-llvm -O3 -c $< -o $@
+	$(LLVMCC) $(LLVMCFLAGS) -emit-llvm -O3 -c $< -o $@
 
 obj/%.o: src/%.s
 	gcc $(CFLAGS) -c -o $@ $<
