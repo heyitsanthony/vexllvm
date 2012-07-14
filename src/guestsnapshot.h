@@ -19,6 +19,7 @@ public:
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return argv_ptrs; }
 
+	const std::string& getPath(void) const { return srcdir; }
 protected:
 	GuestSnapshot(const char* dirname);
 
@@ -29,8 +30,8 @@ private:
 		const char* dirpath,
 		const char* name);
 
-	Symbols* loadSymbols(const char* dirname, const char* name);
-	void loadMappings(const char* dirname);
+	Symbols* loadSymbols(const char* name);
+	void loadMappings(void);
 
 	bool			is_valid;
 	guest_ptr		entry_pt;
@@ -39,6 +40,8 @@ private:
 	Symbols			*syms;
 	Symbols			*dyn_syms;
 	std::vector<guest_ptr>	argv_ptrs;
+
+	std::string		srcdir;
 };
 
 #endif

@@ -43,8 +43,8 @@ GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 #define SETUP_F_R(x)			\
 	{ FILE		*f;		\
 	char 		buf[BUFSZ];	\
-	snprintf(buf, BUFSZ, "%s/%s", dirpath, x);	\
-	f = fopen(buf, "r");				\
+	snprintf(buf, BUFSZ, "%s/%s", srcdir.c_str(), x);	\
+	f = fopen(buf, "r");					\
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
 
@@ -53,6 +53,7 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 , is_valid(false)
 , syms(NULL)
 , dyn_syms(NULL)
+, srcdir(dirpath)
 {
 	ssize_t	sz;
 
@@ -91,14 +92,14 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	}
 	END_F()
 
-	loadMappings(dirpath);
-	syms = loadSymbols(dirpath, "syms");
-	dyn_syms = loadSymbols(dirpath, "dynsyms");
+	loadMappings();
+	syms = loadSymbols("syms");
+	dyn_syms = loadSymbols("dynsyms");
 
 	is_valid = true;
 }
 
-void GuestSnapshot::loadMappings(const char* dirpath)
+void GuestSnapshot::loadMappings(void)
 {
 	SETUP_F_R("mapinfo")
 	assert (mem == NULL);
@@ -130,7 +131,7 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 
 		length =(uintptr_t)end - (uintptr_t)begin;
 
-		snprintf(buf, BUFSZ, "%s/maps/%p", dirpath, (void*)begin.o);
+		snprintf(buf, BUFSZ, "%s/maps/%p", srcdir.c_str(), (void*)begin.o);
 		fd = open(buf, O_RDONLY);
 		assert (fd != -1);
 
@@ -180,7 +181,7 @@ void GuestSnapshot::loadMappings(const char* dirpath)
 	END_F()
 }
 
-Symbols* GuestSnapshot::loadSymbols(const char* dirpath, const char* name)
+Symbols* GuestSnapshot::loadSymbols(const char* name)
 {
 	Symbols	*ret;
 
