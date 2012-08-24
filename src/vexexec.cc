@@ -204,6 +204,7 @@ const VexSB* VexExec::doNextSB(void)
 			<< std::endl;
 		break;
 	default:
+		std::cerr << "[VEXLLVM] UNKNOWN EXIT: " << exit_type << '\n';
 		assert (0 == 1 && "SPECIAL EXIT TYPE");
 	}
 

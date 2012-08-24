@@ -183,10 +183,14 @@ bool PTImgAMD64::isMatch(void) const
 			return false;
 	}
 
-	sse_ok = !memcmp(
-		&state.guest_XMM0,
-		&fpregs.xmm_space[0],
-		sizeof(fpregs.xmm_space));
+	/* XXX: PARTIAL. DOES NOT CONSIDER FULL YMM REGISTER */
+	for (unsigned i = 0; i < 16; i++) {
+		sse_ok = !memcmp(
+			((char*)&state.guest_YMM0) + i*32,
+			((char*)&fpregs.xmm_space) + i*16,
+			16);
+		if (!sse_ok) break;
+	}
 
 	//TODO: check the top pointer of the floating point stack..
 	// /* FPU */
@@ -315,13 +319,14 @@ void PTImgAMD64::printFPRegs(std::ostream& os) const
 	//TODO: what is this for? well besides the obvious
 	// /* 192 */ULong guest_SSEROUND;
 
+/* 4 32-bit values per register */
 #define XMM_TO_64(x,i,k) (void*)(x[i*4+k] | (((uint64_t)x[i*4+(k+1)]) << 32L))
 
 	for(int i = 0; i < 16; ++i) {
 		if (memcmp(
-			&fpregs.xmm_space[i * 4],
-			&(&ref.guest_XMM0)[i],
-			sizeof(ref.guest_XMM0)))
+			(((char*)&fpregs.xmm_space)) + i*16,
+			((char*)&ref.guest_YMM0) + i*32,
+			16) != 0)
 		{
 			os << "***";
 		}

@@ -12,8 +12,6 @@ extern "C" {
 
 #define state2amd64()	((VexGuestAMD64State*)(state_data))
 
-#define FS_SEG_OFFSET	(24*8)
-
 AMD64CPUState::AMD64CPUState()
 {
 	mkRegCtx();
@@ -41,6 +39,9 @@ guest_ptr AMD64CPUState::getPC(void) const {
 /* ripped from libvex_guest_amd64 */
 static struct guest_ctx_field amd64_fields[] =
 {
+	{64, 1, "EvC_FAILADDR"},
+	{32, 1, "EvC_COUNTER"},
+	{32, 1, "EvC_PAD"},
 	{64, 16, "GPR"},	/* 0-15, 8*16 = 128*/
 	{64, 1, "CC_OP"},	/* 16, 128 */
 	{64, 1, "CC_DEP1"},	/* 17, 136 */
@@ -55,7 +56,7 @@ static struct guest_ctx_field amd64_fields[] =
 	{64, 1, "FS_ZERO"},	/* 24 */
 
 	{64, 1, "SSEROUND"},
-	{128, 17, "XMM"},	/* there is an XMM16 for valgrind stuff */
+	{256, 17, "YMM"},	/* there is an YMM16 for valgrind stuff */
 
 	{32, 1, "FTOP"},
 	{64, 8, "FPREG"},
@@ -78,7 +79,7 @@ static struct guest_ctx_field amd64_fields[] =
 	{64, 1, "GS_0x60"},
 	{64, 1, "IP_AT_SYSCALL"},
 
-	{64, 1, "pad"},
+	{64, 1, "pad1"},
 	/* END VEX STRUCTURE */
 
 	{0}	/* time to stop */
@@ -127,23 +128,23 @@ const char* AMD64CPUState::off2Name(unsigned int off) const
 	CASE_OFF2NAME(RIP)
 	CASE_OFF2NAME(ACFLAG)
 	CASE_OFF2NAME(IDFLAG)
-	CASE_OFF2NAMEN(XMM,0)
-	CASE_OFF2NAMEN(XMM,1)
-	CASE_OFF2NAMEN(XMM,2)
-	CASE_OFF2NAMEN(XMM,3)
-	CASE_OFF2NAMEN(XMM,4)
-	CASE_OFF2NAMEN(XMM,5)
-	CASE_OFF2NAMEN(XMM,6)
-	CASE_OFF2NAMEN(XMM,7)
-	CASE_OFF2NAMEN(XMM,8)
-	CASE_OFF2NAMEN(XMM,9)
-	CASE_OFF2NAMEN(XMM,10)
-	CASE_OFF2NAMEN(XMM,11)
-	CASE_OFF2NAMEN(XMM,12)
-	CASE_OFF2NAMEN(XMM,13)
-	CASE_OFF2NAMEN(XMM,14)
-	CASE_OFF2NAMEN(XMM,15)
-	CASE_OFF2NAMEN(XMM,16)
+	CASE_OFF2NAMEN(YMM,0)
+	CASE_OFF2NAMEN(YMM,1)
+	CASE_OFF2NAMEN(YMM,2)
+	CASE_OFF2NAMEN(YMM,3)
+	CASE_OFF2NAMEN(YMM,4)
+	CASE_OFF2NAMEN(YMM,5)
+	CASE_OFF2NAMEN(YMM,6)
+	CASE_OFF2NAMEN(YMM,7)
+	CASE_OFF2NAMEN(YMM,8)
+	CASE_OFF2NAMEN(YMM,9)
+	CASE_OFF2NAMEN(YMM,10)
+	CASE_OFF2NAMEN(YMM,11)
+	CASE_OFF2NAMEN(YMM,12)
+	CASE_OFF2NAMEN(YMM,13)
+	CASE_OFF2NAMEN(YMM,14)
+	CASE_OFF2NAMEN(YMM,15)
+	CASE_OFF2NAMEN(YMM,16)
 	default: return NULL;
 	}
 	return NULL;
@@ -207,9 +208,13 @@ uint64_t AMD64CPUState::getExitCode(void) const
 	return state2amd64()->guest_RDI;
 }
 
-// 208 == XMM base
-#define get_xmm_lo(x,i)	((uint64_t*)(&(((uint8_t*)s)[208+16*i])))[0]
-#define get_xmm_hi(x,i)	((uint64_t*)(&(((uint8_t*)s)[208+16*i])))[1]
+#define YMM_BASE	offsetof(VexGuestAMD64State, guest_YMM0)
+/* 32 because of YMM / AVX extensions */
+#define get_xmm_lo(x,i)	((uint64_t*)(&(((uint8_t*)s)[YMM_BASE+32*i])))[0]
+#define get_xmm_hi(x,i)	((uint64_t*)(&(((uint8_t*)s)[YMM_BASE+32*i])))[1]
+#define get_ymm_lo(x,i)	((uint64_t*)(&(((uint8_t*)s)[YMM_BASE+32*i])))[2]
+#define get_ymm_hi(x,i)	((uint64_t*)(&(((uint8_t*)s)[YMM_BASE+32*i])))[3]
+
 
 void AMD64CPUState::print(std::ostream& os, const void* regctx) const
 {
@@ -239,9 +244,12 @@ void AMD64CPUState::print(std::ostream& os, const void* regctx) const
 
 	for (int i = 0; i < 16; i++) {
 		os
-		<< "XMM" << i << ": "
-		<< (void*) get_xmm_hi(s,i) << "|"
-		<< (void*)get_xmm_lo(s,i) << std::endl;
+		<< "YMM" << i
+		<< ": "<< (void*) get_xmm_hi(s,i)
+		<< "|" << (void*)get_xmm_lo(s,i)
+		<< "(" << (void*)get_ymm_hi(s,i)
+		<< "|" << (void*)get_ymm_lo(s,i)
+		<< ")" << std::endl;
 	}
 
 	for (int i = 0; i < 8; i++) {
@@ -254,13 +262,11 @@ void AMD64CPUState::print(std::ostream& os, const void* regctx) const
 	os << "fs_base = " << (void*)s->guest_FS_ZERO << std::endl;
 }
 
-void AMD64CPUState::setFSBase(uintptr_t base) {
-	state2amd64()->guest_FS_ZERO = base;
-}
+void AMD64CPUState::setFSBase(uintptr_t base)
+{ state2amd64()->guest_FS_ZERO = base; }
 
-uintptr_t AMD64CPUState::getFSBase() const {
-	return state2amd64()->guest_FS_ZERO;
-}
+uintptr_t AMD64CPUState::getFSBase() const
+{ return state2amd64()->guest_FS_ZERO; }
 
 static const int arg2reg[] =
 {
@@ -307,9 +313,13 @@ void AMD64CPUState::setRegs(
 	assert (regs.fs_base != 0 && "TLS is important to have!!!");
 	state2amd64()->guest_FS_ZERO = regs.fs_base;
 
-	memcpy(	&state2amd64()->guest_XMM0,
-		&fpregs.xmm_space[0],
-		sizeof(fpregs.xmm_space));
+	/* XXX: in the future we want to slurp the full YMM registers */
+	/* definitely need smarter ptrace code GETREGSET */
+	for (unsigned i = 0; i < 16; i++) {
+		memcpy( ((char*)&state2amd64()->guest_YMM0) + i*32,
+			((char*)&fpregs.xmm_space) + i*16,
+			16);
+	}
 
 
 	//TODO: this is surely wrong, the sizes don't even match...

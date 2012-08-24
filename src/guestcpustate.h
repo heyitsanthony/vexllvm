@@ -18,7 +18,7 @@ namespace llvm
 
 struct guest_ctx_field
 {
-	unsigned char	f_len;
+	unsigned int	f_len;
 	unsigned int	f_count;
 	const char*	f_name;
 };

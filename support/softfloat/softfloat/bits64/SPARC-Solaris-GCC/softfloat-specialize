@@ -141,7 +141,8 @@ static float32 propagateFloat32NaN( float32 a, float32 b )
 /*----------------------------------------------------------------------------
 | The pattern for a default generated double-precision NaN.
 *----------------------------------------------------------------------------*/
-#define float64_default_nan LIT64( 0x7FFFFFFFFFFFFFFF )
+/* replace F..F with 0.00 -- AJR */
+#define float64_default_nan LIT64( 0x7FF0000000000000 )
 
 /*----------------------------------------------------------------------------
 | Returns 1 if the double-precision floating-point value `a' is a NaN;
@@ -220,7 +221,6 @@ static float64 propagateFloat64NaN( float64 a, float64 b )
     b |= LIT64( 0x0008000000000000 );
     if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid );
     return bIsSignalingNaN ? b : aIsSignalingNaN ? a : bIsNaN ? b : a;
-
 }
 
 #ifdef FLOATX80

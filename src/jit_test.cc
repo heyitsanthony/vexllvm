@@ -70,10 +70,10 @@ public:
 
 /* XXX use offsetof references to valgrind */
 #define GUEST_BYTEOFF_RDX	offsetof(VexGuestAMD64State, guest_RDX)
-#define GUEST_BYTEOFF_XMM0	offsetof(VexGuestAMD64State, guest_XMM0)
-#define GUEST_BYTEOFF_XMM1	offsetof(VexGuestAMD64State, guest_XMM1)
-#define GUEST_BYTEOFF_XMM2	offsetof(VexGuestAMD64State, guest_XMM2)
-#define GUEST_BYTEOFF_XMM3	offsetof(VexGuestAMD64State, guest_XMM3)
+#define GUEST_BYTEOFF_YMM0	offsetof(VexGuestAMD64State, guest_YMM0)
+#define GUEST_BYTEOFF_YMM1	offsetof(VexGuestAMD64State, guest_YMM1)
+#define GUEST_BYTEOFF_YMM2	offsetof(VexGuestAMD64State, guest_YMM2)
+#define GUEST_BYTEOFF_YMM3	offsetof(VexGuestAMD64State, guest_YMM3)
 
 class TestSB
 {
@@ -152,7 +152,7 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0xffff;
+		return *((uint64_t*)&st->guest_YMM1) == 0xffff;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -164,7 +164,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM1, 
+				GUEST_BYTEOFF_YMM1, 
 				new VexExprBinopOrV128(NULL, args)));
 	}
 };
@@ -178,7 +178,7 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0xff;
+		return *((uint64_t*)&st->guest_YMM1) == 0xff;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -190,7 +190,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM1, 
+				GUEST_BYTEOFF_YMM1, 
 				new VexExprBinopAndV128(NULL, args)));
 	}
 };
@@ -204,7 +204,7 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0xff00;
+		return *((uint64_t*)&st->guest_YMM1) == 0xff00;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -216,7 +216,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM1, 
+				GUEST_BYTEOFF_YMM1, 
 				new VexExprBinopCmpGT8Sx16(NULL, args)));
 	}
 };
@@ -228,8 +228,8 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return	*((uint64_t*)&st->guest_XMM1+1) == 0xff &&
-			*((uint64_t*)&st->guest_XMM1) == 0xff00;
+		return	*((uint64_t*)&st->guest_YMM1+1) == 0xff &&
+			*((uint64_t*)&st->guest_YMM1) == 0xff00;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -241,7 +241,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM1, 
+				GUEST_BYTEOFF_YMM1, 
 				new VexExprBinopInterleaveLO64x2(
 					NULL, args)));
 	}
@@ -256,7 +256,7 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0xff0000ff00;
+		return *((uint64_t*)&st->guest_YMM1) == 0xff0000ff00;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -268,7 +268,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM1, 
+				GUEST_BYTEOFF_YMM1, 
 				new VexExprBinopInterleaveLO8x16(
 					NULL, args)));
 	}
@@ -282,7 +282,7 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return *((uint64_t*)&st->guest_XMM1) == 0xff0000;
+		return *((uint64_t*)&st->guest_YMM1) == 0xff0000;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -294,7 +294,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM1, 
+				GUEST_BYTEOFF_YMM1, 
 				new VexExprBinopSub8x16(NULL, args)));
 	}
 };
@@ -307,8 +307,8 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return (((uint64_t*)&st->guest_XMM1)[1] == 0x12345678abcdef01) && 
-			(((uint64_t*)&st->guest_XMM1)[0] == 0x11);
+		return (((uint64_t*)&st->guest_YMM1)[1] == 0x12345678abcdef01) && 
+			(((uint64_t*)&st->guest_YMM1)[0] == 0x11);
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -320,7 +320,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM1, 
+				GUEST_BYTEOFF_YMM1, 
 				new VexExprBinop64HLtoV128(NULL, args)));
 	}
 };
@@ -333,7 +333,7 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		return ((uint64_t*)&st->guest_XMM1)[0] == 0x12345678;
+		return ((uint64_t*)&st->guest_YMM1)[0] == 0x12345678;
 	}
 protected:
 	virtual void setupStmts(VexSB* vsb, std::vector<VexStmt*>& stmts) const 
@@ -344,7 +344,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM1, 
+				GUEST_BYTEOFF_YMM1, 
 				new VexExprUnop32UtoV128(NULL, args)));
 	}
 };
@@ -457,7 +457,7 @@ public:
 	virtual bool isGoodState(Guest* gs) const
 	{
 		VexGuestAMD64State	*st = getVexState(gs);
-		uint64_t		*xmm = (uint64_t*)&st->guest_XMM0;
+		uint64_t		*xmm = (uint64_t*)&st->guest_YMM0;
 		return xmm[0] == 0x1fe00000000 && xmm[1] == 0 /* no rem */;
 	}
 protected:
@@ -470,7 +470,7 @@ protected:
 		stmts.push_back(
 			new VexStmtPut(
 				vsb,
-				GUEST_BYTEOFF_XMM0, 
+				GUEST_BYTEOFF_YMM0, 
 				new VexExprBinopDivModU128to64(NULL, args)));
 	}
 };

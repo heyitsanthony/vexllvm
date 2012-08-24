@@ -51,11 +51,11 @@ void VexStmtPut::print(std::ostream& os) const
 
 VexStmtPutI::VexStmtPutI(VexSB* in_parent, const IRStmt* in_stmt)
 : VexStmt(in_parent, in_stmt),
-  base(in_stmt->Ist.PutI.descr->base),
-  len(in_stmt->Ist.PutI.descr->nElems),
-  ix_expr(VexExpr::create(this, in_stmt->Ist.PutI.ix)),
-  bias(in_stmt->Ist.PutI.bias),
-  data_expr(VexExpr::create(this, in_stmt->Ist.PutI.data))
+  base(in_stmt->Ist.PutI.details->descr->base),
+  len(in_stmt->Ist.PutI.details->descr->nElems),
+  ix_expr(VexExpr::create(this, in_stmt->Ist.PutI.details->ix)),
+  bias(in_stmt->Ist.PutI.details->bias),
+  data_expr(VexExpr::create(this, in_stmt->Ist.PutI.details->data))
 {
 	assert (ix_expr != NULL && "Bad ix expr");
 	assert (data_expr != NULL && "Bad data expr");

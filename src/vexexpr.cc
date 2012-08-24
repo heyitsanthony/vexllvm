@@ -15,6 +15,33 @@ using namespace llvm;
 
 unsigned int VexExpr::vex_expr_op_count[VEX_MAX_OP];
 
+static IROp getNaryOp(const IRExpr* expr)
+{
+	switch (expr->tag) {
+	case Iex_Unop: return expr->Iex.Unop.op;
+	case Iex_Binop:return expr->Iex.Binop.op;
+	case Iex_Triop:return expr->Iex.Triop.details->op;
+	case Iex_Qop: return expr->Iex.Qop.details->op;
+	default:
+		assert (0 == 1 && "BAD TAG");
+	}
+	return (IROp)~0;
+}
+
+static const IRExpr** getNaryArgs(const IRExpr* expr)
+{
+	switch (expr->tag) {
+	case Iex_Unop: return (const IRExpr**)((void*)(&expr->Iex.Unop.arg));
+	case Iex_Binop:return (const IRExpr**)((void*)(&expr->Iex.Binop.arg1));
+	case Iex_Triop:
+	case Iex_Qop:
+		return (const IRExpr**)((void*)(&expr->Iex.Triop.details->arg1));
+	default:
+		assert (0 == 1 && "BAD TAG");
+	}
+	return NULL;
+}
+
 VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 {
 	VexExpr	*ret = NULL;
@@ -54,10 +81,9 @@ VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 	IROp		op;
 	unsigned int	op_idx;
 
-	op = expr->Iex.Unop.op;
-
-	/* bump expression operation count */
+	op = getNaryOp(expr);
 	op_idx = op - Iop_INVALID;
+
 	assert (op_idx < VEX_MAX_OP && "Op is larger than VEX_MAX_OP - OFLOW");
 	VexExpr::vex_expr_op_count[op_idx]++;
 
@@ -646,9 +672,7 @@ Value* VexExprConstF64::emit(void) const
 }
 
 void VexExprGet::print(std::ostream& os) const
-{
-	os << "GET(" << offset << "):" << VexSB::getTypeStr(ty);
-}
+{ os << "GET(" << offset << "):" << VexSB::getTypeStr(ty); }
 
 
 VexExprGetI::VexExprGetI(VexStmt* in_parent, const IRExpr* in_expr)
@@ -695,14 +719,13 @@ Value* VexExprRdTmp::emit(void) const
 
 VexExprNaryOp::VexExprNaryOp(
 	VexStmt* in_parent, const IRExpr* expr, unsigned int in_n_ops)
-: VexExpr(in_parent),
-  op(expr->Iex.Unop.op),
-  n_ops(in_n_ops)
+: VexExpr(in_parent)
+, op(getNaryOp(expr))
+, n_ops(in_n_ops)
 {
-	/* HACK HACK cough */
 	const IRExpr**	ir_exprs;
-	ir_exprs = (const IRExpr**)((void*)(&expr->Iex.Unop.arg));
 
+	ir_exprs = getNaryArgs(expr);
 	args = new VexExpr*[n_ops];
 	for (unsigned int i = 0; i < n_ops; i++)
 		args[i] = VexExpr::create(in_parent, ir_exprs[i]);
@@ -887,6 +910,4 @@ void VexExprMux0X::print(std::ostream& os) const
 
 
 Value* VexExprGet::emit(void) const
-{
-	return theGenLLVM->readCtx(offset, ty);
-}
+{ return theGenLLVM->readCtx(offset, ty); }

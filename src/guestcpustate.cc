@@ -47,7 +47,7 @@ Type* GuestCPUState::mkFromFields(
 	byte2elem_map& offmap)
 {
 	std::vector<Type*>	types;
-	Type			*i8ty, *i16ty, *i32ty, *i64ty, *i128ty;
+	Type			*i8ty, *i16ty, *i32ty, *i64ty, *i128ty, *i256ty;
 	LLVMContext		&gctx(getGlobalContext());
 	int			i;
 	unsigned int		cur_byte_off, total_elems;
@@ -57,6 +57,7 @@ Type* GuestCPUState::mkFromFields(
 	i32ty = Type::getInt32Ty(gctx);
 	i64ty = Type::getInt64Ty(gctx);
 	i128ty = VectorType::get(i16ty, 8);
+	i256ty = VectorType::get(i16ty, 16);
 
 	/* add all fields to types vector from structure */
 	i = 0;
@@ -72,6 +73,7 @@ Type* GuestCPUState::mkFromFields(
 		case 32:	t = i32ty;	break;
 		case 64:	t = i64ty;	break;
 		case 128:	t = i128ty;	break;
+		case 256:	t = i256ty;	break;
 		default:
 		fprintf(stderr, "UGH w=%d\n", f[i].f_len);
 		assert( 0 == 1 && "BAD FIELD WIDTH");

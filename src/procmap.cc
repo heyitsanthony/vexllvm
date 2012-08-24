@@ -24,7 +24,7 @@ int ProcMap::getProt(void) const
 }
 
 #ifdef __amd64__
-#define STACK_EXTEND_BYTES	0x20000
+#define STACK_EXTEND_BYTES	0xf0000
 #else
 #define STACK_EXTEND_BYTES	0x1000
 #endif

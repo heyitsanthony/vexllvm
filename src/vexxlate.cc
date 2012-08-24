@@ -246,14 +246,9 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	vta.traceflags = VEX_TRACE_FLAGS;
 	if (trace_fe) vta.traceflags |= (1 << 7);
 
-	/* lipservice -- never actually used */
-	if (arch == VexArchARM) {
-		vta.dispatch_assisted = NULL;
-		vta.dispatch_unassisted = NULL;
-	} else {
-		vta.dispatch_assisted = (void*)(0x1234dead);
-		vta.dispatch_unassisted = (void*)(0x1234beef);
-	}
+	/* lipservice -- should never be used */
+	vta.disp_cp_chain_me_to_slowEP = NULL;
+	vta.disp_cp_xassisted = (void*)0xdeadbeef;
 
 	vta.needs_self_check = vex_needs_self_check;
 
