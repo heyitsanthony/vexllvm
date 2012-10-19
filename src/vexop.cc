@@ -1563,6 +1563,7 @@ OPVS_EMIT(ShrN64x2, get_vt(2, 64), LShr )
 #define OPSHUF_EMIT(x, y, z)						\
 Value* VexExprBinop##x::emit(void) const				\
 {									\
+	Value	*last_perm_idx = NULL, *last_ext_elem = NULL;		\
 	BINOP_SETUP							\
 	v1 = builder->CreateBitCast(v1, y);				\
 	v2 = builder->CreateBitCast(v2, y);				\
@@ -1576,11 +1577,16 @@ Value* VexExprBinop##x::emit(void) const				\
 				v2,					\
 				get_32i(i)),				\
 			get_i(32));					\
-		ext_elem = builder->CreateExtractElement(v1, perm_idx);	\
+		if (perm_idx == last_perm_idx)				\
+			ext_elem = last_ext_elem;			\
+		else							\
+			ext_elem = builder->CreateExtractElement(v1, perm_idx);	\
 		result = builder->CreateInsertElement(		\
 			result,					\
 			ext_elem,				\
-			get_32i(i));			\
+			get_32i(i));				\
+		last_perm_idx = perm_idx;			\
+		last_ext_elem = ext_elem;			\
 	}						\
 	return result;					\
 }
