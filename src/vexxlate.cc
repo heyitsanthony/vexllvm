@@ -112,6 +112,11 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 	switch(in_arch) {
 	case Arch::X86_64:
 		arch = VexArchAMD64;
+		vai_guest.hwcaps |= VEX_HWCAPS_AMD64_SSE3;
+		vai_guest.hwcaps |= VEX_HWCAPS_AMD64_CX16;
+		vai_guest.hwcaps |= VEX_HWCAPS_AMD64_LZCNT;
+		vai_guest.hwcaps |= VEX_HWCAPS_AMD64_AVX;
+		vai_host.hwcaps = vai_guest.hwcaps;
 		break;
 	case Arch::ARM:
 		arch = VexArchARM;
@@ -276,6 +281,7 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 				frag_log_fd,
 				guest_bytes,
 				g_cb.cb_vexsb->getSize());
+			(void)bw;
 			/* bw == -1 when we run the fucking syscall page */
 		}
 	}
