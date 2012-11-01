@@ -6,7 +6,7 @@ endif
 
 ifeq ($(shell uname -m), armv7l)
 #fucking ubuntu mystery commands
-CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed 
+CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed
 endif
 
 CFLAGS += -lssl -g -O3 -I`pwd`/src/ -lcrypto
@@ -93,7 +93,7 @@ OBJDEPS=	vexxlate.o		\
 #
 
 ifeq ($(shell uname -m), armv7l)
-CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/ -lrt -lcrypto -lcrypt 
+CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/ -lcrypto -lcrypt -lrt -lpthread
 OBJDEPS += cpu/ptimgarm.o
 VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
 endif
@@ -118,7 +118,7 @@ HAS_VALGRIND_TRUNK=$(shell [ -d $(VALGRIND_TRUNK) ] && echo \'yes\' )
 ifeq ($(HAS_VALGRIND_TRUNK), 'yes')
 	VEXLIB=$(VALGRIND_TRUNK)/lib/valgrind/libvex-amd64-linux.a
 	CFLAGS += -I$(VALGRIND_TRUNK)/include -DVALGRIND_TRUNK
-endif 
+endif
 
 
 FPDEPS= vexop_fp.o
@@ -173,16 +173,16 @@ bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
 	ar r $@ $^
 
 bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl -lrt $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
+	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) -ldl -lrt
 
 bin/%: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl -lrt  $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) -ldl -lrt
 
 bin/softfloat/%_rebase: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl -lrt $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2)
+	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) -ldl -lrt
 
 bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	g++ $(CFLAGS) -ldl -lrt $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC)
+	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) -ldl -lrt
 
 #obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
 #	llc  $< -o $@
@@ -220,7 +220,7 @@ TRACEDEPS= nested_call strlen strrchr 	\
 	sscanf time gettimeofday	\
 	rand gettext uselocale		\
 	getopt errno strerror strchrnul	\
-	cmdline-many 
+	cmdline-many
 
 TRACEDEPS_DYN= dlsym fp-test
 
