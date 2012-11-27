@@ -61,7 +61,9 @@ typedef struct {
 /*----------------------------------------------------------------------------
 | The pattern for a default generated single-precision NaN.
 *----------------------------------------------------------------------------*/
-#define float32_default_nan 0x7FFFFFFF
+
+// #define float32_default_nan 0x7FFFFFFF AJR
+#define float32_default_nan 0xFFC00000
 
 /*----------------------------------------------------------------------------
 | Returns 1 if the single-precision floating-point value `a' is a NaN;
@@ -142,7 +144,9 @@ static float32 propagateFloat32NaN( float32 a, float32 b )
 | The pattern for a default generated double-precision NaN.
 *----------------------------------------------------------------------------*/
 /* replace F..F with 0.00 -- AJR */
-#define float64_default_nan LIT64( 0x7FF0000000000000 )
+//#define float64_default_nan LIT64( 0x7FF0000000000000 )
+//#define float64_default_nan LIT64( 0x7FFFFFFFFFFFFFFF )
+#define float64_default_nan LIT64( 0xFFF8000000000000 )
 
 /*----------------------------------------------------------------------------
 | Returns 1 if the double-precision floating-point value `a' is a NaN;
