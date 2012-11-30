@@ -129,7 +129,9 @@ BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/libvex_x86_helpers.bc	\
 		bitcode/libvex_arm_helpers.bc	\
 		bitcode/vexops.bc		\
-		bitcode/softfloat.bc
+		bitcode/softfloat.bc		\
+		bitcode/fpu-linuxmips.bc	\
+		bitcode/fpu-bsdppc.bc
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 FPDIRDEPS=$(FPDEPS:%=obj/%)
@@ -190,14 +192,15 @@ bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
 #obj/libvex_amd64_helpers.o:   obj/libvex_amd64_helpers.s
 #	g++ $(CFLAGS)$(LLVMFLAGS)  -o $@ -c $<
 
-SOFTFLOATDIR=support/softfloat/softfloat/bits64
-bitcode/softfloat_lib.bc: $(SOFTFLOATDIR)/softfloat.c
-	cd $(SOFTFLOATDIR)/SPARC-Solaris-GCC/ && $(LLVMCC) -emit-llvm -I. -I.. -O3 -c  \
-		../softfloat.c \
-		-o ../../../../../$@
-
-bitcode/softfloat.bc: bitcode/softfloat_lib.bc bitcode/vexops_softfloat.bc
+bitcode/softfloat.bc: bitcode/softfloat-fpu.bc bitcode/vexops_softfloat.bc
 	$(LLVMLINK) -o $@ $^
+
+bitcode/fpu-bsdppc.bc: bitcode/bsd-fpu-ppc.bca bitcode/vexops_softfloat.bc
+	$(LLVMLINK) -o $@ $^
+
+bitcode/fpu-linuxmips.bc: bitcode/linux-fpu-mips.bca bitcode/vexops_softfloat.bc
+	$(LLVMLINK) -o $@ $^
+
 
 bitcode/%.bc: support/%.c
 	$(LLVMCC) $(LLVMCFLAGS) -emit-llvm -O3 -c $< -o $@

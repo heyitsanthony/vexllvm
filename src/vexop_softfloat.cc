@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <llvm/Intrinsics.h>
 #include "genllvm.h"
 #include "vexop.h"
@@ -8,7 +9,12 @@ using namespace llvm;
 
 void vexop_setup_fp(VexHelpers* vh)
 {
-	vh->loadUserMod("softfloat.bc");
+	const char*	lib_fname;
+
+	if ((lib_fname = getenv("VEXLLVM_FPU")) == NULL)
+		lib_fname = "softfloat.bc";
+
+	vh->loadUserMod(lib_fname);
 }
 
 #define OPF0X_EMIT_SOFTFLOAT_OP(x,y,z)					\
