@@ -32,7 +32,7 @@ OPF0X_SOFTFLOAT_EMIT(Add64F0x2, get_vt(2, 64), "float64_add")
 OPF0X_SOFTFLOAT_EMIT(Div32F0x4, get_vt(4, 32), "float32_div")
 OPF0X_SOFTFLOAT_EMIT(Div64F0x2, get_vt(2, 64), "float64_div")
 OPF0X_SOFTFLOAT_EMIT(Mul32F0x4, get_vt(4, 32), "float32_mul")
-OPF0X_SOFTFLOAT_EMIT(Mul64F0x2, get_vt(4, 64), "float64_mul")
+OPF0X_SOFTFLOAT_EMIT(Mul64F0x2, get_vt(2, 64), "float64_mul")
 OPF0X_SOFTFLOAT_EMIT(Sub32F0x4, get_vt(4, 32), "float32_sub")
 OPF0X_SOFTFLOAT_EMIT(Sub64F0x2, get_vt(2, 64), "float64_sub")
 
