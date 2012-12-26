@@ -2,7 +2,7 @@
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
 #include <llvm/Analysis/Verifier.h>
-#include <llvm/Support/IRBuilder.h>
+#include <llvm/IRBuilder.h>
 #include <llvm/Intrinsics.h>
 #include <stdio.h>
 

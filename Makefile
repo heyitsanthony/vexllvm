@@ -27,14 +27,13 @@ ifndef LLVMCONFIG_PATH
 LLVMCONFIG_PATH = llvm-config
 endif
 
-ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.0)
-CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=0
-endif
-
 ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.1)
 CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=1
 endif
 
+ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.2)
+CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=2
+endif
 
 LLVMCC=clang
 LLVMCFLAGS=$(shell echo $(CFLAGS) | sed "s/-g//g")
@@ -130,8 +129,10 @@ BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/libvex_arm_helpers.bc	\
 		bitcode/vexops.bc		\
 		bitcode/softfloat.bc		\
+		bitcode/fpu-softfloat.bc	\
 		bitcode/fpu-linuxmips.bc	\
-		bitcode/fpu-bsdppc.bc
+		bitcode/fpu-bsdppc.bc		\
+		bitcode/fpu-bsdhppa.bc
 
 OBJDIRDEPS=$(OBJDEPS:%=obj/%)
 FPDIRDEPS=$(FPDEPS:%=obj/%)
@@ -192,10 +193,17 @@ bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
 #obj/libvex_amd64_helpers.o:   obj/libvex_amd64_helpers.s
 #	g++ $(CFLAGS)$(LLVMFLAGS)  -o $@ -c $<
 
+
+bitcode/fpu-softfloat.bc: bitcode/softfloat-fpu.bc bitcode/vexops_softfloat.bc
+	$(LLVMLINK) -o $@ $^
+
 bitcode/softfloat.bc: bitcode/softfloat-fpu.bc bitcode/vexops_softfloat.bc
 	$(LLVMLINK) -o $@ $^
 
 bitcode/fpu-bsdppc.bc: bitcode/bsd-fpu-ppc.bca bitcode/vexops_softfloat.bc
+	$(LLVMLINK) -o $@ $^
+
+bitcode/fpu-bsdhppa.bc: bitcode/bsd-fpu-hppa.bca bitcode/vexops_softfloat.bc
 	$(LLVMLINK) -o $@ $^
 
 bitcode/fpu-linuxmips.bc: bitcode/linux-fpu-mips.bca bitcode/vexops_softfloat.bc

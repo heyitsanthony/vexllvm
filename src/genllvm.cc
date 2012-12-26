@@ -2,7 +2,7 @@
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
 #include <llvm/Analysis/Verifier.h>
-#include <llvm/Support/IRBuilder.h>
+#include <llvm/IRBuilder.h>
 #include <llvm/Intrinsics.h>
 
 #include <vector>
@@ -69,7 +69,7 @@ void GenLLVM::beginBB(const char* name)
 
 	Function::arg_iterator arg = cur_f->arg_begin();
 
-	arg->addAttr(llvm::Attribute::NoAlias);
+	//arg->addAttr(Attributes(Attributes::NoAlias));
 	cur_guest_ctx = arg++;
 
 	if (log_last_store) {
