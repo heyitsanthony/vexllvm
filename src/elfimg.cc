@@ -23,20 +23,20 @@
 #define ElfImg32 ElfImg
 #define ElfImg64 ElfImg
 
-ElfImg* ElfImg::create(const char* fname, bool linked)
+ElfImg* ElfImg::create(const char* fname, bool linked, bool map_segs)
 {
 	Arch::Arch arch = readHeader(fname, linked);
 	if(arch == Arch::Unknown)
 		return NULL;
-	return new ElfImg(fname, arch, linked);
+	return new ElfImg(fname, arch, linked, map_segs);
 }
 
-ElfImg* ElfImg::create(GuestMem* m, const char* fname, bool linked)
+ElfImg* ElfImg::create(GuestMem* m, const char* fname, bool linked, bool map_segs)
 {
 	Arch::Arch arch = readHeader(fname, linked);
 	if(arch == Arch::Unknown)
 		return NULL;
-	return new ElfImg(m, fname, arch, linked);
+	return new ElfImg(m, fname, arch, linked, map_segs);
 }
 
 ElfImg::~ElfImg(void)
@@ -54,11 +54,27 @@ ElfImg::~ElfImg(void)
 	segments.clear();
 
 	if (mem != NULL && owns_mem) delete mem;
-	munmap(img_mmap, img_bytes_c);
+	if (img_mmap != NULL) munmap(img_mmap, img_bytes_c);
 	close(fd);
 }
 
-ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked)
+void ElfImg::setupBits(void)
+{
+	switch(arch) {
+	case Arch::X86_64:
+		address_bits = 64;
+		break;
+	case Arch::ARM:
+	case Arch::I386:
+		mem->mark32Bit();
+		address_bits = 32;
+		break;
+	default:
+		assert(!"unknown arch type");
+	}
+}
+
+ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked, bool map_segs)
 : interp(NULL)
 , linked(in_linked)
 , arch(in_arch)
@@ -66,12 +82,15 @@ ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked)
 {
 	mem = new GuestMem();
 	img_path = strdup(fname);
-	setup();
+
+	setupBits();
+	setupImgMMap();
+	if (map_segs) setup();
 }
 
 ElfImg::ElfImg(
 	GuestMem* m,
-	const char* fname, Arch::Arch in_arch, bool in_linked)
+	const char* fname, Arch::Arch in_arch, bool in_linked, bool map_segs)
 : interp(NULL)
 , linked(in_linked)
 , arch(in_arch)
@@ -80,10 +99,15 @@ ElfImg::ElfImg(
 {
 	assert (mem != NULL);
 	img_path = strdup(fname);
-	setup();
+
+	setupBits();
+	setupImgMMap();
+	if (map_segs) setup();
 }
 
-void ElfImg::setup(void)
+
+
+void ElfImg::setupImgMMap(void)
 {
 	struct stat	st;
 
@@ -99,24 +123,17 @@ void ElfImg::setup(void)
 	assert(img_mmap != MAP_FAILED);
 
 	hdr_raw = img_mmap;
+}
 
+void ElfImg::setup(void)
+{
 	if(getenv("VEXLLVM_LIBRARY_ROOT"))
 		library_root.assign(getenv("VEXLLVM_LIBRARY_ROOT"));
 
-	switch(arch) {
-	case Arch::X86_64:
-		address_bits = 64;
+	if (address_bits == 64)
 		setupSegments<Elf64_Ehdr, Elf64_Phdr>();
-		break;
-	case Arch::ARM:
-	case Arch::I386:
-		mem->mark32Bit();
-		address_bits = 32;
+	else
 		setupSegments<Elf32_Ehdr, Elf32_Phdr>();
-		break;
-	default:
-		assert(!"unknown arch type");
-	}
 }
 
 int ElfImg::getHeaderCount() const {
@@ -130,7 +147,7 @@ int ElfImg::getHeaderCount() const {
 }
 
 const guest_ptr ElfImg::getHeader() const {
-	/* this is so janky and will most likely not work other places */
+	assert (hdr32 || hdr64);
 	if(address_bits == 32) {
 		return getFirstSegment()->offset(hdr32->e_phoff);
 	} else if(address_bits == 64) {
@@ -192,9 +209,11 @@ guest_ptr ElfImg::getEntryPoint(void) const
 	/* address must be translated in case the region was remapped
 	   as is the case for the interp which specified a load address
 	   base of 0 */
-	if(address_bits == 32) {
+	assert (hdr32 || hdr64);
+
+	if (address_bits == 32) {
 		return xlateAddr(guest_ptr(hdr32->e_entry));
-	} else if(address_bits == 64) {
+	} else if (address_bits == 64) {
 		return xlateAddr(guest_ptr(hdr64->e_entry));
 	} else {
 		assert(!"address bits corrupted");
@@ -295,6 +314,8 @@ Arch::Arch ElfImg::readHeader64(const Elf64_Ehdr* hdr, bool require_exe)
 
 guest_ptr ElfImg::xlateAddr(guest_ptr elfptr) const
 {
+	if (segments.empty()) return elfptr;
+
 	foreach (it, segments.begin(), segments.end()) {
 		ElfSegment	*es = *it;
 		guest_ptr	ret;

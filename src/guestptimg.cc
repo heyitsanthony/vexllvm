@@ -59,7 +59,7 @@ GuestPTImg::GuestPTImg(
 
 	entry_pt = guest_ptr(0);
 	if (argv[0] != NULL && use_entry)  {
-		ElfImg	*img = ElfImg::create(argv[0], false);
+		ElfImg	*img = ElfImg::create(argv[0], false, false);
 		assert (img != NULL && "DOES BINARY EXIST?");
 		assert(img->getArch() == getArch() || use_32bit_arch);
 

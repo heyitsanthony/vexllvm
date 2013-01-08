@@ -120,17 +120,28 @@ void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 		desired_base,
 		file_pages, prot | PROT_WRITE, flags, fd, file_off_pgbase);
 
-	assert (res == 0 && es_mmapbase.o != 0 && "failed to map segment");
-	filesz = phdr.p_offset - file_off_pgbase + phdr.p_filesz;
-	extra_bytes = file_pages - filesz;
-
-	if (getenv("VEXLLVM_LOG_MAPPINGS")) {
-		std::cerr << "mapped section @ " << (void*)desired_base.o
+	if (res != 0 || es_mmapbase.o == 0) {
+		std::cerr << "OOPS: mapped section @ " << (void*)desired_base.o
 			<< " to " << (void*)es_mmapbase.o
 			<< " size " << es_len
 			<< " file base " << file_off_pgbase
+			<< " file pages " << file_pages << '\n';
+	}
+	assert (res == 0 && es_mmapbase.o != 0 && "failed to map segment");
+
+
+	if (getenv("VEXLLVM_LOG_MAPPINGS")) {
+		std::cerr << "mapped section @ "
+			<< (void*)((uintptr_t)desired_base.o)
+			<< " to " << (void*)((uintptr_t)es_mmapbase.o)
+			<< "--" << (void*)((uintptr_t)(es_mmapbase.o + es_len))
+			<< " size " << (void*)((uintptr_t)es_len)
+			<< " file base " << (void*)((uintptr_t)file_off_pgbase)
 		<< std::endl;
 	}
+
+	filesz = phdr.p_offset - file_off_pgbase + phdr.p_filesz;
+	extra_bytes = file_pages - filesz;
 
 	my_end = es_mmapbase + filesz;
 

@@ -19,7 +19,8 @@ class GuestMem;
 class ElfImg
 {
 public:
-	static ElfImg* create(const char* fname, bool linked = true);
+	static ElfImg* create(const char* fname, bool linked = true,
+		bool map_segs = true);
 	virtual ~ElfImg(void);
 	guest_ptr xlateAddr(guest_ptr addr) const;
 	guest_ptr getEntryPoint(void) const;
@@ -47,12 +48,18 @@ public:
 	GuestMem* takeMem(void);
 
 private:
-	ElfImg(const char* fname, Arch::Arch arch, bool linked);
-	ElfImg(GuestMem* m, const char* fname, Arch::Arch arch, bool linked);
+	ElfImg(const char* fname, Arch::Arch arch, bool linked,
+		bool map_segs);
+	ElfImg(GuestMem* m, const char* fname, Arch::Arch arch,
+		bool linked, bool map_segs);
 	void setup(void);
+	void setupBits(void);
+	void setupImgMMap(void);
+
 
 	static ElfImg* create(
-		GuestMem* m, const char* fname, bool linked = true);
+		GuestMem* m, const char* fname, bool linked = true,
+		bool map_segs = true);
 	static Arch::Arch readHeader(const char* fname,
 		bool require_exe);
 	static Arch::Arch readHeader32(const Elf32_Ehdr* hdr,
