@@ -43,6 +43,9 @@ guest_ptr I386CPUState::getPC(void) const
 /* ripped from libvex_guest_86 */
 static struct guest_ctx_field x86_fields[] =
 {
+	{32, 1, "EvC_FAILADDR"},
+	{32, 1, "EvC_COUNTER"},
+
 	{32, 8, "GPR"},
 	{32, 1, "CC_OP"},
 	{32, 1, "CC_DEP1"},
@@ -72,8 +75,8 @@ static struct guest_ctx_field x86_fields[] =
 	{16, 1, "GS"},
 	{16, 1, "SS"},
 
-	{sizeof(void*)*8, 1, "LDT"},
-	{sizeof(void*)*8, 1, "GDT"},
+	{64, 1, "LDT"},
+	{64, 1, "GDT"},
 
 	{32, 1, "EMWARN"},
 
@@ -90,7 +93,7 @@ static struct guest_ctx_field x86_fields[] =
 	{32, 1, "IP_AT_SYSCALL"},
 
 
-	{32, 3, "pad"},
+	{32, 5, "pad"},
 	/* END VEX STRUCTURE */
 
 	{0}	/* time to stop */
