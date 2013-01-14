@@ -201,7 +201,31 @@ void VexXlate::dumpLog(std::ostream& os) const
 	os << std::endl;
 }
 
-/* XXX eventually support other architectures */
+VexSB* VexXlate::patchBadDecode(const void* guest_bytes, uint64_t guest_addr)
+{
+	const unsigned char *gb = (unsigned char*)(guest_bytes);
+
+	if (arch == VexArchX86) {
+		for (unsigned i = 0; i < 128; i++) {
+			/* windows syscall patch-- pretend it's a
+			 * linux syscall */
+			if (gb[i] == 0xcd && gb[i+1] == 0x2e) {
+				char		dumb_buf[128];
+				memcpy(dumb_buf, gb, 128);
+				printf("[VexXlate] PATCH UP@%p\n",
+					(void*)(guest_addr+i));
+				dumb_buf[i+1] = 0x80;
+				return xlate(dumb_buf, guest_addr);
+			}
+		}
+	}
+
+	/* XXX: add 32-bit syscall patch */
+
+	return NULL;
+}
+
+
 VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 {
 	VexTranslateArgs	vta;
@@ -267,8 +291,9 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	if (res.status == VexTranslateResult::VexTransAccessFail)
 		return NULL;
 
-	if (g_cb.cb_vexsb == NULL)
-		return NULL;
+	if (g_cb.cb_vexsb == NULL) {
+		return patchBadDecode(guest_bytes, guest_addr);
+	}
 
 	if (g_cb.cb_vexsb->getSize()) {
 		if (frag_cache)

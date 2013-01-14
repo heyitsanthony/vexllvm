@@ -14,6 +14,7 @@
 #include "util.h"
 #include "guestcpustate.h"
 #include "guestsnapshot.h"
+#include "cpu/i386cpustate.h"
 #include <algorithm>
 
 using namespace std;
@@ -40,11 +41,13 @@ GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 	return ret;
 }
 
-#define SETUP_F_R(x)			\
+#define SETUP_F_R_MAYBE(x)		\
 	{ FILE		*f;		\
 	char 		buf[BUFSZ];	\
 	snprintf(buf, BUFSZ, "%s/%s", srcdir.c_str(), x);	\
-	f = fopen(buf, "r");					\
+	f = fopen(buf, "r");
+#define SETUP_F_R(x)			\
+	SETUP_F_R_MAYBE(x)		\
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
 
@@ -96,6 +99,53 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	syms = loadSymbols("syms");
 	dyn_syms = loadSymbols("dynsyms");
 
+	SETUP_F_R_MAYBE("regs.ldt")
+	if (f != NULL) {
+		I386CPUState	*i386;
+		char		*buf;
+		int		res;
+		guest_ptr	gp;
+
+		i386 =  dynamic_cast<I386CPUState*>(cpu_state);
+		assert (i386 != NULL && "ONLY I386 HAS LDT");
+		buf = new char[8192*8];
+		res = fread(buf, 8, 8192, f);
+		assert (res == 8192 && "not enough LDT entries??");
+		res = mem->mmap(gp, guest_ptr(0), 8192*8,
+				PROT_WRITE | PROT_READ,
+				MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		assert (gp.o && res == 0 && "failed to map ldt");
+
+		mem->memcpy(gp, buf, 8192*8);
+		i386->setLDT(gp);
+		delete [] buf;
+		END_F()
+	}
+
+	SETUP_F_R_MAYBE("regs.gdt")
+	if (f != NULL) {
+		I386CPUState	*i386;
+		char		*buf;
+		int		res;
+		guest_ptr	gp;
+
+		i386 =  dynamic_cast<I386CPUState*>(cpu_state);
+		assert (i386 != NULL && "ONLY I386 HAS LDT");
+		buf = new char[8192*8];
+		res = fread(buf, 8, 8192, f);
+		assert (res == 8192 && "not enough LDT entries??");
+		res = mem->mmap(gp, guest_ptr(0), 8192*8,
+				PROT_WRITE | PROT_READ,
+				MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		assert (gp.o && res == 0 && "failed to map ldt");
+
+		mem->memcpy(gp, buf, 8192*8);
+		i386->setGDT(gp);
+		delete [] buf;
+		END_F()
+	}
+
+
 	is_valid = true;
 }
 
@@ -128,6 +178,8 @@ void GuestSnapshot::loadMappings(void)
 			(void**)&begin, (void**)&end, &prot,
 			(int*)&map_type, name_buf);
 		assert (item_c >= 4);
+
+		if (prot == 0) continue;
 
 		length =(uintptr_t)end - (uintptr_t)begin;
 

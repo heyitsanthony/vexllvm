@@ -32,6 +32,7 @@ public:
 
 private:
 	void loadLogType(void);
+	VexSB* patchBadDecode(const void* guest_bytes, uint64_t guest_addr);
 
 	VexControl		vc;
 	VexArchInfo		vai_host;
@@ -39,8 +40,7 @@ private:
 	VexAbiInfo		vbi;
 	VexArch			arch;
 
-	/* TJ's mystery flag. Traces the front end with super-detailed 
-	 * information for debugging idiot deceoder errors. */
+	/* trace the frontend */
 	bool			trace_fe;
 
 	bool			store_fragments;

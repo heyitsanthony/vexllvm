@@ -228,16 +228,16 @@ void I386CPUState::print(std::ostream& os, const void* regctx) const
 	const VexGuestX86State	*s;
 	
 	s = (const VexGuestX86State*)regctx;
-
-	os << "EIP: " << (void*)s->guest_EIP << "\n";
-	os << "EAX: " << (void*)s->guest_EAX << "\n";
-	os << "EBX: " << (void*)s->guest_EBX << "\n";
-	os << "ECX: " << (void*)s->guest_ECX << "\n";
-	os << "EDX: " << (void*)s->guest_EDX << "\n";
-	os << "ESP: " << (void*)s->guest_ESP << "\n";
-	os << "EBP: " << (void*)s->guest_EBP << "\n";
-	os << "EDI: " << (void*)s->guest_EDI << "\n";
-	os << "ESI: " << (void*)s->guest_ESI << "\n";
+#define PRINT_GPR(X) os << #X": " << (void*)(uintptr_t)s->guest_##X << "\n";
+	PRINT_GPR(EIP)
+	PRINT_GPR(EAX)
+	PRINT_GPR(EBX)
+	PRINT_GPR(ECX)
+	PRINT_GPR(EDX)
+	PRINT_GPR(ESP)
+	PRINT_GPR(EBP)
+	PRINT_GPR(EDI)
+	PRINT_GPR(ESI)
 
 	for (int i = 0; i < 8; i++) {
 		os
@@ -251,6 +251,12 @@ void I386CPUState::print(std::ostream& os, const void* regctx) const
 		os
 		<< "ST" << i << ": "
 		<< (void*)s->guest_FPREG[r] << std::endl;
+	}
+
+	const char* seg_tab[] = {"CS", "DS", "ES", "FS", "GS", "SS"};
+	for (int i = 0; i < 6; i++) {
+		os << seg_tab[i] << ": "
+			<< (void*)(uintptr_t)((short*)(&s->guest_CS))[i] << '\n';
 	}
 }
 
