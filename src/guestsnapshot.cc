@@ -439,3 +439,20 @@ char* GuestSnapshot::readMemory(
 
 	return read_mem;
 }
+
+
+void GuestSnapshot::getPlatform(const char* plat_key, void* buf, unsigned len) const
+{
+	FILE	*f;
+	char 	path[512];
+	ssize_t br;
+
+	sprintf(path, "%s/platform/%s", srcdir.c_str(), plat_key);
+	f = fopen(path, "rb");
+	assert (f != NULL && "Could not get a platform file");
+
+	br = fread(buf, len, 1, f);
+	assert (br == 1);
+
+	fclose(f);
+}

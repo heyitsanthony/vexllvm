@@ -20,6 +20,8 @@ public:
 	{ return argv_ptrs; }
 
 	const std::string& getPath(void) const { return srcdir; }
+
+	void getPlatform(const char* plat_key, void* buf, unsigned len) const;
 protected:
 	GuestSnapshot(const char* dirname);
 

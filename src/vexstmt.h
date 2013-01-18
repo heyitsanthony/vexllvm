@@ -137,10 +137,10 @@ public:
 	virtual void emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
-	unsigned int oldVal_tmp;
+	unsigned int oldVal_tmp, oldVal_tmpHI;
 	VexExpr	*addr;
-	VexExpr	*expected_val;
-	VexExpr	*new_val;
+	VexExpr	*expected_val, *expected_valHI;
+	VexExpr	*new_val, *new_valHI;
 };
 
 class VexStmtLLSC : public VexStmt

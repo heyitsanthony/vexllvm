@@ -204,13 +204,19 @@ void VexStmtLLSC::print(std::ostream& os) const {
 VexStmtCAS::VexStmtCAS(VexSB* in_parent, const IRStmt* in_stmt)
  :	VexStmt(in_parent, in_stmt),
  	oldVal_tmp(in_stmt->Ist.CAS.details->oldLo),
+	oldVal_tmpHI(in_stmt->Ist.CAS.details->oldHi),
  	addr(VexExpr::create(this, in_stmt->Ist.CAS.details->addr)),
 	expected_val(VexExpr::create(this, in_stmt->Ist.CAS.details->expdLo)),
-	new_val(VexExpr::create(this, in_stmt->Ist.CAS.details->dataLo))
-{
-	assert (in_stmt->Ist.CAS.details->expdHi == NULL &&
-		"Only supporting single width CAS");
-}
+	expected_valHI(
+		(in_stmt->Ist.CAS.details->expdHi)
+		? VexExpr::create(this, in_stmt->Ist.CAS.details->expdHi)
+		: NULL),
+	new_val(VexExpr::create(this, in_stmt->Ist.CAS.details->dataLo)),
+	new_valHI(
+		(in_stmt->Ist.CAS.details->expdHi)
+		? VexExpr::create(this, in_stmt->Ist.CAS.details->dataHi)
+		: NULL)
+{}
 
 VexStmtCAS::~VexStmtCAS()
 {
@@ -221,7 +227,8 @@ VexStmtCAS::~VexStmtCAS()
 
 void VexStmtCAS::emit(void) const
 {
-	Value		*v_addr, *v_addr_load, *v_expected, *v_new, *v_cmp;
+	Value		*v_addr[2], *v_cmp,
+			*v_addr_load[2], *v_expected[2], *v_new[2];
 	BasicBlock	*bb_then, *bb_merge, *bb_origin;
 	IRBuilder<>	*builder;
 
@@ -229,9 +236,31 @@ void VexStmtCAS::emit(void) const
 // written there, else there is no write.  In both cases, the
 // original value at .addr is copied into .oldLo.
  	builder = theGenLLVM->getBuilder();
-	v_addr = addr->emit();
-	v_expected = expected_val->emit();
-	v_addr_load = theGenLLVM->load(v_addr, v_expected->getType());
+	v_addr[0] = addr->emit();
+	v_addr[1] = NULL;
+
+	v_expected[0] = expected_val->emit();
+	v_expected[1] = NULL;
+
+	v_addr_load[0] = theGenLLVM->load(v_addr[0], v_expected[0]->getType());
+	v_addr_load[1] = NULL;
+
+	if (expected_valHI) {
+		unsigned a_w, t_w;
+
+		a_w = v_addr[0]->getType()->getPrimitiveSizeInBits();
+		/* widths of both parts are equal */
+		t_w = v_expected[0]->getType()->getPrimitiveSizeInBits();
+
+		v_expected[1] = expected_valHI->emit();
+		v_addr[1] = builder->CreateAdd(v_addr[0],
+				ConstantInt::get(
+					getGlobalContext(),
+					APInt(a_w, t_w/8)));
+		v_addr_load[1] = theGenLLVM->load(
+			v_addr[1], v_expected[0]->getType());
+	}
+
 
 	bb_origin = builder->GetInsertBlock();
 	bb_then = BasicBlock::Create(
@@ -245,17 +274,34 @@ void VexStmtCAS::emit(void) const
 
 	/* compare value at address with expected value*/
 	builder->SetInsertPoint(bb_origin);
-	v_cmp = builder->CreateICmpEQ(v_expected, v_addr_load);
+
+	v_cmp = builder->CreateICmpEQ(v_expected[0], v_addr_load[0]);
+	if (v_expected[1]) {
+		v_cmp = builder->CreateICmpEQ(
+			v_cmp,
+			builder->CreateICmpEQ(
+				v_expected[1],
+				v_addr_load[1]));
+	}
 	builder->CreateCondBr(v_cmp, bb_then, bb_merge);
 
 	builder->SetInsertPoint(bb_then);
 	/* match, write new value to address */
-	v_new = new_val->emit();
-	theGenLLVM->store(v_addr, v_new);
+	v_new[0] = new_val->emit();
+	theGenLLVM->store(v_addr[0], v_new[0]);
+	if (v_addr[1]) {
+		v_new[1] = new_val->emit();
+		theGenLLVM->store(v_addr[1], v_new[1]);
+	}
+
 	builder->CreateBr(bb_merge);
 
 	builder->SetInsertPoint(bb_merge);
-	parent->setRegValue(oldVal_tmp, v_addr_load);
+
+	parent->setRegValue(oldVal_tmp, v_addr_load[0]);
+	if (v_addr[1]) {
+		parent->setRegValue(oldVal_tmpHI, v_addr_load[1]);
+	}
 }
 
 void VexStmtCAS::print(std::ostream& os) const
