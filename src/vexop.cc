@@ -721,6 +721,7 @@ CASE_OP(Rsqrte32x4)
 	return "???Op???";
 }
 
+XHI_TO_Y_EMIT(16HIto8, 8, get_i(16), get_i(8))
 XHI_TO_Y_EMIT(64HIto32, 32, get_i(64), get_i(32))
 XHI_TO_Y_EMIT(32HIto16, 16, get_i(32), get_i(16))
 
