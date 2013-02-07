@@ -43,8 +43,7 @@ public:
 	virtual void setFakeInfo(const char* info_file)
 	{ assert (0 == 1 && "Not implemented for this arch"); }
 
-	/* returns address processed */
-	virtual uint64_t stepInitFixup(void)
+	virtual void stepInitFixup(void)
 	{ assert (0 == 1 && "Not implemented for this arch"); }
 
 protected:

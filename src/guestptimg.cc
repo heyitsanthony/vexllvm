@@ -364,35 +364,17 @@ void GuestPTImg::stackTrace(
 		os.write(buffer, bytes);
 }
 
-void GuestPTImg::waitForEntrySingleStep(int pid)
+void GuestPTImg::waitForEntry(int pid)
 {
 	int		err, status;
 	const char	*fake_cpuid;
 
 	fake_cpuid = getenv("VEXLLVM_FAKE_CPUID");
-	pt_arch->setFakeInfo(fake_cpuid);
-
-	while (1) {
-		uint64_t	pc;
-
-		err = ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL);
-		assert (err != -1 && "Bad PTRACE_SINGLESTEP");
-		wait(&status);
-		assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
-
-		pc = pt_arch->stepInitFixup();
-		if (entry_pt == pc)
-			break;
-	}
-}
-
-void GuestPTImg::waitForEntry(int pid)
-{
-	int		err, status;
-
-	if (getenv("VEXLLVM_FAKE_CPUID") != NULL) {
-		waitForEntrySingleStep(pid);
-		/* fall through to breakpoint instruction */
+	if (fake_cpuid != NULL) {
+		pt_arch->setFakeInfo(fake_cpuid);
+		pt_arch->stepInitFixup();
+		/* should end on breakpoint instruction */
+		return;
 	}
 
 	err = ptrace(PTRACE_CONT, pid, NULL, NULL);

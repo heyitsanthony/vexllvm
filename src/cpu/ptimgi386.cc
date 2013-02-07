@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <signal.h>
+#include <sys/wait.h>
 #include <sys/ptrace.h>
 #include <asm/ptrace-abi.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include "Sugar.h"
 #include "cpu/ptimgi386.h"
 #include "cpu/i386cpustate.h"
 
@@ -300,29 +303,57 @@ void PTImgI386::revokeRegs() { assert (0 == 1 && "STUB"); }
 
 void PTImgI386::setFakeInfo(const char* info_file)
 {
-	/* use VEX */
-	if (strcmp(info_file, "0") == 0) {
-		fprintf(stderr, INFOSTR "faking CPUID with VEX\n");
-		return;
-	}
+	FILE*		f;
+	uint32_t	cur_off;
 
-	assert (0 == 1 && "UNSUPPORTED FAKE CPUID FILE");
+	f = fopen(info_file, "rb");
+	assert (f != NULL && "could not open patch file");
+
+	while (fscanf(f, "%x\n", &cur_off) > 0)
+		patch_offsets.insert(cur_off);
+
+	assert (patch_offsets.size() > 0 && "No patch offsets?");
+
+	fprintf(stderr,
+		INFOSTR "loaded %d CPUID patch offsets\n",
+		(int)patch_offsets.size());
+
+	fclose(f);
 }
 
-/* patch all cpuid instructions */
-uint64_t PTImgI386::stepInitFixup(void)
+#define IS_PEEKTXT_CPUID(x)	(((x) & 0xffff) == 0xa20f)
+
+uint64_t PTImgI386::checkCPUID(void)
 {
 	struct user_regs_struct regs;
 	int			err;
-	VexGuestX86State	fakeState;
 	uint64_t		v;
 
 	err = ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
 	assert(err != -1);
 
 	v = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
-	if ((v & 0xffff) != 0xa20f)
-		return regs.rip;
+	if (!IS_PEEKTXT_CPUID(v))
+		return 0;
+
+	return regs.rip;
+}
+
+bool PTImgI386::patchCPUID(void)
+{
+	struct user_regs_struct regs;
+	VexGuestX86State	fakeState;
+	int			err;
+	static bool		has_patched = false;
+
+	err = ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
+	assert(err != -1);
+
+	/* -1 because the trap opcode is dispatched */
+	if (has_patched && cpuid_insts.count(regs.rip-1) == 0) {
+		fprintf(stderr, INFOSTR "unpatched addr %p\n", (void*)regs.rip);
+		return false;
+	}
 
 	fakeState.guest_EAX = regs.rax;
 	fakeState.guest_EBX = regs.rbx;
@@ -334,9 +365,66 @@ uint64_t PTImgI386::stepInitFixup(void)
 	regs.rcx = fakeState.guest_ECX;
 	regs.rdx = fakeState.guest_EDX;
 
-	/* skip over CPUID opcode */
-	regs.rip += 2;
+	fprintf(stderr, INFOSTR "patched CPUID @ %p\n", (void*)regs.rip);
+
+	/* skip over the extra byte from the cpuid opcode */
+	regs.rip += (has_patched) ? 1 : 2;
 
 	err = ptrace((__ptrace_request)PTRACE_SETREGS, child_pid, NULL, &regs);
 	assert (err != -1);
+
+	has_patched = true;
+	return true;
+}
+
+/* patch all cpuid instructions */
+void PTImgI386::stepInitFixup(void)
+{
+	int		err, status;
+	uint64_t	cpuid_pc = 0, bias = 0;
+
+	/* single step until cpuid instruction */
+	while (cpuid_pc == 0) {
+		err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
+		assert (err != -1 && "Bad PTRACE_SINGLESTEP");
+		wait(&status);
+		assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+
+		cpuid_pc = checkCPUID();
+	}
+
+	/* find bias of cpuid instruction w/r/t patch offsets */
+	foreach (it, patch_offsets.begin(), patch_offsets.end()) {
+		/* XXX: "research quality" */
+		if ((*it & 0xfff) == (cpuid_pc & 0xfff)) {
+			bias = cpuid_pc - *it;
+			break;
+		}
+	}
+
+	fprintf(stderr, INFOSTR "CPUID patch bias %p\n", (void*)bias);
+
+	assert (bias != 0 && "Expected non-zero bias. Bad patch file?");
+
+	/* now have offset of first CPUID instruction.
+	 * replace all CPUID instructions with trap instruction. */
+	foreach (it, patch_offsets.begin(), patch_offsets.end()) {
+		uint64_t	addr = *it + bias;
+		cpuid_insts[addr] = setBreakpoint(guest_ptr(addr));
+	}
+
+	/* trap on replaced cpuid instructions until non-cpuid instruction */
+	while (patchCPUID() == true) {
+		err = ptrace(PTRACE_CONT, child_pid, NULL, NULL);
+		assert (err != -1 && "bad ptrace_cont");
+		wait(&status);
+		assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+	}
+
+	/* child process should be on a legitimate int3 instruction now */
+
+	/* restore CPUID instructions */
+	foreach (it, cpuid_insts.begin(), cpuid_insts.end()) {
+		resetBreakpoint(guest_ptr(it->first), it->second);
+	}
 }

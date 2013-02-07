@@ -2,6 +2,7 @@
 #define PTIMGI386_H
 
 #include <sys/user.h>
+#include <set>
 #include "ptimgarch.h"
 
 extern "C" {
@@ -37,12 +38,23 @@ public:
 	void resetBreakpoint(guest_ptr addr, long v);
 
 	virtual void setFakeInfo(const char* info_file);
-	virtual uint64_t stepInitFixup(void);
+	virtual void stepInitFixup(void);
 private:
+	/* return PC iff on cpuid instruction, otherwise 0 */
+	uint64_t checkCPUID(void);
+
+	/* return true iff on trapped cpuid instruction */
+	bool patchCPUID(void);
+
 	void setupGDT(void);
 	bool readThreadEntry(unsigned idx, VEXSEG* buf);
 	const VexGuestX86State& getVexState(void) const;
 	char	shadow_user_regs[17*4];
+
+	/* provided by VEXLLVM_FAKE_CPUID */
+	std::set<uint64_t>	patch_offsets;
+	/* overwritten instructions (addr, data) */
+	std::map<uint64_t, uint64_t>	cpuid_insts;
 };
 
 #endif
