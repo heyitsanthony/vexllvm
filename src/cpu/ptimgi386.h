@@ -36,6 +36,8 @@ public:
 	void revokeRegs();
 	void resetBreakpoint(guest_ptr addr, long v);
 
+	virtual void setFakeInfo(const char* info_file);
+	virtual uint64_t stepInitFixup(void);
 private:
 	void setupGDT(void);
 	bool readThreadEntry(unsigned idx, VEXSEG* buf);

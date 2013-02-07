@@ -14,6 +14,7 @@
 
 extern "C" {
 #include "valgrind/libvex_guest_x86.h"
+extern void x86g_dirtyhelper_CPUID_sse2 ( VexGuestX86State* st );
 }
 
 /* HAHA TOO BAD I CAN'T REUSE A HEADER. */
@@ -227,7 +228,7 @@ bool PTImgI386::readThreadEntry(unsigned idx, VEXSEG* buf)
 	fprintf(stderr,
 		INFOSTR "[TLS[%d]: base=%p. limit=%p\n"
 		INFOSTR "seg32=%d. contents=%d. not_present=%d. useable=%d\n",
-		idx, (void*)ud.base_addr, (void*)ud.limit,
+		idx, (void*)(intptr_t)ud.base_addr, (void*)(intptr_t)ud.limit,
 		ud.seg_32bit, ud.contents, ud.seg_not_present, ud.useable);
 
 	/* translate linux user desc into vex/hw ldt */
@@ -295,3 +296,47 @@ bool PTImgI386::canFixup(
 	bool has_memlog) const { assert (0 == 1 && "STUB"); }
 bool PTImgI386::breakpointSysCalls(guest_ptr, guest_ptr) { assert (0 == 1 && "STUB"); }
 void PTImgI386::revokeRegs() { assert (0 == 1 && "STUB"); }
+
+
+void PTImgI386::setFakeInfo(const char* info_file)
+{
+	/* use VEX */
+	if (strcmp(info_file, "0") == 0) {
+		fprintf(stderr, INFOSTR "faking CPUID with VEX\n");
+		return;
+	}
+
+	assert (0 == 1 && "UNSUPPORTED FAKE CPUID FILE");
+}
+
+/* patch all cpuid instructions */
+uint64_t PTImgI386::stepInitFixup(void)
+{
+	struct user_regs_struct regs;
+	int			err;
+	VexGuestX86State	fakeState;
+	uint64_t		v;
+
+	err = ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
+	assert(err != -1);
+
+	v = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+	if ((v & 0xffff) != 0xa20f)
+		return regs.rip;
+
+	fakeState.guest_EAX = regs.rax;
+	fakeState.guest_EBX = regs.rbx;
+	fakeState.guest_ECX = regs.rcx;
+	fakeState.guest_EDX = regs.rdx;
+	x86g_dirtyhelper_CPUID_sse2(&fakeState);
+	regs.rax = fakeState.guest_EAX;
+	regs.rbx = fakeState.guest_EBX;
+	regs.rcx = fakeState.guest_ECX;
+	regs.rdx = fakeState.guest_EDX;
+
+	/* skip over CPUID opcode */
+	regs.rip += 2;
+
+	err = ptrace((__ptrace_request)PTRACE_SETREGS, child_pid, NULL, &regs);
+	assert (err != -1);
+}

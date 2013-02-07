@@ -40,6 +40,13 @@ public:
 	void incBlocks(void) { blocks++; }
 	virtual void revokeRegs(void) = 0;
 
+	virtual void setFakeInfo(const char* info_file)
+	{ assert (0 == 1 && "Not implemented for this arch"); }
+
+	/* returns address processed */
+	virtual uint64_t stepInitFixup(void)
+	{ assert (0 == 1 && "Not implemented for this arch"); }
+
 protected:
 	PTImgArch(GuestPTImg* in_gs, int in_pid);
 	virtual void waitForSingleStep(void);

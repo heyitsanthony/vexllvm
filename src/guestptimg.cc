@@ -161,10 +161,10 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	assert (err != -1 && "Couldn't attach to process");
 
 	wait(&status);
-	fprintf(stderr, "ptrace status=%p\n", (void*)status);
+	fprintf(stderr, "ptrace status=%x\n", status);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSTOP);
 	fprintf(stderr, "Attached to PID=%d\n", pid);
-	
+
 	if (getenv("VEXLLVM_NOSYSCALL") == NULL)
 		attachSyscall(pid);
 	else
@@ -181,7 +181,7 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 pid_t GuestPTImg::createSlurpedChild(
 	int argc, char *const argv[], char *const envp[])
 {
-	int			err, status;
+	int			status;
 	pid_t			pid;
 	guest_ptr		break_addr;
 
@@ -221,11 +221,8 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* overwrite entry with BP. */
 	setBreakpoint(pid, entry_pt);
 
-	/* go until child hits entry point */
-	err = ptrace(PTRACE_CONT, pid, NULL, NULL);
-	assert (err != -1);
-	wait(&status);
-	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+	/* run until child hits entry point */
+	waitForEntry(pid);
 
 	break_addr = undoBreakpoint(pid);
 	assert (break_addr == entry_pt && "Did not break at entry");
@@ -365,6 +362,44 @@ void GuestPTImg::stackTrace(
 
 	while ((bytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
 		os.write(buffer, bytes);
+}
+
+void GuestPTImg::waitForEntrySingleStep(int pid)
+{
+	int		err, status;
+	const char	*fake_cpuid;
+
+	fake_cpuid = getenv("VEXLLVM_FAKE_CPUID");
+	pt_arch->setFakeInfo(fake_cpuid);
+
+	while (1) {
+		uint64_t	pc;
+
+		err = ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL);
+		assert (err != -1 && "Bad PTRACE_SINGLESTEP");
+		wait(&status);
+		assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+
+		pc = pt_arch->stepInitFixup();
+		if (entry_pt == pc)
+			break;
+	}
+}
+
+void GuestPTImg::waitForEntry(int pid)
+{
+	int		err, status;
+
+	if (getenv("VEXLLVM_FAKE_CPUID") != NULL) {
+		waitForEntrySingleStep(pid);
+		/* fall through to breakpoint instruction */
+	}
+
+	err = ptrace(PTRACE_CONT, pid, NULL, NULL);
+	assert (err != -1 && "bad ptrace_cont");
+	wait(&status);
+
+	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
 }
 
 void GuestPTImg::setBreakpoint(pid_t pid, guest_ptr addr)

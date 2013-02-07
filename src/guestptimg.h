@@ -99,6 +99,9 @@ private:
 		int argc, char *const argv[], char *const envp[]);
 	void slurpBrains(pid_t pid);
 
+	void waitForEntry(int pid);
+	void waitForEntrySingleStep(int pid);
+
 	guest_ptr			entry_pt;
 	PtrList<ProcMap>		mappings;
 	std::map<guest_ptr, uint64_t>	breakpoints;
