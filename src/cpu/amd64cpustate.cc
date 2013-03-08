@@ -274,13 +274,15 @@ static const int arg2reg[] =
 	offsetof(VexGuestAMD64State, guest_RDI),
 	offsetof(VexGuestAMD64State, guest_RSI),
 	offsetof(VexGuestAMD64State, guest_RDX),
-	offsetof(VexGuestAMD64State, guest_RCX)
+	offsetof(VexGuestAMD64State, guest_RCX),
+	offsetof(VexGuestAMD64State, guest_R8),
+	offsetof(VexGuestAMD64State, guest_R9)
 };
 
 /* set a function argument */
 void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 {
-	assert (arg_num <= 3);
+	assert (arg_num <= 5);
 	*((uint64_t*)((uintptr_t)state_data + arg2reg[arg_num])) = arg_val;
 }
 
