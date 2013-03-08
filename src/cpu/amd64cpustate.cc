@@ -341,7 +341,7 @@ void AMD64CPUState::setRegs(
 
 unsigned int AMD64CPUState::getFuncArgOff(unsigned int arg_num) const
 {
-	assert (arg_num <= 3);
+	assert (arg_num <= 5);
 	return arg2reg[arg_num];
 }
 
