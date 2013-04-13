@@ -25,6 +25,8 @@ public:
 	void bindToExeEngine(llvm::ExecutionEngine*);
 	void loadUserMod(const char* path);
 	void useExternalMod(llvm::Module* m);
+
+	static llvm::Module* loadModFromPath(const char* path);
 protected:
 	VexHelpers(Arch::Arch arch);
 	virtual void loadDefaultModules(void);

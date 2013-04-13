@@ -136,3 +136,11 @@ bool GuestCPUState::save(const char* fname)
 
 	return true;
 }
+
+uint8_t* GuestCPUState::copyOutStateData(void)
+{
+	uint8_t*	old_dat = state_data;
+	state_data = copyStateData();
+	exit_type = &state_data[state_byte_c];
+	return old_dat;
+}

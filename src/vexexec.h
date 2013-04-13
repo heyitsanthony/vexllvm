@@ -64,6 +64,7 @@ public:
 
 	guest_ptr getNextAddr(void) const { return next_addr; }
 
+	void setSyscalls(Syscalls* in_sc);
 protected:
 	VexExec(Guest* gs, VexXlate* in_xlate = NULL);
 	virtual guest_ptr doVexSB(VexSB* vsb);

@@ -73,6 +73,9 @@ VexHelpers* VexHelpers::create(Arch::Arch arch)
 }
 
 Module* VexHelpers::loadMod(const char* path)
+{ return loadModFromPath(path); }
+
+Module* VexHelpers::loadModFromPath(const char* path)
 {
 	Module			*ret_mod;
 	std::string		ErrorMsg;

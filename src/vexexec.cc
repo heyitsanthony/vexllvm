@@ -404,3 +404,9 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 		exit(1);
 	}
 }
+
+void VexExec::setSyscalls(Syscalls* in_sc)
+{
+	delete sc;
+	sc = in_sc;
+}

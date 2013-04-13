@@ -129,6 +129,7 @@ BITCODE_FILES=	bitcode/libvex_amd64_helpers.bc	\
 		bitcode/libvex_arm_helpers.bc	\
 		bitcode/vexops.bc		\
 		bitcode/softfloat.bc		\
+		bitcode/fpu-softgun.bc		\
 		bitcode/fpu-softfloat.bc	\
 		bitcode/fpu-linuxmips.bc	\
 		bitcode/fpu-bsdppc.bc		\
@@ -202,6 +203,10 @@ bitcode/softfloat.bc: bitcode/softfloat-fpu.bc bitcode/vexops_softfloat.bc
 
 bitcode/fpu-bsdppc.bc: bitcode/bsd-fpu-ppc.bca bitcode/vexops_softfloat.bc
 	$(LLVMLINK) -o $@ $^
+
+bitcode/fpu-softgun.bc: bitcode/softgun-fpu.bca bitcode/vexops_softfloat.bc
+	$(LLVMLINK) -o $@ $^
+
 
 bitcode/fpu-bsdhppa.bc: bitcode/bsd-fpu-hppa.bca bitcode/vexops_softfloat.bc
 	$(LLVMLINK) -o $@ $^

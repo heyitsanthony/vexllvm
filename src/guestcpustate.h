@@ -51,6 +51,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	const void* getStateData(void) const { return state_data; }
 	unsigned int getStateSize(void) const { return state_byte_c+1; }
 	uint8_t* copyStateData(void) const;
+	uint8_t* copyOutStateData(void);
 
 	virtual void setStackPtr(guest_ptr) = 0;
 	virtual guest_ptr getStackPtr(void) const = 0;
