@@ -24,8 +24,6 @@ protected:
 	void dumpShadow(VexSB* vsb);
 
 	PTImgChk		*cross_check;
-	SyscallsMarshalled	*sc_marshall;
-
 private:
 	bool		hit_syscall;
 	bool		is_deferred;

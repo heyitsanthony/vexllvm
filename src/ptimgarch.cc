@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <sys/ptrace.h>
 #include "ptimgarch.h"
+#include "guestcpustate.h"
 
 PTImgArch::PTImgArch(GuestPTImg* in_gs, int in_pid)
 : gs(in_gs)
@@ -46,9 +47,32 @@ void PTImgArch::waitForSingleStep(void)
 	//TODO: real signal handling needed, but the main process
 	//doesn't really have that yet...
 	// 1407
-	assert(	WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP &&
-		"child received a signal or ptrace can't single step");
+	if (WIFSTOPPED(status)) {
+		switch (WSTOPSIG(status)) {
+		case SIGTRAP:
+			/* trap is expected for single-stepping */
+			break;
+		case SIGFPE:
+			fprintf(stderr, "[PTImgArch] FPE!\n");
+			break;
+		case SIGSEGV: {
+			guest_ptr	cur_pc(gs->getCPUState()->getPC());
 
+			fprintf(stderr, "[PTImgArch] SIGSEGV!\n");
+			/* "fake progress" */
+
+			gs->getCPUState()->setPC(guest_ptr(0xbadbadbadbad));
+			pushRegisters();
+			gs->getCPUState()->setPC(cur_pc);
+			break;
+			}
+		default:
+			perror("child received a signal or ptrace can't single step");
+		}
+	}  else {
+		perror("Unknown status in waitForSingleStep");
+		abort();
+	}
 	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
 		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
 		fprintf(stderr,

@@ -40,10 +40,8 @@
 
 using namespace llvm;
 
-GuestPTImg::GuestPTImg(
-	int argc, char *const argv[], char *const envp[],
-	bool use_entry)
-: Guest(argv[0])
+GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
+: Guest(binpath)
 , pt_arch(NULL)
 , symbols(NULL)
 , dyn_symbols(NULL)
@@ -54,12 +52,11 @@ GuestPTImg::GuestPTImg(
 	mem = new GuestMem();
 	ProcMap::dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
 
-
 	use_32bit_arch = (getenv("VEXLLVM_32_ARCH") != NULL);
 
 	entry_pt = guest_ptr(0);
-	if (argv[0] != NULL && use_entry)  {
-		ElfImg	*img = ElfImg::create(argv[0], false, false);
+	if (binpath != NULL && use_entry)  {
+		ElfImg	*img = ElfImg::create(binpath, false, false);
 		assert (img != NULL && "DOES BINARY EXIST?");
 		assert(img->getArch() == getArch() || use_32bit_arch);
 
@@ -178,6 +175,96 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	return pid;
 }
 
+static void setupTraceMe(void)
+{
+	/* don't keep running if parent dies */
+	prctl(PR_SET_PDEATHSIG, SIGKILL);
+	prctl(PR_SET_PDEATHSIG, SIGSEGV);
+	prctl(PR_SET_PDEATHSIG, SIGILL);
+	prctl(PR_SET_PDEATHSIG, SIGBUS);
+	prctl(PR_SET_PDEATHSIG, SIGABRT);
+	ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+}
+
+static void setupChild(char *const argv[], char *const envp[])
+{
+	int     err;
+
+	setupTraceMe();
+	if (getenv("VEXLLVM_PRELOAD")) {
+		setenv("LD_PRELOAD", getenv("VEXLLVM_PRELOAD"), 1);
+		err = execvp(argv[0], argv);
+	} else {
+		err = execvpe(argv[0], argv, envp);
+	}
+
+	assert (err != -1 && "EXECVE FAILED. NO PTIMG!");
+}
+
+
+pid_t GuestPTImg::createFromGuest(Guest* gs)
+{
+	pid_t		pid;
+	int		status;
+	guest_ptr	cur_pc, break_addr;
+
+	pid = fork();
+	if (pid < 0) return pid;
+	if (pid == 0) {
+		/* child */
+		setupTraceMe();
+
+		/* wait for parent by SIGTRAPing self */
+		kill(getpid(), SIGTRAP);
+
+		/* parent should have set breakpoint at current IP
+		 * ... jump to it */
+		cpu_state = gs->getCPUState();
+		pt_arch = NEW_ARCH;
+		pt_arch->restore();
+
+		assert (0 == 1 && "OOPS");
+		exit(-1);
+	}
+
+	pt_arch = NEW_ARCH;
+
+	/* wait for child to SIGTRAP itself */
+	wait(&status);
+	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+
+	/* Trapped the process on execve-- binary is loaded, but not linked */
+	/* overwrite entry with BP. */
+	cur_pc = gs->getCPUState()->getPC();
+	setBreakpoint(pid, cur_pc);
+
+	/* run until child hits entry point */
+	waitForEntry(pid);
+
+	break_addr = undoBreakpoint(pid);
+	assert (break_addr == cur_pc && "Did not break at entry");
+
+	/* cleanup bp */
+	resetBreakpoint(pid, cur_pc);
+
+	/* copy guest state into our state, destroy old guest */
+	cpu_state = gs->cpu_state;
+	mem =  gs->mem;
+	bin_path = gs->bin_path;
+
+	symbols = new Symbols(*gs->getSymbols());
+
+	/* this needs guestptimg to be a 'friend' of guest */
+	gs->cpu_state = NULL;
+	gs->mem = NULL;
+	gs->bin_path = NULL;
+	delete gs;
+
+	entry_pt = cur_pc;
+
+	return pid;
+}
+
 pid_t GuestPTImg::createSlurpedChild(
 	int argc, char *const argv[], char *const envp[])
 {
@@ -188,25 +275,8 @@ pid_t GuestPTImg::createSlurpedChild(
 	assert (entry_pt.o && "No entry point given to slurp");
 
 	pid = fork();
-	if (pid == 0) {
-		/* child */
-		int     err;
-
-		/* don't keep running if parent dies */
-                prctl(PR_SET_PDEATHSIG, SIGKILL);
-                prctl(PR_SET_PDEATHSIG, SIGSEGV);
-                prctl(PR_SET_PDEATHSIG, SIGILL);
-                prctl(PR_SET_PDEATHSIG, SIGBUS);
-                prctl(PR_SET_PDEATHSIG, SIGABRT);
-		ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-		if (getenv("VEXLLVM_PRELOAD")) {
-			setenv("LD_PRELOAD", getenv("VEXLLVM_PRELOAD"), 1);
-			err = execvp(argv[0], argv);
-		} else {
-			err = execvpe(argv[0], argv, envp);
-		}
-		assert (err != -1 && "EXECVE FAILED. NO PTIMG!");
-	}
+	if (pid == 0)
+		setupChild(argv, envp);
 
 	/* failed to create child */
 	if (pid < 0) return pid;
@@ -279,20 +349,6 @@ pid_t GuestPTImg::createSlurpedChild(
 	return pid;
 }
 
-void GuestPTImg::dumpSelfMap(void)
-{
-	FILE	*f_self;
-	char	buf[256];
-
-	f_self = fopen("/proc/self/maps", "r");
-	while (!feof(f_self)) {
-		if (fgets(buf, 256, f_self) == NULL)
-			break;
-		fprintf(stderr, "[ME] %s", buf);
-	}
-	fclose(f_self);
-}
-
 void GuestPTImg::slurpRegisters(pid_t pid)
 {
 	pt_arch->slurpRegisters();
@@ -302,66 +358,6 @@ void GuestPTImg::slurpBrains(pid_t pid)
 {
 	ProcMap::slurpMappings(pid, mem, mappings);
 	slurpRegisters(pid);
-}
-
-void GuestPTImg::stackTrace(
-	std::ostream& os,
-	const char* binname, pid_t pid,
-	guest_ptr range_begin, guest_ptr range_end)
-{
-	char			buffer[1024];
-	int			bytes;
-	int			pipefd[2];
-	int			err;
-	std::ostringstream	pid_str, disasm_cmd;
-
-	pid_str << pid;
-	if (range_begin && range_end) {
-		disasm_cmd << "disass " << range_begin << "," << range_end;
-	} else {
-		disasm_cmd << "print \"???\"";
-	}
-
-	err = pipe(pipefd);
-	assert (err != -1 && "Bad pipe for subservient trace");
-
-	kill(pid, SIGSTOP);
-	ptrace(PTRACE_DETACH, pid, NULL, NULL);
-
-	if (!fork()) {
-		close(pipefd[0]);    // close reading end in the child
-		dup2(pipefd[1], 1);  // send stdout to the pipe
-		dup2(pipefd[1], 2);  // send stderr to the pipe
-		close(pipefd[1]);    // this descriptor is no longer needed
-
-		execl("/usr/bin/gdb",
-			"/usr/bin/gdb",
-			"--batch",
-			binname,
-			pid_str.str().c_str(),
-			"--eval-command",
-			"thread apply all bt",
-			"--eval-command",
-			"print \"disasm of where guest ended (may fail)\"",
-			"--eval-command",
-			"disass",
-			 "--eval-command",
-			"print \"disasm of block with error (just finished)\"",
-			"--eval-command",
-			disasm_cmd.str().c_str(),
-			"--eval-command",
-			"info registers all",
-			"--eval-command",
-			"kill",
-			(char*)NULL);
-		exit(1);
-	}
-
-	  // close the write end of the pipe in the parent
-	close(pipefd[1]);
-
-	while ((bytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
-		os.write(buffer, bytes);
 }
 
 void GuestPTImg::waitForEntry(int pid)
@@ -498,4 +494,78 @@ Symbols* GuestPTImg::loadDynSymbols(
 	}
 
 	return dyn_syms;
+}
+
+void GuestPTImg::stackTrace(
+	std::ostream& os,
+	const char* binname, pid_t pid,
+	guest_ptr range_begin, guest_ptr range_end)
+{
+	char			buffer[1024];
+	int			bytes;
+	int			pipefd[2];
+	int			err;
+	std::ostringstream	pid_str, disasm_cmd;
+
+	pid_str << pid;
+	if (range_begin && range_end) {
+		disasm_cmd << "disass " << range_begin << "," << range_end;
+	} else {
+		disasm_cmd << "print \"???\"";
+	}
+
+	err = pipe(pipefd);
+	assert (err != -1 && "Bad pipe for subservient trace");
+
+	kill(pid, SIGSTOP);
+	ptrace(PTRACE_DETACH, pid, NULL, NULL);
+
+	if (!fork()) {
+		close(pipefd[0]);    // close reading end in the child
+		dup2(pipefd[1], 1);  // send stdout to the pipe
+		dup2(pipefd[1], 2);  // send stderr to the pipe
+		close(pipefd[1]);    // this descriptor is no longer needed
+
+		execl("/usr/bin/gdb",
+			"/usr/bin/gdb",
+			"--batch",
+			binname,
+			pid_str.str().c_str(),
+			"--eval-command",
+			"thread apply all bt",
+			"--eval-command",
+			"print \"disasm of where guest ended (may fail)\"",
+			"--eval-command",
+			"disass",
+			 "--eval-command",
+			"print \"disasm of block with error (just finished)\"",
+			"--eval-command",
+			disasm_cmd.str().c_str(),
+			"--eval-command",
+			"info registers all",
+			"--eval-command",
+			"kill",
+			(char*)NULL);
+		exit(1);
+	}
+
+	  // close the write end of the pipe in the parent
+	close(pipefd[1]);
+
+	while ((bytes = read(pipefd[0], buffer, sizeof(buffer))) != 0)
+		os.write(buffer, bytes);
+}
+
+void GuestPTImg::dumpSelfMap(void)
+{
+	FILE	*f_self;
+	char	buf[256];
+
+	f_self = fopen("/proc/self/maps", "r");
+	while (!feof(f_self)) {
+		if (fgets(buf, 256, f_self) == NULL)
+			break;
+		fprintf(stderr, "[ME] %s", buf);
+	}
+	fclose(f_self);
 }

@@ -11,6 +11,7 @@
 
 class GuestCPUState;
 class GuestSnapshot;
+class GuestPTImg;
 class Symbols;
 
 namespace llvm
@@ -49,6 +50,10 @@ public:
 	const GuestMem* getMem(void) const { assert (mem != NULL); return mem; }
 	GuestMem* getMem(void) { assert (mem != NULL); return mem; }
 
+	/* this is for swapping out the memory layer with
+	 * a ptrace memory layer, mainly */
+	void setMem(GuestMem* in_mem) { mem = in_mem; }
+
 	/* guest has an interface to saving/loading, but all the legwork
 	 * is done by guestsnapshot to keep things tidy */
 	void save(const char* dirpath = NULL) const;
@@ -61,6 +66,7 @@ public:
 	{ return std::vector<guest_ptr>(); }
 
 protected:
+	friend class GuestPTImg;
 	void setBinPath(const char* b);
 	Guest(const char* bin_path);
 

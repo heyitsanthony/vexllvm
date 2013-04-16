@@ -21,9 +21,8 @@ VexExecChk::VexExecChk(PTImgChk* gs, VexXlate* vx)
 	cross_check = (getGuest()) ? gs : NULL;
 	if (!cross_check) return;
 
-	sc_marshall = new SyscallsMarshalled(gs);
-	delete sc;
-	sc = sc_marshall;
+	if (sc != NULL) delete sc;
+	sc = new SyscallsMarshalled(gs);
 }
 
 /* ensures that shadow process's state <= llvm process's state */
@@ -128,7 +127,7 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 
 void VexExecChk::stepSysCall(VexSB* vsb)
 {
-	cross_check->stepSysCall(sc_marshall);
+	cross_check->stepSysCall(static_cast<SyscallsMarshalled*>(sc));
 	gs->getCPUState()->resetSyscall();
 }
 
@@ -140,7 +139,7 @@ void VexExecChk::doSysCallCore(VexSB* vsb)
 	SyscallParams	sp(gs->getSyscallParams());
 	int		sys_nr;
 
-	sys_nr = sc_marshall->translateSyscall(sp.getSyscall());
+	sys_nr = sc->translateSyscall(sp.getSyscall());
 	if (sys_nr == SYS_brk) {
 		/* XXX audit this code. I don't trust it-- AJR */
 

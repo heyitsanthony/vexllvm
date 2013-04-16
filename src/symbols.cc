@@ -10,6 +10,12 @@ Symbols::~Symbols()
 		delete (*it).second;
 }
 
+Symbols::Symbols(const Symbols& s)
+{
+	if (&s == this) return;
+	addSyms(&s);
+}
+
 const Symbol* Symbols::findSym(const std::string& s) const
 {
 	symname_map::const_iterator it;
@@ -61,9 +67,7 @@ bool Symbols::addSym(const std::string& name, symaddr_t addr, unsigned int len)
 }
 
 void Symbols::addSym(const Symbol* sym)
-{
-	addSym(sym->getName(), sym->getBaseAddr(), sym->getLength());
-}
+{ addSym(sym->getName(), sym->getBaseAddr(), sym->getLength()); }
 
 void Symbols::addSyms(const Symbols* syms)
 {

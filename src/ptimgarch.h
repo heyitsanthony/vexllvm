@@ -13,7 +13,9 @@ public:
 	virtual void printUserRegs(std::ostream& os) const = 0;
 	virtual guest_ptr getStackPtr(void) const = 0;
 	virtual void slurpRegisters(void) = 0;
+	virtual void pushRegisters(void) { assert (0 == 1 && "STUB"); }
 	virtual void stepSysCall(SyscallsMarshalled* sc_m) = 0;
+	virtual void ignoreSysCall(void) { assert (0 == 1 && "STUB"); }
 
 	virtual long setBreakpoint(guest_ptr addr) = 0;
 	virtual void resetBreakpoint(guest_ptr addr, long v) = 0;
@@ -46,10 +48,16 @@ public:
 	virtual void stepInitFixup(void)
 	{ assert (0 == 1 && "Not implemented for this arch"); }
 
+	/* starts running guest natively by jumping into context */
+	virtual void restore(void) { assert (0 == 1 && "Not implemented"); }
+
+	virtual uint64_t dispatchSysCall(const SyscallParams& sp)
+	{ assert (0 == 1 && "Not implemented"); }
+
+	void copyIn(guest_ptr dst, const void* src, unsigned int bytes) const;
 protected:
 	PTImgArch(GuestPTImg* in_gs, int in_pid);
 	virtual void waitForSingleStep(void);
-	void copyIn(guest_ptr dst, const void* src, unsigned int bytes) const;
 
 
 	GuestPTImg	*gs;

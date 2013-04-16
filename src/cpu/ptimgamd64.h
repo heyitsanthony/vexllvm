@@ -18,7 +18,10 @@ public:
 	bool isRegMismatch(void) const;
 	bool doStep(guest_ptr start, guest_ptr end, bool& hit_syscall);
 	uintptr_t getSysCallResult() const;
+	
 	void stepSysCall(SyscallsMarshalled* sc_m);
+	void ignoreSysCall(void);
+
 	bool breakpointSysCalls(
 		const guest_ptr ip_begin,
 		const guest_ptr ip_end);
@@ -31,6 +34,7 @@ public:
 	void setRegs(const user_regs_struct& regs);
 	guest_ptr getPC(void);
 	guest_ptr getStackPtr(void) const;
+	virtual void pushRegisters(void);
 
 	void resetBreakpoint(guest_ptr addr, long v);
 	void printFPRegs(std::ostream& os) const;
@@ -41,6 +45,9 @@ public:
 	guest_ptr undoBreakpoint(void);
 	void revokeRegs(void);
 
+	virtual void restore(void);
+
+	virtual uint64_t dispatchSysCall(const SyscallParams& sp);
 protected:
 	virtual void waitForSingleStep(void);
 
@@ -59,6 +66,7 @@ private:
 
 	struct user_regs_struct& getRegs(void) const;
 	const VexGuestAMD64State& getVexState(void) const;
+	VexGuestAMD64State& getVexState(void);
 
 	// don't reference directly-- use getRegs() to
 	// ensure most current version

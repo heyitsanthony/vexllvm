@@ -12,11 +12,14 @@ class SyscallsMarshalled;
 class PTImgChk : public GuestPTImg
 {
 public:
-	PTImgChk(int argc, char* const argv[], char* const envp[]);
+	PTImgChk(
+		const char* binname,
+		bool dummy = false /* so templates work */);
 	virtual ~PTImgChk();
 
 	guest_ptr stepToBreakpoint(void);
 	void stepThroughBounds(guest_ptr start, guest_ptr end);
+	void ignoreSysCall(void);
 	void stepSysCall(SyscallsMarshalled* sc);
 	guest_ptr continueForwardWithBounds(guest_ptr start, guest_ptr end);
 
@@ -38,10 +41,12 @@ public:
 	void setBreakpoint(guest_ptr addr)
 	{ GuestPTImg::setBreakpoint(child_pid, addr); }
 
-
+	void pushRegisters(void);
 
 	uintptr_t getSysCallResult() const;
 	MemLog* getMemLog(void) { return mem_log; }
+
+	pid_t getPID(void) const { return child_pid; }
 
 protected:
 	virtual void handleChild(pid_t pid);

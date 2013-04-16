@@ -23,7 +23,7 @@ public:
 		T			*pt_t;
 		pid_t			slurped_pid;
 
-		pt_t = new T(argc, argv, envp);
+		pt_t = new T(argv[0]);
 		pt_img = pt_t;
 		slurped_pid = pt_img->createSlurpedChild(argc, argv, envp);
 		if (slurped_pid <= 0) {
@@ -44,7 +44,7 @@ public:
 		T			*pt_t;
 		pid_t			slurped_pid;
 
-		pt_t = new T(argc, argv, envp, false /* ignore binary */);
+		pt_t = new T(argv[0], false /* ignore binary */);
 		pt_img = pt_t;
 		slurped_pid = pt_img->createSlurpedAttach(pid);
 		if (slurped_pid <= 0) {
@@ -56,13 +56,30 @@ public:
 		return pt_t;
 	}
 
-	void printTraceStats(std::ostream& os);
-	static void stackTrace(
-		std::ostream& os, const char* binname, pid_t pid,
-		guest_ptr range_begin = guest_ptr(0), 
-		guest_ptr range_end = guest_ptr(0));
 
-	static void dumpSelfMap(void);
+	/* NOTE: destroys the guest 'gs' on success */
+	template <class T>
+	static T* create(Guest* gs)
+	{
+		GuestPTImg		*pt_img;
+		T			*pt_t;
+		pid_t			slurped_pid;
+
+		pt_t = new T(gs->getBinaryPath(), false /* ignore binary */);
+		pt_img = pt_t;
+		slurped_pid = pt_img->createFromGuest(gs);
+		if (slurped_pid <= 0) {
+			delete pt_img;
+			return NULL;
+		}
+
+		pt_img->handleChild(slurped_pid);
+		return pt_t;
+	}
+
+
+	void printTraceStats(std::ostream& os);
+
 	virtual Arch::Arch getArch() const { return arch; }
 
 	virtual const Symbols* getSymbols(void) const;
@@ -74,29 +91,37 @@ public:
 	void setBreakpoint(pid_t pid, guest_ptr addr);
 	void resetBreakpoint(pid_t pid, guest_ptr addr);
 
-	PTImgArch* getPTArch(void) { return pt_arch; }
-
 	static Symbols* loadSymbols(const PtrList<ProcMap>& mappings);
 	static Symbols* loadDynSymbols(
 		GuestMem	*mem,
 		const char	*binpath);
 
+	static void stackTrace(
+		std::ostream& os, const char* binname, pid_t pid,
+		guest_ptr range_begin = guest_ptr(0), 
+		guest_ptr range_end = guest_ptr(0));
+
+	static void dumpSelfMap(void);
+
+	PTImgArch* getPTArch(void) { return pt_arch; }
 protected:
-	GuestPTImg(int argc, char* const argv[], char* const envp[],
-		bool use_entry=true);
+	GuestPTImg(const char* binpath, bool use_entry=true);
 	virtual void handleChild(pid_t pid);
 
 	void slurpRegisters(pid_t pid);
 
 	guest_ptr undoBreakpoint(pid_t pid);
 
-	PTImgArch	*pt_arch;
 
+	PTImgArch	*pt_arch;
 private:
 	pid_t createSlurpedAttach(int pid);
 	void attachSyscall(int pid);
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);
+
+	pid_t createFromGuest(Guest* gs);
+
 	void slurpBrains(pid_t pid);
 
 	void waitForEntry(int pid);

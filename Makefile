@@ -58,6 +58,7 @@ OBJDEPS=	vexxlate.o		\
 		genllvm.o		\
 		guest.o			\
 		guestmem.o		\
+		guestptmem.o		\
 		guestcpustate.o		\
 		guestelf.o		\
 		guestfragment.o		\
@@ -100,7 +101,8 @@ endif
 ifeq ($(shell uname -m), x86_64)
 VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
 OBJDEPS +=	cpu/ptimgamd64.o	\
-		cpu/ptimgi386.o
+		cpu/ptimgi386.o		\
+		cpu/amd64_trampoline.o
 endif
 
 #LLVMCONFIG_PATH=llvm-config

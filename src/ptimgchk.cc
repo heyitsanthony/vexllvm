@@ -19,8 +19,8 @@
 /*
  * single step shadow program while counter is in specific range
  */
-PTImgChk::PTImgChk(int argc, char* const argv[], char* const envp[])
-: GuestPTImg(argc, argv, envp)
+PTImgChk::PTImgChk(const char* binname, bool dummy)
+: GuestPTImg(binname)
 , bp_steps(0)
 , blocks(0)
 , hit_syscall(false)
@@ -210,7 +210,8 @@ guest_ptr PTImgChk::stepToBreakpoint(void)
 	if (!(WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP)) {
 		fprintf(stderr,
 			"OOPS. status: stopped=%d sig=%d status=%p\n",
-			WIFSTOPPED(status), WSTOPSIG(status), (void*)status);
+			WIFSTOPPED(status), WSTOPSIG(status),
+			(void*)(long)status);
 		stackTraceShadow(std::cerr, guest_ptr(0),  guest_ptr(0));
 		assert (0 == 1 && "bad wait from breakpoint");
 	}
@@ -265,6 +266,8 @@ void PTImgChk::printShadow(std::ostream& os) const
 	printMemory(os);
 }
 
+void PTImgChk::ignoreSysCall(void) { pt_arch->ignoreSysCall(); }
+
 void PTImgChk::printTraceStats(std::ostream& os)
 {
 	os	<< "Traced "
@@ -274,3 +277,5 @@ void PTImgChk::printTraceStats(std::ostream& os)
 
 void PTImgChk::stepSysCall(SyscallsMarshalled* sc_m)
 { pt_arch->stepSysCall(sc_m); }
+
+void PTImgChk::pushRegisters(void) { pt_arch->pushRegisters(); }

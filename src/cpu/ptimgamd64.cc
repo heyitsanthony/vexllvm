@@ -56,7 +56,7 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 	// but valgrind/vex seems to not really fully handle them, how sneaky
 };
 
-#define get_reg_user(x,y)	*((uint64_t*)&x[user_regs_desc_tab[y].user_off]);
+#define get_reg_user(x,y)	*((uint64_t*)&x[user_regs_desc_tab[y].user_off])
 #define get_reg_vex(x,y)	*((uint64_t*)&x[user_regs_desc_tab[y].vex_off])
 #define get_reg_name(y)		user_regs_desc_tab[y].name
 
@@ -145,9 +145,11 @@ struct user_regs_struct& PTImgAMD64::getRegs(void) const
 }
 
 const VexGuestAMD64State& PTImgAMD64::getVexState(void) const
-{
-	return *((const VexGuestAMD64State*)gs->getCPUState()->getStateData());
-}
+{ return *((const VexGuestAMD64State*)gs->getCPUState()->getStateData()); }
+
+VexGuestAMD64State& PTImgAMD64::getVexState(void)
+{ return *((VexGuestAMD64State*)gs->getCPUState()->getStateData()); }
+
 
 bool PTImgAMD64::isMatch(void) const
 {
@@ -556,6 +558,20 @@ bool PTImgAMD64::filterSysCall(
 	return false;
 }
 
+void PTImgAMD64::ignoreSysCall(void)
+{
+	user_regs_struct	*regs;
+
+	/* do special syscallhandling if we're on an opcode */
+	assert (isOnSysCall());
+
+	regs = &getRegs();
+	regs->rip += 2;
+	/* kernel clobbers these */
+	regs->rcx = regs->r11 = 0;
+	setRegs(*regs);
+	return;
+}
 
 void PTImgAMD64::stepSysCall(SyscallsMarshalled* sc_m)
 {
@@ -574,10 +590,7 @@ void PTImgAMD64::stepSysCall(SyscallsMarshalled* sc_m)
 	old_r10 = regs->r10;
 
 	if (filterSysCall(getVexState(), *regs)) {
-		regs->rip += 2;
-		/* kernel clobbers these */
-		regs->rcx = regs->r11 = 0;
-		setRegs(*regs);
+		ignoreSysCall();
 		return;
 	}
 
@@ -673,6 +686,20 @@ long PTImgAMD64::setBreakpoint(guest_ptr addr)
 	return old_v;
 }
 
+void PTImgAMD64::pushRegisters(void)
+{
+	struct	user_regs_struct	&r(getRegs());
+	const VexGuestAMD64State	&v(getVexState());
+
+	for (unsigned i = 0; i < REG_COUNT; i++) {
+		get_reg_user(
+			((uint8_t*)&r), i) = get_reg_vex(
+				((const uint8_t*)&v), i);
+	}
+
+	setRegs(r);
+}
+
 void PTImgAMD64::slurpRegisters(void)
 {
 	AMD64CPUState			*amd64_cpu_state;
@@ -737,4 +764,47 @@ void PTImgAMD64::resetBreakpoint(guest_ptr addr, long v)
 {
 	int err = ptrace(PTRACE_POKETEXT, child_pid, addr.o, v);
 	assert (err != -1 && "Failed to reset breakpoint");
+}
+
+extern "C" { extern void amd64_trampoline(void* x); }
+void PTImgAMD64::restore(void)
+{
+	VexGuestAMD64State& state(getVexState());
+
+	state.guest_CC_NDEP = get_rflags(state);
+	amd64_trampoline(&state);
+}
+
+
+uint64_t PTImgAMD64::dispatchSysCall(const SyscallParams& sp)
+{
+	struct user_regs_struct	old_regs, new_regs;
+	uint64_t		ret;
+	uint64_t		old_op;
+
+	old_regs = getRegs();
+
+	/* patch in system call opcode */
+	old_op = ptrace(PTRACE_PEEKDATA, child_pid, old_regs.rip, NULL);
+	ptrace(PTRACE_POKEDATA, child_pid, old_regs.rip, (void*)OPCODE_SYSCALL);
+
+	new_regs = old_regs;
+	new_regs.rax = sp.getSyscall();
+	new_regs.rdi = sp.getArg(0);
+	new_regs.rsi = sp.getArg(1);
+	new_regs.rdx = sp.getArg(2);
+	new_regs.r10 = sp.getArg(3);
+	new_regs.r8 = sp.getArg(4);
+	new_regs.r9 =  sp.getArg(5);
+	ptrace(PTRACE_SETREGS, child_pid, NULL, &new_regs);
+
+	waitForSingleStep();
+
+	ret = getSysCallResult();
+
+	/* reload old state */
+	ptrace(PTRACE_POKEDATA, child_pid, old_regs.rip, (void*)old_op);
+	setRegs(old_regs);
+
+	return ret;
 }

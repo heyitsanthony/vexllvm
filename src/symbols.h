@@ -45,6 +45,7 @@ class Symbols
 {
 public:
 	Symbols() {}
+	Symbols(const Symbols& s);
 	virtual ~Symbols();
 	const Symbol* findSym(const std::string& s) const;
 	const Symbol* findSym(uint64_t ptr) const;
