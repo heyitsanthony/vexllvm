@@ -251,6 +251,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	cpu_state = gs->cpu_state;
 	mem =  gs->mem;
 	bin_path = gs->bin_path;
+	argv_ptrs = gs->getArgvPtrs();
 
 	symbols = new Symbols(*gs->getSymbols());
 
