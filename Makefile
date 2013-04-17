@@ -59,6 +59,7 @@ OBJDEPS=	vexxlate.o		\
 		guest.o			\
 		guestmem.o		\
 		guestptmem.o		\
+		guestmemdual.o		\
 		guestcpustate.o		\
 		guestelf.o		\
 		guestfragment.o		\
