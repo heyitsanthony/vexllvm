@@ -19,8 +19,8 @@
 /*
  * single step shadow program while counter is in specific range
  */
-PTImgChk::PTImgChk(const char* binname, bool dummy)
-: GuestPTImg(binname)
+PTImgChk::PTImgChk(const char* binname, bool use_entry)
+: GuestPTImg(binname, use_entry)
 , bp_steps(0)
 , blocks(0)
 , hit_syscall(false)

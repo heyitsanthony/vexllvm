@@ -14,7 +14,7 @@ class PTImgChk : public GuestPTImg
 public:
 	PTImgChk(
 		const char* binname,
-		bool dummy = false /* so templates work */);
+		bool use_entry = true/* so templates work */);
 	virtual ~PTImgChk();
 
 	guest_ptr stepToBreakpoint(void);
