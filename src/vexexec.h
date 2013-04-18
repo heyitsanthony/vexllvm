@@ -79,6 +79,7 @@ protected:
 	Guest		*gs;
 	Syscalls	*sc;
 	VexFCache	*f_cache;
+	guest_ptr	next_addr;
 
 private:
 	VexSB*		getSBFromGuestAddr(guest_ptr elfptr);
@@ -89,7 +90,6 @@ private:
 	static void signalHandler(int sig, siginfo_t* si, void* raw_context);
 	void flushTamperedCode(guest_ptr start, guest_ptr end);
 
-	guest_ptr	next_addr;
 	int		call_depth;
 
 	/* stats */

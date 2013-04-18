@@ -82,6 +82,7 @@ VexExec::~VexExec()
 
 VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 : gs(in_gs)
+, next_addr(0)
 , sb_executed_c(0)
 , exited(false)
 , trace_c(0)

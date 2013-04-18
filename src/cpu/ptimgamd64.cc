@@ -226,6 +226,11 @@ bool PTImgAMD64::isMatch(void) const
 }
 
 #define MAX_INS_BUF	32
+#define EFLAG_FIXUP(x)			\
+	reason = x;			\
+	if (!fixup_eflags) break;	\
+	goto do_fixup;
+
 bool PTImgAMD64::canFixup(
 	const std::vector<InstExtent>& insts,
 	bool has_memlog) const
@@ -233,11 +238,13 @@ bool PTImgAMD64::canFixup(
 	uint64_t	fix_op;
 	guest_ptr	fix_addr;
 	uint8_t		ins_buf[MAX_INS_BUF];
+	const char	*reason = NULL;
 
 	foreach (it, insts.begin(), insts.end()) {
 		const InstExtent	&inst(*it);
-		uint16_t		op16;
 		uint8_t			op8;
+		uint16_t		op16;
+		uint32_t		op32;
 		int			off;
 
 		assert (inst.second < MAX_INS_BUF);
@@ -251,42 +258,54 @@ bool PTImgAMD64::canFixup(
 			ins_buf[0] == 0x48 ||
 			ins_buf[0] == 0x49) ? 1 : 0;
 		op8 = ins_buf[off];
+		fix_op = op8;
 		switch (op8) {
 		case 0xd3: /* shl    %cl,%rsi */
-		case 0xc1: /* shl */
-		case 0xf7: /* idiv */
-			if (!fixup_eflags)
-				break;
-
+		case 0xc1: EFLAG_FIXUP("shl");
+		case 0xf7: EFLAG_FIXUP("idiv");
 		case 0x69: /* IMUL */
-		case 0x6b: /* IMUL */
-			fix_op = op8;
-			goto do_fixup;
+		case 0x6b: EFLAG_FIXUP("imul");
 		default:
 			break;
 		}
 
 
 		op16 = ins_buf[off] | (ins_buf[off+1] << 8);
+		fix_op = op16;
 		switch (op16) {
 		case 0x6b4c:
 		case 0xaf0f: /* imul   0x24(%r14),%edx */
+			EFLAG_FIXUP("imul");
 		case 0xc06b:
 		case 0xa30f: /* BT */
-			if (!fixup_eflags)
-				break;
-		case 0xbc0f: /* BSF */
-		case 0xbd0f: /* BSR */
-			fix_op = op16;
-			goto do_fixup;
+			EFLAG_FIXUP("bt");
+		case 0xbc0f: reason = "bsf"; goto do_fixup;
+		case 0xbd0f: reason = "bsr"; goto do_fixup;
 		default:
 			break;
+		}
+
+		/* kind of slow / stupid, but oh well */
+		for (unsigned i = 0; i < inst.second; i++) {
+			op32 =	ins_buf[i] << 0 | (ins_buf[i+1] << 8) |
+				(ins_buf[i+2] << 16) | (ins_buf[i+3] << 24);
+			fix_op = op32;
+			switch (op32) {
+			/* accessing kernel timer page */
+			case 0xff5ff080:
+				reason = "readtimer-80";
+				goto do_fixup;
+			case 0xff5ff0b0:
+				reason = "readtimer-b0";
+				goto do_fixup;
+			}
 		}
 
 		if (has_memlog) {
 			switch(op16) {
 			case 0xa30f: /* fucking BT writes to stack! */
 				fix_op = op16;
+				reason = "bt-stack";
 				goto do_fixup;
 			default:
 				break;
@@ -299,9 +318,10 @@ bool PTImgAMD64::canFixup(
 
 do_fixup:
 	fprintf(stderr,
-		"[VEXLLVM] fixing up op=%p@IP=%p\n",
+		"[VEXLLVM] fixing up op=%p@IP=%p. Reason=%s\n",
 		(void*)fix_op,
-		(void*)fix_addr.o);
+		(void*)fix_addr.o,
+		reason);
 	return true;
 }
 

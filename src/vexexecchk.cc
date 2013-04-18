@@ -106,6 +106,7 @@ guest_ptr VexExecChk::doVexSB(VexSB* vsb)
 	
 states_should_be_equal:
 	verifyBlockRun(vsb);
+	new_ip = gs->getCPUState()->getPC();
 done:
 	return new_ip;
 }
@@ -119,7 +120,13 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 		 return;
 
 	fixed = cross_check->fixup(vsb->getInstExtents());
-	if (fixed) return;
+	if (fixed) {
+		/* if registers were slurped into the guest
+		 * then the 'next_addr' is invalid. The PC in
+		 * the state is accurate, so use it instead. */
+		next_addr = gs->getCPUState()->getPC();
+		return;
+	}
 
 	fprintf(stderr, "MISMATCH: END OF BLOCK. FIND NEW EMU BUG.\n");
 	dumpShadow(vsb);

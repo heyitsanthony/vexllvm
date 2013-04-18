@@ -29,7 +29,7 @@ DEFREAD(64)
 void GuestPTMem::write##x(guest_ptr offset, uint##x##_t t)	\
 {	uint64_t	n;						\
 	n = ptrace(PTRACE_PEEKDATA, pid, (void*)offset.o, NULL);	\
-	n &= ~(uint64_t)(((uint##x##_t)(t | ~t)));			\
+	n &= ~(uint64_t)(((uint##x##_t)(~0)));			\
 	n |= t;								\
 	ptrace(PTRACE_POKEDATA, pid, (void*)offset.o, (void*)n); }
 DEFWRITE(8)
@@ -40,7 +40,18 @@ DEFWRITE(64)
 
 
 void GuestPTMem::memcpy(guest_ptr dest, const void* src, size_t len)
-{ g_ptimg->getPTArch()->copyIn(dest, src, len); }
+{
+	unsigned	rem;
+
+	rem = len % sizeof(long);
+	if (rem > 0) {
+		for (unsigned i = 0; i < rem; i++)
+			write8(dest + i, ((char*)src)[i]);
+	}
+
+	len -= rem;
+	g_ptimg->getPTArch()->copyIn(dest + rem, (char*)src + rem, len);
+}
 
 void GuestPTMem::memcpy(void* dest, guest_ptr src, size_t len) const
 {

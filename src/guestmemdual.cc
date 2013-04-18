@@ -30,13 +30,13 @@ void* GuestMemDual::getData(const Mapping& _m) const
 { return m[0]->getData(_m); }
 
 void GuestMemDual::memcpy(guest_ptr dest, const void* src, size_t len)
-{ m[0]->memcpy(dest, src, len); }
-
-void GuestMemDual::memcpy(void* dest, guest_ptr src, size_t len) const
 {
 	m[0]->memcpy(dest, src, len);
 	m[1]->memcpy(dest, src, len);
 }
+
+void GuestMemDual::memcpy(void* dest, guest_ptr src, size_t len) const
+{ m[0]->memcpy(dest, src, len); }
 
 void GuestMemDual::memset(guest_ptr dest, char d, size_t len)
 {
