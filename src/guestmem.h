@@ -163,7 +163,6 @@ public:
 
 	const void* getSysHostAddr(guest_ptr p) const;
 	void addSysPage(guest_ptr p, char* host_data, unsigned int len);
-
 private:
 	bool sbrkInitial();
 	bool sbrkInitial(guest_ptr new_top);

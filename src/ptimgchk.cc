@@ -15,6 +15,8 @@
 #include "syscall/syscallsmarshalled.h"
 #include "ptimgchk.h"
 #include "memlog.h"
+#include "guestptmem.h"
+#include "guestcpustate.h"
 
 /*
  * single step shadow program while counter is in specific range
@@ -26,6 +28,7 @@ PTImgChk::PTImgChk(const char* binname, bool use_entry)
 , hit_syscall(false)
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 , xchk_stack(getenv("VEXLLVM_XCHK_STACK") ? true : false)
+, fixup_c(0)
 {
 	log_steps = (getenv("VEXLLVM_LOG_STEPS")) ? true : false;
 }
@@ -94,10 +97,47 @@ bool PTImgChk::fixup(const std::vector<InstExtent>& insts)
 		return false;
 	}
 
+	doFixup();
+	return true;
+}
+
+void PTImgChk::doFixup(void)
+{
+	GuestCPUState*	gcpu;
+	GuestMem*	m;
+	GuestPTMem	ptmem(this, child_pid);
+	const uint64_t*	dat;
+	unsigned	dat_elems;
+
+	fixup_c++;
+
 	slurpRegisters(child_pid);
 	if (mem_log) mem_log->clear();
 
-	return true;
+	/* load all nearby pointers */
+
+	/* XXX: this is really stupid, need a better interface
+	 * for enumerating all registers */
+	gcpu = getCPUState();
+	dat = (const uint64_t*)gcpu->getStateData();
+	dat_elems = gcpu->getStateSize() / sizeof(*dat);
+
+	m = getMem();
+
+	for (unsigned i = 0; i < dat_elems; i++) {
+		GuestMem::Mapping	mp;
+		uint64_t		reg = dat[i];
+		char			buf[4096];
+
+		if (m->lookupMapping(guest_ptr(reg), mp) == false)
+			continue;
+
+		if (!(mp.getReqProt() & PROT_WRITE))
+			continue;
+
+		ptmem.memcpy(buf, guest_ptr(reg & ~(0xfffUL)), 4096);
+		m->memcpy(guest_ptr(reg & ~(0xfffUL)), buf, 4096);
+	}
 }
 
 bool PTImgChk::isMatch() const

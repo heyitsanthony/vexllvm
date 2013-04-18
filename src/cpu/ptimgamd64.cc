@@ -298,6 +298,9 @@ bool PTImgAMD64::canFixup(
 			case 0xff5ff0b0:
 				reason = "readtimer-b0";
 				goto do_fixup;
+			case 0xff5ff0a8:
+				reason = "syspage-syslog?";
+				goto do_fixup;
 			}
 		}
 

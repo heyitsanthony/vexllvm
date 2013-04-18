@@ -48,6 +48,7 @@ public:
 
 	pid_t getPID(void) const { return child_pid; }
 
+	unsigned getNumFixups(void) const { return fixup_c; }
 protected:
 	virtual void handleChild(pid_t pid);
 
@@ -61,6 +62,8 @@ private:
 
 	void readMemLogData(char* data) const;
 
+	void doFixup(void);
+
 	pid_t		child_pid;
 
 	uint64_t	bp_steps;
@@ -72,6 +75,8 @@ private:
 
 	MemLog		*mem_log;
 	bool		xchk_stack;
+
+	unsigned	fixup_c;
 };
 
 #endif
