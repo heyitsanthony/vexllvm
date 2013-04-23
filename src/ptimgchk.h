@@ -59,6 +59,8 @@ private:
 	void waitForSingleStep(void);
 
 	void printMemory(std::ostream& os) const;
+	void printRootTrace(std::ostream& os) const;
+	guest_ptr getPageMismatch(guest_ptr p) const;
 
 	void readMemLogData(char* data) const;
 

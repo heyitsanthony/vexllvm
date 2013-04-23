@@ -295,7 +295,7 @@ void GuestMem::removeMapping(Mapping& mapping)
 	}
 }
 
-bool GuestMem::lookupMapping(guest_ptr addr, Mapping& mapping)
+bool GuestMem::lookupMapping(guest_ptr addr, Mapping& mapping) const
 {
 	const GuestMem::Mapping* m;
 

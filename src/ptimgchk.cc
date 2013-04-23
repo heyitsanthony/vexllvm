@@ -299,11 +299,66 @@ void PTImgChk::printMemory(std::ostream& os) const
 	os << std::endl;
 }
 
+guest_ptr PTImgChk::getPageMismatch(guest_ptr p) const
+{
+	GuestMem::Mapping	mp;
+	GuestPTMem		ptmem(const_cast<PTImgChk*>(this), child_pid);
+	char			buf_pt[4096], buf_vex[4096];
+
+	p.o = p.o & ~0xfffUL;
+
+	/* no match found, so impossible to have mismatch */
+	if (getMem()->lookupMapping(p, mp) == false)
+		return guest_ptr(0);
+
+	/* can not write to this page, don't bother checking */
+	if (!(mp.getReqProt() & PROT_WRITE))
+		return guest_ptr(0);
+
+	ptmem.memcpy(buf_pt, p, 4096);
+	getMem()->memcpy(buf_vex, p, 4096);
+
+	for (unsigned i = 0; i < 4096; i++)
+		if (buf_pt[i] != buf_vex[i])
+			return guest_ptr(p.o + i);
+
+	return guest_ptr(0);
+}
+
+void PTImgChk::printRootTrace(std::ostream& os) const
+{
+	const GuestCPUState	*gcpu;
+	const uint64_t		*dat;
+	unsigned		dat_elems;
+
+	gcpu = getCPUState();
+	dat = (const uint64_t*)gcpu->getStateData();
+	dat_elems = gcpu->getStateSize() / sizeof(*dat);
+
+	for (unsigned i = 0; i < dat_elems; i++) {
+		guest_ptr mismatch_ptr;
+
+		mismatch_ptr = getPageMismatch(guest_ptr(dat[i] - 4096));
+		if (mismatch_ptr) {
+			os	<< "[PTImgChk] Mismatch on ptr="
+				<< (void*)(mismatch_ptr.o) << '\n';
+		}
+
+		mismatch_ptr = getPageMismatch(guest_ptr(dat[i]));
+		if (mismatch_ptr) {
+			os	<< "[PTImgChk] Mismatch on ptr="
+				<< (void*)(mismatch_ptr.o) << '\n';
+		}
+	}
+}
+
 void PTImgChk::printShadow(std::ostream& os) const
 {
 	pt_arch->printUserRegs(os);
 	pt_arch->printFPRegs(os);
+
 	printMemory(os);
+	printRootTrace(os);
 }
 
 void PTImgChk::ignoreSysCall(void) { pt_arch->ignoreSysCall(); }
