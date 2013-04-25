@@ -25,7 +25,7 @@ public:
 
 	virtual guest_ptr getPC(void) = 0;
 
-	virtual bool canFixup(
+	virtual GuestPTImg::FixupDir canFixup(
 		const std::vector<InstExtent>& insts,
 		bool has_memlog) const = 0;
 
@@ -58,12 +58,13 @@ public:
 protected:
 	PTImgArch(GuestPTImg* in_gs, int in_pid);
 	virtual void waitForSingleStep(void);
-
+	void pushBadProgress(void);
 
 	GuestPTImg	*gs;
 	int		child_pid;
 	bool		log_steps;
 
+	int		wss_status;
 private:
 	uint64_t	steps;
 	uint64_t	blocks;

@@ -86,10 +86,10 @@ guest_ptr PTImgChk::continueForwardWithBounds(guest_ptr start, guest_ptr end)
  */
 bool PTImgChk::fixup(const std::vector<InstExtent>& insts)
 {
-	bool		do_fixup;
+	FixupDir	fixup;
 
-	do_fixup = pt_arch->canFixup(insts, mem_log != NULL);
-	if (do_fixup == false) {
+	fixup = pt_arch->canFixup(insts, mem_log != NULL);
+	if (fixup == FIXUP_NONE) {
 		fprintf(stderr, "VAIN ATTEMPT TO FIXUP %p-%p\n",
 			(void*)(insts.front().first.o),
 			(void*)(insts.back().first.o));
@@ -97,11 +97,64 @@ bool PTImgChk::fixup(const std::vector<InstExtent>& insts)
 		return false;
 	}
 
-	doFixup();
+	fixup_c++;
+	if (fixup == FIXUP_NATIVE)
+		doFixupNative();
+	else
+		doFixupGuest();
+
+	if (mem_log) mem_log->clear();
+
 	return true;
 }
 
-void PTImgChk::doFixup(void)
+void PTImgChk::pushPage(guest_ptr p)
+{
+	GuestMem*		m(getMem());
+	GuestMem::Mapping	mp;
+	GuestPTMem		ptmem(const_cast<PTImgChk*>(this), child_pid);
+	char			buf[4096];
+
+	p.o &= ~0xfffUL;
+
+	if (m->lookupMapping(guest_ptr(p), mp) == false)
+		return;
+
+	if (!(mp.getReqProt() & PROT_WRITE))
+		return;
+
+	m->memcpy(buf, p, 4096);
+	ptmem.memcpy(p, buf, 4096);
+}
+
+void PTImgChk::doFixupNative(void)
+{
+	GuestCPUState*	gcpu;
+	const uint64_t*	dat;
+	unsigned	dat_elems;
+
+	std::cerr << "FIXUP THE NATIVE STATE\n";
+
+	pushRegisters();
+
+	/* load all nearby pointers */
+
+	/* XXX: this is really stupid, need a better interface
+	 * for enumerating all registers */
+	gcpu = getCPUState();
+	dat = (const uint64_t*)gcpu->getStateData();
+	dat_elems = gcpu->getStateSize() / sizeof(*dat);
+
+	/* XXX: should copy in page prior too */
+	for (unsigned i = 0; i < dat_elems; i++) {
+		uint64_t		reg = dat[i];
+		if (reg < 0x1000) continue;
+		pushPage(guest_ptr(reg - 4096));
+		pushPage(guest_ptr(reg));
+	}
+}
+
+void PTImgChk::doFixupGuest(void)
 {
 	GuestCPUState*	gcpu;
 	GuestMem*	m;
@@ -109,10 +162,7 @@ void PTImgChk::doFixup(void)
 	const uint64_t*	dat;
 	unsigned	dat_elems;
 
-	fixup_c++;
-
 	slurpRegisters(child_pid);
-	if (mem_log) mem_log->clear();
 
 	/* load all nearby pointers */
 
@@ -124,6 +174,7 @@ void PTImgChk::doFixup(void)
 
 	m = getMem();
 
+	/* XXX: should copy in page prior too */
 	for (unsigned i = 0; i < dat_elems; i++) {
 		GuestMem::Mapping	mp;
 		uint64_t		reg = dat[i];

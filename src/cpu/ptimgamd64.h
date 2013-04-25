@@ -26,7 +26,7 @@ public:
 		const guest_ptr ip_begin,
 		const guest_ptr ip_end);
 
-	bool canFixup(
+	GuestPTImg::FixupDir canFixup(
 		const std::vector<InstExtent>& insts,
 		bool has_memlog) const;
 

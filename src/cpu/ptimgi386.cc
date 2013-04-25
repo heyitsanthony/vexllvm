@@ -294,7 +294,7 @@ guest_ptr PTImgI386::undoBreakpoint()
 }
 
 guest_ptr PTImgI386::getPC() { assert (0 == 1 && "STUB"); }
-bool PTImgI386::canFixup(
+GuestPTImg::FixupDir PTImgI386::canFixup(
 	const std::vector<std::pair<guest_ptr, unsigned char> >&,
 	bool has_memlog) const { assert (0 == 1 && "STUB"); }
 bool PTImgI386::breakpointSysCalls(guest_ptr, guest_ptr) { assert (0 == 1 && "STUB"); }

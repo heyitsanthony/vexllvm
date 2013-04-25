@@ -64,7 +64,11 @@ private:
 
 	void readMemLogData(char* data) const;
 
-	void doFixup(void);
+	void pushPage(guest_ptr p);
+
+	/* guest => clobber guest; native => clobber native */
+	void doFixupGuest(void);
+	void doFixupNative(void);
 
 	pid_t		child_pid;
 

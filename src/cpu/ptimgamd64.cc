@@ -231,7 +231,7 @@ bool PTImgAMD64::isMatch(void) const
 	if (!fixup_eflags) break;	\
 	goto do_fixup;
 
-bool PTImgAMD64::canFixup(
+GuestPTImg::FixupDir PTImgAMD64::canFixup(
 	const std::vector<InstExtent>& insts,
 	bool has_memlog) const
 {
@@ -239,6 +239,12 @@ bool PTImgAMD64::canFixup(
 	guest_ptr	fix_addr;
 	uint8_t		ins_buf[MAX_INS_BUF];
 	const char	*reason = NULL;
+	int		cur_s = wss_status;
+
+	/* detected an illegal instruction-- an instruction
+	 * that the host didn't understand? */
+	if (WSTOPSIG(cur_s) == SIGILL)
+		return GuestPTImg::FIXUP_NATIVE;
 
 	foreach (it, insts.begin(), insts.end()) {
 		const InstExtent	&inst(*it);
@@ -317,7 +323,7 @@ bool PTImgAMD64::canFixup(
 	}
 
 	/* couldn't figure out how to fix */
-	return false;
+	return GuestPTImg::FIXUP_NONE;
 
 do_fixup:
 	fprintf(stderr,
@@ -325,7 +331,7 @@ do_fixup:
 		(void*)fix_op,
 		(void*)fix_addr.o,
 		reason);
-	return true;
+	return GuestPTImg::FIXUP_GUEST;
 }
 
 void PTImgAMD64::printFPRegs(std::ostream& os) const
@@ -715,10 +721,13 @@ void PTImgAMD64::pushRegisters(void)
 	const VexGuestAMD64State	&v(getVexState());
 
 	for (unsigned i = 0; i < REG_COUNT; i++) {
-		get_reg_user(
-			((uint8_t*)&r), i) = get_reg_vex(
-				((const uint8_t*)&v), i);
+		get_reg_user(((uint8_t*)&r), i) =
+			get_reg_vex(((const uint8_t*)&v), i);
 	}
+	
+	r.eflags = get_rflags(v);
+
+	/* XXX: XMM REGISTERS!!! */
 
 	setRegs(r);
 }

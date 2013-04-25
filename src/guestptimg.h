@@ -13,6 +13,9 @@ class PTImgArch;
 class GuestPTImg : public Guest
 {
 public:
+	/* fixup type specifies the state that will get clobbered */
+	enum FixupDir { FIXUP_NATIVE = -1, FIXUP_NONE = 0, FIXUP_GUEST = 1 };
+
 	virtual ~GuestPTImg(void);
 	guest_ptr getEntryPoint(void) const { return entry_pt; }
 

@@ -30,7 +30,7 @@ public:
 	long int setBreakpoint(guest_ptr);
 	guest_ptr undoBreakpoint();
 	guest_ptr getPC();
-	bool canFixup(
+	GuestPTImg::FixupDir canFixup(
 		const std::vector<std::pair<guest_ptr, unsigned char> >&,
 		bool has_memlog) const;
 	bool breakpointSysCalls(guest_ptr, guest_ptr);
