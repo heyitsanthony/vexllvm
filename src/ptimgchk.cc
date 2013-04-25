@@ -133,8 +133,6 @@ void PTImgChk::doFixupNative(void)
 	const uint64_t*	dat;
 	unsigned	dat_elems;
 
-	std::cerr << "FIXUP THE NATIVE STATE\n";
-
 	pushRegisters();
 
 	/* load all nearby pointers */
