@@ -106,6 +106,8 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 	vai_host.hwcaps = VEX_HOST_HWCAPS;
 	if (in_arch == Arch::ARM)
 		vai_host.hwcaps = ARM_HWCAPS;
+	else if (in_arch == Arch::MIPS32)
+		vai_host.hwcaps = VEX_PRID_COMP_MIPS;
 
 	LibVEX_default_VexArchInfo(&vai_guest);
 
@@ -128,6 +130,10 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 		vai_guest.hwcaps |= VEX_HWCAPS_X86_SSE2;
 		vai_guest.hwcaps |= VEX_HWCAPS_X86_SSE3;
 		vai_guest.hwcaps |= VEX_HWCAPS_X86_LZCNT;
+		break;
+	case Arch::MIPS32:
+		arch = VexArchMIPS32;
+		vai_guest.hwcaps |= VEX_PRID_COMP_MIPS;
 		break;
 	default:
 		assert(!"valid VEX architecture");
@@ -291,9 +297,8 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	if (res.status == VexTranslateResult::VexTransAccessFail)
 		return NULL;
 
-	if (g_cb.cb_vexsb == NULL) {
+	if (g_cb.cb_vexsb == NULL)
 		return patchBadDecode(guest_bytes, guest_addr);
-	}
 
 	if (g_cb.cb_vexsb->getSize()) {
 		if (frag_cache)

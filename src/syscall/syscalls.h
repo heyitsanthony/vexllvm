@@ -26,7 +26,6 @@ class GuestCPUState;
 class Syscalls
 {
 public:
-	Syscalls(Guest*);
 	virtual ~Syscalls();
 	virtual uint64_t apply(SyscallParams& args);
 	uint64_t apply(void); /* use guest params */
@@ -37,7 +36,11 @@ public:
 	std::string getSyscallName(int guest) const;
 	
 	int translateSyscall(int guest) const;
+
+	static Syscalls* create(Guest*);
 protected:
+	Syscalls(Guest*);
+
 	bool interceptSyscall(
 		int sys_nr,
 		SyscallParams& args,

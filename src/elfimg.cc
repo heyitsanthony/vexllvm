@@ -64,6 +64,7 @@ void ElfImg::setupBits(void)
 	case Arch::X86_64:
 		address_bits = 64;
 		break;
+	case Arch::MIPS32:
 	case Arch::ARM:
 	case Arch::I386:
 		mem->mark32Bit();
@@ -289,11 +290,12 @@ Arch::Arch ElfImg::readHeader32(const Elf32_Ehdr* hdr, bool require_exe)
 
 	if(hdr->e_machine == EM_ARM) {
 		return Arch::ARM;
-	} else if(hdr->e_machine == EM_386) {
+	} else if (hdr->e_machine == EM_386) {
 		return Arch::I386;
-	}
+	} else if (hdr->e_machine == EM_MIPS)
+		return Arch::MIPS32;
 
-	/* just don't care about the rest, slutty is fun */
+
 	return Arch::Unknown;
 }
 

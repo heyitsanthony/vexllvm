@@ -70,12 +70,14 @@ OBJDEPS=	vexxlate.o		\
 		cpu/amd64cpustate.o	\
 		cpu/i386cpustate.o	\
 		cpu/armcpustate.o	\
+		cpu/mips32cpustate.o	\
 		cpu/i386syscalls.o		\
 		cpu/armsyscalls.o		\
 		cpu/amd64syscalls.o		\
 		fragcache.o		\
 		memlog.o		\
 		syscall/syscalls.o		\
+		syscall/spimsyscalls.o		\
 		syscall/syscallsmarshalled.o	\
 		vexfcache.o		\
 		vexjitcache.o		\

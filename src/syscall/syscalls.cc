@@ -6,6 +6,7 @@
 #include "syscalls.h"
 #include <errno.h>
 #include <stdlib.h>
+#include "spimsyscalls.h"
 
 #include "guest.h"
 #include "guestcpustate.h"
@@ -20,8 +21,7 @@ Syscalls::Syscalls(Guest* g)
 , binary(g->getBinaryPath())
 , log_syscalls(getenv("VEXLLVM_SYSCALLS") ? true : false)
 , force_qemu_syscalls(getenv("VEXLLVM_XLATE_SYSCALLS") ? true : false)
-{
-}
+{}
 
 const std::string Syscalls::chroot(getenv("VEXLLVM_CHROOT") ?
 	getenv("VEXLLVM_CHROOT") : "");
@@ -32,6 +32,14 @@ uint64_t Syscalls::apply(void)
 {
 	SyscallParams	sp(guest->getSyscallParams());
 	return apply(sp);
+}
+
+Syscalls* Syscalls::create(Guest* gs)
+{
+	if (gs->getArch() == Arch::MIPS32)
+		return new SPIMSyscalls(gs);
+
+	return new Syscalls(gs);
 }
 
 /* pass through */
@@ -102,12 +110,10 @@ uint64_t Syscalls::apply(SyscallParams& args)
 
 int Syscalls::translateSyscall(int sys_nr) const {
 	switch(guest->getArch()) {
-	case Arch::X86_64:
-		return translateAMD64Syscall(sys_nr);
-	case Arch::ARM:
-		return translateARMSyscall(sys_nr);
-	case Arch::I386:
-		return translateI386Syscall(sys_nr);
+	case Arch::X86_64: return translateAMD64Syscall(sys_nr);
+	case Arch::ARM: return translateARMSyscall(sys_nr);
+	case Arch::I386: return translateI386Syscall(sys_nr);
+
 	default:
 		assert(!"unknown arch type for syscall");
 	}	
@@ -115,12 +121,9 @@ int Syscalls::translateSyscall(int sys_nr) const {
 
 std::string Syscalls::getSyscallName(int sys_nr) const {
 	switch(guest->getArch()) {
-	case Arch::X86_64:
-		return getAMD64SyscallName(sys_nr);
-	case Arch::ARM:
-		return getARMSyscallName(sys_nr);
-	case Arch::I386:
-		return getI386SyscallName(sys_nr);
+	case Arch::X86_64:	return getAMD64SyscallName(sys_nr);
+	case Arch::ARM:		return getARMSyscallName(sys_nr);
+	case Arch::I386:	return getI386SyscallName(sys_nr);
 	default:
 		assert(!"unknown arch type for syscall");
 	}

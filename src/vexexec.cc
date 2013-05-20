@@ -112,7 +112,7 @@ VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
 	}
 
-	sc = new Syscalls(gs);
+	sc = Syscalls::create(gs);
 
 	dump_current_state = (getenv("VEXLLVM_DUMP_STATES")) ? true : false;
 

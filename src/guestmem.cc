@@ -69,11 +69,8 @@ bool GuestMem::sbrkInitial()
 	int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
 	int prot = PROT_READ | PROT_WRITE;
 
-	/* we pick it */
-	#ifdef __amd64__
-		if(is_32_bit)
-			flags |= MAP_32BIT;
-	#endif
+	if (is_32_bit) flags |= MAP_32BIT;
+
 	/* this sux, for some reason it keeps redirecting the allocation
 	   lower, but the truth is, we're forcing it elsewhere anyway, so
 	   it doesn't matter.  it would be good to reserve the whole address
@@ -86,10 +83,11 @@ bool GuestMem::sbrkInitial()
 	addr = ::mmap(getBase() + m.offset.o, BRK_RESERVE, prot,
 		flags, -1, 0);
 
-	/* hmm, we could shrink the reserve but */
 	assert(addr != MAP_FAILED && "initial sbrk failed");
 	m.offset = guest_ptr((char*)addr - getBase());
 	assert(!is_32_bit || m.offset.o < 0xFFFFFFFFULL);
+
+
 	addr = ::mremap(addr, BRK_RESERVE, PAGE_SIZE, 0);
 	assert(addr != MAP_FAILED && "sbrk shrink assploded");
 	flags &= ~MAP_NORESERVE;
@@ -113,6 +111,8 @@ bool GuestMem::sbrkInitial(guest_ptr new_top)
 	void *addr;
 	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 	int prot = PROT_READ | PROT_WRITE;
+
+	if (is_32_bit) flags |= MAP_32BIT;
 
 	/* they picked it (e.g. xchk), try to make a mapping there.
 	   note that this initial mapping doesn't reserve any extra
@@ -178,6 +178,7 @@ bool GuestMem::sbrk(guest_ptr new_top)
 
 	m.length = new_len;
 	recordMapping(m);
+
 	top_brick = new_top;
 	return true;
 }
@@ -395,24 +396,23 @@ void GuestMem::Mapping::print(std::ostream& os) const
    to just find something higher than the rebase */
 bool GuestMem::findFreeRegion(size_t len, Mapping& m) const
 {
-	if (force_flat) {
-		void	*addr;
-		int	flags;
+	void	*addr;
+	int	flags;
 
-		flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
-		if (is_32_bit) flags |= MAP_32BIT;
+	if (!force_flat)
+		return findFreeRegionByMaps(len, m);
 
-		addr = ::mmap(0, len, 0, flags, -1, 0);
-		if (addr == MAP_FAILED)
-			return false;
-		::munmap(addr, len);
+	flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
+	if (is_32_bit) flags |= MAP_32BIT;
 
-		m.offset = guest_ptr((uintptr_t)addr - (uintptr_t)getBase());
-		m.length = len;
-		return true;
-	}
+	addr = ::mmap(0, len, 0, flags, -1, 0);
+	if (addr == MAP_FAILED)
+		return false;
+	::munmap(addr, len);
 
-	return findFreeRegionByMaps(len, m);
+	m.offset = guest_ptr((uintptr_t)addr - (uintptr_t)getBase());
+	m.length = len;
+	return true;
 }
 
 bool GuestMem::findFreeRegionByMaps(size_t len, Mapping& m) const

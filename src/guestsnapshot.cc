@@ -156,11 +156,15 @@ void GuestSnapshot::loadMappings(void)
 
 	mem = new GuestMem();
 	switch (arch) {
+	case Arch::MIPS32:
 	case Arch::ARM:
 	case Arch::I386:
 		mem->mark32Bit();
 		break;
+	case Arch::X86_64:
+		break;
 	default:
+		assert (0 == 1 && "UNKNOWN ARCH");
 		break;
 	}
 

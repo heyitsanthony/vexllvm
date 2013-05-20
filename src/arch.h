@@ -6,7 +6,8 @@ enum Arch {
 	Unknown,
 	X86_64,
 	ARM,
-	I386
+	I386,
+	MIPS32
 };
 
 static inline Arch getHostArch(void)

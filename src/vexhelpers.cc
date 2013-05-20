@@ -39,27 +39,25 @@ void VexHelpers::loadDefaultModules(void)
 
 	const char* helper_file = NULL;
 	switch(arch) {
-	case Arch::X86_64:
-		helper_file = "libvex_amd64_helpers.bc";
-		break;
-	case Arch::I386:
-		helper_file = "libvex_x86_helpers.bc";
-		break;
-	case Arch::ARM:
-		helper_file = "libvex_arm_helpers.bc";
-		break;
+	case Arch::X86_64: helper_file = "libvex_amd64_helpers.bc"; break;
+	case Arch::I386: helper_file = "libvex_x86_helpers.bc"; break;
+	case Arch::ARM: helper_file = "libvex_arm_helpers.bc"; break;
+	case Arch::MIPS32: break; /* no useful helpers for mips */
 	default:
 		assert(!"known arch for helpers");
 	}
 
-	snprintf(path_buf, 512, "%s/%s", bc_dirpath, helper_file);
-	helper_mod = loadMod(path_buf);
+	if (helper_file) {
+		snprintf(path_buf, 512, "%s/%s", bc_dirpath, helper_file);
+		helper_mod = loadMod(path_buf);
+	}
+
 	snprintf(path_buf, 512, "%s/%s", bc_dirpath, VEXOP_BC_FILE);
 	vexop_mod = loadMod(path_buf);
 
 	vexop_setup_fp(this);
 
-	assert (vexop_mod && helper_mod);
+	assert (vexop_mod && (helper_file == NULL || helper_mod));
 }
 
 VexHelpers* VexHelpers::create(Arch::Arch arch)
@@ -113,7 +111,7 @@ Module* VexHelpers::loadModFromPath(const char* path)
 mod_list VexHelpers::getModules(void) const
 {
 	mod_list	l = user_mods;
-	l.push_back(helper_mod);
+	if (helper_mod) l.push_back(helper_mod);
 	l.push_back(vexop_mod);
 	return l;
 }
@@ -157,7 +155,7 @@ Function* VexHelpers::getHelper(const char* s) const
 	}
 
 	/* TODO why not start using a better algorithm sometime */
-	if ((f = helper_mod->getFunction(s))) return f;
+	if (helper_mod && (f = helper_mod->getFunction(s))) return f;
 	if ((f = vexop_mod->getFunction(s))) return f;
 	foreach (it, user_mods.begin(), user_mods.end()) {
 		if ((f = (*it)->getFunction(s)))
@@ -169,7 +167,7 @@ Function* VexHelpers::getHelper(const char* s) const
 
 void VexHelpers::bindToExeEngine(ExecutionEngine* exe)
 {
-	exe->addModule(helper_mod);
+	if (helper_mod) exe->addModule(helper_mod);
 	exe->addModule(vexop_mod);
 }
 

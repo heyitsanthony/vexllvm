@@ -191,19 +191,15 @@ void GuestELF::createElfTables(int argc, int envc)
 #endif
 	/* add a platform string */
 	switch(img->getArch()) {
-	case Arch::X86_64:
-		k_platform = "x86_64";
-		break;
-	case Arch::I386:
-		k_platform = "i386";
-		break;
-	case Arch::ARM:
-		k_platform = "ARM";
-		break;
+	case Arch::X86_64: k_platform = "x86_64"; break;
+	case Arch::I386:k_platform = "i386"; break;
+	case Arch::ARM: k_platform = "ARM"; break;
+	case Arch::MIPS32: k_platform = "MIPS32"; break;
 	default:
 		assert (0 == 1 && "BAD ARCH");
 		exit(1);
 	}
+
 	if (k_platform) {
 		size_t len = strlen(k_platform) + 1;
 		sp.o -= 8;
@@ -238,6 +234,7 @@ void GuestELF::createElfTables(int argc, int envc)
 		/* less? */
 		table.add(AT_HWCAP, 0x000000000febfbff);
 		break;
+	default:
 	case Arch::Unknown:
 		/* less? */
 		table.add(AT_HWCAP, 0);
