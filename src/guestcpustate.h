@@ -44,7 +44,6 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	GuestCPUState();
 	virtual ~GuestCPUState() {};
 
-	llvm::Type* getTy(void) const { return guestCtxTy; }
 	virtual unsigned int byteOffset2ElemIdx(unsigned int off) const = 0;
 
 	void* getStateData(void) { return state_data; }
@@ -93,11 +92,11 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	 * if exceeds bounds */
 	virtual int cpu2gdb(int gdb_off) const
 	{ assert (0 ==1 && "STUB"); return -1; }
-protected:
-	llvm::Type* mkFromFields(struct guest_ctx_field* f, byte2elem_map&);
+
+	virtual const struct guest_ctx_field* getFields(void) const = 0;
+	unsigned getFieldsSize(const struct guest_ctx_field* f);
 protected:
 	byte2elem_map	off2ElemMap;
-	llvm::Type*	guestCtxTy;
 	uint8_t		*state_data;
 	uint8_t		*exit_type;
 	unsigned int	state_byte_c;

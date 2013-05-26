@@ -20,6 +20,7 @@ using namespace llvm;
 
 GenLLVM::GenLLVM(const Guest* gs, const char* name)
 : guest(gs)
+, guestCtxTy(NULL)
 , funcTy(NULL)
 , cur_guest_ctx(NULL)
 , cur_memory_log(NULL)
@@ -386,7 +387,7 @@ void GenLLVM::mkFuncTy(void)
 {
 	std::vector<Type*>	f_args;
 
-	f_args.push_back(PointerType::get(guest->getCPUState()->getTy(), 0));
+	f_args.push_back(PointerType::get(getGuestTy(), 0));
 	if(log_last_store) {
 		f_args.push_back(PointerType::get(MemLog::getType(), 0));
 	}
@@ -403,3 +404,46 @@ Value* GenLLVM::to16x8i(Value* v) const
 }
 
 void GenLLVM::memFence(void) { builder->CreateFence(SequentiallyConsistent); }
+
+Type* GenLLVM::getGuestTy(void)
+{
+	if (guestCtxTy)
+		return guestCtxTy;
+
+	const struct guest_ctx_field* f(guest->getCPUState()->getFields());
+	std::vector<Type*>	types;
+	Type			*i8ty, *i16ty, *i32ty,
+				*i64ty, *i128ty, *i256ty;
+	LLVMContext		&gctx(getGlobalContext());
+
+
+	i8ty = Type::getInt8Ty(gctx);
+	i16ty = Type::getInt16Ty(gctx);
+	i32ty = Type::getInt32Ty(gctx);
+	i64ty = Type::getInt64Ty(gctx);
+	i128ty = VectorType::get(i16ty, 8);
+	i256ty = VectorType::get(i16ty, 16);
+
+	/* add all fields to types vector from structure */
+	for (unsigned i = 0; f[i].f_len != 0; i++) {
+		Type*	t;
+
+		switch (f[i].f_len) {
+		case 8:		t = i8ty;	break;
+		case 16:	t = i16ty;	break;
+		case 32:	t = i32ty;	break;
+		case 64:	t = i64ty;	break;
+		case 128:	t = i128ty;	break;
+		case 256:	t = i256ty;	break;
+		default:
+			std::cerr << "UGH w=" << f[i].f_len << '\n';
+			assert( 0 == 1 && "BAD FIELD WIDTH");
+		}
+
+		for (unsigned int c = 0; c < f[i].f_count; c++) {
+			types.push_back(t);
+		}
+	}
+
+	return StructType::create(gctx, types, "guestCtxTy");
+}

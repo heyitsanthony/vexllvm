@@ -57,9 +57,12 @@ public:
 	void memFence(void);
 	void setFakeSysReads(void) { fake_vsys_reads = true; }
 private:
+	llvm::Type* getGuestTy(void);
 	void mkFuncTy(void);
 
 	const Guest		*guest;
+	llvm::Type		*guestCtxTy;
+
 	llvm::IRBuilder<>	*builder;
 	llvm::Module		*mod;
 	llvm::FunctionType	*funcTy;

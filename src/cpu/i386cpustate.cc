@@ -20,8 +20,7 @@ using namespace llvm;
 
 I386CPUState::I386CPUState()
 {
-	mkRegCtx();
-
+	state_byte_c = getFieldsSize(getFields());
 	state_data = new uint8_t[state_byte_c+1];
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
@@ -36,9 +35,7 @@ I386CPUState::~I386CPUState() {	delete [] state_data; }
 void I386CPUState::setPC(guest_ptr ip) { state2i386()->guest_EIP = ip; }
 
 guest_ptr I386CPUState::getPC(void) const
-{
-	return guest_ptr(state2i386()->guest_EIP);
-}
+{ return guest_ptr(state2i386()->guest_EIP); }
 
 /* ripped from libvex_guest_86 */
 static struct guest_ctx_field x86_fields[] =
@@ -98,11 +95,6 @@ static struct guest_ctx_field x86_fields[] =
 
 	{0}	/* time to stop */
 };
-
-void I386CPUState::mkRegCtx(void)
-{
-	guestCtxTy = mkFromFields(x86_fields, off2ElemMap);
-}
 
 extern void dumpIRSBs(void);
 
@@ -164,6 +156,9 @@ const char* I386CPUState::off2Name(unsigned int off) const
 	}
 	return NULL;
 }
+
+const struct guest_ctx_field* I386CPUState::getFields(void) const
+{ return x86_fields; }
 
 /* gets the element number so we can do a GEP */
 unsigned int I386CPUState::byteOffset2ElemIdx(unsigned int off) const

@@ -37,8 +37,8 @@ public:
 
 	virtual unsigned int getRetOff(void) const;
 	virtual unsigned int getStackRegOff(void) const;
-protected:
-	void mkRegCtx(void);
+
+	const struct guest_ctx_field* getFields(void) const;
 };
 
 #endif

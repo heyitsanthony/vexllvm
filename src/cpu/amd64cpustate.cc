@@ -14,7 +14,7 @@ extern "C" {
 
 AMD64CPUState::AMD64CPUState()
 {
-	mkRegCtx();
+	state_byte_c = getFieldsSize(getFields());
 	state_data = new uint8_t[state_byte_c+1];
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
@@ -23,10 +23,7 @@ AMD64CPUState::AMD64CPUState()
 	state2amd64()->guest_CC_DEP1 = (1 << 2);
 }
 
-AMD64CPUState::~AMD64CPUState()
-{
-	delete [] state_data;
-}
+AMD64CPUState::~AMD64CPUState() { delete [] state_data; }
 
 void AMD64CPUState::setPC(guest_ptr ip) {
 	state2amd64()->guest_RIP = ip;
@@ -85,10 +82,9 @@ static struct guest_ctx_field amd64_fields[] =
 	{0}	/* time to stop */
 };
 
-void AMD64CPUState::mkRegCtx(void)
-{
-	guestCtxTy = mkFromFields(amd64_fields, off2ElemMap);
-}
+const struct guest_ctx_field* AMD64CPUState::getFields(void) const
+{ return amd64_fields; }
+
 
 extern void dumpIRSBs(void);
 

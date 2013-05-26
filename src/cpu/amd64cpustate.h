@@ -45,8 +45,8 @@ public:
 	const char* off2Name(unsigned int off) const;
 
 	virtual int cpu2gdb(int gdb_off) const;
-protected:
-	void mkRegCtx(void);
+
+	virtual const struct guest_ctx_field* getFields(void) const;
 };
 
 #endif

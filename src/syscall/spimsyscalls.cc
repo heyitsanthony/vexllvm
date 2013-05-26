@@ -32,6 +32,8 @@ uint64_t SPIMSyscalls::apply(SyscallParams& args)
 	
 	s = (VexGuestMIPS32State*)guest->getCPUState()->getStateData();
 
+//	std::cerr << "[SPIMSys] Call=" << args.getSyscall() << '\n';
+
 	switch (args.getSyscall()) {
 	case SPIM_PRINT_INT: std::cout << args.getArg(0); break;
 	case SPIM_PRINT_FLOAT: {
@@ -69,9 +71,15 @@ uint64_t SPIMSyscalls::apply(SyscallParams& args)
 		memcpy(&s->guest_f0, &d, sizeof(d));
 		break;
 	}
-	case SPIM_READ_STRING:
-		std::cin.get((char*)args.getArgPtr(0), args.getArg(1));
+	case SPIM_READ_STRING: {
+		char	*b = (char*)args.getArgPtr(0);
+		do {
+			b[0] = '\0';
+			if (!std::cin.getline(b, args.getArg(1)))
+				break;
+		} while (b[0] == '\n' || b[0] == '\0');
 		break;
+	}	
 	case SPIM_SBRK: {
 		guest_ptr	p(guest->getMem()->brk());
 		guest->getMem()->sbrk(p + args.getArg(0));

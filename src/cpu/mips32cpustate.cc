@@ -20,8 +20,7 @@ using namespace llvm;
 
 MIPS32CPUState::MIPS32CPUState()
 {
-	mkRegCtx();
-
+	state_byte_c = getFieldsSize(getFields());
 	state_data = new uint8_t[state_byte_c+1];
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
@@ -65,8 +64,9 @@ static struct guest_ctx_field mips32_fields[] =
 	{0}	/* time to stop */
 };
 
-void MIPS32CPUState::mkRegCtx(void)
-{ guestCtxTy = mkFromFields(mips32_fields, off2ElemMap); }
+
+const struct guest_ctx_field* MIPS32CPUState::getFields(void) const
+{ return mips32_fields; }
 
 extern void dumpIRSBs(void);
 

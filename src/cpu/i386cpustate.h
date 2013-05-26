@@ -32,8 +32,8 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	void print(std::ostream& os, const void*) const;
 
 	const char* off2Name(unsigned int off) const;
-protected:
-	void mkRegCtx(void);
+
+	const struct guest_ctx_field* getFields(void) const;
 private:
 };
 

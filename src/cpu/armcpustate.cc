@@ -26,8 +26,7 @@ struct ExtVexGuestARMState
 
 ARMCPUState::ARMCPUState(void)
 {
-	mkRegCtx();
-
+	state_byte_c = getFieldsSize(getFields());
 	state_data = new uint8_t[state_byte_c+1];
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
@@ -89,10 +88,8 @@ static struct guest_ctx_field arm_fields[] =
 	{0}	/* time to stop */
 };
 
-void ARMCPUState::mkRegCtx(void)
-{
-	guestCtxTy = mkFromFields(arm_fields, off2ElemMap);
-}
+const struct guest_ctx_field* ARMCPUState::getFields(void) const
+{ return arm_fields; }
 
 extern void dumpIRSBs(void);
 
@@ -258,9 +255,8 @@ void ARMCPUState::print(std::ostream& os, const void* regctx) const
 	s = (const ExtVexGuestARMState*)regctx;
 	gpr_base = &s->guest_vex.guest_R0;
 	for (int i = 0; i < 16; i++) {
-		os
-		<< "R" << i << ": "
-		<< (void*)gpr_base[i] << std::endl;
+		os	<< "R" << i << ": "
+			<< (void*)((long)gpr_base[i]) << std::endl;
 	}
 
 	const unsigned long long *vpr_base = &s->guest_vex.guest_D0;
@@ -269,10 +265,10 @@ void ARMCPUState::print(std::ostream& os, const void* regctx) const
 		<< "D" << i << ": "
 		<< (void*)vpr_base[i] << std::endl;
 	}
-	os << "FPCSR: "  << (void*)s->guest_vex.guest_FPSCR << "\n";
+	os << "FPCSR: "  << (void*)((long)s->guest_vex.guest_FPSCR) << "\n";
 	/* tls */
-	os << "TPIDRURO: "  << (void*)s->guest_vex.guest_TPIDRURO << "\n";
-	os << "LINKED: "  << (void*)s->guest_LINKED << "\n";
+	os << "TPIDRURO: "<< (void*)((long)s->guest_vex.guest_TPIDRURO)<<"\n";
+	os << "LINKED: "  << (void*)((long)s->guest_LINKED) << "\n";
 }
 
 /* set a function argument */
