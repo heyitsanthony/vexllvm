@@ -23,15 +23,12 @@
  */
 PTImgChk::PTImgChk(const char* binname, bool use_entry)
 : GuestPTImg(binname, use_entry)
-, bp_steps(0)
+, PTCtl((GuestPTImg&)*this)
 , blocks(0)
-, hit_syscall(false)
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 , xchk_stack(getenv("VEXLLVM_XCHK_STACK") ? true : false)
 , fixup_c(0)
-{
-	log_steps = (getenv("VEXLLVM_LOG_STEPS")) ? true : false;
-}
+{}
 
 PTImgChk::~PTImgChk()
 {
@@ -42,6 +39,7 @@ void PTImgChk::handleChild(pid_t pid)
 {
 	/* keep child around */
 	child_pid = pid;
+	PTCtl::setPID(pid);
 
 	//we need the fds to line up.  child will have only 0-4
 	//TODO: actually check that
@@ -49,37 +47,6 @@ void PTImgChk::handleChild(pid_t pid)
 		close(i);
 }
 
-void PTImgChk::stepThroughBounds(guest_ptr start, guest_ptr end)
-{
-	guest_ptr	new_ip;
-
-	/* TODO: timeout? */
-	do {
-		new_ip = continueForwardWithBounds(start, end);
-		if (hit_syscall)
-			break;
-	} while (new_ip >= start && new_ip < end);
-}
-
-guest_ptr PTImgChk::continueForwardWithBounds(guest_ptr start, guest_ptr end)
-{
-	if (log_steps) {
-		std::cerr << "RANGE: "
-			<< (void*)start.o << "-" << (void*)end.o
-			<< std::endl;
-	}
-
-	hit_syscall = false;
-	while (pt_arch->doStep(start, end, hit_syscall)) {
-		guest_ptr	pc(pt_arch->getPC());
-		/* so we trap on backjumps */
-		if (pc > start)
-			start = pc;
-	}
-
-	pt_arch->incBlocks();
-	return pt_arch->getPC();
-}
 
 /* if we find an opcode that is causing problems, we'll replace the vexllvm
  * state with the pt state (since the pt state is by definition correct)
@@ -106,25 +73,6 @@ bool PTImgChk::fixup(const std::vector<InstExtent>& insts)
 	if (mem_log) mem_log->clear();
 
 	return true;
-}
-
-void PTImgChk::pushPage(guest_ptr p)
-{
-	GuestMem*		m(getMem());
-	GuestMem::Mapping	mp;
-	GuestPTMem		ptmem(const_cast<PTImgChk*>(this), child_pid);
-	char			buf[4096];
-
-	p.o &= ~0xfffUL;
-
-	if (m->lookupMapping(guest_ptr(p), mp) == false)
-		return;
-
-	if (!(mp.getReqProt() & PROT_WRITE))
-		return;
-
-	m->memcpy(buf, p, 4096);
-	ptmem.memcpy(p, buf, 4096);
 }
 
 void PTImgChk::doFixupNative(void)
@@ -280,47 +228,10 @@ bool PTImgChk::isStackMatch(void) const
 	return true;
 }
 
-uintptr_t PTImgChk::getSysCallResult(void) const
-{ return pt_arch->getSysCallResult(); }
-
-guest_ptr PTImgChk::stepToBreakpoint(void)
-{
-	int	err, status;
-
-	bp_steps++;
-	pt_arch->revokeRegs();
-	err = ptrace(PTRACE_CONT, child_pid, NULL, NULL);
-	if(err < 0) {
-		perror("PTImgChk::doStep ptrace single step");
-		exit(1);
-	}
-	wait(&status);
-
-	if (!(WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP)) {
-		fprintf(stderr,
-			"OOPS. status: stopped=%d sig=%d status=%p\n",
-			WIFSTOPPED(status), WSTOPSIG(status),
-			(void*)(long)status);
-		stackTraceShadow(std::cerr, guest_ptr(0),  guest_ptr(0));
-		assert (0 == 1 && "bad wait from breakpoint");
-	}
-
-	/* ptrace executes trap, so child process's IP needs to be fixed */
-	return undoBreakpoint(child_pid);
-}
-
-bool PTImgChk::breakpointSysCalls(
-	const guest_ptr ip_begin,
-	const guest_ptr ip_end)
-{
-	return pt_arch->breakpointSysCalls(ip_begin, ip_end);
-}
 
 void PTImgChk::stackTraceShadow(
 	std::ostream& os, guest_ptr begin, guest_ptr end)
-{
-	stackTrace(os, getBinaryPath(), child_pid, begin, end);
-}
+{ stackTrace(os, getBinaryPath(), child_pid, begin, end); }
 
 void PTImgChk::printMemory(std::ostream& os) const
 {
@@ -410,8 +321,6 @@ void PTImgChk::printShadow(std::ostream& os) const
 	printRootTrace(os);
 }
 
-void PTImgChk::ignoreSysCall(void) { pt_arch->ignoreSysCall(); }
-
 void PTImgChk::printTraceStats(std::ostream& os)
 {
 	os	<< "Traced "
@@ -419,7 +328,3 @@ void PTImgChk::printTraceStats(std::ostream& os)
 		<< pt_arch->getSteps() << " instructions" << std::endl;
 }
 
-void PTImgChk::stepSysCall(SyscallsMarshalled* sc_m)
-{ pt_arch->stepSysCall(sc_m); }
-
-void PTImgChk::pushRegisters(void) { pt_arch->pushRegisters(); }

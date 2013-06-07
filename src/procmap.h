@@ -7,12 +7,10 @@
 class ProcMap
 {
 public:
-	ProcMap(GuestMem* mem, pid_t pid, const char* mapline);
+	ProcMap(GuestMem* mem, pid_t pid, const char* mapline, bool copy=true);
 	virtual ~ProcMap(void);
 	unsigned int getByteCount() const
-	{
-		return ((uintptr_t)mem_end - (uintptr_t)mem_begin);
-	}
+	{ return ((uintptr_t)mem_end - (uintptr_t)mem_begin); }
 	guest_ptr getBase(void) const { return mem_begin; }
 	guest_ptr getEnd(void) const { return getBase() + getByteCount(); }
 	int getProt(void) const;
@@ -21,7 +19,8 @@ public:
 	static void slurpMappings(
 		pid_t pid,
 		GuestMem* m,
-		PtrList<ProcMap>& ents);
+		PtrList<ProcMap>& ents,
+		bool do_copy = true);
 
 	static bool dump_maps;
 private:
@@ -44,6 +43,8 @@ private:
 	int		mmap_fd;
 
 	GuestMem	*mem;
+
+	bool		copy;	/* whether to copy from ptraced proc to 'mem' */
 };
 
 #endif

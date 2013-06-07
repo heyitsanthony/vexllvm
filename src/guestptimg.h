@@ -49,6 +49,7 @@ public:
 
 		pt_t = new T(argv[0], false /* ignore binary */);
 		pt_img = pt_t;
+
 		slurped_pid = pt_img->createSlurpedAttach(pid);
 		if (slurped_pid <= 0) {
 			delete pt_img;
@@ -58,7 +59,6 @@ public:
 		pt_img->handleChild(slurped_pid);
 		return pt_t;
 	}
-
 
 	/* NOTE: destroys the guest 'gs' on success */
 	template <class T>
@@ -91,8 +91,8 @@ public:
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return argv_ptrs; }
 
-	void setBreakpoint(pid_t pid, guest_ptr addr);
-	void resetBreakpoint(pid_t pid, guest_ptr addr);
+	void setBreakpointByPID(pid_t pid, guest_ptr addr);
+	void resetBreakpointByPID(pid_t pid, guest_ptr addr);
 
 	static Symbols* loadSymbols(const PtrList<ProcMap>& mappings);
 	static Symbols* loadDynSymbols(
@@ -106,31 +106,30 @@ public:
 
 	static void dumpSelfMap(void);
 
-	PTImgArch* getPTArch(void) { return pt_arch; }
+	PTImgArch* getPTArch(void) const { return pt_arch; }
+	guest_ptr undoBreakpoint(pid_t pid);
 protected:
 	GuestPTImg(const char* binpath, bool use_entry=true);
 	virtual void handleChild(pid_t pid);
 
 	void slurpRegisters(pid_t pid);
+	virtual void slurpBrains(pid_t pid);
 
-	guest_ptr undoBreakpoint(pid_t pid);
 
-
-	PTImgArch	*pt_arch;
+	PTImgArch		*pt_arch;
+	PtrList<ProcMap>	mappings;
 private:
 	pid_t createSlurpedAttach(int pid);
+
 	void attachSyscall(int pid);
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);
 
 	pid_t createFromGuest(Guest* gs);
 
-	void slurpBrains(pid_t pid);
-
 	void waitForEntry(int pid);
 
 	guest_ptr			entry_pt;
-	PtrList<ProcMap>		mappings;
 	std::map<guest_ptr, uint64_t>	breakpoints;
 	mutable Symbols			*symbols; // lazy loaded
 	mutable Symbols			*dyn_symbols;

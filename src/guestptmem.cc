@@ -3,6 +3,7 @@
 #include <sys/mman.h>
 #include "guestptmem.h"
 #include "ptimgarch.h"
+#include "Sugar.h"
 
 GuestPTMem::GuestPTMem(GuestPTImg* gpimg, pid_t in_pid)
 : g_ptimg(gpimg)
@@ -10,8 +11,11 @@ GuestPTMem::GuestPTMem(GuestPTImg* gpimg, pid_t in_pid)
 { /* should I bother with tracking the memory maps?*/ }
 
 
-GuestPTMem::~GuestPTMem(void) { }
-
+GuestPTMem::~GuestPTMem(void)
+{
+	foreach (it, maps.begin(), maps.end()) delete it->second;
+	maps.clear();
+}
 
 #define DEFREAD(x)	\
 uint##x##_t GuestPTMem::read##x(guest_ptr offset) const	\
@@ -108,4 +112,24 @@ int GuestPTMem::mremap(
 {
 	assert (0 == 1 && "STUB");
 	return 0;
+}
+
+
+void GuestPTMem::import(GuestMem* m)
+{
+	base = m->base;
+	top_brick = m->top_brick;
+	base_brick = m->base_brick;
+	reserve_brick = m->reserve_brick;
+	force_flat = m->force_flat;
+	// syspage_data = m->syspage_data;
+
+	foreach (it, m->maps.begin(), m->maps.end()) {
+		guest_ptr	p(it->first);
+		Mapping		*m(it->second);
+
+		recordMapping(*m);
+		if (m->name != NULL)
+			nameMapping(p, *m->name);
+	}
 }

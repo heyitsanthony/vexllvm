@@ -25,6 +25,41 @@ int ProcMap::getProt(void) const
 
 #ifdef __amd64__
 #define STACK_EXTEND_BYTES	0xf0000
+
+#include <setjmp.h>
+#include <signal.h>
+
+#define PROBE_BASE	((volatile char*)0xffffffffff5fe000)
+#define PROBE_PAGES	2
+
+static sigjmp_buf	probe_env;
+static void probe_sig(int signum) { siglongjmp(probe_env, 1); }
+
+static bool probe_fake_timers(void)
+{
+	struct sigaction	act, oldact;
+	bool			found_fakes;
+
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = probe_sig;
+	sigaction(SIGSEGV, &act, &oldact);
+
+	if (sigsetjmp(probe_env, 1) == 0) {
+		/* probing */
+		found_fakes = true;
+		for (int i = 0; i < PROBE_PAGES; i++) {
+			volatile char c = PROBE_BASE[4096*i];
+			(void)c;
+		}
+	} else {
+		/* faulted */
+		found_fakes = false;
+	}
+
+	sigaction(SIGSEGV, &oldact, NULL);
+	return found_fakes;
+}
+
 #else
 #define STACK_EXTEND_BYTES	0x1000
 #endif
@@ -71,6 +106,8 @@ bool ProcMap::procMemCopy(pid_t pid, guest_ptr m_beg, guest_ptr m_end)
 	ssize_t	br;
 	int	fd;
 	bool	ret = false;
+
+	if (!copy) return true;
 
 	sprintf(path, "/proc/%d/mem", pid);
 	fd = open(path, O_RDONLY);
@@ -119,7 +156,7 @@ void ProcMap::mapAnon(pid_t pid)
 		off);
 	if (res) {
 		fprintf(stderr, "Failed to map base=%p. len=%p.\n",
-			(void*)mmap_base.o, (void*)getByteCount());
+			(void*)(long)mmap_base.o, (void*)(long)getByteCount());
 	}
 	assert (!res && "Could not map anonymous region");
 
@@ -204,6 +241,8 @@ void ProcMap::ptraceCopyRange(
 
 	guest_ptr copy_addr;
 
+	if (!copy) return;
+
 	copy_addr = m_beg;
 	errno = 0;
 	while (copy_addr != m_end) {
@@ -225,6 +264,8 @@ void ProcMap::ptraceCopyRange(
 
 void ProcMap::ptraceCopy(pid_t pid, int prot)
 {
+	if (!copy) return;
+
 	if (!(prot & PROT_READ)) return;
 
 	if (!(prot & PROT_WRITE)) {
@@ -241,10 +282,11 @@ void ProcMap::ptraceCopy(pid_t pid, int prot)
 	}
 }
 
-ProcMap::ProcMap(GuestMem* in_mem, pid_t pid, const char* mapline)
+ProcMap::ProcMap(GuestMem* in_mem, pid_t pid, const char* mapline, bool _copy)
 : mmap_base(0)
 , mmap_fd(-1)
 , mem(in_mem)
+, copy(_copy)
 {
 	int		rc;
 
@@ -286,7 +328,8 @@ ProcMap::~ProcMap(void)
 void ProcMap::slurpMappings(
 	pid_t pid,
 	GuestMem* m,
-	PtrList<ProcMap>& ents)
+	PtrList<ProcMap>& ents,
+	bool do_copy)
 {
 	ProcMap	*mapping;
 	FILE	*f;
@@ -302,24 +345,24 @@ void ProcMap::slurpMappings(
 		if (fgets(line_buf, 256, f) == NULL)
 			break;
 
-		mapping = new ProcMap(m, pid, line_buf);
+		mapping = new ProcMap(m, pid, line_buf, do_copy);
 		ents.add(mapping);
 		m->nameMapping(mapping->getBase(), mapping->getLib());
 	}
 	fclose(f);
 
 #ifdef __amd64__
-	/* one more, to handle the hidden timers page */
+	/* handle the hidden timers page */
 	/* there is nothing I don't hate about this */
-	
-	/* XXX: fogger seems to only map f000 and not e000. Probably
-	 * going to need a sigsegv handler. Fuckk */
-	mapping = new ProcMap(
-		m,
-		pid,
-		"ffffffffff5fe000-ffffffffff600000  "
-		"r--p 00000000 00:00 0 [FAKEtimers]");
-	ents.add(mapping);
-	m->nameMapping(mapping->getBase(), mapping->getLib());
+	if (probe_fake_timers()) {
+		fprintf(stderr, "[ProcMap] !!! Found fake timer pages\n");
+		mapping = new ProcMap(
+			m,
+			pid,
+			"ffffffffff5fe000-ffffffffff600000  "
+			"r--p 00000000 00:00 0 [FAKEtimers]");
+		ents.add(mapping);
+		m->nameMapping(mapping->getBase(), mapping->getLib());
+	}
 #endif
 }

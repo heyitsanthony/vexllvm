@@ -75,6 +75,9 @@ public:
 	bool isFlat() const { return force_flat; }
 	void print(std::ostream &os) const;
 
+	friend class GuestPTMem;
+	virtual void import(GuestMem* m);
+
 	virtual void* getData(const Mapping& m) const
 	{ return (void*)(base + m.offset.o); }
 
@@ -163,7 +166,18 @@ public:
 
 	const void* getSysHostAddr(guest_ptr p) const;
 	void addSysPage(guest_ptr p, char* host_data, unsigned int len);
-private:
+
+	unsigned getNumMaps(void) const { return maps.size(); }
+
+protected:
+	virtual void* sys_mmap(void*, size_t len, int prot, int fl,
+		int fd, off_t off) const;
+	virtual int sys_mprotect(void*, size_t len, int prot) const;
+	virtual int sys_munmap(void* p, unsigned len) const;
+	virtual void* sys_mremap(
+		void* old, size_t oldsz, size_t newsz, int fl,
+		void* new_addr = NULL) const;
+
 	bool sbrkInitial();
 	bool sbrkInitial(guest_ptr new_top);
 
@@ -175,6 +189,7 @@ private:
 	bool findFreeRegionByMaps(size_t len, Mapping& m) const;
 
 	bool canUseRange(guest_ptr base, unsigned int len) const;
+
 
 	typedef std::map<guest_ptr, Mapping*> mapmap_t;
 	mapmap_t	maps;

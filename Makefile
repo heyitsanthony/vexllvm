@@ -58,6 +58,7 @@ OBJDEPS=	vexxlate.o		\
 		genllvm.o		\
 		guest.o			\
 		guestmem.o		\
+		guestmemsink.o		\
 		guestptmem.o		\
 		guestmemdual.o		\
 		guestcpustate.o		\
@@ -89,6 +90,8 @@ OBJDEPS=	vexxlate.o		\
 		elfimg.o		\
 		elfdebug.o		\
 		dllib.o			\
+		ptctl.o			\
+		ptimgremote.o		\
 		ptimgchk.o		\
 		ptimgarch.o		\
 		elfsegment.o		\

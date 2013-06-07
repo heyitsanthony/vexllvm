@@ -5,23 +5,18 @@
 #include <sys/user.h>
 #include "guestptimg.h"
 #include "ptimgarch.h"
+#include "ptctl.h"
 
 class MemLog;
 class SyscallsMarshalled;
 
-class PTImgChk : public GuestPTImg
+class PTImgChk : public GuestPTImg, public PTCtl
 {
 public:
 	PTImgChk(
 		const char* binname,
 		bool use_entry = true/* so templates work */);
 	virtual ~PTImgChk();
-
-	guest_ptr stepToBreakpoint(void);
-	void stepThroughBounds(guest_ptr start, guest_ptr end);
-	void ignoreSysCall(void);
-	void stepSysCall(SyscallsMarshalled* sc);
-	guest_ptr continueForwardWithBounds(guest_ptr start, guest_ptr end);
 
 	void printShadow(std::ostream& os) const;
 
@@ -34,20 +29,7 @@ public:
 	bool isMatch() const;
 
 	bool fixup(const std::vector<InstExtent>& insts);
-	bool breakpointSysCalls(guest_ptr ip_begin, guest_ptr ip_end);
-	void resetBreakpoint(guest_ptr addr)
-	{ GuestPTImg::resetBreakpoint(child_pid, addr); }
-
-	void setBreakpoint(guest_ptr addr)
-	{ GuestPTImg::setBreakpoint(child_pid, addr); }
-
-	void pushRegisters(void);
-
-	uintptr_t getSysCallResult() const;
 	MemLog* getMemLog(void) { return mem_log; }
-
-	pid_t getPID(void) const { return child_pid; }
-
 	unsigned getNumFixups(void) const { return fixup_c; }
 protected:
 	virtual void handleChild(pid_t pid);
@@ -64,20 +46,15 @@ private:
 
 	void readMemLogData(char* data) const;
 
-	void pushPage(guest_ptr p);
-
 	/* guest => clobber guest; native => clobber native */
 	void doFixupGuest(void);
 	void doFixupNative(void);
 
 	pid_t		child_pid;
 
-	uint64_t	bp_steps;
 	uint64_t	blocks;
 
 	bool		log_steps;
-
-	bool		hit_syscall;
 
 	MemLog		*mem_log;
 	bool		xchk_stack;

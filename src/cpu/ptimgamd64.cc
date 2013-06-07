@@ -674,7 +674,7 @@ bool PTImgAMD64::breakpointSysCalls(
 
 	while (rip != ip_end) {
 		if (((getInsOp(rip) & 0xffff) == 0x050f)) {
-			gs->setBreakpoint(child_pid, rip);
+			gs->setBreakpointByPID(child_pid, rip);
 			set_bp = true;
 		}
 		rip.o++;

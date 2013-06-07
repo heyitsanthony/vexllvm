@@ -44,6 +44,8 @@ public:
 		guest_ptr& result, guest_ptr old_offset,
 		size_t old_length, size_t new_length,
 		int flags, guest_ptr new_offset);
+
+	virtual void import(GuestMem* m);
 private:
 	GuestPTImg	*g_ptimg;	/* not owner, do not delete */
 	pid_t		pid;

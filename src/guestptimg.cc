@@ -236,7 +236,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
 	cur_pc = gs->getCPUState()->getPC();
-	setBreakpoint(pid, cur_pc);
+	setBreakpointByPID(pid, cur_pc);
 
 	/* run until child hits entry point */
 	waitForEntry(pid);
@@ -245,7 +245,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	assert (break_addr == cur_pc && "Did not break at entry");
 
 	/* cleanup bp */
-	resetBreakpoint(pid, cur_pc);
+	resetBreakpointByPID(pid, cur_pc);
 
 	/* copy guest state into our state, destroy old guest */
 	cpu_state = gs->cpu_state;
@@ -290,7 +290,7 @@ pid_t GuestPTImg::createSlurpedChild(
 
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
-	setBreakpoint(pid, entry_pt);
+	setBreakpointByPID(pid, entry_pt);
 
 	/* run until child hits entry point */
 	waitForEntry(pid);
@@ -301,10 +301,11 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* hit the entry point, everything should be linked now-- load it
 	 * into our context! */
 	/* cleanup bp */
-	resetBreakpoint(pid, entry_pt);
+	resetBreakpointByPID(pid, entry_pt);
 
 	if (ProcMap::dump_maps) dumpSelfMap();
 
+	std::cerr << "[GuestPTImg] Loading child process\n";
 	/* slurp brains after trap code is removed so that we don't
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
@@ -351,9 +352,7 @@ pid_t GuestPTImg::createSlurpedChild(
 }
 
 void GuestPTImg::slurpRegisters(pid_t pid)
-{
-	pt_arch->slurpRegisters();
-}
+{ pt_arch->slurpRegisters(); }
 
 void GuestPTImg::slurpBrains(pid_t pid)
 {
@@ -381,7 +380,7 @@ void GuestPTImg::waitForEntry(int pid)
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
 }
 
-void GuestPTImg::setBreakpoint(pid_t pid, guest_ptr addr)
+void GuestPTImg::setBreakpointByPID(pid_t pid, guest_ptr addr)
 {
 	if (breakpoints.count(addr))
 		return;
@@ -393,7 +392,7 @@ void GuestPTImg::setBreakpoint(pid_t pid, guest_ptr addr)
 guest_ptr GuestPTImg::undoBreakpoint(pid_t pid)
 { return pt_arch->undoBreakpoint(); }
 
-void GuestPTImg::resetBreakpoint(pid_t pid, guest_ptr addr)
+void GuestPTImg::resetBreakpointByPID(pid_t pid, guest_ptr addr)
 {
 	uint64_t	old_v;
 

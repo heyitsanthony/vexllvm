@@ -54,7 +54,8 @@ GuestMem::~GuestMem(void)
 {
 	foreach (it, maps.begin(), maps.end()) {
 		Mapping	*m = it->second;
-		::munmap(getHostPtr(m->offset), m->length);
+		/* XXX: NOTE: won't call subtype's sys_munmap!! */
+		sys_munmap(getHostPtr(m->offset), m->length);
 		delete m;
 	}
 
@@ -80,20 +81,19 @@ bool GuestMem::sbrkInitial()
 	bool found = findFreeRegion(BRK_RESERVE, m);
 	assert(found && "couldn't allocate mapping");
 
-	addr = ::mmap(getBase() + m.offset.o, BRK_RESERVE, prot,
-		flags, -1, 0);
+	addr = sys_mmap(getBase()+m.offset.o, BRK_RESERVE, prot, flags, -1, 0);
 
 	assert(addr != MAP_FAILED && "initial sbrk failed");
 	m.offset = guest_ptr((char*)addr - getBase());
 	assert(!is_32_bit || m.offset.o < 0xFFFFFFFFULL);
 
 
-	addr = ::mremap(addr, BRK_RESERVE, PAGE_SIZE, 0);
+	addr = sys_mremap(addr, BRK_RESERVE, PAGE_SIZE, 0);
 	assert(addr != MAP_FAILED && "sbrk shrink assploded");
 	flags &= ~MAP_NORESERVE;
 	flags |= MAP_FIXED;
 
-	addr = ::mmap(addr, PAGE_SIZE, prot, flags, -1, 0);
+	addr = sys_mmap(addr, PAGE_SIZE, prot, flags, -1, 0);
 	assert(addr != MAP_FAILED && "sbrk flags fix kerplunked");
 
 	m.length = PAGE_SIZE;
@@ -120,7 +120,7 @@ bool GuestMem::sbrkInitial(guest_ptr new_top)
 	   case you'd eventually see divergence in xchk, manifested
 	   by -ENOMEM being returned for the vex process on brk when
 	   the real process managed to extend the brk */
-	addr = ::mmap(getHostPtr(new_top), PAGE_SIZE, prot, flags, -1, 0);
+	addr = sys_mmap(getHostPtr(new_top), PAGE_SIZE, prot, flags, -1, 0);
 	assert(addr == getHostPtr(new_top) && "initial forced sbrk failed");
 
 	m.offset = new_top;
@@ -165,7 +165,7 @@ bool GuestMem::sbrk(guest_ptr new_top)
 	/* i want to extend the existing mapping... but it seems like
 	   something is not working with that, so do this instead */
 	// addr = mremap(m.offset, m.length, new_len, MREMAP_FIXED);
-	addr = ::mmap(
+	addr = sys_mmap(
 		getBase() + m.end(),
 		new_len - m.length,
 		PROT_READ | PROT_WRITE,
@@ -405,10 +405,10 @@ bool GuestMem::findFreeRegion(size_t len, Mapping& m) const
 	flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
 	if (is_32_bit) flags |= MAP_32BIT;
 
-	addr = ::mmap(0, len, 0, flags, -1, 0);
+	addr = sys_mmap(0, len, 0, flags, -1, 0);
 	if (addr == MAP_FAILED)
 		return false;
-	::munmap(addr, len);
+	sys_munmap(addr, len);
 
 	m.offset = guest_ptr((uintptr_t)addr - (uintptr_t)getBase());
 	m.length = len;
@@ -488,11 +488,11 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 
 	desired = getHostPtr(m.offset);
 
-	at = ::mmap(desired, m.length, m.cur_prot, flags & ~MAP_FIXED, fd, offset);
+	at = sys_mmap(desired, m.length, m.cur_prot, flags & ~MAP_FIXED, fd, offset);
 	if (at == desired) goto success;
 
 	/* tear down incorrect allocation, if given */
-	if (at != MAP_FAILED) ::munmap(at, m.length);
+	if (at != MAP_FAILED) sys_munmap(at, m.length);
 
 	/* Memory at desired location is not available through suggestion.
 	 * Presumably, this means it is already allocated. */
@@ -507,10 +507,10 @@ int GuestMem::mmap(guest_ptr& result, guest_ptr addr,
 	}
 
 	desired = getHostPtr(m.offset);
-	at = ::mmap(desired, m.length, m.cur_prot, flags, fd, offset);
+	at = sys_mmap(desired, m.length, m.cur_prot, flags, fd, offset);
 	if (at == MAP_FAILED) return -errno;
 	if (at != desired) {
-		::munmap(at, m.length);
+		sys_munmap(at, m.length);
 		return -errno;
 	}
 
@@ -548,14 +548,14 @@ bool GuestMem::canUseRange(guest_ptr base, unsigned int len) const
 			if (gap < test_len) test_len = gap;
 		}
 
-		test_addr = ::mmap(
+		test_addr = sys_mmap(
 			getHostPtr(base),
 			test_len,
 			PROT_READ | PROT_WRITE,
 			MAP_PRIVATE | MAP_ANONYMOUS,
 			-1,
 			0);
-		if (test_addr != MAP_FAILED) ::munmap(test_addr, test_len);
+		if (test_addr != MAP_FAILED) sys_munmap(test_addr, test_len);
 		if (test_addr != getHostPtr(base))
 			return false;
 
@@ -579,7 +579,7 @@ int GuestMem::mprotect(guest_ptr p, size_t len, int prot)
 	if (m.req_prot & PROT_WRITE)
 		m.cur_prot &= ~PROT_EXEC;
 
-	err = ::mprotect(getHostPtr(p), len, m.cur_prot);
+	err = sys_mprotect(getHostPtr(p), len, m.cur_prot);
 	if (err < 0) return -errno;
 
 	recordMapping(m);
@@ -607,13 +607,28 @@ int GuestMem::munmap(guest_ptr addr, size_t len)
 		std::cerr << '\n';
 	}
 
-	err = ::munmap(getHostPtr(addr), len);
+	err = sys_munmap(getHostPtr(addr), len);
 	if (err < 0)
 		return -errno;
 
 	removeMapping(m);
 	return 0;
 }
+
+void* GuestMem::sys_mmap(void* p, size_t len, int prot, int fl,
+	int fd, off_t off) const
+{ return ::mmap(p, len, prot, fl, fd, off); }
+
+int GuestMem::sys_munmap(void* p, unsigned len) const
+{ return ::munmap(p, len); }
+
+int GuestMem::sys_mprotect(void* p, size_t len, int prot) const
+{ return ::mprotect(p, len, prot); }
+
+void* GuestMem::sys_mremap(
+	void* old, size_t oldsz, size_t newsz, int fl, void* new_addr) const
+{ return ::mremap(old, oldsz, newsz, fl, new_addr); }
+
 
 /* XXX I haven't audited this, so it's very likely that it's wrong. -AJR */
 int GuestMem::mremap(
@@ -669,7 +684,7 @@ int GuestMem::mremap(
 	}
 
 	desired = getHostPtr(n.offset);
-	at = ::mremap(getHostPtr(m.offset), m.length, n.length, flags, desired);
+	at = sys_mremap(getHostPtr(m.offset), m.length, n.length, flags, desired);
 
 	/* if something was allowed to move, then it would have become
 	   fixed, so this can only be map failed or the correct address */
@@ -730,7 +745,7 @@ void GuestMem::addSysPage(guest_ptr p, char* host_data, unsigned int len)
 		return;
 
 	/* try to map it in if relocated */
-	mmap_ret = ::mmap(
+	mmap_ret = sys_mmap(
 		getHostPtr(m.offset),
 		len,
 		PROT_READ | PROT_EXEC | PROT_WRITE,
@@ -759,3 +774,6 @@ void GuestMem::nameMapping(guest_ptr addr, const std::string& s)
 	/* fuck it */
 	const_cast<GuestMem::Mapping*>(m)->name = new_s;
 }
+
+
+void GuestMem::import(GuestMem* m) { assert (0 == 1 && "STUB"); }

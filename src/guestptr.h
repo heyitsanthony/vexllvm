@@ -1,6 +1,8 @@
 #ifndef GUESTPTR_H
 #define GUESTPTR_H
 
+#include <stdint.h>
+
 /* class to enforce proper use of guest ptrs, operators
    are defined as need to make code look nicer */
 struct guest_ptr
