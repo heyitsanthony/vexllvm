@@ -337,10 +337,16 @@ pid_t GuestPTImg::createSlurpedChild(
 #endif
 
 	for (int i = 0; i < argc; i++) {
+		int	arg_len;
+		char	argbuf[1024];
+
 		argv_ptrs.push_back(in_argv);
-		assert (strcmp(
-			(const char*)mem->getHostPtr(in_argv),
-			argv[i]) == 0);
+
+		arg_len = strlen(argv[i]);
+		assert (arg_len < 1024 && "arg_len larger than argbuf");
+
+		mem->memcpy(argbuf, in_argv, arg_len+1);
+		assert (strncmp(argbuf, argv[i], arg_len) == 0);
 		in_argv.o += mem->strlen(in_argv) + 1;
 	}
 #else

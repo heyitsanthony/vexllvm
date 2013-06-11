@@ -8,7 +8,9 @@
 GuestPTMem::GuestPTMem(GuestPTImg* gpimg, pid_t in_pid)
 : g_ptimg(gpimg)
 , pid(in_pid)
-{ /* should I bother with tracking the memory maps?*/ }
+{ /* should I bother with tracking the memory maps?*/
+	assert (pid != 0);
+}
 
 
 GuestPTMem::~GuestPTMem(void)

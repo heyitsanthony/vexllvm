@@ -108,13 +108,13 @@ public:
 
 	PTImgArch* getPTArch(void) const { return pt_arch; }
 	guest_ptr undoBreakpoint(pid_t pid);
+
+	void slurpRegisters(pid_t pid);
 protected:
 	GuestPTImg(const char* binpath, bool use_entry=true);
 	virtual void handleChild(pid_t pid);
 
-	void slurpRegisters(pid_t pid);
 	virtual void slurpBrains(pid_t pid);
-
 
 	PTImgArch		*pt_arch;
 	PtrList<ProcMap>	mappings;

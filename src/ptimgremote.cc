@@ -25,7 +25,7 @@ PTImgRemote::PTImgRemote(const char* binname, bool use_entry)
 : GuestPTImg(binname, use_entry)
 , PTCtl((GuestPTImg&)*this)
 , blocks(0)
-{ std::cerr << "HI REMOTE!!\n"; }
+{}
 
 PTImgRemote::~PTImgRemote() {}
 
@@ -42,15 +42,15 @@ void PTImgRemote::slurpBrains(pid_t pid)
 	mem = new GuestMemSink();
 
 	/* read in with sink guestmem */
-	std::cerr << "Slurping PTRemoteBrain\n";
+	std::cerr << "[PTImgRemote] Slurp brains\n";
 	ProcMap::slurpMappings(pid, mem, mappings, false);
 	slurpRegisters(pid);
 
-	tmp_mem = new GuestPTMem(this, getPID());
+	tmp_mem = new GuestPTMem(this, pid);
 	if (is_32) tmp_mem->mark32Bit();
 	tmp_mem->import(mem);
 
-	std::cerr << "IMPORTED IT!!!\n";
+	std::cerr << "[PTImgRemote] Imported memory map\n";
 
 	delete mem;
 	mem = tmp_mem;
