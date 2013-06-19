@@ -653,8 +653,10 @@ void PTImgAMD64::setRegs(const user_regs_struct& regs)
 	int	err;
 
 	err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
-	if(err < 0) {
+	if (err < 0) {
+		fprintf(stderr, "DIDN'T TAKE?? pid=%d\n", child_pid);
 		perror("PTImgAMD64::setregs");
+		abort();
 		exit(1);
 	}
 
@@ -753,7 +755,7 @@ void PTImgAMD64::slurpRegisters(void)
 	 * to get orig_rax */
 	if (regs.orig_rax != ~((uint64_t)0)) {
 		regs.rax = regs.orig_rax;
-		if (regs.fs_base == 0) regs.fs_base = ~0;
+		if (regs.fs_base == 0) regs.fs_base = 0xdead;
 	} else if (regs.fs_base == 0) {
 		/* if it's static, it'll probably be using
 		 * some native register bullshit for the TLS and it'll read 0.

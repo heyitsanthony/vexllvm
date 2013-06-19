@@ -84,8 +84,8 @@ public:
 	void printTraceStats(std::ostream& os);
 
 	virtual Arch::Arch getArch() const { return arch; }
-
 	virtual const Symbols* getSymbols(void) const;
+	virtual Symbols* getSymbols(void);
 	virtual const Symbols* getDynSymbols(void) const;
 
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const

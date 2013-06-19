@@ -415,6 +415,12 @@ const Symbols* GuestPTImg::getSymbols(void) const
 	return symbols;
 }
 
+Symbols* GuestPTImg::getSymbols(void)
+{
+	if (!symbols) symbols = loadSymbols(mappings);
+	return symbols;
+}
+
 const Symbols* GuestPTImg::getDynSymbols(void) const
 {
 	if (!dyn_symbols)
@@ -422,8 +428,7 @@ const Symbols* GuestPTImg::getDynSymbols(void) const
 	return dyn_symbols;
 }
 
-Symbols* GuestPTImg::loadSymbols(
-	const PtrList<ProcMap>& mappings)
+Symbols* GuestPTImg::loadSymbols(const PtrList<ProcMap>& mappings)
 {
 	Symbols			*symbols;
 	std::set<std::string>	mmap_fnames;
@@ -436,7 +441,6 @@ Symbols* GuestPTImg::loadSymbols(
 	 * duplicate symbols */
 	preload_lib = getenv("VEXLLVM_PRELOAD");
 	if (preload_lib != NULL) {
-		Symbols		*new_syms;
 		guest_ptr	base(0);
 
 		foreach (it, mappings.begin(), mappings.end()) {
@@ -447,11 +451,7 @@ Symbols* GuestPTImg::loadSymbols(
 		}
 
 		assert (base.o && "Could not find VEXLLVM_PRELOAD library!");
-		new_syms = ElfDebug::getSyms(preload_lib, base);
-		if (new_syms != NULL) {
-			symbols->addSyms(new_syms);
-			delete new_syms;
-		}
+		addLibrarySyms(preload_lib, base, symbols);
 
 		mmap_fnames.insert(preload_lib);
 	}
@@ -459,7 +459,6 @@ Symbols* GuestPTImg::loadSymbols(
 	foreach (it, mappings.begin(), mappings.end()) {
 		std::string	libname((*it)->getLib());
 		guest_ptr	base((*it)->getBase());
-		Symbols		*new_syms;
 
 		if (libname.size() == 0)
 			continue;
@@ -469,11 +468,7 @@ Symbols* GuestPTImg::loadSymbols(
 			continue;
 
 		/* new fname, try to load the symbols */
-		new_syms = ElfDebug::getSyms(libname.c_str(), base);
-		if (new_syms) {
-			symbols->addSyms(new_syms);
-			delete new_syms;
-		}
+		addLibrarySyms(libname.c_str(), base, symbols);
 
 		mmap_fnames.insert(libname);
 	}

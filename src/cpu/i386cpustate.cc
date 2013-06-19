@@ -294,3 +294,6 @@ void I386CPUState::setRegs(
 	//TODO: floating point flags and extra fp state, sse  rounding
 }
 #endif
+
+unsigned int I386CPUState::getStackRegOff(void) const
+{ return offsetof(VexGuestX86State, guest_ESP); }

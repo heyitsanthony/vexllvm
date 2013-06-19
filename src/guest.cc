@@ -14,6 +14,7 @@
 
 #include "guest.h"
 
+#include "elfdebug.h"
 
 using namespace llvm;
 
@@ -124,4 +125,25 @@ Guest* Guest::load(const char* dirpath)
 
 	ret = GuestSnapshot::create(dirpath);
 	return ret;
+}
+
+
+void Guest::addLibrarySyms(const char* path, guest_ptr base)
+{
+	Symbols	*cur_syms = getSymbols();
+	if (cur_syms == NULL)
+		return;
+	addLibrarySyms(path, base, cur_syms);
+}
+
+void Guest::addLibrarySyms(const char* path, guest_ptr base, Symbols* cur_syms)
+{
+	Symbols*	new_syms;
+
+	new_syms = ElfDebug::getSyms(path, base);
+	if (new_syms == NULL)
+		return;
+
+	cur_syms->addSyms(new_syms);
+	delete new_syms;
 }

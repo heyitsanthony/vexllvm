@@ -34,6 +34,8 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	const char* off2Name(unsigned int off) const;
 
 	const struct guest_ctx_field* getFields(void) const;
+
+	virtual unsigned int getStackRegOff(void) const;
 private:
 };
 

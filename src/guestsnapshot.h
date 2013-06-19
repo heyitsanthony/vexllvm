@@ -15,6 +15,7 @@ public:
 	virtual Arch::Arch getArch(void) const { return arch; }
 
 	virtual const Symbols* getSymbols(void) const { return syms; }
+	virtual Symbols* getSymbols(void) { return syms; }
 	virtual const Symbols* getDynSymbols(void) const { return dyn_syms; }
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return argv_ptrs; }

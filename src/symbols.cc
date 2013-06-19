@@ -49,6 +49,9 @@ const Symbol* Symbols::findSym(uint64_t ptr) const
 	ret = it->second;
 	assert (ret->getBaseAddr() <= (symaddr_t)ptr && "WTF");
 
+	if ((symaddr_t)ptr > ret->getEndAddr())
+		return NULL;
+
 	return ret;
 }
 
