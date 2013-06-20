@@ -1,11 +1,11 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/Module.h>
-#include <llvm/Instructions.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Instructions.h>
 
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/CommandLine.h>
-#include <llvm/TypeBuilder.h>
+#include <llvm/IR/TypeBuilder.h>
 #include <llvm/Support/system_error.h>
 
 #include <iostream>

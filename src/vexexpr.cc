@@ -1,6 +1,6 @@
-#include <llvm/Type.h>
-#include <llvm/Constants.h>
-#include <llvm/DerivedTypes.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
 #include "genllvm.h"
 #include "Sugar.h"
 #include <stdio.h>

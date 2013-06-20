@@ -4,7 +4,7 @@
 #include "vexop.h"
 #include "vexop_macros.h"
 #include "vexhelpers.h"
-#include <llvm/Intrinsics.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/Analysis/ConstantFolding.h>
 
 using namespace llvm;

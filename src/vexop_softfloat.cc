@@ -1,5 +1,5 @@
 #include <unistd.h>
-#include <llvm/Intrinsics.h>
+#include <llvm/IR/Intrinsics.h>
 #include "genllvm.h"
 #include "vexop.h"
 #include "vexop_macros.h"

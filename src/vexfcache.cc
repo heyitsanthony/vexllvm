@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <list>
-#include "llvm/Function.h"
+#include "llvm/IR/Function.h"
 
 #include "Sugar.h"
 #include "vexsb.h"
