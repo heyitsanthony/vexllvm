@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/ptrace.h>
+#include <unistd.h>
 
 #include "procmap.h"
 

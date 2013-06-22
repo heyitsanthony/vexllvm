@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <string.h>
+#include <sys/types.h>
 #include "collection.h"
 #include "guestptr.h"
 

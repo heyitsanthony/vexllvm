@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "util.h"
 #include "symbols.h"

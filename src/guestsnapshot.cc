@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "Sugar.h"
 #include "symbols.h"
 #include "util.h"

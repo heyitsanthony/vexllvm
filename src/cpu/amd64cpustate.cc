@@ -207,17 +207,22 @@ uint64_t AMD64CPUState::getExitCode(void) const
 
 #define YMM_BASE	offsetof(VexGuestAMD64State, guest_YMM0)
 /* 32 because of YMM / AVX extensions */
-#define get_xmm_lo(x,i)	((uint64_t*)(&(((uint8_t*)s)[YMM_BASE+32*i])))[0]
-#define get_xmm_hi(x,i)	((uint64_t*)(&(((uint8_t*)s)[YMM_BASE+32*i])))[1]
-#define get_ymm_lo(x,i)	((uint64_t*)(&(((uint8_t*)s)[YMM_BASE+32*i])))[2]
-#define get_ymm_hi(x,i)	((uint64_t*)(&(((uint8_t*)s)[YMM_BASE+32*i])))[3]
+#define get_xmm_lo(x,i)	((const uint64_t*)(	\
+	&(((const uint8_t*)s)[YMM_BASE+32*i])))[0]
+#define get_xmm_hi(x,i)	((const uint64_t*)(	\
+	&(((const uint8_t*)s)[YMM_BASE+32*i])))[1]
+#define get_ymm_lo(x,i)	((const uint64_t*)(	\
+	&(((const uint8_t*)s)[YMM_BASE+32*i])))[2]
+#define get_ymm_hi(x,i)	((const uint64_t*)(	\
+	&(((const uint8_t*)s)[YMM_BASE+32*i])))[3]
 
 
 void AMD64CPUState::print(std::ostream& os, const void* regctx) const
 {
 	VexGuestAMD64State	*s;
 
-	s = (VexGuestAMD64State*)regctx;
+	s = const_cast<VexGuestAMD64State*>(
+		(const VexGuestAMD64State*)regctx);
 
 	os << "RIP: " << (void*)s->guest_RIP << "\n";
 	os << "RAX: " << (void*)s->guest_RAX << "\n";
@@ -316,7 +321,7 @@ void AMD64CPUState::setRegs(
 	/* definitely need smarter ptrace code GETREGSET */
 	for (unsigned i = 0; i < 16; i++) {
 		memcpy( ((char*)&state2amd64()->guest_YMM0) + i*32,
-			((char*)&fpregs.xmm_space) + i*16,
+			((const char*)&fpregs.xmm_space) + i*16,
 			16);
 	}
 

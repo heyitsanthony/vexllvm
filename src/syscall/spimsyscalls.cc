@@ -5,6 +5,7 @@ extern "C" {
 #include "guest.h"
 #include "guestcpustate.h"
 #include <sys/types.h>
+#include <unistd.h>
 #include <fcntl.h>
 
 #define SPIM_PRINT_INT		1

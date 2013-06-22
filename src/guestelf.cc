@@ -8,6 +8,7 @@
 #include <fstream>
 #include <fcntl.h>
 #include <sstream>
+#include <unistd.h>
 
 #include "cpu/elf.h"
 #include "elfimg.h"

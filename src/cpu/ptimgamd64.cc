@@ -7,6 +7,7 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #include "Sugar.h"
 #include "guestcpustate.h"
 #include "cpu/ptimgamd64.h"

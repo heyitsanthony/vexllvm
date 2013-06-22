@@ -214,9 +214,12 @@ uint64_t I386CPUState::getExitCode(void) const
 	return state2i386()->guest_EBX;
 }
 
-// 152 == XMM base
-#define get_xmm_lo(x,i)	((uint64_t*)(&(((uint8_t*)x)[152+16*i])))[0]
-#define get_xmm_hi(x,i)	((uint64_t*)(&(((uint8_t*)x)[152+16*i])))[1]
+// 160 == XMM base
+#define XMM_BASE offsetof(VexGuestX86State, guest_XMM0)
+#define get_xmm_lo(x,i)	((const uint64_t*)(	\
+	&(((const uint8_t*)x)[XMM_BASE+16*i])))[0]
+#define get_xmm_hi(x,i)	((const uint64_t*)(	\
+	&(((const uint8_t*)x)[XMM_BASE+16*i])))[1]
 
 void I386CPUState::print(std::ostream& os, const void* regctx) const
 {

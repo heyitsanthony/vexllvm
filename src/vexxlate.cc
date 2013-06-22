@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
+#include <unistd.h>
 
 #include <string>
 #include <list>
@@ -209,7 +210,7 @@ void VexXlate::dumpLog(std::ostream& os) const
 
 VexSB* VexXlate::patchBadDecode(const void* guest_bytes, uint64_t guest_addr)
 {
-	const unsigned char *gb = (unsigned char*)(guest_bytes);
+	const unsigned char *gb = (const unsigned char*)(guest_bytes);
 
 	if (arch == VexArchX86) {
 		for (unsigned i = 0; i < 128; i++) {
