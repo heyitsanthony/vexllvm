@@ -149,6 +149,13 @@ public:
 	virtual int strlen(guest_ptr p) const { return ::strlen(base + p.o); }
 	void* getHostPtr(guest_ptr p) const { return (void*)(base + p.o); }
 
+	std::string readString(guest_ptr p) const {
+		int		l = strlen(p);
+		std::string	s(l, 'x');
+		memcpy(const_cast<char*>(s.data()), p, l);
+		return s;
+	}
+
 	/* virtual memory handling, these update the mappings as
 	   necessary and also do the proper protection to
 	   distinguish between self-modifying/generating code
