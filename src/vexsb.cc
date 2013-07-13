@@ -182,8 +182,10 @@ llvm::Function* VexSB::emit(const char* fname)
 
 	case Ijk_Sys_sysenter:
 	case Ijk_Sys_syscall:
-	case Ijk_Sys_int128:
 		theGenLLVM->setExitType(GE_SYSCALL);
+		break;
+	case Ijk_Sys_int128:
+		theGenLLVM->setExitType(GE_INT);
 		break;
 	case Ijk_SigTRAP:
 		theGenLLVM->setExitType(GE_SIGTRAP);

@@ -186,6 +186,7 @@ const VexSB* VexExec::doNextSB(void)
 	case GE_RETURN:
 		call_depth--;
 		break;
+	case GE_INT:
 	case GE_SYSCALL:
 		doSysCall(vsb);
 		if (exited) {

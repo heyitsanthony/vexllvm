@@ -214,8 +214,8 @@ VexSB* VexXlate::patchBadDecode(const void* guest_bytes, uint64_t guest_addr)
 
 	if (arch == VexArchX86) {
 		for (unsigned i = 0; i < 128; i++) {
-			/* windows syscall patch-- pretend it's a
-			 * linux syscall */
+			/* windows syscall patch (int 0x23)
+			 * -- pretend it's a linux syscall at int 0x80 */
 			if (gb[i] == 0xcd && gb[i+1] == 0x2e) {
 				char		dumb_buf[128];
 				memcpy(dumb_buf, gb, 128);

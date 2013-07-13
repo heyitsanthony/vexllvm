@@ -433,7 +433,7 @@ VexStmtExit::VexStmtExit(VexSB* in_parent, const IRStmt* in_stmt)
 	/* arm has some conditional calls occasionally */
 	case Ijk_Call: exit_type = (uint8_t)GE_CALL; break;
 	case Ijk_Ret: exit_type = (uint8_t)GE_RETURN; break;
-	case Ijk_Sys_int128: exit_type = (uint8_t)GE_SYSCALL; break;
+	case Ijk_Sys_int128: exit_type = (uint8_t)GE_INT; break;
 	case Ijk_Sys_syscall: exit_type = (uint8_t)GE_SYSCALL; break;
 	case Ijk_Sys_sysenter: exit_type = (uint8_t)GE_SYSCALL; break;
 	case Ijk_MapFail: /* shows up with ldt/gdt stuff-- fake as sigsegv */
