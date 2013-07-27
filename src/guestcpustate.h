@@ -41,6 +41,7 @@ class GuestCPUState
 {
 public:
 typedef std::map<unsigned int, unsigned int> byte2elem_map;
+typedef std::map<std::string, unsigned int> reg2byte_map;
 	static GuestCPUState* create(Arch::Arch arch);
 	GuestCPUState();
 	virtual ~GuestCPUState() {};
@@ -96,8 +97,10 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 
 	virtual const struct guest_ctx_field* getFields(void) const = 0;
 	unsigned getFieldsSize(const struct guest_ctx_field* f);
+	uint64_t getReg(const char* name, unsigned bits, int off=0) const;
 protected:
 	byte2elem_map	off2ElemMap;
+	reg2byte_map	reg2OffMap;
 	uint8_t		*state_data;
 	uint8_t		*exit_type;
 	unsigned int	state_byte_c;

@@ -39,7 +39,24 @@ static struct guest_ctx_field amd64_fields[] =
 	{64, 1, "EvC_FAILADDR"},
 	{32, 1, "EvC_COUNTER"},
 	{32, 1, "EvC_PAD"},
-	{64, 16, "GPR"},	/* 0-15, 8*16 = 128*/
+//	{64, 16, "GPR"},	/* 0-15, 8*16 = 128*/
+	{64, 1, "RAX"},
+	{64, 1, "RCX"},
+	{64, 1, "RDX"},
+	{64, 1, "RBX"},
+	{64, 1, "RSP"},
+	{64, 1, "RBP"},
+	{64, 1, "RSI"},
+	{64, 1, "RDI"},
+	{64, 1, "R8"},
+	{64, 1, "R9"},
+	{64, 1, "R10"},
+	{64, 1, "R11"},
+	{64, 1, "R12"},
+	{64, 1, "R13"},
+	{64, 1, "R14"},
+	{64, 1, "R15"},
+
 	{64, 1, "CC_OP"},	/* 16, 128 */
 	{64, 1, "CC_DEP1"},	/* 17, 136 */
 	{64, 1, "CC_DEP2"},	/* 18, 144 */
@@ -87,7 +104,6 @@ const struct guest_ctx_field* AMD64CPUState::getFields(void) const
 
 
 extern void dumpIRSBs(void);
-
 
 const char* AMD64CPUState::off2Name(unsigned int off) const
 {
@@ -167,14 +183,10 @@ unsigned int AMD64CPUState::byteOffset2ElemIdx(unsigned int off) const
 }
 
 void AMD64CPUState::setStackPtr(guest_ptr stack_ptr)
-{
-	state2amd64()->guest_RSP = (uint64_t)stack_ptr;
-}
+{ state2amd64()->guest_RSP = (uint64_t)stack_ptr; }
 
 guest_ptr AMD64CPUState::getStackPtr(void) const
-{
-	return guest_ptr(state2amd64()->guest_RSP);
-}
+{ return guest_ptr(state2amd64()->guest_RSP); }
 
 /**
  * %rax = syscall number

@@ -86,6 +86,7 @@ VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 , sb_executed_c(0)
 , exited(false)
 , trace_c(0)
+, save_core(getenv("VEXLLVM_CORE") != NULL)
 , owns_xlate(in_xlate == NULL)
 , xlate(in_xlate)
 {
@@ -392,8 +393,13 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 		std::cerr << "Caught SIGSEGV but couldn't "
 			<< "find a mapping to tweak @ \n"
 			<< si->si_addr << std::endl;
+
+		if (exec_context->save_core)
+			exec_context->gs->toCore();
+
 		exit(1);
 	}
+
 	if ((m.req_prot & PROT_EXEC) && !(m.cur_prot & PROT_WRITE)) {
 		m.cur_prot = m.req_prot & ~PROT_EXEC;
 		mprotect(mem->getBase() + m.offset, m.length, m.cur_prot);
@@ -403,6 +409,10 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 		std::cerr << "Caught SIGSEGV but the mapping was"
 			<< "a normal one... die! @ \n"
 			<< si->si_addr << std::endl;
+
+		if (exec_context->save_core)
+			exec_context->gs->toCore();
+
 		exit(1);
 	}
 }

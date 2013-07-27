@@ -52,11 +52,13 @@ unsigned GuestCPUState::getFieldsSize(const struct guest_ctx_field* f)
 	cur_byte_off = 0;
 	total_elems = 0;
 	off2ElemMap.clear();
+	reg2OffMap.clear();
 
 	for (unsigned i = 0; f[i].f_len != 0; i++) {
+		reg2OffMap[f[i].f_name] = cur_byte_off;
 		for (unsigned int c = 0; c < f[i].f_count; c++) {
 			off2ElemMap[cur_byte_off] = total_elems;
-			cur_byte_off += f[i].f_len / 8;
+			cur_byte_off += f[i].f_len/ 8;
 			total_elems++;
 		}
 	}
@@ -64,10 +66,29 @@ unsigned GuestCPUState::getFieldsSize(const struct guest_ctx_field* f)
 	return cur_byte_off;
 }
 
-void GuestCPUState::print(std::ostream& os) const
+
+uint64_t GuestCPUState::getReg(const char* name, unsigned bits, int off)
+const
 {
-	print(os, getStateData());
+	reg2byte_map::const_iterator it;
+	unsigned		roff;
+
+	assert (bits == 32 || bits == 64);
+	it = reg2OffMap.find(name);
+	if (it == reg2OffMap.end()) {
+		std::cerr << "WHAT: " << name << '\n';
+		assert ("REG NOT FOUND??" && it != reg2OffMap.end());
+	}
+
+	roff = it->second;
+	if (bits == 32)
+		return ((uint32_t*)(state_data+roff))[off];
+
+	return ((uint64_t*)(state_data+roff))[off];
 }
+
+void GuestCPUState::print(std::ostream& os) const
+{ print(os, getStateData()); }
 
 bool GuestCPUState::load(const char* fname)
 {

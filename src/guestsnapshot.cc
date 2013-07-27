@@ -146,7 +146,6 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 		END_F()
 	}
 
-
 	is_valid = true;
 }
 

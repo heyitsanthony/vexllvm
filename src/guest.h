@@ -62,6 +62,10 @@ public:
 	void save(const char* dirpath = NULL) const;
 	static Guest* load(const char* dirpath = NULL);
 
+	/* saves the guest snapshot to a 'core' file which
+	 * is meant to be loadable by the *guest* platform's debugger */
+	void toCore(const char* path = NULL) const;
+
 	/* This might have to eventually morph into some 'get parameters'
 	 * type function. Since we just do executables right now, limit
 	 * the interface to argv's */

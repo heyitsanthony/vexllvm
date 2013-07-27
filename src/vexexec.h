@@ -107,6 +107,8 @@ private:
 	vexexec_traces	trace;
 	unsigned int	trace_c;
 
+	bool		save_core;
+
 	bool		owns_xlate;
 	VexXlate	*xlate;
 	std::pair<guest_ptr, guest_ptr>	to_flush;

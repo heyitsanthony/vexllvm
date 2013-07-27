@@ -12,6 +12,7 @@
 
 class ElfSegment;
 class GuestMem;
+class Guest;
 
 /* loads and maps an elf image into memory based on its Phdr--
  * NOTE: two elfimg objects of the same exec can't coexist;
@@ -46,6 +47,8 @@ public:
 	}
 
 	GuestMem* takeMem(void);
+
+	static void writeCore(const Guest *gs, std::ostream& os);
 
 private:
 	ElfImg(const char* fname, Arch::Arch arch, bool linked,

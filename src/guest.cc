@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <iostream>
+#include <fstream>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
@@ -15,6 +16,7 @@
 
 #include "guest.h"
 
+#include "elfimg.h"
 #include "elfdebug.h"
 
 using namespace llvm;
@@ -147,4 +149,17 @@ void Guest::addLibrarySyms(const char* path, guest_ptr base, Symbols* cur_syms)
 
 	cur_syms->addSyms(new_syms);
 	delete new_syms;
+}
+
+
+void Guest::toCore(const char* path) const
+{
+	std::ofstream	os(((path) ? path : "core"));
+
+	if (!os.good()) {
+		std::cerr << "[Guest] Couldn't save core.\n";
+		return;
+	}
+
+	ElfImg::writeCore(this, os);
 }
