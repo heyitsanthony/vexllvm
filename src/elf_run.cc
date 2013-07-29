@@ -13,8 +13,6 @@
 #include "guestcpustate.h"
 #include "guestelf.h"
 
-using namespace llvm;
-
 static VexExec *vexexec;
 
 void dumpIRSBs(void)

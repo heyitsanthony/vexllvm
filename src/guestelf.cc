@@ -1,13 +1,8 @@
-#include <llvm/IR/Intrinsics.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Analysis/Verifier.h>
-#include <llvm/IR/IRBuilder.h>
 #include <sys/mman.h>
 #include <fstream>
 #include <fcntl.h>
 #include <sstream>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "cpu/elf.h"
@@ -16,8 +11,6 @@
 #include "guestelf.h"
 #include "guestcpustate.h"
 #include "Sugar.h"
-
-using namespace llvm;
 
 #if defined(__arm__)
 #define PAGE_SIZE	4096
@@ -154,7 +147,7 @@ void GuestELF::setupArgPages()
 	}
 	exe_string = sp;
 
-	if(getenv("VEXLLVM_LOG_MAPPINGS")) {
+	if (getenv("VEXLLVM_LOG_MAPPINGS")) {
 		std::cerr << "stack @ " << (void*)stack_limit.o << " sz "
 			<< (void*)size << std::endl;
 	}

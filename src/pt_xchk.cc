@@ -11,8 +11,6 @@
 #include "vexexecfastchk.h"
 #include "ptimgchk.h"
 
-using namespace llvm;
-
 static VexExec *vexexec;
 
 void dumpIRSBs(void)

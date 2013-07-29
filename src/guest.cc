@@ -19,8 +19,6 @@
 #include "elfimg.h"
 #include "elfdebug.h"
 
-using namespace llvm;
-
 Guest::Guest(const char* in_bin_path)
 : cpu_state(NULL),
   mem(NULL),

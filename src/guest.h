@@ -14,11 +14,6 @@ class GuestSnapshot;
 class GuestPTImg;
 class Symbols;
 
-namespace llvm
-{
-	class Value;
-}
-
 /* ties together all state information for guest.
  * 1. register state
  * 2. memory mappings

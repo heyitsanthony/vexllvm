@@ -2,9 +2,6 @@
 #include "Sugar.h"
 #include <stddef.h>
 #include <iostream>
-#include <llvm/IR/Intrinsics.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/LLVMContext.h>
 #include <cstring>
 #include <vector>
 
@@ -13,8 +10,6 @@
 extern "C" {
 #include <valgrind/libvex_guest_mips32.h>
 }
-
-using namespace llvm;
 
 #define state2mips32()	((VexGuestMIPS32State*)(state_data))
 

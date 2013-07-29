@@ -2,9 +2,6 @@
 #include "Sugar.h"
 #include <stddef.h>
 #include <iostream>
-#include <llvm/IR/Intrinsics.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/LLVMContext.h>
 #include <cstring>
 #include <vector>
 

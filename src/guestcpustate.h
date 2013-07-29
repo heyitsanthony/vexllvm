@@ -11,11 +11,6 @@
 
 #include "guestptr.h"
 
-namespace llvm
-{
-	class Type;
-}
-
 struct guest_ctx_field
 {
 	unsigned int	f_len;

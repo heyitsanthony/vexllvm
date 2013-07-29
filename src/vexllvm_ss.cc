@@ -9,18 +9,12 @@
 
 
 #include "elfimg.h"
-#include "vexexec.h"
 #include "guestcpustate.h"
 #include "guestptimg.h"
 #include "procargs.h"
 
-static VexExec *vexexec;
-
 void dumpIRSBs(void)
-{
-	std::cerr << "DUMPING LOGS" << std::cerr;
-	vexexec->dumpLogs(std::cerr);
-}
+{ std::cerr << "DUMPING LOGS" << std::cerr; }
 
 GuestPTImg* createAttached(void)
 {
@@ -47,12 +41,7 @@ int main(int argc, char* argv[], char* envp[])
 	} else {
 		gs = GuestPTImg::create<GuestPTImg>(argc - 1, argv + 1, envp);
 	}
-	vexexec = VexExec::create<VexExec,Guest>(gs);
-	assert (vexexec && "Could not create vexexec");
 	
-	vexexec->run();
-
-	delete vexexec;
 	delete gs;
 
 	return 0;

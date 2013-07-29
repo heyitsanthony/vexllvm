@@ -50,13 +50,7 @@ LDRELOC2="-Wl,-Ttext-segment=$(BIN_BASE2)"
 # # ###  #  ###
 ##  # #  #  # #
 
-OBJDEPS=	vexxlate.o		\
-		vexstmt.o		\
-		vexsb.o			\
-		vexexpr.o		\
-		vexop.o			\
-		genllvm.o		\
-		guest.o			\
+OBJBASE=	guest.o			\
 		guestmem.o		\
 		guestmemsink.o		\
 		guestptmem.o		\
@@ -69,23 +63,16 @@ OBJDEPS=	vexxlate.o		\
 		procmap.o		\
 		procargs.o		\
 		cpu/amd64cpustate.o	\
+		cpu/amd64syscalls.o	\
 		cpu/i386cpustate.o	\
+		cpu/i386syscalls.o	\
 		cpu/armcpustate.o	\
+		cpu/armsyscalls.o	\
 		cpu/mips32cpustate.o	\
-		cpu/i386syscalls.o		\
-		cpu/armsyscalls.o		\
-		cpu/amd64syscalls.o		\
 		fragcache.o		\
-		memlog.o		\
 		syscall/syscalls.o		\
 		syscall/spimsyscalls.o		\
 		syscall/syscallsmarshalled.o	\
-		vexfcache.o		\
-		vexjitcache.o		\
-		vexexec.o		\
-		vexexecchk.o		\
-		vexexecfastchk.o	\
-		vexhelpers.o		\
 		symbols.o		\
 		elfimg.o		\
 		elfdebug.o		\
@@ -94,22 +81,38 @@ OBJDEPS=	vexxlate.o		\
 		ptimgremote.o		\
 		ptimgchk.o		\
 		ptimgarch.o		\
-		elfsegment.o		\
-#		libvex_amd64_helpers.o	\
-#
+		elfsegment.o
+
+OBJSLLVM=	vexxlate.o		\
+		vexstmt.o		\
+		vexsb.o			\
+		vexexpr.o		\
+		vexop.o			\
+		memlog.o		\
+		genllvm.o		\
+		vexfcache.o		\
+		vexjitcache.o		\
+		vexexec.o		\
+		vexexecchk.o		\
+		vexexecfastchk.o	\
+		vexhelpers.o		\
 
 ifeq ($(shell uname -m), armv7l)
 CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/ -lcrypto -lcrypt -lrt -lpthread
-OBJDEPS += cpu/ptimgarm.o
+OBJBASE += cpu/ptimgarm.o
 VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
 endif
 
 ifeq ($(shell uname -m), x86_64)
 VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
-OBJDEPS +=	cpu/ptimgamd64.o	\
+OBJBASE +=	cpu/ptimgamd64.o	\
 		cpu/ptimgi386.o		\
 		cpu/amd64_trampoline.o
 endif
+
+
+
+OBJDEPS=$(OBJBASE) $(OBJSLLVM)
 
 #LLVMCONFIG_PATH=llvm-config
 CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)
@@ -152,6 +155,7 @@ BINTARGETS=	elf_run jit_test	\
 		ss_run			\
 		frag_run		\
 		pt_run pt_xchk		\
+		vexllvm_ss		\
 		dump_loader
 
 BINOBJS=$(BINTARGETS:%=obj/%.o)
@@ -183,6 +187,12 @@ bin/vexllvm.a: $(OBJDIRDEPS) $(FPDIRDEPS)
 
 bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
 	ar r $@ $^
+
+bin/vexllvm_ss: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
+	g++ $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC) -ldl -lrt
+
+bin/vexllvm_ss_rebase:
+	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) -ldl -lrt
 
 bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
 	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) -ldl -lrt

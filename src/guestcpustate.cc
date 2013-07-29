@@ -1,9 +1,5 @@
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Analysis/Verifier.h>
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Intrinsics.h>
+#include <vector>
+#include <string.h>
 #include <stdio.h>
 
 #include "guestcpustate.h"
@@ -11,8 +7,6 @@
 #include "cpu/armcpustate.h"
 #include "cpu/i386cpustate.h"
 #include "cpu/mips32cpustate.h"
-
-using namespace llvm;
 
 GuestCPUState::GuestCPUState()
 : state_data(NULL)
@@ -45,7 +39,6 @@ uint8_t* GuestCPUState::copyStateData(void) const
 
 unsigned GuestCPUState::getFieldsSize(const struct guest_ctx_field* f)
 {
-	std::vector<Type*>	types;
 	unsigned int		cur_byte_off, total_elems;
 
 	/* add all fields to types vector from structure */

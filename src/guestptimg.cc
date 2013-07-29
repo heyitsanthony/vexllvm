@@ -38,8 +38,6 @@
 #include "cpu/ptimgarm.h"
 #endif
 
-using namespace llvm;
-
 GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 : Guest(binpath)
 , pt_arch(NULL)
