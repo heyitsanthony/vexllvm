@@ -88,6 +88,9 @@ int GuestPTMem::mmap(
 	guest_ptr& result, guest_ptr addr, size_t length,
 	int prot, int flags, int fd, off_t offset)
 {
+#ifdef __arm__
+#define SYS_mmap 9
+#endif
 	SyscallParams	sp(SYS_mmap, addr.o, length, prot, flags, fd, offset);
 	result.o = g_ptimg->getPTArch()->dispatchSysCall(sp);
 	return ((void*)result.o == MAP_FAILED) ? -1 : 0;

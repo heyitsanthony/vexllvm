@@ -30,6 +30,7 @@ GuestPTImg* createAttached(void)
 int main(int argc, char* argv[], char* envp[])
 {
 	GuestPTImg	*gs;
+	const char	*saveas;
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s program_path <args>\n", argv[0]);
@@ -41,7 +42,15 @@ int main(int argc, char* argv[], char* envp[])
 	} else {
 		gs = GuestPTImg::create<GuestPTImg>(argc - 1, argv + 1, envp);
 	}
-	
+
+	if (saveas = getenv("VEXLLVM_SAVEAS")) {
+		fprintf(stderr, "Saving as %s...\n", saveas);
+		gs->save(saveas);
+	} else {
+		fprintf(stderr, "Saving...\n");
+		gs->save();
+	}
+
 	delete gs;
 
 	return 0;

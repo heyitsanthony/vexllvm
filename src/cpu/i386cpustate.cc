@@ -11,8 +11,6 @@ extern "C" {
 #include <valgrind/libvex_guest_x86.h>
 }
 
-using namespace llvm;
-
 #define state2i386()	((VexGuestX86State*)(state_data))
 
 I386CPUState::I386CPUState()
