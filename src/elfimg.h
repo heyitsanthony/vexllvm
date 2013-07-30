@@ -42,9 +42,11 @@ public:
 	std::string getLibraryRoot() const { return library_root; }
 
 	static Arch::Arch getArch(const char* fname)
-	{
-		return readHeader(fname, false);
-	}
+	{ return readHeader(fname, false); }
+
+	static bool isDynamic(const char* fname)
+	{ bool x; readHeader(fname, false, x); return x; }
+
 
 	GuestMem* takeMem(void);
 
@@ -63,8 +65,12 @@ private:
 	static ElfImg* create(
 		GuestMem* m, const char* fname, bool linked = true,
 		bool map_segs = true);
+
+	static Arch::Arch readHeader(const char* fname, bool require_exe);
+
 	static Arch::Arch readHeader(const char* fname,
-		bool require_exe);
+		bool require_exe, bool &is_dyn);
+
 	static Arch::Arch readHeader32(const Elf32_Ehdr* hdr,
 		bool require_exe);
 	static Arch::Arch readHeader64(const Elf64_Ehdr* hdr,

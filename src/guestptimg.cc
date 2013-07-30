@@ -38,6 +38,8 @@
 #include "cpu/ptimgarm.h"
 #endif
 
+#define ANDROID_SYS_BEGIN	0x40000000
+
 GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 : Guest(binpath)
 , pt_arch(NULL)
@@ -59,6 +61,11 @@ GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 		assert(img->getArch() == getArch() || use_32bit_arch);
 
 		entry_pt = img->getEntryPoint();
+
+		/* XXXX: gross hack for android */
+		if (arch == Arch::ARM && use_entry && ElfImg::isDynamic(binpath))
+			entry_pt.o |= ANDROID_SYS_BEGIN;
+
 		delete img;
 	}
 

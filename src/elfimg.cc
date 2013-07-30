@@ -229,6 +229,10 @@ guest_ptr ElfImg::getEntryPoint(void) const
 }
 
 Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
+{ bool x; return readHeader(fname, require_exe, x); }
+
+
+Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe, bool& is_dyn)
 {
 	struct header_cleanup {
 		header_cleanup() : fd(-1), data(NULL), size(0) {}
@@ -244,6 +248,8 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 		void* data;
 		size_t size;
 	} header;
+
+	is_dyn = false;
 
 	header.fd = open(fname, O_RDONLY);
 	if (header.fd == -1) {
@@ -279,9 +285,13 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 	}
 
 	if(address_bits == 32) {
-		return readHeader32((Elf32_Ehdr*)header.data, require_exe);
+		Elf32_Ehdr	*e32 = (Elf32_Ehdr*)header.data;
+		is_dyn = (e32->e_type == ET_DYN);
+		return readHeader32(e32, require_exe);
 	} else if (address_bits == 64) {
-		return readHeader64((Elf64_Ehdr*)header.data, require_exe);
+		Elf64_Ehdr	*e64 = (Elf64_Ehdr*)header.data;
+		is_dyn = (e64->e_type == ET_DYN);
+		return readHeader64(e64, require_exe);
 	}
 
 	assert(!"address_bits corrupted");
