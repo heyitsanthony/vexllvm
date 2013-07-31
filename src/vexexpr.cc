@@ -578,6 +578,7 @@ return new VexExprUnop##x(in_parent, expr)
 	TRIOP_TAGOP(PRemC3210F64);
 
 	TRIOP_TAGOP(SetElem8x8);
+	TRIOP_TAGOP(SetElem32x2);
 
 	default:
 		fprintf(stderr, "createOp: UNKNOWN OP %s (%x)\n",

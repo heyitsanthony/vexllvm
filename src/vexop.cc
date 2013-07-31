@@ -799,6 +799,7 @@ Value* VexExprTriopSetElem ##w## x ##e ::emit(void) const { \
 	return builder->CreateInsertElement(v1, v3, v2); }
 
 SET_ELEM_EMIT(8,8)
+SET_ELEM_EMIT(32,2)
 GET_ELEM_EMIT(8,8)
 GET_ELEM_EMIT(32,2)
 
