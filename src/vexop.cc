@@ -761,6 +761,47 @@ X_TO_Y_EMIT(ReinterpI64asF64, CreateBitCast, get_i(64), get_d())
 X_TO_Y_EMIT(ReinterpF32asI32, CreateBitCast, get_f(), get_i(32))
 X_TO_Y_EMIT(ReinterpI32asF32, CreateBitCast, get_i(32), get_f())
 
+Value* VexExprUnopDup8x16::emit(void) const
+{
+	Value	*v[5];
+	UNOP_SETUP
+
+
+	v[0] = builder->CreateZExt(v1, get_i(8*16));
+	/* [0] = 0000 00xx
+	 * [1] = 0000 xxxx ([0] | [0] << 8)
+	 * [2] = xxxx xxxx ([1] | [1] << 16)
+	 * [3] = 64
+	 * [4] = 128
+	 */
+	for (unsigned i = 1; i <= 4; i++) {
+		v[i] = builder->CreateOr(
+			v[i-1],
+			builder->CreateShl(v[i-1], (8 << (i-1))));
+	}
+
+	return v[4];
+}
+
+/* GET / SET elements of VECTOR
+   GET is binop (I64, I8) -> I<elem_size>
+   SET is triop (I64, I8, I<elem_size>) -> I64 */
+#define GET_ELEM_EMIT(w,e)	\
+Value* VexExprBinopGetElem ##w## x ##e ::emit(void) const { \
+	BINOP_SETUP	\
+	v1 = builder->CreateBitCast(v1, get_vt(e, w));	\
+	return builder->CreateExtractElement(v1, v2);	}
+
+#define SET_ELEM_EMIT(w,e)	\
+Value* VexExprTriopSetElem ##w## x ##e ::emit(void) const { \
+	TRIOP_SETUP	\
+	v1 = builder->CreateBitCast(v1, get_vt(e, w));	\
+	return builder->CreateInsertElement(v1, v3, v2); }
+
+SET_ELEM_EMIT(8,8)
+GET_ELEM_EMIT(8,8)
+GET_ELEM_EMIT(32,2)
+
 Value* VexExprUnopV128to64::emit(void) const
 {
 	UNOP_SETUP
@@ -840,6 +881,8 @@ Value* VexExprBinop64HLtoV128::emit(void) const
 
 	return builder->CreateBitCast(v_128hl, get_vt(16, 8), "64HLtoV128");
 }
+
+
 
 /* (i32, i32) -> i64 */
 Value* VexExprBinop32HLto64::emit(void) const

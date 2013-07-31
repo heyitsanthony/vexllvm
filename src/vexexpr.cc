@@ -275,6 +275,8 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Not64);
 	UNOP_TAGOP(NotV128);
 
+	UNOP_TAGOP(Dup8x16);
+
 	UNOP_TAGOP(1Uto8);
 	UNOP_TAGOP(1Uto32);
 	UNOP_TAGOP(1Uto64);
@@ -319,6 +321,9 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(ReinterpI64asF64);
 	UNOP_TAGOP(ReinterpF32asI32);
 	UNOP_TAGOP(ReinterpI32asF32);
+
+	BINOP_TAGOP(GetElem8x8);
+	BINOP_TAGOP(GetElem32x2);
 
 	BINOP_TAGOP(I64StoF64);
 //	BINOP_TAGOP(I64UtoF64); 3.7.0
@@ -571,6 +576,8 @@ return new VexExprUnop##x(in_parent, expr)
 	
 	TRIOP_TAGOP(PRemF64);
 	TRIOP_TAGOP(PRemC3210F64);
+
+	TRIOP_TAGOP(SetElem8x8);
 
 	default:
 		fprintf(stderr, "createOp: UNKNOWN OP %s (%x)\n",

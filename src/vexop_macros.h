@@ -47,15 +47,13 @@ Value* VexExprUnop##x::emit(void) const				\
 	UNOP_SETUP						\
 	unsigned bits = v1->getType()->getPrimitiveSizeInBits();\
 	if(bits < w->getPrimitiveSizeInBits()) {		\
-		std::cerr << "size mismatch in IR: wanted "	\
-		 	<< w->getPrimitiveSizeInBits()		\
-			<< " got " << bits << std::endl;	\
+		fprintf(stderr, "size mismatch in IR: wanted %d got %d\n", \
+		 	w->getPrimitiveSizeInBits(), bits);	\
 		v1 = builder->CreateBitCast(v1, get_i(bits));	\
 		v1 = builder->CreateZExt(v1, w);		\
 	} else if (bits > w->getPrimitiveSizeInBits()) {	\
-		std::cerr << "size mismatch in IR: wanted "	\
-		 	<< w->getPrimitiveSizeInBits()		\
-			<< " got " << bits << std::endl;	\
+		fprintf(stderr, "size mismatch in IR: wanted %d got %d\n", \
+		 	w->getPrimitiveSizeInBits(), bits);	\
 		v1 = builder->CreateBitCast(v1, get_i(bits));	\
 		v1 = builder->CreateTrunc(v1, w);		\
 	}							\
