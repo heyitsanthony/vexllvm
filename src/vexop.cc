@@ -235,6 +235,7 @@ CASE_OP(F64toI32U)
 CASE_OP(I16StoF64)
 CASE_OP(I32StoF64)
 CASE_OP(I64StoF64)
+CASE_OP(I64UtoF64)
 CASE_OP(I32UtoF64)
 CASE_OP(F32toF64)
 CASE_OP(F64toF32)
@@ -750,6 +751,8 @@ X_TO_Y_EMIT(8Uto64,   CreateZExt,  get_i(8),  get_i(64))
 X_TO_Y_EMIT(8Sto64,   CreateSExt,  get_i(8),  get_i(64))
 X_TO_Y_EMIT(128to64,  CreateTrunc, get_i(128), get_i(64))
 
+
+
 UNOP_EMIT(Not1, CreateNot)
 UNOP_EMIT(Not8, CreateNot)
 UNOP_EMIT(Not16, CreateNot)
@@ -882,8 +885,6 @@ Value* VexExprBinop64HLtoV128::emit(void) const
 
 	return builder->CreateBitCast(v_128hl, get_vt(16, 8), "64HLtoV128");
 }
-
-
 
 /* (i32, i32) -> i64 */
 Value* VexExprBinop32HLto64::emit(void) const

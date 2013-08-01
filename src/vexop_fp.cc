@@ -1,4 +1,5 @@
 #include <llvm/IR/Intrinsics.h>
+#include <stdio.h>
 #include "genllvm.h"
 #include "vexop.h"
 #include "vexop_macros.h"
@@ -62,7 +63,8 @@ X_TO_Y_EMIT(I32StoF64, CreateSIToFP, get_i(32), get_d())
 
 X_TO_Y_EMIT_ROUND(F64toF32, CreateFPTrunc, get_d(), get_f())
 X_TO_Y_EMIT_ROUND(I64StoF64, CreateSIToFP, get_i(64), get_d())
-X_TO_Y_EMIT_ROUND(I64UtoF64, CreateSIToFP, get_i(64), get_d())
+X_TO_Y_EMIT_ROUND(I64UtoF64, CreateUIToFP, get_i(64), get_d())
+X_TO_Y_EMIT_ROUND(I32UtoF64, CreateUIToFP, get_i(32), get_d())
 X_TO_Y_EMIT_ROUND(F64toI32S, CreateFPToSI, get_d(), get_i(32))
 X_TO_Y_EMIT_ROUND(F64toI32U, CreateFPToSI, get_d(), get_i(32))
 X_TO_Y_EMIT_ROUND(F64toI64S, CreateFPToSI, get_d(), get_i(64))
