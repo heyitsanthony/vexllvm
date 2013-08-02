@@ -21,9 +21,6 @@ public:
 	guest_ptr getStackPtr(void) const;
 	void setPC(guest_ptr);
 	guest_ptr getPC(void) const;
-	SyscallParams getSyscallParams(void) const;
-	void setSyscallResult(uint64_t ret);
-	uint64_t getExitCode(void) const;
 
 	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
 	virtual unsigned int getFuncArgOff(unsigned int arg_num) const;
@@ -47,6 +44,10 @@ public:
 	virtual int cpu2gdb(int gdb_off) const;
 
 	virtual const struct guest_ctx_field* getFields(void) const;
+
+	static const char* abi_linux_scregs[];
 };
+
+#define	ABI_LINUX_AMD64	AMD64CPUState::abi_linux_scregs, "RAX",	"RDI", false
 
 #endif

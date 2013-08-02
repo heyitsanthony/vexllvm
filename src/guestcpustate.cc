@@ -12,8 +12,7 @@ GuestCPUState::GuestCPUState()
 : state_data(NULL)
 , exit_type(NULL)
 , state_byte_c(0)
-{
-}
+{}
 
 GuestCPUState* GuestCPUState::create(Arch::Arch arch)
 {
@@ -59,6 +58,32 @@ unsigned GuestCPUState::getFieldsSize(const struct guest_ctx_field* f)
 	return cur_byte_off;
 }
 
+
+unsigned GuestCPUState::name2Off(const char* name) const
+{
+	reg2byte_map::const_iterator	it(reg2OffMap.find(name));
+	assert (it != reg2OffMap.end());
+	return it->second;
+}
+
+void GuestCPUState::setReg(const char* name, unsigned bits, uint64_t v, int off)
+{
+	reg2byte_map::const_iterator it;
+	unsigned		roff;
+
+	assert (bits == 32 || bits == 64);
+	it = reg2OffMap.find(name);
+	if (it == reg2OffMap.end()) {
+		std::cerr << "WHAT: " << name << '\n';
+		assert ("REG NOT FOUND??" && it != reg2OffMap.end());
+	}
+
+	roff = it->second;
+	if (bits == 32)
+		((uint32_t*)(state_data+roff))[off] = v;
+	else
+		((uint64_t*)(state_data+roff))[off] = v;
+}
 
 uint64_t GuestCPUState::getReg(const char* name, unsigned bits, int off)
 const

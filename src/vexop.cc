@@ -1025,6 +1025,10 @@ BINOP_EMIT(CasCmpNE16, ICmpNE)
 BINOP_EMIT(CasCmpNE32, ICmpNE)
 BINOP_EMIT(CasCmpNE64, ICmpNE)
 
+/* I tried to do this with vector instructions and it either
+ * 1) created constantexprs that wouldn't fold to a constant
+ * 2) crashed the JIT on make tests
+ */
 #define DIVMOD_EMIT(x,y,z,w)				\
 Value* VexExprBinop##x::emit(void) const		\
 {							\
@@ -1032,16 +1036,12 @@ Value* VexExprBinop##x::emit(void) const		\
 	BINOP_SETUP					\
 	v1 = builder->CreateBitCast(v1, get_i(w));	\
 	v2 = builder->Create##z##Ext(v2, get_i(w)); 	\
-	div =  builder->Create##y##Div(v1, v2);		\
+	div = builder->Create##y##Div(v1, v2);		\
 	rem = builder->Create##y##Rem(v1, v2);		\
-	return builder->CreateBitCast(			\
-		builder->CreateInsertValue(		\
-		builder->CreateVectorSplat(			\
-			2,					\
-			builder->CreateTrunc(div, get_i(w/2))), \
-		builder->CreateTrunc(rem, get_i(w/2)),	\
-		1,					\
-		"divmod"), get_i(128));			\
+	rem = builder->CreateShl(rem, get_c(128, 64));	\
+	div = builder->CreateZExt(			\
+		builder->CreateTrunc(div,get_i(w/2)), get_i(w)); \
+	return builder->CreateOr(div, rem);		\
 }
 
 DIVMOD_EMIT(DivModU128to64, U, Z, 128)

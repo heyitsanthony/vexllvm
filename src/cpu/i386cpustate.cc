@@ -13,6 +13,10 @@ extern "C" {
 
 #define state2i386()	((VexGuestX86State*)(state_data))
 
+
+const char* I386CPUState::abi_linux_scregs[] =
+{"EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "EBP", NULL};
+
 I386CPUState::I386CPUState()
 {
 	state_byte_c = getFieldsSize(getFields());
@@ -38,7 +42,15 @@ static struct guest_ctx_field x86_fields[] =
 	{32, 1, "EvC_FAILADDR"},
 	{32, 1, "EvC_COUNTER"},
 
-	{32, 8, "GPR"},
+	{32, 1, "EAX"},
+	{32, 1, "ECX"},
+	{32, 1, "EDX"},
+	{32, 1, "EBX"},
+	{32, 1, "ESP"},
+	{32, 1, "EBP"},
+	{32, 1, "ESI"},
+	{32, 1, "EDI"},
+
 	{32, 1, "CC_OP"},
 	{32, 1, "CC_DEP1"},
 	{32, 1, "CC_DEP2"},
@@ -80,12 +92,12 @@ static struct guest_ctx_field x86_fields[] =
 	{32, 1, "NRADDR"},
 
 	/* darwin hax */
-	{32, 1, "SC_CLASS"},
+	{64, 1, "SC_CLASS"},
 
 	{32, 1, "IP_AT_SYSCALL"},
 
 
-	{32, 5, "pad"},
+	{32, 4, "pad"},
 	/* END VEX STRUCTURE */
 
 	{0}	/* time to stop */
@@ -182,31 +194,6 @@ void I386CPUState::setStackPtr(guest_ptr stack_ptr)
 guest_ptr I386CPUState::getStackPtr(void) const
 {
 	return guest_ptr(state2i386()->guest_ESP);
-}
-
-SyscallParams I386CPUState::getSyscallParams(void) const
-{
-	return SyscallParams(
-		state2i386()->guest_EAX,
-		state2i386()->guest_EBX,
-		state2i386()->guest_ECX,
-		state2i386()->guest_EDX,
-		state2i386()->guest_ESI,
-		state2i386()->guest_EDI,
-		state2i386()->guest_EBP);
-}
-
-
-void I386CPUState::setSyscallResult(uint64_t ret)
-{
-	state2i386()->guest_EAX = ret;
-}
-
-uint64_t I386CPUState::getExitCode(void) const
-{
-	/* exit code is from call to exit(), which passes the exit
-	 * code through the first argument */
-	return state2i386()->guest_EBX;
 }
 
 // 160 == XMM base

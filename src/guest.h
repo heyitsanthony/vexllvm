@@ -12,6 +12,7 @@
 class GuestCPUState;
 class GuestSnapshot;
 class GuestPTImg;
+class GuestABI;
 class Symbols;
 
 /* ties together all state information for guest.
@@ -33,6 +34,7 @@ public:
 
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
+
 	virtual std::string getName(guest_ptr) const;
 	virtual const Symbols* getSymbols(void) const { return NULL; }
 	virtual Symbols* getSymbols(void) { return NULL; }
@@ -67,6 +69,7 @@ public:
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return std::vector<guest_ptr>(); }
 
+	const GuestABI* getABI(void) const { return abi; }
 protected:
 	friend class GuestPTImg;
 	void setBinPath(const char* b);
@@ -75,6 +78,7 @@ protected:
 	GuestCPUState	*cpu_state;
 	GuestMem	*mem;
 	char		*bin_path;
+	GuestABI	*abi;
 };
 
 #endif

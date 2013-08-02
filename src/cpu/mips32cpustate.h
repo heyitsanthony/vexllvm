@@ -22,9 +22,6 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	guest_ptr getStackPtr(void) const;
 	void setPC(guest_ptr);
 	guest_ptr getPC(void) const;
-	SyscallParams getSyscallParams(void) const;
-	void setSyscallResult(uint64_t ret);
-	uint64_t getExitCode(void) const;
 	
 	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
 	void print(std::ostream& os, const void*) const;
@@ -32,7 +29,10 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	const char* off2Name(unsigned int off) const;
 
 	const struct guest_ctx_field* getFields(void) const;
-private:
+
+	static const char* abi_spim_scregs[];
 };
+
+#define ABI_SPIM_MIPS32	MIPS32CPUState::abi_spim_scregs, "R2", "R4", true
 
 #endif

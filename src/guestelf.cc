@@ -10,6 +10,7 @@
 #include "elfsegment.h"
 #include "guestelf.h"
 #include "guestcpustate.h"
+#include "guestabi.h"
 #include "Sugar.h"
 
 #if defined(__arm__)
@@ -30,6 +31,7 @@ GuestELF::GuestELF(ElfImg* in_img)
 {
 	mem = in_img->takeMem();
 	cpu_state = GuestCPUState::create(img->getArch());
+	abi = GuestABI::create(this);
 }
 
 GuestELF::~GuestELF(void) {}

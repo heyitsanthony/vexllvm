@@ -9,6 +9,8 @@
 #include "vexsb.h"
 #include "vexstmt.h"
 #include "vexexpr.h"
+#include "guest.h"
+#include "guestabi.h"
 #include "guestcpustate.h"
 
 using namespace llvm;
@@ -279,7 +281,7 @@ llvm::Type* VexSB::getRegType(unsigned int reg_idx) const
 
 
 /* jump past the backjump on the linux trampoline */
-#define LINUX_SYSENTER_TRAMPOLINE_OFFSET	9
+#define LINUX_SYSENTER_TRAMPOLINE_OFFSET ((GuestABI::use_linux_sysenter) ? 9 : 0)
 void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 {
 	jump_kind = jk;

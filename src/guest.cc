@@ -13,6 +13,7 @@
 #include "symbols.h"
 #include "guestcpustate.h"
 #include "guestsnapshot.h"
+#include "guestabi.h"
 
 #include "guest.h"
 
@@ -20,15 +21,17 @@
 #include "elfdebug.h"
 
 Guest::Guest(const char* in_bin_path)
-: cpu_state(NULL),
-  mem(NULL),
-  bin_path(NULL)
+: cpu_state(NULL)
+, mem(NULL)
+, bin_path(NULL)
+, abi(NULL)
 {
 	setBinPath(in_bin_path);
 }
 
 Guest::~Guest(void)
 {
+	if (abi) delete abi;
 	if (bin_path) free(bin_path);
 	if (mem) delete mem;
 	if (cpu_state) delete cpu_state;
@@ -43,14 +46,11 @@ void Guest::setBinPath(const char* p)
 }
 
 SyscallParams Guest::getSyscallParams(void) const
-{
-	return cpu_state->getSyscallParams();
-}
+{ return abi->getSyscallParams(); }
 
-void Guest::setSyscallResult(uint64_t ret)
-{
-	cpu_state->setSyscallResult(ret);
-}
+void Guest::setSyscallResult(uint64_t ret) { abi->setSyscallResult(ret); }
+uint64_t Guest::getExitCode(void) const { return abi->getExitCode(); }
+
 
 std::string Guest::getName(guest_ptr x) const
 {
@@ -68,11 +68,6 @@ std::string Guest::getName(guest_ptr x) const
 	}
 
 	return hex_to_string(x); 
-}
-
-uint64_t Guest::getExitCode(void) const
-{
-	return cpu_state->getExitCode();
 }
 
 void Guest::print(std::ostream& os) const { cpu_state->print(os); }
@@ -128,7 +123,6 @@ Guest* Guest::load(const char* dirpath)
 	return ret;
 }
 
-
 void Guest::addLibrarySyms(const char* path, guest_ptr base)
 {
 	Symbols	*cur_syms = getSymbols();
@@ -148,7 +142,6 @@ void Guest::addLibrarySyms(const char* path, guest_ptr base, Symbols* cur_syms)
 	cur_syms->addSyms(new_syms);
 	delete new_syms;
 }
-
 
 void Guest::toCore(const char* path) const
 {

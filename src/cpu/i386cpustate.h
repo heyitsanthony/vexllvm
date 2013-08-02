@@ -22,9 +22,7 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	guest_ptr getStackPtr(void) const;
 	void setPC(guest_ptr);
 	guest_ptr getPC(void) const;
-	SyscallParams getSyscallParams(void) const;
-	void setSyscallResult(uint64_t ret);
-	uint64_t getExitCode(void) const;
+
 	void setGDT(guest_ptr);
 	void setLDT(guest_ptr);
 	
@@ -36,7 +34,15 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	const struct guest_ctx_field* getFields(void) const;
 
 	virtual unsigned int getStackRegOff(void) const;
-private:
+
+	static const char* abi_linux_scregs[];
 };
+
+#define	ABI_LINUX_I386	I386CPUState::abi_linux_scregs, \
+	"EAX",	/* syscall result */	\
+	"EBX",	/* get exit code */	\
+	true	/* 32-bit */
+
+
 
 #endif

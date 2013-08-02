@@ -43,7 +43,7 @@ int main(int argc, char* argv[], char* envp[])
 		gs = GuestPTImg::create<GuestPTImg>(argc - 1, argv + 1, envp);
 	}
 
-	if (saveas = getenv("VEXLLVM_SAVEAS")) {
+	if ((saveas = getenv("VEXLLVM_SAVEAS"))) {
 		fprintf(stderr, "Saving as %s...\n", saveas);
 		gs->save(saveas);
 	} else {

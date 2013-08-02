@@ -6,6 +6,7 @@
 #include <string.h>
 #include "arch.h"
 #include "guestcpustate.h"
+#include "guestabi.h"
 #include "guestfragment.h"
 
 std::string GuestFragment::getName(guest_ptr gp) const
@@ -73,6 +74,7 @@ GuestFragment::GuestFragment(
 	memcpy(code, data, code_len);
 
 	cpu_state = GuestCPUState::create(arch);
+	abi = GuestABI::create(this);
 
 	/* our one fragment mapping */
 	mem = new GuestMem();

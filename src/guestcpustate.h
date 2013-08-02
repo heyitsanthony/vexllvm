@@ -53,9 +53,6 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	virtual guest_ptr getStackPtr(void) const = 0;
 	virtual void setPC(guest_ptr) = 0;
 	virtual guest_ptr getPC(void) const = 0;
-	virtual SyscallParams getSyscallParams(void) const = 0;
-	virtual void setSyscallResult(uint64_t ret) = 0;
-	virtual uint64_t getExitCode(void) const = 0;
 
 	/* byte offset into state data for exit type byte */
 	unsigned int getExitTypeOffset(void) const { return state_byte_c; }
@@ -80,6 +77,7 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	virtual void print(std::ostream& os, const void* regctx) const = 0;
 
 	virtual const char* off2Name(unsigned int off) const = 0;
+	unsigned name2Off(const char* name) const;
 
 	virtual bool load(const char* fname);
 	virtual bool save(const char* fname);
@@ -93,6 +91,7 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	virtual const struct guest_ctx_field* getFields(void) const = 0;
 	unsigned getFieldsSize(const struct guest_ctx_field* f);
 	uint64_t getReg(const char* name, unsigned bits, int off=0) const;
+	void setReg(const char* name, unsigned bits, uint64_t v, int off=0);
 protected:
 	byte2elem_map	off2ElemMap;
 	reg2byte_map	reg2OffMap;

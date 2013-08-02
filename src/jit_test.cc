@@ -23,6 +23,7 @@
 #include "vexhelpers.h"
 #include "genllvm.h"
 #include "guestcpustate.h"
+#include "guestabi.h"
 #include "guest.h"
 
 extern "C"
@@ -62,6 +63,7 @@ public:
 	{
 		cpu_state = GuestCPUState::create(Arch::X86_64);
 		mem = new GuestMem();
+		abi = GuestABI::create(this);
 	}
 	virtual ~GuestIdent() {}
 	guest_ptr getEntryPoint(void) const { return guest_ptr(0); }

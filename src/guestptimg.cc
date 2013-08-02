@@ -23,6 +23,7 @@
 #include "ptimgchk.h"
 #include "guestptimg.h"
 #include "guestcpustate.h"
+#include "guestabi.h"
 
 #if defined(__amd64__)
 #include <asm/ptrace-abi.h>
@@ -76,6 +77,7 @@ GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 	}
 
 	cpu_state = GuestCPUState::create(getArch());
+	abi = GuestABI::create(this);
 }
 
 GuestPTImg::~GuestPTImg(void)
@@ -143,7 +145,7 @@ void GuestPTImg::attachSyscall(int pid)
 		assert (err == 0);
 
 		getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-2));
-		getCPUState()->setSyscallResult(r.orig_rax);
+		setSyscallResult(r.orig_rax);
 	}
 #else
 	assert (0 == 1 && "CAN'T HANDLE THIS");
@@ -254,6 +256,8 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 
 	/* copy guest state into our state, destroy old guest */
 	cpu_state = gs->cpu_state;
+	abi = gs->abi;
+	if (abi) abi->setGuest(this);
 	mem =  gs->mem;
 	bin_path = gs->bin_path;
 	argv_ptrs = gs->getArgvPtrs();
@@ -264,6 +268,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	gs->cpu_state = NULL;
 	gs->mem = NULL;
 	gs->bin_path = NULL;
+	gs->abi = NULL;
 	delete gs;
 
 	entry_pt = cur_pc;

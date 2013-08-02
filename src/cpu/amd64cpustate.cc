@@ -10,6 +10,10 @@ extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
 }
 
+
+const char* AMD64CPUState::abi_linux_scregs[] =
+{"RAX", "RDI", "RSI", "RDX", "R10", "R8", "R9", NULL};
+
 #define state2amd64()	((VexGuestAMD64State*)(state_data))
 
 AMD64CPUState::AMD64CPUState()
@@ -187,35 +191,6 @@ void AMD64CPUState::setStackPtr(guest_ptr stack_ptr)
 
 guest_ptr AMD64CPUState::getStackPtr(void) const
 { return guest_ptr(state2amd64()->guest_RSP); }
-
-/**
- * %rax = syscall number
- * rdi, rsi, rdx, r10, r8, r9
- */
-SyscallParams AMD64CPUState::getSyscallParams(void) const
-{
-	return SyscallParams(
-		state2amd64()->guest_RAX,
-		state2amd64()->guest_RDI,
-		state2amd64()->guest_RSI,
-		state2amd64()->guest_RDX,
-		state2amd64()->guest_R10,
-		state2amd64()->guest_R8,
-		state2amd64()->guest_R9);
-}
-
-
-void AMD64CPUState::setSyscallResult(uint64_t ret)
-{
-	state2amd64()->guest_RAX = ret;
-}
-
-uint64_t AMD64CPUState::getExitCode(void) const
-{
-	/* exit code is from call to exit(), which passes the exit
-	 * code through the first argument */
-	return state2amd64()->guest_RDI;
-}
 
 #define YMM_BASE	offsetof(VexGuestAMD64State, guest_YMM0)
 /* 32 because of YMM / AVX extensions */

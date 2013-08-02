@@ -13,6 +13,9 @@ extern "C" {
 
 #define state2mips32()	((VexGuestMIPS32State*)(state_data))
 
+const char* MIPS32CPUState::abi_spim_scregs[] =
+{ "R2", "R4", "R5", "R6", "R7", "R8", "R9", NULL};
+
 MIPS32CPUState::MIPS32CPUState()
 {
 	state_byte_c = getFieldsSize(getFields());
@@ -30,7 +33,16 @@ guest_ptr MIPS32CPUState::getPC(void) const
 
 static struct guest_ctx_field mips32_fields[] =
 {
-	{32, 32, "GPR"},
+//	{32, 32, "GPR"},
+	{32, 1, "R0"}, {32, 1, "R1"}, {32, 1, "R2"}, {32, 1, "R3"},
+	{32, 1, "R4"}, {32, 1, "R5"}, {32, 1, "R6"}, {32, 1, "R7"},
+	{32, 1, "R8"}, {32, 1, "R9"}, {32, 1, "R10"}, {32, 1, "R11"},
+	{32, 1, "R12"}, {32, 1, "R13"}, {32, 1, "R14"}, {32, 1, "R15"},
+	{32, 1, "R16"}, {32, 1, "R17"}, {32, 1, "R18"}, {32, 1, "R19"},
+	{32, 1, "R20"}, {32, 1, "R21"}, {32, 1, "R22"}, {32, 1, "R23"},
+	{32, 1, "R24"}, {32, 1, "R25"}, {32, 1, "R26"}, {32, 1, "R27"},
+	{32, 1, "R28"}, {32, 1, "R29"}, {32, 1, "R30"}, {32, 1, "R31"},
+
 	{32, 1, "PC"},
 	{32, 1, "HI"},
 	{32, 1, "LO"},
@@ -146,29 +158,6 @@ void MIPS32CPUState::setStackPtr(guest_ptr stack_ptr)
 
 guest_ptr MIPS32CPUState::getStackPtr(void) const
 { return guest_ptr(state2mips32()->guest_r29); }
-
-SyscallParams MIPS32CPUState::getSyscallParams(void) const
-{
-	return SyscallParams(
-		state2mips32()->guest_r2, /* v0 */
-		state2mips32()->guest_r4, /* a0 */
-		state2mips32()->guest_r5, /* a1 */
-		state2mips32()->guest_r6, // a2
-		state2mips32()->guest_r7, // a3
-		state2mips32()->guest_r8, // a4
-		state2mips32()->guest_r9 /* a5 */);
-}
-
-
-void MIPS32CPUState::setSyscallResult(uint64_t ret)
-{ state2mips32()->guest_r2= ret; }
-
-uint64_t MIPS32CPUState::getExitCode(void) const
-{
-	/* exit code is from call to exit(), which passes the exit
-	 * code through the first argument */
-	return state2mips32()->guest_r4;
-}
 
 void MIPS32CPUState::print(std::ostream& os, const void* regctx) const
 {

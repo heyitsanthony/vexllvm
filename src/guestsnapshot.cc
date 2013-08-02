@@ -15,7 +15,9 @@
 #include "util.h"
 #include "guestcpustate.h"
 #include "guestsnapshot.h"
+#include "guestabi.h"
 #include "cpu/i386cpustate.h"
+#include "cpu/i386windowsabi.h"
 #include <algorithm>
 
 using namespace std;
@@ -99,6 +101,16 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	loadMappings();
 	syms = loadSymbols("syms");
 	dyn_syms = loadSymbols("dynsyms");
+
+
+	/* XXX: super-lame windows detection */
+	SETUP_F_R_MAYBE("platform/process_cookie");
+	if (f == NULL) {
+		abi = GuestABI::create(this);
+	} else {
+		abi = new I386WindowsABI(this);
+		END_F()
+	}
 
 	SETUP_F_R_MAYBE("regs.ldt")
 	if (f != NULL) {

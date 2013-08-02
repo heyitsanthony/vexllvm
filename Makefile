@@ -51,6 +51,7 @@ LDRELOC2="-Wl,-Ttext-segment=$(BIN_BASE2)"
 ##  # #  #  # #
 
 OBJBASE=	guest.o			\
+		guestabi.o		\
 		guestmem.o		\
 		guestmemsink.o		\
 		guestptmem.o		\
@@ -66,6 +67,7 @@ OBJBASE=	guest.o			\
 		cpu/amd64syscalls.o	\
 		cpu/i386cpustate.o	\
 		cpu/i386syscalls.o	\
+		cpu/i386windowsabi.o	\
 		cpu/armcpustate.o	\
 		cpu/armsyscalls.o	\
 		cpu/mips32cpustate.o	\
@@ -191,8 +193,8 @@ bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
 bin/vexllvm_ss: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
 	g++ $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC) -ldl -lrt
 
-bin/vexllvm_ss_rebase:
-	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) -ldl -lrt
+bin/vexllvm_ss_rebase: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
+	g++ $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC2) -ldl -lrt
 
 bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
 	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) -ldl -lrt

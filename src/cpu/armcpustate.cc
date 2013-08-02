@@ -19,6 +19,10 @@ struct ExtVexGuestARMState
 #define state2arm()	((VexGuestARMState*)(state_data))
 #define state2arm_ext() ((ExtVexGuestARMState*)(state_data))
 
+
+const char* ARMCPUState::abi_linux_scregs[] =
+{ "R7", "R0", "R1", "R2", "R3", "R4", "R5", NULL };
+
 ARMCPUState::ARMCPUState(void)
 {
 	state_byte_c = getFieldsSize(getFields());
@@ -43,7 +47,26 @@ guest_ptr ARMCPUState::getPC(void) const {
 /* ripped from libvex_guest_arm */
 static struct guest_ctx_field arm_fields[] =
 {
-	{32, 16, "GPR"},
+	{32, 2, "EvC"},
+//	{32, 16, "GPR"},
+
+	{32, 1, "R0"},
+	{32, 1, "R1"},
+	{32, 1, "R2"},
+	{32, 1, "R3"},
+	{32, 1, "R4"},
+	{32, 1, "R5"},
+	{32, 1, "R6"},
+	{32, 1, "R7"},
+	{32, 1, "R8"},
+	{32, 1, "R9"},
+	{32, 1, "R10"},
+	{32, 1, "R11"},
+	{32, 1, "R12"},
+	{32, 1, "R13"},
+	{32, 1, "R14"},
+	{32, 1, "R15T"},
+
 	{32, 1, "CC_OP"},
 	{32, 1, "CC_DEP1"},
 	{32, 1, "CC_DEP2"},
@@ -201,46 +224,14 @@ unsigned int ARMCPUState::byteOffset2ElemIdx(unsigned int off) const
 }
 
 void ARMCPUState::setStackPtr(guest_ptr stack_ptr)
-{
-	state2arm()->guest_R13 = stack_ptr;
-}
+{ state2arm()->guest_R13 = stack_ptr; }
 
 guest_ptr ARMCPUState::getStackPtr(void) const
-{
-	return guest_ptr(state2arm()->guest_R13);
-}
-
-SyscallParams ARMCPUState::getSyscallParams(void) const
-{
-	/* its possible that the actual instruction can encode
-	   something in the non-eabi case, but we are restricting
-	   our selves to eabi for now */
-	return SyscallParams(
-		state2arm()->guest_R7,
-		state2arm()->guest_R0,
-		state2arm()->guest_R1,
-		state2arm()->guest_R2,
-		state2arm()->guest_R3,
-		state2arm()->guest_R4,
-		state2arm()->guest_R5);
-}
+{ return guest_ptr(state2arm()->guest_R13); }
 
 
-void ARMCPUState::setSyscallResult(uint64_t ret)
-{
-	state2arm()->guest_R0 = ret;
-}
-
-uint64_t ARMCPUState::getExitCode(void) const
-{
-	/* exit code is from call to exit(), which passes the exit
-	 * code through the first argument */
-	return state2arm()->guest_R0;
-}
 void ARMCPUState::setThreadPointer(uint32_t v)
-{
-	state2arm()->guest_TPIDRURO = v;
-}
+{ state2arm()->guest_TPIDRURO = v; }
 
 void ARMCPUState::print(std::ostream& os, const void* regctx) const
 {
