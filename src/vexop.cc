@@ -1025,27 +1025,23 @@ BINOP_EMIT(CasCmpNE16, ICmpNE)
 BINOP_EMIT(CasCmpNE32, ICmpNE)
 BINOP_EMIT(CasCmpNE64, ICmpNE)
 
-#define DIVMOD_EMIT(x,y,z,w)						\
-Value* VexExprBinop##x::emit(void) const				\
-{									\
-	Value	*div, *rem;						\
-	BINOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, get_i(w));			\
-	v2 = builder->Create##z##Ext(v2, get_i(w)); 			\
-	div = builder->Create##z##Ext(					\
-		builder->Create##y##Div(v1, v2),			\
-		get_i(w));						\
-	rem = builder->Create##z##Ext(					\
-		builder->Create##y##Rem(v1, v2),			\
-		get_i(w));						\
-	Constant	*shuffle_v[] = { get_32i(0), get_32i(2) };	\
-	Constant	*cv = get_cv(shuffle_v);			\
-	return builder->CreateBitCast( 					\
-		builder->CreateShuffleVector(				\
-			builder->CreateBitCast(div, get_vt(2, w / 2)),	\
-			builder->CreateBitCast(rem, get_vt(2, w / 2)),	\
-			cv, "divmod"),					\
-		get_i(w));						\
+#define DIVMOD_EMIT(x,y,z,w)				\
+Value* VexExprBinop##x::emit(void) const		\
+{							\
+	Value	*div, *rem;				\
+	BINOP_SETUP					\
+	v1 = builder->CreateBitCast(v1, get_i(w));	\
+	v2 = builder->Create##z##Ext(v2, get_i(w)); 	\
+	div =  builder->Create##y##Div(v1, v2);		\
+	rem = builder->Create##y##Rem(v1, v2);		\
+	return builder->CreateBitCast(			\
+		builder->CreateInsertValue(		\
+		builder->CreateVectorSplat(			\
+			2,					\
+			builder->CreateTrunc(div, get_i(w/2))), \
+		builder->CreateTrunc(rem, get_i(w/2)),	\
+		1,					\
+		"divmod"), get_i(128));			\
 }
 
 DIVMOD_EMIT(DivModU128to64, U, Z, 128)
