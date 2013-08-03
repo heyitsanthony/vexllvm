@@ -316,6 +316,7 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(F32toF64);
 	BINOP_TAGOP(F64toF32);
 	UNOP_TAGOP(I32StoF64);
+	UNOP_TAGOP(I32UtoF64);
 
 	UNOP_TAGOP(ReinterpF64asI64);
 	UNOP_TAGOP(ReinterpI64asF64);
@@ -327,7 +328,6 @@ return new VexExprUnop##x(in_parent, expr)
 
 	BINOP_TAGOP(I64StoF64);
 	BINOP_TAGOP(I64UtoF64);
-	BINOP_TAGOP(I32UtoF64);
 	BINOP_TAGOP(F64toI32S);
 	BINOP_TAGOP(F64toI32U);
 	BINOP_TAGOP(F64toI64S);
