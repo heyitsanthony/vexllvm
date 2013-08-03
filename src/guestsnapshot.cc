@@ -84,10 +84,15 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	cpu_state = GuestCPUState::create(arch);
 	sz = fread(
 		cpu_state->getStateData(),
-		cpu_state->getStateSize(),
 		1,
+		cpu_state->getStateSize(),
 		f);
-	assert (sz == 1);
+	if (sz != cpu_state->getStateSize()) {
+		std::cerr << "Bad register size. Expected " <<
+			cpu_state->getStateSize() << " got " <<
+			sz << '\n';
+	}
+	assert (sz == cpu_state->getStateSize());
 	END_F()
 
 	SETUP_F_R("argv")

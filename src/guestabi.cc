@@ -14,7 +14,7 @@ RegStrABI::RegStrABI(
 	const char* exit_reg,
 	bool	_is_32bit)
 : GuestABI(_g)
-, is_32bit(is_32bit)
+, is_32bit(_is_32bit)
 {
 	GuestCPUState	*cpu(g->getCPUState());
 	unsigned	i;
@@ -33,6 +33,7 @@ SyscallParams RegStrABI::getSyscallParams(void) const
 	const uint8_t	*dat;
 	uint64_t	v[7];
 
+	memset(v, 0, sizeof(v));
 
 	dat = (const uint8_t*)g->getCPUState()->getStateData();
 	for (unsigned i = 0; sc_reg_off[i] != ~0U && i < 7; i++) {
