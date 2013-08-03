@@ -100,7 +100,8 @@ static struct guest_ctx_field arm_fields[] =
 
 	{32, 1, "ITSTATE"},
 
-	{32, 1, "pad"},
+	{32, 5, "pad"},
+
 	/* END VEX STRUCTURE */
 	{32, 1, "LINKED"},	/* we set this when load linked happens
 				   clear it when a later store conditional
