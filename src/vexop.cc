@@ -1038,7 +1038,7 @@ Value* VexExprBinop##x::emit(void) const		\
 	v2 = builder->Create##z##Ext(v2, get_i(w)); 	\
 	div = builder->Create##y##Div(v1, v2);		\
 	rem = builder->Create##y##Rem(v1, v2);		\
-	rem = builder->CreateShl(rem, get_c(128, 64));	\
+	rem = builder->CreateShl(rem, get_c(w, w/2));	\
 	div = builder->CreateZExt(			\
 		builder->CreateTrunc(div,get_i(w/2)), get_i(w)); \
 	return builder->CreateOr(div, rem);		\
