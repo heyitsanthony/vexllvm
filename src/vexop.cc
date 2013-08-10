@@ -752,7 +752,6 @@ X_TO_Y_EMIT(8Sto64,   CreateSExt,  get_i(8),  get_i(64))
 X_TO_Y_EMIT(128to64,  CreateTrunc, get_i(128), get_i(64))
 
 
-
 UNOP_EMIT(Not1, CreateNot)
 UNOP_EMIT(Not8, CreateNot)
 UNOP_EMIT(Not16, CreateNot)
@@ -1086,6 +1085,9 @@ EMIT_HELPER_UNOP(Ctz64, "vexop_ctz64")
 EMIT_HELPER_UNOP(Clz64, "vexop_clz64")
 EMIT_HELPER_UNOP(Ctz32, "vexop_ctz32")
 EMIT_HELPER_UNOP(Clz32, "vexop_clz32")
+
+EMIT_HELPER_UNOP(AbsF64, "vexop_absf64")
+EMIT_HELPER_UNOP(AbsF32, "vexop_absf32")
 
 static Constant* ileave_lo8x16[] =  {
 	/* this was backwards (0,16) instead of (16,0)-- thx xchk! */

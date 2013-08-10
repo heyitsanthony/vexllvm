@@ -73,3 +73,6 @@ float vexop_maxf32(float f1, float f2)
 	if (f1 > f2) return f1;
 	return f2;
 }
+
+double vexop_absf64(double f) { return (f < 0) ? -f : f; }
+float vexop_absf32(float f) { return (f < 0)  ? -f : f; }
