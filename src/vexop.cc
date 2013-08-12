@@ -1350,6 +1350,10 @@ OPNRWSS_EMIT(
 	get_c(16, 0x00FF), get_c(16, 0));
 
 OPNRWSS_EMIT(
+	QNarrowBin16Sto8Ux8, get_vt(4, 16), get_vt(8, 8),
+	get_c(16, 0x00FF), get_c(16, 0));
+
+OPNRWSS_EMIT(
 	QNarrowBin32Sto16Ux8, get_vt(4, 32), get_vt(8 , 16),
 	get_c(32, 0xFFFF), get_c(32, 0));
 

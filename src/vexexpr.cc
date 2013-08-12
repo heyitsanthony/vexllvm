@@ -430,8 +430,10 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(MulHi32Ux4);
 	BINOP_TAGOP(MulHi32Sx4);
 
+
 	BINOP_TAGOP(NarrowBin16to8x16);
 	BINOP_TAGOP(NarrowBin32to16x8);
+	BINOP_TAGOP(QNarrowBin16Sto8Ux8);
 	BINOP_TAGOP(QNarrowBin16Sto8Ux16);
 	BINOP_TAGOP(QNarrowBin32Sto16Ux8);
 	BINOP_TAGOP(QNarrowBin16Sto8Sx16);
