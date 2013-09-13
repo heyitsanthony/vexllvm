@@ -17,15 +17,39 @@ void vexop_setup_fp(VexHelpers* vh)
 	vh->loadUserMod(lib_fname);
 }
 
+/* bit casts are important or the codegen will fuck up */
 #define OPF0X_EMIT_SOFTFLOAT_OP(x,y,z)					\
 	Function	*f = theVexHelpers->getHelper(z);		\
 	assert (f != NULL && "Could not find "z);			\
-	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);
+	if (!lo_op_lhs->getType()->isIntegerTy())			\
+		lo_op_lhs = builder->CreateBitCast(lo_op_lhs,		\
+			get_i(lo_op_lhs->getType()->getPrimitiveSizeInBits())); \
+	if (!lo_op_rhs->getType()->isIntegerTy())			\
+		lo_op_rhs = builder->CreateBitCast(lo_op_rhs,		\
+			get_i(lo_op_rhs->getType()->getPrimitiveSizeInBits())); \
+	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);	
+
+#define OPF0X_EMIT_CMP_SOFTFLOAT_OP(x,y,z)				\
+	OPF0X_EMIT_SOFTFLOAT_OP(x,y,z);					\
+	result = builder->CreateICmpNE(result,				\
+		get_c(result->getType()->getPrimitiveSizeInBits(), 0));	\
+	result = builder->CreateSExt(result, 				\
+		get_i(y->getScalarType()->getPrimitiveSizeInBits()));	\
+	result = builder->CreateBitCast(result, y->getScalarType());	\
 
 
-#define OPF0X_SOFTFLOAT_EMIT(x,y,z)	OPF0X_EMIT_BEGIN(x,y,z)		\
-					OPF0X_EMIT_SOFTFLOAT_OP(x,y,z)	\
-					OPF0X_EMIT_END(x,y,z)
+
+#define OPF0X_SOFTFLOAT_EMIT(x,y,z)	\
+	OPF0X_EMIT_BEGIN(x,y,z)		\
+	OPF0X_EMIT_SOFTFLOAT_OP(x,y,z)	\
+	OPF0X_EMIT_END(x,y,z)
+
+#include <stdio.h>
+#define OPF0X_CMP_SOFTFLOAT_EMIT(x,y,z)		\
+	OPF0X_EMIT_BEGIN(x,y,z)			\
+	OPF0X_EMIT_CMP_SOFTFLOAT_OP(x,y,z)	\
+	OPF0X_EMIT_END(x,y,z)
+
 
 OPF0X_SOFTFLOAT_EMIT(Add32F0x4, get_vt(4, 32), "float32_add")
 OPF0X_SOFTFLOAT_EMIT(Add64F0x2, get_vt(2, 64), "float64_add")
@@ -38,10 +62,13 @@ OPF0X_SOFTFLOAT_EMIT(Sub64F0x2, get_vt(2, 64), "float64_sub")
 
 BINOP_UNIMPL(CmpEQ32F0x4)
 BINOP_UNIMPL(CmpEQ64F0x2)
-BINOP_UNIMPL(CmpLE32F0x4)
-BINOP_UNIMPL(CmpLE64F0x2)
-BINOP_UNIMPL(CmpLT32F0x4)
-BINOP_UNIMPL(CmpLT64F0x2)
+
+OPF0X_CMP_SOFTFLOAT_EMIT(CmpLT32F0x4, get_vtf(4), "float32_lt");
+OPF0X_CMP_SOFTFLOAT_EMIT(CmpLE32F0x4, get_vtf(4), "float32_le");
+OPF0X_CMP_SOFTFLOAT_EMIT(CmpLT64F0x2, get_vtd(2), "float64_lt");
+OPF0X_CMP_SOFTFLOAT_EMIT(CmpLE64F0x2, get_vtd(2), "float64_le");
+
+
 BINOP_UNIMPL(CmpUN32F0x4)
 BINOP_UNIMPL(CmpUN64F0x2)
 BINOP_UNIMPL(Max32F0x4)

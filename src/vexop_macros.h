@@ -109,6 +109,12 @@ Value* VexExprBinop##x::emit(void) const		\
 	lo_op_lhs = builder->CreateExtractElement(v1, get_32i(0));	\
 	lo_op_rhs = builder->CreateExtractElement(v2, get_32i(0));
 
+#define OPF0X_EMIT_BEGIN_AB(x, y, z)	\
+	OPF0X_EMIT_BEGIN(x,y,z)		\
+	Value	*a, *b;			\
+	a = lo_op_lhs;			\
+	b = lo_op_rhs;
+
 #define OPF0X_EMIT_OP(x,y,z)	\
 	result = builder->Create##z(lo_op_lhs, lo_op_rhs); \
 
@@ -117,34 +123,17 @@ Value* VexExprBinop##x::emit(void) const		\
 }
 
 #define OPF0X_CMP_EMIT(x, y, z)						\
-Value* VexExprBinop##x::emit(void) const				\
-{									\
-	Value	*a1, *a2, *result;					\
-	BINOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, y);				\
-	v2 = builder->CreateBitCast(v2, y);				\
-	a1 = builder->CreateExtractElement(v1, get_32i(0));		\
-	a2 = builder->CreateExtractElement(v2, get_32i(0));		\
-	result = builder->Create##z(a1, a2);				\
+	OPF0X_EMIT_BEGIN_AB(x,y,z)					\
+	result = builder->Create##z(a, b);				\
 	result = builder->CreateSExt(result, 				\
 		get_i(y->getScalarType()->getPrimitiveSizeInBits()));	\
 	result = builder->CreateBitCast(result, y->getScalarType());	\
-	return builder->CreateInsertElement(v1, result, get_32i(0));	\
-}
+	OPF0X_EMIT_END(x,y,z)
 
 #define OPF0X_SEL_EMIT(x, y, z)						\
-Value* VexExprBinop##x::emit(void) const				\
-{									\
-	Value	*result, *a, *b;					\
-	BINOP_SETUP							\
-	v1 = builder->CreateBitCast(v1, y);				\
-	v2 = builder->CreateBitCast(v2, y);				\
-	a = builder->CreateExtractElement(v1, get_32i(0));		\
-	b = builder->CreateExtractElement(v2, get_32i(0));		\
-	result = builder->CreateSelect(					\
-		builder->Create##z(a, b), a, b);			\
-	return builder->CreateInsertElement(v1, result, get_32i(0));	\
-}
+	OPF0X_EMIT_BEGIN_AB(x,y,z)					\
+	result = builder->CreateSelect(builder->Create##z(a, b), a, b);	\
+	OPF0X_EMIT_END(x,y,z)
 
 #define OPF0X_RSQ(x, y, z, a, b)					\
 Value* VexExprUnop##x::emit(void) const					\
