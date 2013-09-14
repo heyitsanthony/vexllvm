@@ -10,6 +10,7 @@ public:
 	virtual SyscallParams getSyscallParams(void) const = 0;
 	virtual void setSyscallResult(uint64_t ret) = 0;
 	virtual uint64_t getExitCode(void) const = 0;
+	virtual uint64_t getSyscallResult(void) const = 0;
 	void setGuest(Guest* _g) { g = _g; }
 	static GuestABI* create(Guest* g);
 
@@ -31,7 +32,8 @@ public:
 
 	virtual SyscallParams getSyscallParams(void) const;
 	virtual void setSyscallResult(uint64_t ret);
-	virtual uint64_t getExitCode(void) const; 
+	virtual uint64_t getExitCode(void) const;
+	virtual uint64_t getSyscallResult(void) const;
 private:
 	unsigned	sc_reg_off[8]; /* [0] = sc_num, [1] = arg0, ... */
 	unsigned	scret_reg_off;

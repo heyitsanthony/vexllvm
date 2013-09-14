@@ -37,11 +37,23 @@ SyscallParams RegStrABI::getSyscallParams(void) const
 
 	dat = (const uint8_t*)g->getCPUState()->getStateData();
 	for (unsigned i = 0; sc_reg_off[i] != ~0U && i < 7; i++) {
-		v[i] = *((uint64_t*)(dat + sc_reg_off[i]));
+		v[i] = *((const uint64_t*)(dat + sc_reg_off[i]));
 		if (is_32bit) v[i] &= 0xffffffff;
 	}
 
 	return SyscallParams(v[0], v[1], v[2], v[3], v[4], v[5], v[6]);
+}
+
+uint64_t RegStrABI::getSyscallResult(void) const
+{
+	const void	*dat;
+
+	dat = (const void*)
+		((const uint8_t*)g->getCPUState()->getStateData() + scret_reg_off);
+
+	return (is_32bit)
+		? *((const uint32_t*)dat)
+		: *((const uint64_t*)dat);
 }
 
 void RegStrABI::setSyscallResult(uint64_t ret)
