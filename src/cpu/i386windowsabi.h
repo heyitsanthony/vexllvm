@@ -11,6 +11,7 @@ public:
 
 	virtual SyscallParams getSyscallParams(void) const;
 	virtual void setSyscallResult(uint64_t ret);
+	virtual uint64_t getSyscallResult(void) const;
 	virtual uint64_t getExitCode(void) const; 
 };
 

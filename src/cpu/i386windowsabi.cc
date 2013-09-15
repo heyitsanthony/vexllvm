@@ -28,3 +28,6 @@ void I386WindowsABI::setSyscallResult(uint64_t ret)
 
 uint64_t I386WindowsABI::getExitCode(void) const
 { return state2i386()->guest_EAX; }
+
+uint64_t I386WindowsABI::getSyscallResult(void) const
+{ return state2i386()->guest_EAX; }
