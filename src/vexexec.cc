@@ -273,9 +273,15 @@ VexSB* VexExec::getSBFromGuestAddr(guest_ptr elfptr)
 	/* compile it + get vsb */
 	vsb = jit_cache->getVSB(hostptr, elfptr);
 	if (vsb == NULL) {
+		uint8_t	buf[16];
+
 		fprintf(stderr,
 			"Could not get VSB for %p. Bad decode?\n",
 			(void*)elfptr.o);
+		gs->getMem()->memcpy(buf, elfptr, 16);
+		for (unsigned i = 0; i < 16; i++)
+			fprintf(stderr, "0x%02x ", buf[i]);
+		fprintf(stderr, "\n");
 		return NULL;
 	}
 

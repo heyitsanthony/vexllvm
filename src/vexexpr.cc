@@ -31,8 +31,10 @@ static IROp getNaryOp(const IRExpr* expr)
 static const IRExpr** getNaryArgs(const IRExpr* expr)
 {
 	switch (expr->tag) {
-	case Iex_Unop: return (const IRExpr**)((void*)(&expr->Iex.Unop.arg));
-	case Iex_Binop:return (const IRExpr**)((void*)(&expr->Iex.Binop.arg1));
+	case Iex_Unop:
+		return (const IRExpr** )((const void*)(&expr->Iex.Unop.arg));
+	case Iex_Binop:
+		return (const IRExpr**)((const void*)(&expr->Iex.Binop.arg1));
 	case Iex_Triop:
 	case Iex_Qop:
 		return (const IRExpr**)((void*)(&expr->Iex.Triop.details->arg1));
@@ -66,11 +68,19 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 		ret = VexExprConst::createConst(in_parent, expr);
 		break;
 
+#ifndef USE_SVN
 	EXPR_TAGOP(Mux0X);
+#else
+	case Iex_ITE:
+	ret = new VexExprMux0X(in_parent, expr);
+	break;
+
+	EXPR_TAGOP(BBPTR);
+#endif
 	EXPR_TAGOP(CCall);
 	case Iex_Binder:
 	default:
-		fprintf(stderr, "Expr: ??? %x\n", expr->tag);
+		fprintf(stderr, "Expr-Tag: ??? %x\n", expr->tag);
 	}
 
 	return ret;
@@ -89,6 +99,9 @@ VexExpr* VexExprNaryOp::createOp(VexStmt* in_parent, const IRExpr* expr)
 
 	/* known ops */
 	switch (op) {
+#define QOP_TAGOP(x) case Iop_##x : \
+return new VexExprQop##x(in_parent, expr)
+
 #define TRIOP_TAGOP(x) case Iop_##x : \
 return new VexExprTriop##x(in_parent, expr)
 
@@ -102,6 +115,15 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpEQ16);
 	BINOP_TAGOP(CmpEQ32);
 	BINOP_TAGOP(CmpEQ64);
+
+#ifdef USE_SVN
+	BINOP_TAGOP(ExpCmpNE8);
+	BINOP_TAGOP(ExpCmpNE16);
+	BINOP_TAGOP(ExpCmpNE32);
+	BINOP_TAGOP(ExpCmpNE64);
+	UNOP_TAGOP(GetMSBs8x16);
+	QOP_TAGOP(MAddF64);
+#endif
 
 	BINOP_TAGOP(CmpNE8);
 	BINOP_TAGOP(CmpNE16);
@@ -831,11 +853,26 @@ void VexExprCCall::print(std::ostream& os) const
 	os << ")";
 }
 
+VexExprBBPTR::VexExprBBPTR(VexStmt* in_parent, const IRExpr* expr)
+: VexExpr(in_parent)
+{}
+
+llvm::Value* VexExprBBPTR::emit(void) const
+{ return theGenLLVM->getCtxBase(); }
+
+void VexExprBBPTR::print(std::ostream& os) const { os << "BPP"; }
+
 VexExprMux0X::VexExprMux0X(VexStmt* in_parent, const IRExpr* expr)
 : VexExpr(in_parent),
+#ifndef USE_SVN
   cond(VexExpr::create(in_parent, expr->Iex.Mux0X.cond)),
   expr0(VexExpr::create(in_parent, expr->Iex.Mux0X.expr0)),
   exprX(VexExpr::create(in_parent, expr->Iex.Mux0X.exprX))
+#else
+  cond(VexExpr::create(in_parent, expr->Iex.ITE.cond)),
+  expr0(VexExpr::create(in_parent, expr->Iex.ITE.iffalse)),
+  exprX(VexExpr::create(in_parent, expr->Iex.ITE.iftrue))
+#endif
 { }
 
 VexExprMux0X::~VexExprMux0X(void)

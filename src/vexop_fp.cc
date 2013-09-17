@@ -52,6 +52,7 @@ Value* VexExprUnop##x::emit(void) const					\
 	return v1;							\
 }
 
+
 // Constant* const g_dbl_0x2[] = { DBL_0, DBL_0 };
 Constant* const g_flt_0x2[] = { FLT_0, FLT_0 };
 Constant* const g_flt_0x4[] = { FLT_0, FLT_0, FLT_0, FLT_0 };
@@ -234,3 +235,11 @@ OPV_RSQ(RSqrt32Fx4, get_vtf(4), sqrt, VINT(get_vtf(4), sqrt), VRCP(FLT_1x4))
 // 
 // UNOP_TAGOP(Recip32Fx4);
 // UNOP_TAGOP(Recip64Fx2);
+//
+
+
+Value* VexExprQopMAddF64::emit(void) const
+{
+	QOP_SETUP
+	return builder->CreateFAdd(builder->CreateFMul(v2, v3), v4);
+}

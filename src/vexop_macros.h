@@ -22,24 +22,30 @@
 
 #define UNOP_SETUP				\
 	Value		*v1;			\
-	IRBuilder<>	*builder;		\
-	builder = theGenLLVM->getBuilder();	\
+	IRBuilder<>	*builder(theGenLLVM->getBuilder());	\
 	v1 = args[0]->emit();
 
 #define BINOP_SETUP				\
 	Value		*v1, *v2;		\
-	IRBuilder<>	*builder;		\
+	IRBuilder<>	*builder(theGenLLVM->getBuilder()); \
 	v1 = args[0]->emit();			\
-	v2 = args[1]->emit();			\
-	builder = theGenLLVM->getBuilder();
+	v2 = args[1]->emit();
 
 #define TRIOP_SETUP				\
 	Value		*v1, *v2, *v3;		\
-	IRBuilder<>	*builder;		\
+	IRBuilder<>	*builder(theGenLLVM->getBuilder());	\
+	v1 = args[0]->emit();			\
+	v2 = args[1]->emit();			\
+	v3 = args[2]->emit();
+
+#define QOP_SETUP				\
+	Value		*v1, *v2, *v3, *v4;	\
+	IRBuilder<>	*builder(theGenLLVM->getBuilder());	\
 	v1 = args[0]->emit();			\
 	v2 = args[1]->emit();			\
 	v3 = args[2]->emit();			\
-	builder = theGenLLVM->getBuilder();
+	v4 = args[3]->emit();
+
 
 #define X_TO_Y_EMIT(x,y,w,z)					\
 Value* VexExprUnop##x::emit(void) const				\
@@ -233,5 +239,8 @@ Value* VexExprUnop##x::emit(void) const { assert (0 == 1 && "UNIMPL"); }
 Value* VexExprBinop##x::emit(void) const { assert (0 == 1 && "UNIMPL"); }
 #define TRIOP_UNIMPL(x)	\
 Value* VexExprTriop##x::emit(void) const { assert (0 == 1 && "UNIMPL"); }
+#define QOP_UNIMPL(x)	\
+Value* VexExprQop##x::emit(void) const { assert (0 == 1 && "UNIMPL"); }
+
 
 #endif

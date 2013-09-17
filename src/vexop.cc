@@ -30,7 +30,11 @@ using namespace llvm;
 const char* getVexOpName(IROp op)
 {
 	switch(op) {
+#ifndef USE_SVN
 	CASE_OP(SqrtF64r32)
+	CASE_OP(I16StoF64)
+	CASE_OP(CalcFPRF)
+#endif
 	OP_32_64(SqrtF)
 	OP_32_64(NegF)
 	OP_32_64(AbsF)
@@ -232,7 +236,6 @@ CASE_OP(F64toI16S)
 CASE_OP(F64toI32S)
 CASE_OP(F64toI64S)
 CASE_OP(F64toI32U)
-CASE_OP(I16StoF64)
 CASE_OP(I32StoF64)
 CASE_OP(I64StoF64)
 CASE_OP(I64UtoF64)
@@ -264,7 +267,6 @@ CASE_OP(RoundF64toF64_PosINF)
 CASE_OP(RoundF64toF64_ZERO)
 CASE_OP(TruncF64asF32)
 CASE_OP(RoundF64toF32)
-CASE_OP(CalcFPRF)
 CASE_OP(Add16x2)
 CASE_OP(Sub16x2)
 CASE_OP(QAdd16Sx2)
@@ -856,6 +858,32 @@ Value* VexExprUnop32UtoV128::emit(void) const
 	return builder->CreateBitCast(v_128i, get_vt(16, 8), "32UtoV128");
 }
 
+#ifdef USE_SVN
+/* returns 16-bit value */
+Value* VexExprUnopGetMSBs8x16::emit(void) const
+{
+	Value	*ret, *vec;
+
+	UNOP_SETUP
+
+	ret = get_c(16, 0);
+	vec = builder->CreateBitCast(v1, get_vt(16, 8), "GetMSBs8x16");
+
+	for (unsigned i = 0; i < 16; i++) {
+		Value*	cur_v;
+		cur_v = builder->CreateExtractElement(vec, get_32i(i));
+		// pluck off top bit
+		cur_v = builder->CreateLShr(cur_v, get_c(8, 7));
+		cur_v = builder->CreateZExt(cur_v, get_i(16));
+		// shift to position
+		cur_v = builder->CreateShl(cur_v, get_c(16, i));
+		ret = builder->CreateOr(ret, cur_v);
+	}
+
+	return ret;
+}
+#endif
+
 Value* VexExprUnop64UtoV128::emit(void) const
 {
 	Value		*v_128i;
@@ -1014,6 +1042,13 @@ BINOP_EMIT(CmpNE8, ICmpNE)
 BINOP_EMIT(CmpNE16, ICmpNE)
 BINOP_EMIT(CmpNE32, ICmpNE)
 BINOP_EMIT(CmpNE64, ICmpNE)
+
+#ifdef USE_SVN
+BINOP_EMIT(ExpCmpNE8, ICmpNE)
+BINOP_EMIT(ExpCmpNE16, ICmpNE)
+BINOP_EMIT(ExpCmpNE32, ICmpNE)
+BINOP_EMIT(ExpCmpNE64, ICmpNE)
+#endif
 
 BINOP_EMIT(CasCmpEQ8, ICmpEQ)
 BINOP_EMIT(CasCmpEQ16, ICmpEQ)
@@ -1641,3 +1676,4 @@ Value* VexExprBinop##x::emit(void) const				\
 
 OPSHUF_EMIT(Perm8x8, get_vt(8, 8), get_vt(8, 8))
 OPSHUF_EMIT(Perm8x16, get_vt(16, 8), get_vt(16, 8))
+

@@ -232,4 +232,14 @@ private:
       VexExpr	*exprX;	/* false expr */
 };
 
+class VexExprBBPTR : public VexExpr
+{
+public:
+	VexExprBBPTR(VexStmt* in_parent, const IRExpr* expr);
+	virtual ~VexExprBBPTR(void) {}
+	virtual llvm::Value* emit(void) const;
+	virtual void print(std::ostream& os) const;
+private:
+};
+
 #endif

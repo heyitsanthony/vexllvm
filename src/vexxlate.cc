@@ -115,10 +115,15 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 	switch(in_arch) {
 	case Arch::X86_64:
 		arch = VexArchAMD64;
-		vai_guest.hwcaps |= VEX_HWCAPS_AMD64_SSE3;
-		vai_guest.hwcaps |= VEX_HWCAPS_AMD64_CX16;
-		vai_guest.hwcaps |= VEX_HWCAPS_AMD64_LZCNT;
-		vai_guest.hwcaps |= VEX_HWCAPS_AMD64_AVX;
+		vai_guest.hwcaps |=	VEX_HWCAPS_AMD64_SSE3
+				|	VEX_HWCAPS_AMD64_CX16
+				|	VEX_HWCAPS_AMD64_LZCNT
+				|	VEX_HWCAPS_AMD64_AVX
+#ifdef USE_SVN
+				|	VEX_HWCAPS_AMD64_AVX2
+				|	VEX_HWCAPS_AMD64_BMI
+#endif
+				;
 		vai_host.hwcaps = vai_guest.hwcaps;
 		break;
 	case Arch::ARM:

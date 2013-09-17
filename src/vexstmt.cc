@@ -318,7 +318,9 @@ void VexStmtCAS::print(std::ostream& os) const
 VexStmtDirty::VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
   :	VexStmt(in_parent, in_stmt),
   	guard(VexExpr::create(this, in_stmt->Ist.Dirty.details->guard)),
+#ifndef USE_SVN
   	needs_state_ptr(in_stmt->Ist.Dirty.details->needsBBP),
+#endif
 	tmp_reg(in_stmt->Ist.Dirty.details->tmp)
 {
 	const char*	func_name;
@@ -367,12 +369,14 @@ void VexStmtDirty::emit(void) const
 	/* guard condition OK, make drty call */
 	builder->SetInsertPoint(bb_then);
 
+#ifndef USE_SVN
 	if (needs_state_ptr) {
 		args_v.push_back(
 			theGenLLVM->getBuilder()->CreateBitCast(
 				theGenLLVM->getCtxBase(),
 				func->arg_begin()->getType()));
 	}
+#endif
 
 	foreach (it, args.begin(), args.end())
 		args_v.push_back((*it)->emit());

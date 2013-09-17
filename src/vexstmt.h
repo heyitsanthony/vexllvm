@@ -169,7 +169,9 @@ private:
 	VexExpr			*guard;
 	llvm::Function*		func;
 	PtrList<VexExpr>	args;
+#ifndef USE_SVN
 	bool			needs_state_ptr;
+#endif
 	int			tmp_reg;	/* where to store */
 };
 
