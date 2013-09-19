@@ -237,9 +237,10 @@ OPV_RSQ(RSqrt32Fx4, get_vtf(4), sqrt, VINT(get_vtf(4), sqrt), VRCP(FLT_1x4))
 // UNOP_TAGOP(Recip64Fx2);
 //
 
-
+#ifdef USE_SVN
 Value* VexExprQopMAddF64::emit(void) const
 {
 	QOP_SETUP
 	return builder->CreateFAdd(builder->CreateFMul(v2, v3), v4);
 }
+#endif
