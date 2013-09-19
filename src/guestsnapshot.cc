@@ -462,7 +462,7 @@ char* GuestSnapshot::readMemory(
 }
 
 
-void GuestSnapshot::getPlatform(const char* plat_key, void* buf, unsigned len) const
+bool GuestSnapshot::getPlatform(const char* plat_key, void* buf, unsigned len) const
 {
 	FILE	*f;
 	char 	path[512];
@@ -470,10 +470,18 @@ void GuestSnapshot::getPlatform(const char* plat_key, void* buf, unsigned len) c
 
 	sprintf(path, "%s/platform/%s", srcdir.c_str(), plat_key);
 	f = fopen(path, "rb");
-	assert (f != NULL && "Could not get a platform file");
+	if (f == NULL) {
+		std::cerr << "[GuestSnapshot] Missing platform key '"
+			<< plat_key << "'\n";
+		return false;
+	}
 
-	br = fread(buf, len, 1, f);
-	assert (br == 1);
+	if (buf != NULL) {
+		br = fread(buf, len, 1, f);
+		assert (br == 1);
+	}
 
 	fclose(f);
+
+	return true;
 }

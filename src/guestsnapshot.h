@@ -22,7 +22,8 @@ public:
 
 	const std::string& getPath(void) const { return srcdir; }
 
-	void getPlatform(const char* plat_key, void* buf, unsigned len) const;
+	bool getPlatform(
+		const char* plat_key, void* buf = NULL, unsigned len = 0) const;
 protected:
 	GuestSnapshot(const char* dirname);
 
