@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include "Sugar.h"
+#include "cpu/i386_macros.h"
 #include "cpu/ptimgi386.h"
 #include "cpu/i386cpustate.h"
 
@@ -59,6 +60,19 @@ struct x86_user_fpxregs
   long int padding[56];
 };
 
+/* from linux sources. whatever */
+struct user_desc {
+	unsigned int  entry_number;
+	unsigned int  base_addr;
+	unsigned int  limit;
+	unsigned int  seg_32bit:1;
+	unsigned int  contents:2;
+	unsigned int  read_exec_only:1;
+	unsigned int  limit_in_pages:1;
+	unsigned int  seg_not_present:1;
+	unsigned int  useable:1;
+	unsigned int  lm:1;
+};
 
 PTImgI386::PTImgI386(GuestPTImg* gs, int in_pid)
 : PTImgArch(gs, in_pid)
@@ -129,6 +143,8 @@ void PTImgI386::slurpRegisters(void)
 
 	/* allocate GDT */
 	if (!vgs->guest_GDT && !vgs->guest_LDT) {
+		fprintf(stderr, INFOSTR "gs=%p. fs=%p\n",
+			(void*)regs.gs, (void*)regs.fs);
 		setupGDT();
 	}
 
@@ -139,23 +155,16 @@ void PTImgI386::slurpRegisters(void)
 /* I might as well be writing an OS! */
 void PTImgI386::setupGDT(void)
 {
-	guest_ptr	gdt, ldt;
-	VEXSEG		default_ent;
+	guest_ptr		gdt, ldt;
+	VEXSEG			default_ent;
+	struct user_desc	ud;
 
 	fprintf(stderr, WARNSTR "Bogus GDT. Bogus LDT\n");
 
-	default_ent.LdtEnt.Bits.LimitLow = 0xffff;
-	default_ent.LdtEnt.Bits.BaseLow = 0;
-	default_ent.LdtEnt.Bits.BaseMid = 0;
-	default_ent.LdtEnt.Bits.Type = 0; /* ??? */
-	default_ent.LdtEnt.Bits.Dpl = 3;
-	default_ent.LdtEnt.Bits.Pres = 1;
-	default_ent.LdtEnt.Bits.LimitHi = 0xf;
-	default_ent.LdtEnt.Bits.Sys = 0; /* avail for sys use */
-	default_ent.LdtEnt.Bits.Reserved_0 = 0;
-	default_ent.LdtEnt.Bits.Default_Big = 1;
-	default_ent.LdtEnt.Bits.Granularity = 1; /* ??? */
-	default_ent.LdtEnt.Bits.BaseHi = 0;
+	memset(&ud, 0, sizeof(ud));
+	ud.limit = ~0;
+	ud.limit_in_pages = 1;
+	ud2vexseg(ud, &default_ent.LdtEnt);
 
 	if (gs->getMem()->mmap(
 		gdt,
@@ -200,20 +209,6 @@ void PTImgI386::setupGDT(void)
 	}
 }
 
-/* from linux sources. whatever */
-struct user_desc {
-	unsigned int  entry_number;
-	unsigned int  base_addr;
-	unsigned int  limit;
-	unsigned int  seg_32bit:1;
-	unsigned int  contents:2;
-	unsigned int  read_exec_only:1;
-	unsigned int  limit_in_pages:1;
-	unsigned int  seg_not_present:1;
-	unsigned int  useable:1;
-	unsigned int  lm:1;
-};
-
 bool PTImgI386::readThreadEntry(unsigned idx, VEXSEG* buf)
 {
 
@@ -229,25 +224,13 @@ bool PTImgI386::readThreadEntry(unsigned idx, VEXSEG* buf)
 		return false;
 
 	fprintf(stderr,
-		INFOSTR "[TLS[%d]: base=%p. limit=%p\n"
+		INFOSTR "TLS[%d]: base=%p. limit=%p\n"
 		INFOSTR "seg32=%d. contents=%d. not_present=%d. useable=%d\n",
 		idx, (void*)(intptr_t)ud.base_addr, (void*)(intptr_t)ud.limit,
 		ud.seg_32bit, ud.contents, ud.seg_not_present, ud.useable);
 
 	/* translate linux user desc into vex/hw ldt */
-	buf->LdtEnt.Bits.LimitLow = ud.limit & 0xffff;
-	buf->LdtEnt.Bits.BaseLow = ud.base_addr & 0xffff;
-	buf->LdtEnt.Bits.BaseMid = (ud.base_addr >> 16) & 0xff;
-	buf->LdtEnt.Bits.Type = 0; /* ??? */
-	buf->LdtEnt.Bits.Dpl = 3;
-	buf->LdtEnt.Bits.Pres = !ud.seg_not_present;
-	buf->LdtEnt.Bits.LimitHi = ud.limit >> 16;
-	buf->LdtEnt.Bits.Sys = 0;
-	buf->LdtEnt.Bits.Reserved_0 = 0;
-	buf->LdtEnt.Bits.Default_Big = 1;
-	buf->LdtEnt.Bits.Granularity = ud.limit_in_pages;
-	buf->LdtEnt.Bits.BaseHi = (ud.base_addr >> 24) & 0xff;
-
+	ud2vexseg(ud, &buf->LdtEnt);
 	return true;
 }
 
