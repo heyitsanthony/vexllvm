@@ -45,8 +45,9 @@ public:
 	virtual void setFakeInfo(const char* info_file)
 	{ assert (0 == 1 && "Not implemented for this arch"); }
 
-	virtual void stepInitFixup(void)
-	{ assert (0 == 1 && "Not implemented for this arch"); }
+	virtual bool stepInitFixup(void)
+	{ assert (0 == 1 && "Not implemented for this arch");
+	  return false; }
 
 	/* starts running guest natively by jumping into context */
 	virtual void restore(void) { assert (0 == 1 && "Not implemented"); }

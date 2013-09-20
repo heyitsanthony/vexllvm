@@ -243,6 +243,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
 	cur_pc = gs->getCPUState()->getPC();
+	fprintf(stderr, "setting bp on cur_pc=%x\n", cur_pc);
 	setBreakpointByPID(pid, cur_pc);
 
 	/* run until child hits entry point */
@@ -384,7 +385,10 @@ void GuestPTImg::waitForEntry(int pid)
 	fake_cpuid = getenv("VEXLLVM_FAKE_CPUID");
 	if (fake_cpuid != NULL) {
 		pt_arch->setFakeInfo(fake_cpuid);
-		pt_arch->stepInitFixup();
+		if (pt_arch->stepInitFixup() == false) {
+			stackTrace(std::cerr, getBinaryPath(), pid);
+			abort();
+		}
 		/* should end on breakpoint instruction */
 		return;
 	}

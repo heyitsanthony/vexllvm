@@ -322,6 +322,7 @@ void PTImgI386::setFakeInfo(const char* info_file)
 }
 
 #define IS_PEEKTXT_CPUID(x)	(((x) & 0xffff) == 0xa20f)
+#define IS_PEEKTXT_INT3(x)	(((x) & 0xff) == 0xcc)
 
 uint64_t PTImgI386::checkCPUID(void)
 {
@@ -333,10 +334,14 @@ uint64_t PTImgI386::checkCPUID(void)
 	assert(err != -1);
 
 	v = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
-	if (!IS_PEEKTXT_CPUID(v))
-		return 0;
 
-	return regs.rip;
+	if (IS_PEEKTXT_INT3(v))
+		return 1;
+
+	if (IS_PEEKTXT_CPUID(v))
+		return regs.rip;
+
+	return 0;
 }
 
 bool PTImgI386::patchCPUID(void)
@@ -378,19 +383,48 @@ bool PTImgI386::patchCPUID(void)
 }
 
 /* patch all cpuid instructions */
-void PTImgI386::stepInitFixup(void)
+bool PTImgI386::stepInitFixup(void)
 {
-	int		err, status;
+	int		err, status, prefix_ins_c = 0;
 	uint64_t	cpuid_pc = 0, bias = 0;
 
 	/* single step until cpuid instruction */
-	while (cpuid_pc == 0) {
+	while ((cpuid_pc = checkCPUID()) == 0) {
+		int	ok;
+
 		err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
 		assert (err != -1 && "Bad PTRACE_SINGLESTEP");
 		wait(&status);
-		assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
 
-		cpuid_pc = checkCPUID();
+		ok = (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+		if (!ok) {
+			if (	WIFSTOPPED(status) &&
+				WSTOPSIG(status) == SIGSEGV)
+			{
+				fprintf(stderr,
+					"sigsegv. prefix_ins_c=%d\n",
+					prefix_ins_c);
+			}
+
+			fprintf(stderr,
+				"[PTImgI386] mixed signals! status=%x\n",
+				status);
+			return false;
+		}
+
+		prefix_ins_c++;
+	}
+
+	/* int3 => terminate early-- can't trust more code */
+	if (cpuid_pc == 1) {
+		struct user_regs_struct regs;
+		fprintf(stderr, INFOSTR "skipping CPUID patching\n");
+		ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
+		/* undoBreakpoint code expects the instruction to already
+		 * be dispatched, so fake it by bumping the PC */
+		regs.rip++; 
+		ptrace((__ptrace_request)PTRACE_SETREGS, child_pid, NULL, &regs);
+		return true;
 	}
 
 	/* find bias of cpuid instruction w/r/t patch offsets */
@@ -427,4 +461,6 @@ void PTImgI386::stepInitFixup(void)
 	foreach (it, cpuid_insts.begin(), cpuid_insts.end()) {
 		resetBreakpoint(guest_ptr(it->first), it->second);
 	}
+
+	return true;
 }

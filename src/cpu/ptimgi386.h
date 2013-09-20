@@ -38,7 +38,7 @@ public:
 	void resetBreakpoint(guest_ptr addr, long v);
 
 	virtual void setFakeInfo(const char* info_file);
-	virtual void stepInitFixup(void);
+	virtual bool stepInitFixup(void);
 private:
 	/* return PC iff on cpuid instruction, otherwise 0 */
 	uint64_t checkCPUID(void);
