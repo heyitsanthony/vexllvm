@@ -31,12 +31,18 @@ static jmp_buf				g_env;
 static std::list<std::string>		xlate_msg_log;
 static VexXlate::VexXlateLogType	log_type;
 
+#ifdef USE_SVN
 #define VEX_GUEST_CAPS_X86	VEX_HWCAPS_X86_MMXEXT |	\
 				VEX_HWCAPS_X86_SSE1 |	\
 				VEX_HWCAPS_X86_SSE2 |	\
 				VEX_HWCAPS_X86_SSE3 |	\
 				VEX_HWCAPS_X86_LZCNT
-
+#else
+#define VEX_GUEST_CAPS_X86	VEX_HWCAPS_X86_SSE1 |	\
+				VEX_HWCAPS_X86_SSE2 |	\
+				VEX_HWCAPS_X86_SSE3 |	\
+				VEX_HWCAPS_X86_LZCNT
+#endif
 
 #if defined(__amd64__)
 /* we actually do have some extensions... */
