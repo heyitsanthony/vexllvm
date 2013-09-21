@@ -31,13 +31,20 @@ static jmp_buf				g_env;
 static std::list<std::string>		xlate_msg_log;
 static VexXlate::VexXlateLogType	log_type;
 
+#define VEX_GUEST_CAPS_X86	VEX_HWCAPS_X86_MMXEXT |	\
+				VEX_HWCAPS_X86_SSE1 |	\
+				VEX_HWCAPS_X86_SSE2 |	\
+				VEX_HWCAPS_X86_SSE3 |	\
+				VEX_HWCAPS_X86_LZCNT
+
+
 #if defined(__amd64__)
 /* we actually do have some extensions... */
-#define VEX_HOST_HWCAPS	0
+#define VEX_HOST_HWCAPS	(VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2 | VEX_HWCAPS_X86_SSE3 | VEX_HWCAPS_X86_LZCNT)
 #define VEX_HOST_ARCH	VexArchAMD64
 #elif defined(__i386__)
 /* we actually do have some extensions... */
-#define VEX_HOST_HWCAPS	0
+#define VEX_HOST_HWCAPS	VEX_GUEST_CAPS_X86
 #define VEX_HOST_ARCH	VexArchX86
 #elif defined(__arm__)
 /* pretend we're just arm 7 for now.. */
@@ -132,10 +139,7 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 		break;
 	case Arch::I386:
 		arch = VexArchX86;
-		vai_guest.hwcaps |= VEX_HWCAPS_X86_SSE1;
-		vai_guest.hwcaps |= VEX_HWCAPS_X86_SSE2;
-		vai_guest.hwcaps |= VEX_HWCAPS_X86_SSE3;
-		vai_guest.hwcaps |= VEX_HWCAPS_X86_LZCNT;
+		vai_guest.hwcaps |= VEX_GUEST_CAPS_X86;
 		break;
 	case Arch::MIPS32:
 		arch = VexArchMIPS32;
