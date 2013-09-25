@@ -57,8 +57,12 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 	// but valgrind/vex seems to not really fully handle them, how sneaky
 };
 
-#define get_reg_user(x,y)	*((uint64_t*)&x[user_regs_desc_tab[y].user_off])
-#define get_reg_vex(x,y)	*((uint64_t*)&x[user_regs_desc_tab[y].vex_off])
+#define get_reg_user(x,y)	\
+	*((const uint64_t*)&x[user_regs_desc_tab[y].user_off])
+#define set_reg_user(x,y,z)	\
+	*((uint64_t*)&x[user_regs_desc_tab[y].user_off]) = z
+#define get_reg_vex(x,y)	\
+	*((const uint64_t*)&x[user_regs_desc_tab[y].vex_off])
 #define get_reg_name(y)		user_regs_desc_tab[y].name
 
 #define FLAGS_MASK	(0xff | (1 << 10) | (1 << 11))
@@ -189,8 +193,8 @@ bool PTImgAMD64::isMatch(void) const
 	/* XXX: PARTIAL. DOES NOT CONSIDER FULL YMM REGISTER */
 	for (unsigned i = 0; i < 16; i++) {
 		sse_ok = !memcmp(
-			((char*)&state.guest_YMM0) + i*32,
-			((char*)&fpregs.xmm_space) + i*16,
+			((const char*)&state.guest_YMM0) + i*32,
+			((const char*)&fpregs.xmm_space) + i*16,
 			16);
 		if (!sse_ok) break;
 	}
@@ -356,8 +360,8 @@ void PTImgAMD64::printFPRegs(std::ostream& os) const
 
 	for(int i = 0; i < 16; ++i) {
 		if (memcmp(
-			(((char*)&fpregs.xmm_space)) + i*16,
-			((char*)&ref.guest_YMM0) + i*32,
+			(((const char*)&fpregs.xmm_space)) + i*16,
+			((const char*)&ref.guest_YMM0) + i*32,
 			16) != 0)
 		{
 			os << "***";
@@ -718,20 +722,33 @@ long PTImgAMD64::setBreakpoint(guest_ptr addr)
 	return old_v;
 }
 
-void PTImgAMD64::pushRegisters(void)
-{
-	struct	user_regs_struct	&r(getRegs());
-	const VexGuestAMD64State	&v(getVexState());
+void PTImgAMD64::ptrace2vex(
+	const user_regs_struct& urs,
+	const user_fpregs_struct& fpregs,
+	VexGuestAMD64State& vs)
+{ AMD64CPUState::setRegs(vs, urs, fpregs); }
 
+void PTImgAMD64::vex2ptrace(
+	const VexGuestAMD64State& v,
+	struct user_regs_struct& r)
+{
 	for (unsigned i = 0; i < REG_COUNT; i++) {
-		get_reg_user(((uint8_t*)&r), i) =
-			get_reg_vex(((const uint8_t*)&v), i);
+		set_reg_user(
+			((uint8_t*)&r), i,
+			get_reg_vex(((const uint8_t*)&v), i));
 	}
 	
 	r.eflags = get_rflags(v);
 
 	/* XXX: XMM REGISTERS!!! */
+}
 
+void PTImgAMD64::pushRegisters(void)
+{
+	struct	user_regs_struct	&r(getRegs());
+	const VexGuestAMD64State	&v(getVexState());
+
+	vex2ptrace(v, r);
 	setRegs(r);
 }
 

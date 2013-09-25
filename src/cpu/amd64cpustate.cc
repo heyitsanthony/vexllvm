@@ -6,10 +6,6 @@
 #include <vector>
 
 #include "cpu/amd64cpustate.h"
-extern "C" {
-#include <valgrind/libvex_guest_amd64.h>
-}
-
 
 const char* AMD64CPUState::abi_linux_scregs[] =
 {"RAX", "RDI", "RSI", "RDX", "R10", "R8", "R9", NULL};
@@ -276,55 +272,59 @@ void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
 
 #ifdef __amd64__
 void AMD64CPUState::setRegs(
-	const user_regs_struct& regs,
+	VexGuestAMD64State& v,
+	const user_regs_struct& regs, 
 	const user_fpregs_struct& fpregs)
 {
-	state2amd64()->guest_RAX = regs.rax;
-	state2amd64()->guest_RCX = regs.rcx;
-	state2amd64()->guest_RDX = regs.rdx;
-	state2amd64()->guest_RBX = regs.rbx;
-	state2amd64()->guest_RSP = regs.rsp;
-	state2amd64()->guest_RBP = regs.rbp;
-	state2amd64()->guest_RSI = regs.rsi;
-	state2amd64()->guest_RDI = regs.rdi;
-	state2amd64()->guest_R8  = regs.r8;
-	state2amd64()->guest_R9  = regs.r9;
-	state2amd64()->guest_R10 = regs.r10;
-	state2amd64()->guest_R11 = regs.r11;
-	state2amd64()->guest_R12 = regs.r12;
-	state2amd64()->guest_R13 = regs.r13;
-	state2amd64()->guest_R14 = regs.r14;
-	state2amd64()->guest_R15 = regs.r15;
-	state2amd64()->guest_RIP = regs.rip;
+	v.guest_RAX = regs.rax;
+	v.guest_RCX = regs.rcx;
+	v.guest_RDX = regs.rdx;
+	v.guest_RBX = regs.rbx;
+	v.guest_RSP = regs.rsp;
+	v.guest_RBP = regs.rbp;
+	v.guest_RSI = regs.rsi;
+	v.guest_RDI = regs.rdi;
+	v.guest_R8  = regs.r8;
+	v.guest_R9  = regs.r9;
+	v.guest_R10 = regs.r10;
+	v.guest_R11 = regs.r11;
+	v.guest_R12 = regs.r12;
+	v.guest_R13 = regs.r13;
+	v.guest_R14 = regs.r14;
+	v.guest_R15 = regs.r15;
+	v.guest_RIP = regs.rip;
 
 	//TODO: some kind of eflags, checking but i don't yet understand this
 	//mess of broken apart state.
 
 	//valgrind/vex seems to not really fully segments them, how sneaky
 	assert (regs.fs_base != 0 && "TLS is important to have!!!");
-	state2amd64()->guest_FS_ZERO = regs.fs_base;
+	v.guest_FS_ZERO = regs.fs_base;
 
 	/* XXX: in the future we want to slurp the full YMM registers */
 	/* definitely need smarter ptrace code GETREGSET */
 	for (unsigned i = 0; i < 16; i++) {
-		memcpy( ((char*)&state2amd64()->guest_YMM0) + i*32,
+		memcpy( ((char*)&v.guest_YMM0) + i*32,
 			((const char*)&fpregs.xmm_space) + i*16,
 			16);
 	}
 
 
 	//TODO: this is surely wrong, the sizes don't even match...
-	memcpy(	&state2amd64()->guest_FPREG[0],
-		&fpregs.st_space[0],
-		sizeof(state2amd64()->guest_FPREG));
+	memcpy(&v.guest_FPREG[0], &fpregs.st_space[0], sizeof(v.guest_FPREG));
 
 	//TODO: floating point flags and extra fp state, sse  rounding
 	//
 
-	state2amd64()->guest_CC_OP = 0 /* AMD64G_CC_OP_COPY */;
-	state2amd64()->guest_CC_DEP1 = regs.eflags & (0xff | (3 << 10)) ;
-
+	v.guest_CC_OP = 0 /* AMD64G_CC_OP_COPY */;
+	v.guest_CC_DEP1 = regs.eflags & (0xff | (3 << 10)) ;
 }
+
+
+void AMD64CPUState::setRegs(
+	const user_regs_struct& regs,
+	const user_fpregs_struct& fpregs)
+{ setRegs(*state2amd64(), regs, fpregs); }
 #endif
 
 unsigned int AMD64CPUState::getFuncArgOff(unsigned int arg_num) const

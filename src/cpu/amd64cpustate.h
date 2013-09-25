@@ -8,6 +8,9 @@
 #include <map>
 
 #include "guestcpustate.h"
+extern "C" {
+#include <valgrind/libvex_guest_amd64.h>
+}
 
 class SyscallParams;
 
@@ -31,8 +34,14 @@ public:
 	virtual void resetSyscall(void);
 
 #ifdef __amd64__
-	void setRegs(const user_regs_struct& regs, 
+	void setRegs(
+		const user_regs_struct& regs,
 		const user_fpregs_struct& fpregs);
+	static void setRegs(
+		VexGuestAMD64State& v,
+		const user_regs_struct& regs, 
+		const user_fpregs_struct& fpregs);
+
 #endif
 	virtual void print(std::ostream& os, const void*) const;
 

@@ -48,6 +48,15 @@ public:
 	virtual void restore(void);
 
 	virtual uint64_t dispatchSysCall(const SyscallParams& sp);
+
+	static void ptrace2vex(
+		const user_regs_struct& urs,
+		const user_fpregs_struct& fpregs,
+		VexGuestAMD64State& vs);
+
+	static void vex2ptrace(
+		const VexGuestAMD64State& vs,
+		user_regs_struct& urs);
 protected:
 	virtual void waitForSingleStep(void);
 
