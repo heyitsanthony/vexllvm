@@ -56,7 +56,8 @@ public:
 
 	static void vex2ptrace(
 		const VexGuestAMD64State& vs,
-		user_regs_struct& urs);
+		user_regs_struct& urs,
+		user_fpregs_struct& fpregs);
 protected:
 	virtual void waitForSingleStep(void);
 

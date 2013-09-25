@@ -730,7 +730,8 @@ void PTImgAMD64::ptrace2vex(
 
 void PTImgAMD64::vex2ptrace(
 	const VexGuestAMD64State& v,
-	struct user_regs_struct& r)
+	struct user_regs_struct& r,
+	struct user_fpregs_struct& fp)
 {
 	for (unsigned i = 0; i < REG_COUNT; i++) {
 		set_reg_user(
@@ -740,15 +741,22 @@ void PTImgAMD64::vex2ptrace(
 	
 	r.eflags = get_rflags(v);
 
-	/* XXX: XMM REGISTERS!!! */
+	/* XXX: still broken, doesn't handle YMM right */
+	memset(&fp, 0, sizeof(fp));
+	for (unsigned i = 0; i < 16; i++) {
+		memcpy(	((uint8_t*)&fp.xmm_space) + i*16,
+			((const uint8_t*)&v.guest_YMM0)+i*sizeof(v.guest_YMM0),
+			16);
+	}
 }
 
 void PTImgAMD64::pushRegisters(void)
 {
-	struct	user_regs_struct	&r(getRegs());
+	struct user_regs_struct		&r(getRegs());
+	struct user_fpregs_struct	fp;
 	const VexGuestAMD64State	&v(getVexState());
 
-	vex2ptrace(v, r);
+	vex2ptrace(v, r, fp);
 	setRegs(r);
 }
 
