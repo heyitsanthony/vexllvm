@@ -102,7 +102,6 @@ static struct guest_ctx_field amd64_fields[] =
 const struct guest_ctx_field* AMD64CPUState::getFields(void) const
 { return amd64_fields; }
 
-
 extern void dumpIRSBs(void);
 
 const char* AMD64CPUState::off2Name(unsigned int off) const
@@ -191,60 +190,71 @@ guest_ptr AMD64CPUState::getStackPtr(void) const
 #define YMM_BASE	offsetof(VexGuestAMD64State, guest_YMM0)
 /* 32 because of YMM / AVX extensions */
 #define get_xmm_lo(x,i)	((const uint64_t*)(	\
-	&(((const uint8_t*)s)[YMM_BASE+32*i])))[0]
+	&(((const uint8_t*)(x))[YMM_BASE+32*i])))[0]
 #define get_xmm_hi(x,i)	((const uint64_t*)(	\
-	&(((const uint8_t*)s)[YMM_BASE+32*i])))[1]
+	&(((const uint8_t*)(x))[YMM_BASE+32*i])))[1]
 #define get_ymm_lo(x,i)	((const uint64_t*)(	\
-	&(((const uint8_t*)s)[YMM_BASE+32*i])))[2]
+	&(((const uint8_t*)(x))[YMM_BASE+32*i])))[2]
 #define get_ymm_hi(x,i)	((const uint64_t*)(	\
-	&(((const uint8_t*)s)[YMM_BASE+32*i])))[3]
+	&(((const uint8_t*)(x))[YMM_BASE+32*i])))[3]
 
-
-void AMD64CPUState::print(std::ostream& os, const void* regctx) const
+/* XXX: is there a smarter way to do this? */
+void AMD64CPUState::print(std::ostream& os, const VexGuestAMD64State& vs)
 {
-	VexGuestAMD64State	*s;
+	os << "RIP: " << (void*)vs.guest_RIP << "\n";
+	os << "RAX: " << (void*)vs.guest_RAX << "\n";
+	os << "RBX: " << (void*)vs.guest_RBX << "\n";
+	os << "RCX: " << (void*)vs.guest_RCX << "\n";
+	os << "RDX: " << (void*)vs.guest_RDX << "\n";
+	os << "RSP: " << (void*)vs.guest_RSP << "\n";
+	os << "RBP: " << (void*)vs.guest_RBP << "\n";
+	os << "RDI: " << (void*)vs.guest_RDI << "\n";
+	os << "RSI: " << (void*)vs.guest_RSI << "\n";
+	os << "R8: " << (void*)vs.guest_R8 << "\n";
+	os << "R9: " << (void*)vs.guest_R9 << "\n";
+	os << "R10: " << (void*)vs.guest_R10 << "\n";
+	os << "R11: " << (void*)vs.guest_R11 << "\n";
+	os << "R12: " << (void*)vs.guest_R12 << "\n";
+	os << "R13: " << (void*)vs.guest_R13 << "\n";
+	os << "R14: " << (void*)vs.guest_R14 << "\n";
+	os << "R15: " << (void*)vs.guest_R15 << "\n";
 
-	s = const_cast<VexGuestAMD64State*>(
-		(const VexGuestAMD64State*)regctx);
-
-	os << "RIP: " << (void*)s->guest_RIP << "\n";
-	os << "RAX: " << (void*)s->guest_RAX << "\n";
-	os << "RBX: " << (void*)s->guest_RBX << "\n";
-	os << "RCX: " << (void*)s->guest_RCX << "\n";
-	os << "RDX: " << (void*)s->guest_RDX << "\n";
-	os << "RSP: " << (void*)s->guest_RSP << "\n";
-	os << "RBP: " << (void*)s->guest_RBP << "\n";
-	os << "RDI: " << (void*)s->guest_RDI << "\n";
-	os << "RSI: " << (void*)s->guest_RSI << "\n";
-	os << "R8: " << (void*)s->guest_R8 << "\n";
-	os << "R9: " << (void*)s->guest_R9 << "\n";
-	os << "R10: " << (void*)s->guest_R10 << "\n";
-	os << "R11: " << (void*)s->guest_R11 << "\n";
-	os << "R12: " << (void*)s->guest_R12 << "\n";
-	os << "R13: " << (void*)s->guest_R13 << "\n";
-	os << "R14: " << (void*)s->guest_R14 << "\n";
-	os << "R15: " << (void*)s->guest_R15 << "\n";
-
-	os << "EFLAGS: " << (void*)LibVEX_GuestAMD64_get_rflags(s) << '\n';
+	os << "RFLAGS: " << (void*)getRFLAGS(vs) << '\n';
 
 	for (int i = 0; i < 16; i++) {
 		os
 		<< "YMM" << i
-		<< ": "<< (void*) get_xmm_hi(s,i)
-		<< "|" << (void*)get_xmm_lo(s,i)
-		<< "(" << (void*)get_ymm_hi(s,i)
-		<< "|" << (void*)get_ymm_lo(s,i)
+		<< ": "<< (void*)get_xmm_hi(&vs,i)
+		<< "|" << (void*)get_xmm_lo(&vs,i)
+		<< "(" << (void*)get_ymm_hi(&vs,i)
+		<< "|" << (void*)get_ymm_lo(&vs,i)
 		<< ")" << std::endl;
 	}
 
 	for (int i = 0; i < 8; i++) {
-		int r  = (state2amd64()->guest_FTOP + i) & 0x7;
-		os
-		<< "ST" << i << ": "
-		<< (void*)s->guest_FPREG[r] << std::endl;
+		int r  = (vs.guest_FTOP + i) & 0x7;
+		os	<< "ST" << i << ": "
+			<< (void*)vs.guest_FPREG[r] << std::endl;
 	}
 
-	os << "fs_base = " << (void*)s->guest_FS_ZERO << std::endl;
+	os << "fs_base = " << (void*)vs.guest_FS_ZERO << std::endl;
+}
+
+#define FLAGS_MASK	(0xff | (1 << 10) | (1 << 11))
+uint64_t AMD64CPUState::getRFLAGS(const VexGuestAMD64State& v)
+{
+	uint64_t guest_rflags = LibVEX_GuestAMD64_get_rflags(
+		&const_cast<VexGuestAMD64State&>(v));
+	guest_rflags &= FLAGS_MASK;
+	guest_rflags |= (1 << 1);
+	return guest_rflags;
+}
+
+void AMD64CPUState::print(std::ostream& os, const void* regctx) const
+{
+	VexGuestAMD64State	*s;
+	s = const_cast<VexGuestAMD64State*>((const VexGuestAMD64State*)regctx);
+	print(os, *s);
 }
 
 void AMD64CPUState::setFSBase(uintptr_t base)
@@ -294,19 +304,15 @@ void AMD64CPUState::setRegs(
 	v.guest_R15 = regs.r15;
 	v.guest_RIP = regs.rip;
 
-	//TODO: some kind of eflags, checking but i don't yet understand this
-	//mess of broken apart state.
-
-	//valgrind/vex seems to not really fully segments them, how sneaky
 	assert (regs.fs_base != 0 && "TLS is important to have!!!");
 	v.guest_FS_ZERO = regs.fs_base;
 
 	/* XXX: in the future we want to slurp the full YMM registers */
 	/* definitely need smarter ptrace code GETREGSET */
 	for (unsigned i = 0; i < 16; i++) {
-		memcpy( ((char*)&v.guest_YMM0) + i*32,
-			((const char*)&fpregs.xmm_space) + i*16,
-			16);
+		void		*dst(&(((char*)&v.guest_YMM0)[i*32]));
+		const void	*src(&(((const char*)&fpregs.xmm_space)[i*16]));
+		memcpy(dst, src, 16);
 	}
 
 
@@ -316,8 +322,12 @@ void AMD64CPUState::setRegs(
 	//TODO: floating point flags and extra fp state, sse  rounding
 	//
 
+	/* DF => string instructions auto-decrement */
+	v.guest_DFLAG = (regs.eflags & (1 << 10)) ? -1 :1;
 	v.guest_CC_OP = 0 /* AMD64G_CC_OP_COPY */;
-	v.guest_CC_DEP1 = regs.eflags & (0xff | (3 << 10)) ;
+	v.guest_CC_DEP1 = regs.eflags & (0xff | (3 << 10));
+	v.guest_CC_DEP2 = 0;
+	v.guest_CC_NDEP = v.guest_CC_DEP1;
 }
 
 

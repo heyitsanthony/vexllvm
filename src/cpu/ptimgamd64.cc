@@ -86,15 +86,6 @@ static inline bool fcompare(unsigned int* a, long d)
 		ldeqd(&a[0], d);
 }
 
-static uint64_t get_rflags(const VexGuestAMD64State& state)
-{
-	uint64_t guest_rflags = LibVEX_GuestAMD64_get_rflags(
-		&const_cast<VexGuestAMD64State&>(state));
-	guest_rflags &= FLAGS_MASK;
-	guest_rflags |= (1 << 1);
-	return guest_rflags;
-}
-
 PTImgAMD64::PTImgAMD64(GuestPTImg* gs, int in_pid)
 : PTImgArch(gs, in_pid)
 , recent_shadow(false)
@@ -185,7 +176,7 @@ bool PTImgAMD64::isMatch(void) const
 		uint64_t guest_rflags, eflags;
 		eflags = regs->eflags;
 		eflags &= FLAGS_MASK;
-		guest_rflags = get_rflags(state);
+		guest_rflags = AMD64CPUState::getRFLAGS(state);
 		if (eflags != guest_rflags)
 			return false;
 	}
@@ -420,7 +411,7 @@ void PTImgAMD64::printUserRegs(std::ostream& os) const
 			<< (void*)user_reg << std::endl;
 	}
 
-	guest_eflags = get_rflags(ref);
+	guest_eflags = AMD64CPUState::getRFLAGS(ref);
 	if ((regs.eflags & FLAGS_MASK) != guest_eflags)
 		os << "***";
 	os << "EFLAGS: " << (void*)(regs.eflags & FLAGS_MASK);
@@ -733,19 +724,20 @@ void PTImgAMD64::vex2ptrace(
 	struct user_regs_struct& r,
 	struct user_fpregs_struct& fp)
 {
+	memset(&r, 0, sizeof(r));
 	for (unsigned i = 0; i < REG_COUNT; i++) {
 		set_reg_user(
 			((uint8_t*)&r), i,
 			get_reg_vex(((const uint8_t*)&v), i));
 	}
 	
-	r.eflags = get_rflags(v);
+	r.eflags = AMD64CPUState::getRFLAGS(v) | 0x200;
 
 	/* XXX: still broken, doesn't handle YMM right */
 	memset(&fp, 0, sizeof(fp));
 	for (unsigned i = 0; i < 16; i++) {
 		memcpy(	((uint8_t*)&fp.xmm_space) + i*16,
-			((const uint8_t*)&v.guest_YMM0)+i*sizeof(v.guest_YMM0),
+			((const uint8_t*)&v.guest_YMM0)+i*32,
 			16);
 	}
 }
@@ -838,7 +830,7 @@ void PTImgAMD64::restore(void)
 {
 	VexGuestAMD64State& state(getVexState());
 
-	state.guest_CC_NDEP = get_rflags(state);
+	state.guest_CC_NDEP = AMD64CPUState::getRFLAGS(state);
 	amd64_trampoline(&state);
 }
 

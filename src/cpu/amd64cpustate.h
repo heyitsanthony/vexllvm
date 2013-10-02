@@ -17,6 +17,8 @@ class SyscallParams;
 class AMD64CPUState : public GuestCPUState
 {
 public:
+	const static unsigned REGFILE_BYTES = 921;
+
 	AMD64CPUState();
 	~AMD64CPUState();
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
@@ -44,6 +46,9 @@ public:
 
 #endif
 	virtual void print(std::ostream& os, const void*) const;
+	static void print(std::ostream& os, const VexGuestAMD64State& vs);
+
+	static uint64_t getRFLAGS(const VexGuestAMD64State& v);
 
 	void setFSBase(uintptr_t base);
 	uintptr_t getFSBase() const;
