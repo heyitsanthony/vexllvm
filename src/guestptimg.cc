@@ -195,11 +195,21 @@ static void setupTraceMe(void)
 
 static void setupChild(char *const argv[], char *const envp[])
 {
-	int     err;
+	int     err, new_env = 0;
 
 	setupTraceMe();
+
+	if (getenv("VEXLLVM_LIBRARY_PATH")) {
+		setenv("LD_LIBRARY_PATH", getenv("VEXLLVM_LIBRARY_PATH"), 1);
+		new_env = 1;
+	}
+
 	if (getenv("VEXLLVM_PRELOAD")) {
 		setenv("LD_PRELOAD", getenv("VEXLLVM_PRELOAD"), 1);
+		new_env = 1;
+	}
+
+	if (new_env) {
 		err = execvp(argv[0], argv);
 	} else {
 		err = execvpe(argv[0], argv, envp);

@@ -3,6 +3,7 @@
 #define GUESTSTATEPTIMG_H
 
 #include <map>
+#include <stdlib.h>
 #include "collection.h"
 #include "guest.h"
 #include "procmap.h"
@@ -25,8 +26,12 @@ public:
 		GuestPTImg		*pt_img;
 		T			*pt_t;
 		pid_t			slurped_pid;
+		const char		*bp;
 
-		pt_t = new T(argv[0]);
+		bp = (getenv("VEXLLVM_REAL_BINPATH"))
+			? getenv("VEXLLVM_REAL_BINPATH")
+			: argv[0];
+		pt_t = new T(bp);
 		pt_img = pt_t;
 		slurped_pid = pt_img->createSlurpedChild(argc, argv, envp);
 		if (slurped_pid <= 0) {
