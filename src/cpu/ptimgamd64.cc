@@ -724,7 +724,8 @@ void PTImgAMD64::vex2ptrace(
 	struct user_regs_struct& r,
 	struct user_fpregs_struct& fp)
 {
-	memset(&r, 0, sizeof(r));
+/* zeroing out the regs struct causes KMC_PTRACE to stop working */
+//	memset(&r, 0, sizeof(r));
 	for (unsigned i = 0; i < REG_COUNT; i++) {
 		set_reg_user(
 			((uint8_t*)&r), i,

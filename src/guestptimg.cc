@@ -225,6 +225,8 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	int		status;
 	guest_ptr	cur_pc, break_addr;
 
+	fprintf(stderr, "[GuestPTImg] creating ptimg from guest\n");
+
 	pid = fork();
 	if (pid < 0) return pid;
 	if (pid == 0) {
@@ -247,13 +249,13 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	pt_arch = NEW_ARCH;
 
 	/* wait for child to SIGTRAP itself */
-	wait(&status);
+	waitpid(pid, &status, 0);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
 
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
 	cur_pc = gs->getCPUState()->getPC();
-	fprintf(stderr, "setting bp on cur_pc=%x\n", cur_pc);
+	fprintf(stderr, "[GuestPTImg] setting bp on cur_pc=%x\n", cur_pc);
 	setBreakpointByPID(pid, cur_pc);
 
 	/* run until child hits entry point */
@@ -284,6 +286,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 
 	entry_pt = cur_pc;
 
+	fprintf(stderr, "[GuestPTImg] Guest state cloned to process %d\n", pid);
 	return pid;
 }
 
@@ -405,7 +408,7 @@ void GuestPTImg::waitForEntry(int pid)
 
 	err = ptrace(PTRACE_CONT, pid, NULL, NULL);
 	assert (err != -1 && "bad ptrace_cont");
-	wait(&status);
+	waitpid(pid, &status, 0);
 
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
 }
