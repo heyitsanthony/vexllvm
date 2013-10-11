@@ -59,7 +59,7 @@ echo -e -n '\x1\x0\x0\x0\x0\x0\x0\x0' >>guest-vmlinux/regs
 head -c737 /dev/zero >>guest-vmlinux/regs
 # xxx maybe should only have 4k stack to test for stack overflows?
 dd if=/dev/zero of=guest-vmlinux/maps/0x1ff8000 bs=4096 count=8
-printf "0x%llx-0x%llx 5 0 [stack]\n" 0x1ff8000 0x02000000 >>guest-vmlinux/mapinfo
+printf "0x%llx-0x%llx 3 0 [stack]\n" 0x1ff8000 0x02000000 >>guest-vmlinux/mapinfo
 
 #dummy fields
 touch guest-vmlinux/argv
