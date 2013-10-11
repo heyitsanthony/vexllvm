@@ -28,6 +28,7 @@ GenLLVM::GenLLVM(const Guest* gs, const char* name)
 , entry_bb(NULL)
 , log_last_store(getenv("VEXLLVM_LAST_STORE"))
 , fake_vsys_reads(getenv("VEXLLVM_FAKE_VSYS") != NULL)
+, use_reloc(true)
 {
 	builder = new IRBuilder<>(getGlobalContext());
 	assert (builder != NULL && "Could not create builder");
@@ -293,7 +294,7 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 			getGlobalContext(), sizeof(void*)*8));
 	}
 #endif
-	if (guest->getMem()->getBase()) {
+	if (guest->getMem()->getBase() && use_reloc) {
 		addr_v = builder->CreateAdd(addr_v,
 			ConstantInt::get(getGlobalContext(),
 				APInt(sizeof(intptr_t)*8,
@@ -344,7 +345,7 @@ Value* GenLLVM::load(Value* addr_v, Type* ty)
 	}
 
 
-	if (guest->getMem()->getBase()) {
+	if (guest->getMem()->getBase() && use_reloc) {
 		addr_v = builder->CreateAdd(addr_v,
 			ConstantInt::get(getGlobalContext(),
 				APInt(sizeof(intptr_t)*8,

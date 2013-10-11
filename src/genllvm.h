@@ -56,6 +56,8 @@ public:
 	llvm::Value* to16x8i(llvm::Value*) const;
 	void memFence(void);
 	void setFakeSysReads(void) { fake_vsys_reads = true; }
+
+	void setUseReloc(bool v) { use_reloc = v; }
 private:
 	llvm::Type* getGuestTy(void);
 	void mkFuncTy(void);
@@ -86,6 +88,7 @@ private:
 	bool			log_last_store;
 
 	bool			fake_vsys_reads;
+	bool			use_reloc;
 };
 
 extern class GenLLVM* theGenLLVM;

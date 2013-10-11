@@ -226,17 +226,29 @@ void VexXlate::dumpLog(std::ostream& os) const
 VexSB* VexXlate::patchBadDecode(const void* guest_bytes, uint64_t guest_addr)
 {
 	const unsigned char *gb = (const unsigned char*)(guest_bytes);
+	char		dumb_buf[128];
 
 	if (arch == VexArchX86) {
 		for (unsigned i = 0; i < 128; i++) {
 			/* windows syscall patch (int 0x23)
 			 * -- pretend it's a linux syscall at int 0x80 */
 			if (gb[i] == 0xcd && gb[i+1] == 0x2e) {
-				char		dumb_buf[128];
 				memcpy(dumb_buf, gb, 128);
 				printf("[VexXlate] PATCH UP@%p\n",
 					(void*)(guest_addr+i));
 				dumb_buf[i+1] = 0x80;
+				return xlate(dumb_buf, guest_addr);
+			}
+		}
+	}
+
+	if (arch == VexArchAMD64) {
+		for (unsigned i = 0; i < 128; i++) {
+			if (gb[i] == 0xfa || gb[i] == 0xfb) {
+				printf("[VexXlate] PATCH UP cli/sti@%p\n",
+					(void*)(guest_addr+i));
+				memcpy(dumb_buf, gb, 128);
+				dumb_buf[i] = 0x90;
 				return xlate(dumb_buf, guest_addr);
 			}
 		}
@@ -273,6 +285,8 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 		/* amd64 reserves 128 bytes below the stack frame
 		 * for turbo-nerd functions like memcpy. kind of breaks things */
 		vbi.guest_stack_redzone_size = 128;
+		/* gs_is_0x60: necessary so kernel code will decode */
+		vbi.guest_amd64_assume_gs_is_0x60 = 1;
 	}
 	vbi.guest_amd64_assume_fs_is_zero = true;	/* XXX LIBVEX FIXME */
 	vta.abiinfo_both = vbi;
