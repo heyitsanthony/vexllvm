@@ -201,4 +201,34 @@ private:
 	guest_ptr	dst;	/* target constant */
 };
 
+#ifdef USE_SVN
+class VexStmtStoreG : public VexStmt
+{
+public:
+	VexStmtStoreG(VexSB* in_parent, const IRStmt* in_stmt);
+	virtual ~VexStmtStoreG(void);
+	virtual void emit(void) const;
+	virtual void print(std::ostream& os) const;
+private:
+	VexExpr		*addr;
+	VexExpr		*data;
+	VexExpr		*guard;
+};
+
+class VexStmtLoadG : public VexStmt
+{
+public:
+	VexStmtLoadG(VexSB* in_parent, const IRStmt* in_stmt);
+	virtual ~VexStmtLoadG(void);
+	virtual void emit(void) const;
+	virtual void print(std::ostream& os) const;
+private:
+	IRLoadGOp	loadg_op; /* conversions */
+	int		dst_tmp;
+	VexExpr		*addr;
+	VexExpr		*alt;
+	VexExpr		*guard;
+};
+#endif
+
 #endif

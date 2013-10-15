@@ -6,6 +6,7 @@
 #include "vexhelpers.h"
 #include "vexexpr.h"
 #include "vexsb.h"
+#include "vexop_macros.h"
 
 #include "vexstmt.h"
 
@@ -514,3 +515,158 @@ void VexStmtExit::print(std::ostream& os) const
 	guard->print(os);
 	os << ") goto {...} " << (void*)dst.o;
 }
+
+#ifdef USE_SVN
+VexStmtStoreG::VexStmtStoreG(VexSB* in_parent, const IRStmt* in_stmt)
+: VexStmt(in_parent, in_stmt)
+, addr(VexExpr::create(this, in_stmt->Ist.StoreG.details->addr))
+, data(VexExpr::create(this, in_stmt->Ist.StoreG.details->data))
+, guard(VexExpr::create(this, in_stmt->Ist.StoreG.details->guard))
+{
+	assert (in_stmt->Ist.StoreG.details->end == Iend_LE);
+}
+
+VexStmtStoreG::~VexStmtStoreG(void)
+{
+	delete addr;
+	delete data;
+	delete guard;
+}
+
+
+void VexStmtStoreG::emit(void) const
+{
+	BasicBlock	*bb_then, *bb_origin, *bb_merge;
+	Value		*guard_v, *data_v, *addr_v;
+	IRBuilder<>	*builder;
+
+	builder = theGenLLVM->getBuilder();
+	guard_v = guard->emit();
+
+	bb_origin = builder->GetInsertBlock();
+	bb_then = BasicBlock::Create(
+		getGlobalContext(),
+		"storeg_then",
+		bb_origin->getParent());
+
+	bb_merge = BasicBlock::Create(
+		getGlobalContext(),
+		"storeg_merge",
+		bb_origin->getParent());
+
+	builder->SetInsertPoint(bb_origin);
+	builder->CreateCondBr(guard_v, bb_then, bb_merge);
+
+	builder->SetInsertPoint(bb_then);
+	addr_v = addr->emit();
+	data_v = data->emit();
+	theGenLLVM->store(addr_v, data_v);
+	builder->CreateBr(bb_merge);
+
+	builder->SetInsertPoint(bb_merge);
+}
+
+void VexStmtStoreG::print(std::ostream& os) const
+{
+	os << "StoreG. if (";
+	guard->print(os);
+	os << ") ";
+	addr->print(os);
+	os << " <- ";
+	data->print(os);
+}
+
+VexStmtLoadG::VexStmtLoadG(VexSB* in_parent, const IRStmt* in_stmt)
+: VexStmt(in_parent, in_stmt)
+, loadg_op(in_stmt->Ist.LoadG.details->cvt)
+, dst_tmp(in_stmt->Ist.LoadG.details->dst)
+, addr(VexExpr::create(this, in_stmt->Ist.LoadG.details->addr))
+, alt(VexExpr::create(this, in_stmt->Ist.LoadG.details->alt))
+, guard(VexExpr::create(this, in_stmt->Ist.LoadG.details->guard))
+{
+	assert (in_stmt->Ist.LoadG.details->end == Iend_LE);
+}
+
+VexStmtLoadG::~VexStmtLoadG(void)
+{
+	delete addr;
+	delete alt;
+	delete guard;
+}
+
+void VexStmtLoadG::emit(void) const
+{
+	Value		*guard_v, *addr_v, *alt_v, *c_v;
+	BasicBlock	*bb_then, *bb_merge, *bb_alt, *bb_origin;
+	PHINode		*pn;
+	IRBuilder<>	*builder;
+
+	builder = theGenLLVM->getBuilder();
+	guard_v = guard->emit();
+	addr_v = addr->emit();
+	alt_v = alt->emit();
+
+	bb_origin = builder->GetInsertBlock();
+	bb_then = BasicBlock::Create(
+		getGlobalContext(), "loadg_then", bb_origin->getParent());
+	bb_alt = BasicBlock::Create(
+		getGlobalContext(), "loadg_alt", bb_origin->getParent());
+	bb_merge = BasicBlock::Create(
+		getGlobalContext(), "loadg_merge", bb_origin->getParent());
+	
+	builder->SetInsertPoint(bb_origin);
+	builder->CreateCondBr(guard_v, bb_then, bb_alt);
+
+	builder->SetInsertPoint(bb_then);
+	switch (loadg_op) {
+	case ILGop_Ident32:
+		c_v = theGenLLVM->load(addr_v, get_i(32));
+		break;
+	case ILGop_8Sto32:
+	case ILGop_8Uto32:
+		c_v = theGenLLVM->load(addr_v, get_i(8));
+		break;
+	case ILGop_16Uto32:
+	case ILGop_16Sto32:
+		c_v = theGenLLVM->load(addr_v, get_i(16));
+		break;
+	default: assert (0 == 1 && "???");
+	}
+
+	switch (loadg_op) {
+	case ILGop_Ident32: break;
+	case ILGop_16Uto32:
+	case ILGop_8Uto32:
+		c_v = builder->CreateZExt(c_v, get_i(32));
+		break;
+	case ILGop_8Sto32:
+	case ILGop_16Sto32:
+		c_v = builder->CreateSExt(c_v, get_i(32));
+		break;
+	default: assert (0 == 1 && "Unknown IRLoadGOp");
+	}
+	builder->CreateBr(bb_merge);
+
+	builder->SetInsertPoint(bb_alt);
+	builder->CreateBr(bb_merge);
+
+	builder->SetInsertPoint(bb_merge);
+
+	pn = builder->CreatePHI(c_v->getType(), 0, "loadg_phi");
+
+	pn->addIncoming(c_v, bb_then);
+	pn->addIncoming(alt_v, bb_alt);
+	parent->setRegValue(dst_tmp, pn);
+}
+
+void VexStmtLoadG::print(std::ostream& os) const
+{
+	os << "LoadG. t" << dst_tmp;
+	os << " <- ";
+	guard->print(os);
+	os << " ? *";
+	addr->print(os);
+	os << " : ";
+	alt->print(os);
+}
+#endif

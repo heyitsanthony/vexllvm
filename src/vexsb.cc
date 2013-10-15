@@ -222,8 +222,12 @@ VexStmt* VexSB::loadNextInstruction(const IRStmt* stmt)
 	TAGOP(LLSC);
 	TAGOP(Dirty);
 	TAGOP(MBE);
+#ifdef USE_SVN
+	TAGOP(StoreG);
+	TAGOP(LoadG);
+#endif
 	default:
-	printf("???\n");
+	fprintf(stderr, "??? tag=%x\n", stmt->tag);
 	assert (0 && "SIMPLE HUMAN");
 	break;
 	}
