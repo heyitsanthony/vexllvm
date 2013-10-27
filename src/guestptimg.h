@@ -96,6 +96,9 @@ public:
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return argv_ptrs; }
 
+	virtual guest_ptr getArgcPtr(void) const { return argc_ptr; }
+
+
 	void setBreakpointByPID(pid_t pid, guest_ptr addr);
 	void resetBreakpointByPID(pid_t pid, guest_ptr addr);
 
@@ -139,6 +142,7 @@ private:
 	mutable Symbols			*symbols; // lazy loaded
 	mutable Symbols			*dyn_symbols;
 	std::vector<guest_ptr>		argv_ptrs;
+	guest_ptr			argc_ptr;
 
 	Arch::Arch			arch;
 };

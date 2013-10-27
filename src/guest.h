@@ -69,6 +69,8 @@ public:
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return std::vector<guest_ptr>(); }
 
+	virtual guest_ptr getArgcPtr(void) const { return guest_ptr(0); }
+
 	const GuestABI* getABI(void) const { return abi; }
 protected:
 	friend class GuestPTImg;

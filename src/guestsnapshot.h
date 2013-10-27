@@ -20,6 +20,8 @@ public:
 	virtual std::vector<guest_ptr> getArgvPtrs(void) const
 	{ return argv_ptrs; }
 
+	virtual guest_ptr getArgcPtr(void) const { return argc_ptr; }
+
 	const std::string& getPath(void) const { return srcdir; }
 
 	bool getPlatform(
@@ -44,6 +46,7 @@ private:
 	Symbols			*syms;
 	Symbols			*dyn_syms;
 	std::vector<guest_ptr>	argv_ptrs;
+	guest_ptr		argc_ptr;
 
 	std::string		srcdir;
 };

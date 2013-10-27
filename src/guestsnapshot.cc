@@ -103,6 +103,15 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	}
 	END_F()
 
+	argc_ptr.o = 0;
+	SETUP_F_R_MAYBE("argc")
+	if (f != NULL) {
+		uint64_t	p;
+		if (fscanf(f, "%p\n", ((void**)&p)) == 1)
+			argc_ptr.o = p;
+		END_F()
+	}
+
 	loadMappings();
 	syms = loadSymbols("syms");
 	dyn_syms = loadSymbols("dynsyms");
@@ -336,6 +345,13 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 		fprintf(f, "%p\n", (void*)(it)->o);
 	}
 	END_F()
+
+	if (g->getArgcPtr() != 0) {
+		SETUP_F_W("argv");
+		fprintf(f, "%p\n", (void*)g->getArgcPtr().o);
+		END_F();
+	}
+
 
 	saveMappings(g, dirpath);
 	saveSymbols(g->getSymbols(), dirpath, "syms");

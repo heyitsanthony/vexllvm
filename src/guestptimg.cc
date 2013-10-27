@@ -255,7 +255,8 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
 	cur_pc = gs->getCPUState()->getPC();
-	fprintf(stderr, "[GuestPTImg] setting bp on cur_pc=%x\n", cur_pc);
+	fprintf(stderr,
+		"[GuestPTImg] setting bp on cur_pc=%p\n", (void*)cur_pc.o);
 	setBreakpointByPID(pid, cur_pc);
 
 	/* run until child hits entry point */
@@ -347,7 +348,8 @@ pid_t GuestPTImg::createSlurpedChild(
 	guest_ptr		in_argv;
 
 	argv_ptrs.clear();
-	argc = mem->readNative(pt_arch->getStackPtr());
+	argc_ptr = pt_arch->getStackPtr();
+	argc = mem->readNative(argc_ptr);
 	in_argv = guest_ptr(mem->readNative(pt_arch->getStackPtr(), 1));
 #ifdef __arm__
 	/* so so stupid, but I can't figure out how to get argv[0]! */
