@@ -913,34 +913,19 @@ Value* VexExprBinop64HLtoV128::emit(void) const
 	return builder->CreateBitCast(v_128hl, get_vt(16, 8), "64HLtoV128");
 }
 
-/* (i32, i32) -> i64 */
-Value* VexExprBinop32HLto64::emit(void) const
-{
-	Value		*v_hi, *v_lo;
+/* (i_x, i_x) -> i_y */
+#define X_HL_TO_Y_EMIT(x,y)	\
+Value* VexExprBinop##x##HLto##y::emit(void) const	\
+{	\
+	Value		*v_hi, *v_lo;	\
+	BINOP_SETUP	\
+	v_hi = builder->CreateZExt(v1, get_i(y));	\
+	v_lo = builder->CreateZExt(v2, get_i(y));	\
+	return builder->CreateOr(v_lo, builder->CreateShl(v_hi, get_c(y, x))); }
 
-	BINOP_SETUP
-
-	v_hi = builder->CreateZExt(v1, get_i(64));
-	v_lo = builder->CreateZExt(v2, get_i(64));
-
-	return builder->CreateOr(
-		v_lo,
-		builder->CreateShl(v_hi, get_c(64, 32)));
-}
-
-Value* VexExprBinop16HLto32::emit(void) const
-{
-	Value		*v_hi, *v_lo;
-
-	BINOP_SETUP
-
-	v_hi = builder->CreateZExt(v1, get_i(32));
-	v_lo = builder->CreateZExt(v2, get_i(32));
-
-	return builder->CreateOr(
-		v_lo,
-		builder->CreateShl(v_hi, get_c(32, 16)));
-}
+X_HL_TO_Y_EMIT(16, 32)
+X_HL_TO_Y_EMIT(8, 16)
+X_HL_TO_Y_EMIT(32, 64)
 
 #define BINOP_EMIT(x,y)				\
 Value* VexExprBinop##x::emit(void) const	\
