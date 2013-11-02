@@ -859,29 +859,31 @@ Value* VexExprUnop32UtoV128::emit(void) const
 }
 
 #ifdef USE_SVN
-/* returns 16-bit value */
-Value* VexExprUnopGetMSBs8x16::emit(void) const
-{
-	Value	*ret, *vec;
 
-	UNOP_SETUP
 
-	ret = get_c(16, 0);
-	vec = builder->CreateBitCast(v1, get_vt(16, 8), "GetMSBs8x16");
+/* returns x-bit value */
+#define GETMSBS_8xN_EMIT(x)	\
+Value* VexExprUnopGetMSBs8x##x::emit(void) const	\
+{							\
+	Value	*ret, *vec;				\
+	UNOP_SETUP	\
+	ret = get_c(x, 0);	\
+	vec = builder->CreateBitCast(v1, get_vt(x, 8), "GetMSBs8x"#x);	\
+	for (unsigned i = 0; i < x; i++) {	\
+		Value*	cur_v;			\
+		cur_v = builder->CreateExtractElement(vec, get_32i(i));	\
+		/* pluck off top bit */					\
+		cur_v = builder->CreateLShr(cur_v, get_c(8, 7));	\
+		cur_v = builder->CreateZExt(cur_v, get_i(x));		\
+		/* shift to position */					\
+		cur_v = builder->CreateShl(cur_v, get_c(x, i));		\
+		ret = builder->CreateOr(ret, cur_v);			\
+	}	\
+	return ret; }
 
-	for (unsigned i = 0; i < 16; i++) {
-		Value*	cur_v;
-		cur_v = builder->CreateExtractElement(vec, get_32i(i));
-		// pluck off top bit
-		cur_v = builder->CreateLShr(cur_v, get_c(8, 7));
-		cur_v = builder->CreateZExt(cur_v, get_i(16));
-		// shift to position
-		cur_v = builder->CreateShl(cur_v, get_c(16, i));
-		ret = builder->CreateOr(ret, cur_v);
-	}
+GETMSBS_8xN_EMIT(16)
+GETMSBS_8xN_EMIT(8)
 
-	return ret;
-}
 #endif
 
 Value* VexExprUnop64UtoV128::emit(void) const

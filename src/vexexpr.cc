@@ -121,6 +121,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(ExpCmpNE16);
 	BINOP_TAGOP(ExpCmpNE32);
 	BINOP_TAGOP(ExpCmpNE64);
+	UNOP_TAGOP(GetMSBs8x8);
 	UNOP_TAGOP(GetMSBs8x16);
 	QOP_TAGOP(MAddF64);
 #endif
