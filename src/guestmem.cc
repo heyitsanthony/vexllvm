@@ -601,10 +601,9 @@ int GuestMem::munmap(guest_ptr addr, size_t len)
 
 	/* TODO make sure this is a real mapped region in a better
 	   way then if munmap fails? */
-	if (!lookupMapping(addr, cur_mapping)) {
+	if (!isMapped(addr)) {
 		std::cerr << "[VEXLLVM] trying to munmap missing mapping: ";
 		m.print(std::cerr);
-		std::cerr << '\n';
 	}
 
 	err = sys_munmap(getHostPtr(addr), len);
@@ -774,6 +773,5 @@ void GuestMem::nameMapping(guest_ptr addr, const std::string& s)
 	/* fuck it */
 	const_cast<GuestMem::Mapping*>(m)->name = new_s;
 }
-
 
 void GuestMem::import(GuestMem* m) { assert (0 == 1 && "STUB"); }

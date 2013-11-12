@@ -31,6 +31,8 @@ using namespace std;
 #define BUFSZ		1024
 #define BUFSZ_STR	"1024"	/* ugh, stringification is fucked */
 
+static void saveMappings(const Guest* g, const char* dirpath);
+
 GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 {
 	GuestSnapshot	*ret;
@@ -305,9 +307,7 @@ GuestSnapshot::~GuestSnapshot(void)
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
 
-/* lame-o procfs */
-/* XXX this isn't cross-endian, so be careful! */
-void GuestSnapshot::save(const Guest* g, const char* dirpath)
+static void saveSundries(const Guest* g, const char* dirpath)
 {
 	ssize_t	wsz;
 
@@ -351,11 +351,130 @@ void GuestSnapshot::save(const Guest* g, const char* dirpath)
 		fprintf(f, "%p\n", (void*)g->getArgcPtr().o);
 		END_F();
 	}
+}
 
-
+/* lame-o procfs */
+/* XXX this isn't cross-endian, so be careful! */
+void GuestSnapshot::save(const Guest* g, const char* dirpath)
+{
+	saveSundries(g, dirpath);
 	saveMappings(g, dirpath);
 	saveSymbols(g->getSymbols(), dirpath, "syms");
 	saveSymbols(g->getDynSymbols(), dirpath, "dynsyms");
+}
+
+static void saveSymbolsDiff(
+	const char* dirname, const char* last_dirname, const char* symfile)
+{
+	char	last_path[256], rl_path[256], target_path[256];
+	ssize_t	rl_sz;
+	int	err;
+
+
+	sprintf(last_path, "%s/%s", last_dirname, symfile);
+	sprintf(target_path, "%s/%s", dirname, symfile);
+	rl_sz = readlink(last_path, rl_path, sizeof(rl_path));
+	if (rl_sz == -1)
+		strcpy(rl_path, last_path);
+	else
+		rl_path[rl_sz] = '\0';
+	err = symlink(rl_path, target_path);
+	(void)err;
+}
+
+void saveMappingsDiff(
+	const Guest* g,
+	const char* dirpath,
+	const char* last_dirname,
+	const std::set<guest_ptr>& changed_maps)
+{
+	/* save guestmem to mapinfo file */
+	SETUP_F_W("mapinfo")
+
+	/* force dir to exist */
+	snprintf(buf, BUFSZ, "%s/maps", dirpath);
+	mkdir(buf, 0755);
+
+	/* add mappings */
+	list<GuestMem::Mapping> maps = g->getMem()->getMaps();
+	foreach (it, maps.begin(), maps.end()) {
+		FILE			*map_f;
+		GuestMem::Mapping	mapping(*it);
+		ssize_t			sz;
+		char			*buffer;
+		char			last_buf[BUFSZ];
+		struct stat		s;
+
+		/* range, prot, type, name */
+		fprintf(f, "%p-%p %d %d %s\n",
+			(void*)mapping.offset.o,
+			(void*)mapping.end().o,
+			mapping.req_prot,
+			(int)mapping.type,
+			mapping.getName().c_str());
+
+		snprintf(buf, BUFSZ, "%s/maps/%p",
+			dirpath,
+			(void*)mapping.offset.o);
+		snprintf(last_buf, BUFSZ, "%s/maps/%p",
+			last_dirname,
+			(void*)mapping.offset.o);
+
+		/* no change and exists in diff? setup symlink */
+		if (	changed_maps.count(mapping.offset) == 0 &&
+			stat(last_buf, &s) == 0)
+		{
+			char	real_p[BUFSZ];
+			ssize_t	rl_sz;
+
+			rl_sz = readlink(last_buf, real_p, sizeof(real_p));
+			if (rl_sz == -1)
+				strcpy(real_p, last_buf);
+			else
+				real_p[rl_sz] = '\0';
+			if (symlink(real_p, buf) == 0)
+				continue;
+		}
+
+		/* changed / doesn't exist in prior sshot, write out */
+		map_f = fopen(buf, "w");
+		assert (map_f && "Couldn't open mem range file");
+
+		buffer = new char[mapping.length];
+		g->getMem()->memcpy(buffer, mapping.offset, mapping.length);
+		sz = fwrite(buffer, mapping.length, 1, map_f);
+		delete [] buffer;
+		assert (sz == 1 && "Failed to write mapping");
+
+		fclose(map_f);
+	}
+
+	END_F()
+
+}
+
+void GuestSnapshot::saveDiff(
+	const Guest* g,
+	const char* dirname,
+	const char* last_dirname,
+	const std::set<guest_ptr>& changed_maps)
+{
+	char	full_last_dir[512];
+
+	if (last_dirname[0] == '/') {
+		strcpy(full_last_dir, last_dirname);
+	} else {
+		char	*r;
+		r = getcwd(full_last_dir, 512);
+		assert (r != NULL);
+		strcat(full_last_dir, "/");
+		strcat(full_last_dir, last_dirname);
+	}
+
+	saveSundries(g, dirname);
+	saveMappingsDiff(g, dirname, full_last_dir, changed_maps);
+	saveSymbolsDiff(dirname, full_last_dir, "syms");
+	saveSymbolsDiff(dirname, full_last_dir, "dynsyms");
 }
 
 void GuestSnapshot::saveSymbols(
@@ -378,7 +497,7 @@ done:
 	END_F();
 }
 
-void GuestSnapshot::saveMappings(const Guest* g, const char* dirpath)
+static void saveMappings(const Guest* g, const char* dirpath)
 {
 	/* save guestmem to mapinfo file */
 	SETUP_F_W("mapinfo")

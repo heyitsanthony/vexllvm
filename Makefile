@@ -157,6 +157,7 @@ BINTARGETS=	elf_run jit_test	\
 		ss_run			\
 		frag_run		\
 		pt_run pt_xchk		\
+		ss_chkpt		\
 		vexllvm_ss		\
 		dump_loader
 

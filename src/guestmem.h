@@ -65,6 +65,10 @@ public:
 	void nameMapping(guest_ptr addr, const std::string& s);
 	void recordMapping(Mapping& mapping);
 	bool lookupMapping(guest_ptr addr, Mapping& mapping) const;
+	bool isMapped(guest_ptr addr) const {
+		return (lookupMapping(addr) != NULL);
+	}
+
 	std::list<Mapping> getMaps(void) const;
 	void setType(guest_ptr addr, Mapping::MapType);
 

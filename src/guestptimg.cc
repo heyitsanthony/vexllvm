@@ -44,9 +44,9 @@
 GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 : Guest(binpath)
 , pt_arch(NULL)
+, arch(Arch::getHostArch())
 , symbols(NULL)
 , dyn_symbols(NULL)
-, arch(Arch::getHostArch())
 {
 	bool	use_32bit_arch;
 
@@ -93,33 +93,24 @@ void GuestPTImg::handleChild(pid_t pid)
 	wait(NULL);
 }
 
-
-#if defined(__amd64__)
-#define NEW_ARCH	\
-	(arch != Arch::I386)	\
-	? (PTImgArch*)(new PTImgAMD64(this, pid))	\
-	: (PTImgArch*)(new PTImgI386(this, pid))
-#elif defined(__arm__)
-#define NEW_ARCH	new PTImgARM(this, pid);
-#else
-#define NEW_ARCH	0; assert (0 == 1 && "UNKNOWN PTRACE HOST ARCHITECTURE! AIEE");
-#endif
-
-
 void GuestPTImg::attachSyscall(int pid)
 {
 	int	err, status;
 
+	/* NOTE: this stops immediately before a syscall... */
 	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
+	assert (err != -1);
 	wait(&status);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
 //	fprintf(stderr, "Got syscall from PID=%d\n", pid);
-//
-#if defined(__amd64__)
-
-	/* slurp brains after trap code is removed so that we don't
-	 * copy the trap code into the parent process */
 	slurpBrains(pid);
+	fixupSyscallRegs(pid);
+}
+
+void GuestPTImg::fixupSyscallRegs(int pid)
+{
+#if defined(__amd64__)
+	int	err;
 
 	/* URK. syscall's RAX isn't stored in RAX!?? */
 	uint8_t* x = (uint8_t*)getMem()->getHostPtr(getCPUState()->getPC());
@@ -159,7 +150,7 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	// assert (entry_pt.o == 0 && "Only support attaching immediately");
 	fprintf(stderr, "Attaching to PID=%d\n", pid);
 
-	pt_arch = NEW_ARCH;
+	pt_arch = NEW_ARCH_PT;
 
 	err = ptrace(PTRACE_ATTACH, pid, 0, NULL, NULL);
 	assert (err != -1 && "Couldn't attach to process");
@@ -239,14 +230,14 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 		/* parent should have set breakpoint at current IP
 		 * ... jump to it */
 		cpu_state = gs->getCPUState();
-		pt_arch = NEW_ARCH;
+		pt_arch = NEW_ARCH_PT;
 		pt_arch->restore();
 
 		assert (0 == 1 && "OOPS");
 		exit(-1);
 	}
 
-	pt_arch = NEW_ARCH;
+	pt_arch = NEW_ARCH_PT;
 
 	/* wait for child to SIGTRAP itself */
 	waitpid(pid, &status, 0);
@@ -307,7 +298,7 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* failed to create child */
 	if (pid < 0) return pid;
 
-	pt_arch = NEW_ARCH;
+	pt_arch = NEW_ARCH_PT;
 
 	/* wait for child to call execve and send us a trap signal */
 	wait(&status);

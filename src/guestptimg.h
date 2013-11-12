@@ -11,6 +11,17 @@
 class Symbols;
 class PTImgArch;
 
+#if defined(__amd64__)
+#define NEW_ARCH_PT	\
+	(arch != Arch::I386)	\
+	? (PTImgArch*)(new PTImgAMD64(this, pid))	\
+	: (PTImgArch*)(new PTImgI386(this, pid))
+#elif defined(__arm__)
+#define NEW_ARCH_PT	new PTImgARM(this, pid);
+#else
+#define NEW_ARCH_PT	0; assert (0 == 1 && "UNKNOWN PTRACE HOST ARCHITECTURE! AIEE");
+#endif
+
 class GuestPTImg : public Guest
 {
 public:
@@ -123,13 +134,15 @@ protected:
 	virtual void handleChild(pid_t pid);
 
 	virtual void slurpBrains(pid_t pid);
+	virtual pid_t createSlurpedAttach(int pid);
+	void attachSyscall(int pid);
+	void fixupSyscallRegs(int pid);
 
 	PTImgArch		*pt_arch;
+	Arch::Arch		arch;
 	PtrList<ProcMap>	mappings;
+	guest_ptr		entry_pt;
 private:
-	pid_t createSlurpedAttach(int pid);
-
-	void attachSyscall(int pid);
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);
 
@@ -137,14 +150,11 @@ private:
 
 	void waitForEntry(int pid);
 
-	guest_ptr			entry_pt;
 	std::map<guest_ptr, uint64_t>	breakpoints;
 	mutable Symbols			*symbols; // lazy loaded
 	mutable Symbols			*dyn_symbols;
 	std::vector<guest_ptr>		argv_ptrs;
 	guest_ptr			argc_ptr;
-
-	Arch::Arch			arch;
 };
 
 #endif

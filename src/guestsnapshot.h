@@ -2,6 +2,7 @@
 #define GUESTSNAPSHOT_H
 
 #include <list>
+#include <set>
 #include "guest.h"
 
 class GuestSnapshot : public Guest
@@ -11,6 +12,12 @@ public:
 	static char* readMemory(const char* dirname, guest_ptr p, unsigned int len);
 	virtual ~GuestSnapshot(void);
 	static void save(const Guest*, const char* dirname);
+	static void saveDiff(
+		const Guest*,
+		const char* dirname,
+		const char* last_dirname,
+		const std::set<guest_ptr>& changed_maps);
+
 	virtual guest_ptr getEntryPoint(void) const { return entry_pt; }
 	virtual Arch::Arch getArch(void) const { return arch; }
 
@@ -30,7 +37,6 @@ protected:
 	GuestSnapshot(const char* dirname);
 
 private:
-	static void saveMappings(const Guest* g, const char* dirpath);
 	static void saveSymbols(
 		const Symbols* g_syms,
 		const char* dirpath,

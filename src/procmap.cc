@@ -283,6 +283,20 @@ void ProcMap::ptraceCopy(pid_t pid, int prot)
 	}
 }
 
+ProcMap* ProcMap::create(
+	GuestMem* in_mem, pid_t pid, const char* mapline, bool _copy)
+{
+	ProcMap	*pm(new ProcMap(in_mem, pid, mapline, _copy));
+
+	if (pm->mmap_fd == -1) {
+		delete pm;
+		pm = NULL;
+	}
+
+	return pm;
+}
+
+
 ProcMap::ProcMap(GuestMem* in_mem, pid_t pid, const char* mapline, bool _copy)
 : mmap_base(0)
 , mmap_fd(-1)
@@ -303,6 +317,10 @@ ProcMap::ProcMap(GuestMem* in_mem, pid_t pid, const char* mapline, bool _copy)
 		libname);
 
 	assert (rc >= 0);
+
+	/* don't remap */
+	if (mem->isMapped(mem_begin))
+		return;
 
 	if (dump_maps) fprintf(stderr, "ProcMap: %s", mapline);
 
@@ -346,7 +364,10 @@ void ProcMap::slurpMappings(
 		if (fgets(line_buf, 256, f) == NULL)
 			break;
 
-		mapping = new ProcMap(m, pid, line_buf, do_copy);
+		mapping = ProcMap::create(m, pid, line_buf, do_copy);
+		if (mapping == NULL)
+			continue;
+
 		ents.add(mapping);
 		m->nameMapping(mapping->getBase(), mapping->getLib());
 	}
@@ -356,14 +377,16 @@ void ProcMap::slurpMappings(
 	/* handle the hidden timers page */
 	/* there is nothing I don't hate about this */
 	if (probe_fake_timers()) {
-		fprintf(stderr, "[ProcMap] !!! Found fake timer pages\n");
-		mapping = new ProcMap(
+		// fprintf(stderr, "[ProcMap] !!! Found fake timer pages\n");
+		mapping = ProcMap::create(
 			m,
 			pid,
 			"ffffffffff5fe000-ffffffffff600000  "
 			"r--p 00000000 00:00 0 [FAKEtimers]");
-		ents.add(mapping);
-		m->nameMapping(mapping->getBase(), mapping->getLib());
+		if (mapping != NULL) {
+			ents.add(mapping);
+			m->nameMapping(mapping->getBase(), mapping->getLib());
+		}
 	}
 #endif
 }
