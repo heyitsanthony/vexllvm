@@ -25,7 +25,7 @@ int ProcMap::getProt(void) const
 }
 
 #ifdef __amd64__
-#define STACK_EXTEND_BYTES	0xf0000
+#define STACK_EXTEND_BYTES	0x40000
 
 #include <setjmp.h>
 #include <signal.h>
@@ -288,7 +288,7 @@ ProcMap* ProcMap::create(
 {
 	ProcMap	*pm(new ProcMap(in_mem, pid, mapline, _copy));
 
-	if (pm->mmap_fd == -1) {
+	if (pm->mem_end.o == 0) {
 		delete pm;
 		pm = NULL;
 	}
@@ -319,8 +319,10 @@ ProcMap::ProcMap(GuestMem* in_mem, pid_t pid, const char* mapline, bool _copy)
 	assert (rc >= 0);
 
 	/* don't remap */
-	if (mem->isMapped(mem_begin))
+	if (mem->isMapped(mem_begin)) {
+		mem_end.o = 0;
 		return;
+	}
 
 	if (dump_maps) fprintf(stderr, "ProcMap: %s", mapline);
 

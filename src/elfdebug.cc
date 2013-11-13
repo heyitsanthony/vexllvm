@@ -13,17 +13,10 @@
 
 #include <stdio.h>
 
-Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
+Symbols* ElfDebug::getSymsAll(ElfDebug* ed, uintptr_t base)
 {
-	Symbols		*ret;
 	Symbol		*s;
-	ElfDebug	*ed;
-
-	ed = new ElfDebug(elf_path);
-	if (ed->is_valid == false) {
-		delete ed;
-		return NULL;
-	}
+	Symbols		*ret;
 
 	ret = new Symbols();
 	while ((s = ed->nextSym()) != NULL) {
@@ -38,6 +31,37 @@ Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 		delete s;
 	}
 
+	return ret;
+}
+
+Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
+{
+	Symbols		*ret;
+	ElfDebug	*ed;
+
+	ed = new ElfDebug(elf_path);
+	if (ed->is_valid == false) {
+		delete ed;
+		return NULL;
+	}
+
+	ret = getSymsAll(ed, base);
+	delete ed;
+	return ret;
+}
+
+Symbols* ElfDebug::getSyms(const void* base)
+{
+	Symbols		*ret;
+	ElfDebug	*ed;
+
+	ed = new ElfDebug(base);
+	if (ed->is_valid == false) {
+		delete ed;
+		return NULL;
+	}
+
+	ret = getSymsAll(ed, (uintptr_t)base);
 	delete ed;
 	return ret;
 }
@@ -65,6 +89,35 @@ Symbols* ElfDebug::getLinkageSyms(
 	return ret;
 
 }
+
+ElfDebug::ElfDebug(const void* base)
+: is_valid(false)
+, fd(-1)
+, img((char*)(const_cast<void*>(base)))
+, img_byte_c(4096) /* XXX */
+, rela_tab(NULL)
+, dynsymtab(NULL)
+{
+	elf_arch = ElfImg::getArch(base);
+	if (elf_arch == Arch::Unknown) return;
+
+	/* plow through headers */
+	switch (elf_arch) {
+	case Arch::ARM:
+	case Arch::I386:
+		setupTables<Elf32_Ehdr, Elf32_Shdr, Elf32_Sym>();
+		break;
+
+	case Arch::X86_64:
+		setupTables<Elf64_Ehdr, Elf64_Shdr, Elf64_Sym>();
+		break;
+	default:
+		assert (0 ==1 && "elf no bueno");
+	}
+
+	is_valid = true;
+}
+
 
 ElfDebug::ElfDebug(const char* path)
 : is_valid(false)
@@ -107,8 +160,10 @@ ElfDebug::ElfDebug(const char* path)
 ElfDebug::~ElfDebug(void)
 {
 	if (!is_valid) return;
-	munmap(img, img_byte_c);
-	close(fd);
+	if (fd != -1) {
+		munmap(img, img_byte_c);
+		close(fd);
+	}
 }
 
 template <typename Elf_Ehdr, typename Elf_Shdr, typename Elf_Sym>

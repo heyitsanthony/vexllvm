@@ -72,6 +72,12 @@ public:
 	virtual guest_ptr getArgcPtr(void) const { return guest_ptr(0); }
 
 	const GuestABI* getABI(void) const { return abi; }
+	/* XXX: need some concept of a 'platform' */
+	/* XXX: need some way to track threads-- multiple guestcpustates */
+
+
+	/* XXX: does this go here even? */
+	void patchVDSO(void);
 protected:
 	friend class GuestPTImg;
 	void setBinPath(const char* b);

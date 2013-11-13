@@ -14,11 +14,14 @@ public:
 	static Symbols* getSyms(const char* elf_path, 
 		uintptr_t base = 0);
 
+	static Symbols* getSyms(const void* base);
+
 	static Symbols* getLinkageSyms(
 		const GuestMem* m, const char* elf_path);
 
 private:
 	ElfDebug(const char* path);
+	ElfDebug(const void* base);
 	virtual ~ElfDebug(void);
 	template <
 		typename Elf_Ehdr, typename Elf_Shdr,
@@ -33,6 +36,8 @@ private:
 	Symbol	*nextLinkageSym32(const GuestMem* m);
 	Symbol	*nextLinkageSym64(const GuestMem* m);
 	bool isExec(void) const { return is_exec; }
+
+	static Symbols* getSymsAll(ElfDebug* ed, uintptr_t base);
 
 	bool	is_valid;
 	bool	is_exec;

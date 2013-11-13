@@ -307,6 +307,20 @@ bool GuestMem::lookupMapping(guest_ptr addr, Mapping& mapping) const
 	return true;
 }
 
+
+bool GuestMem::lookupMapping(const char* name, Mapping& mapping) const
+{
+	foreach (it, maps.begin(), maps.end()) {
+		const Mapping	*m(it->second);
+		if (m->name && *(m->name) == name) {
+			mapping = *m;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /* return mapping that begins at addr */
 const GuestMem::Mapping* GuestMem::lookupMapping(guest_ptr addr) const
 {
@@ -385,8 +399,11 @@ std::list<GuestMem::Mapping> GuestMem::getMaps(void) const
 
 void GuestMem::Mapping::print(std::ostream& os) const
 {
-	os	<< "Addr: " << (void*)offset.o << "--" << (void*)end().o
-		<< ". ReqProt=" << std::hex << req_prot
+	os	<< "Addr: " << (void*)offset.o << "--" << (void*)end().o;
+
+	if (name != NULL) os << ". Name=" << *name;
+
+	os	<< ". ReqProt=" << std::hex << req_prot
 		<< ". CurProt=" << cur_prot
 		<< std::endl;
 }

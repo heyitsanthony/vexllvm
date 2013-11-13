@@ -8,7 +8,10 @@
 #include <stdio.h>
 #include <assert.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
+#include "Sugar.h"
+#include "vdso/vdso.h"
 #include "util.h"
 #include "symbols.h"
 #include "guestcpustate.h"
@@ -153,4 +156,31 @@ void Guest::toCore(const char* path) const
 	}
 
 	ElfImg::writeCore(this, os);
+}
+
+/* this is kind of platform specific, not sure if it should go here */
+void Guest::patchVDSO(void)
+{
+	GuestMem::Mapping	m;
+	Symbols			*vdso_syms;
+
+	if (!mem->lookupMapping("[vdso]", m))
+		return;
+
+	vdso_syms = ElfDebug::getSyms(mem->getHostPtr(m.offset));
+	if (vdso_syms == NULL)
+		return;
+
+	mem->mprotect(m.offset, m.length, m.cur_prot | PROT_WRITE);
+	for (unsigned i = 0; vdso_tab[i].ve_f; i++) {
+		const Symbol	*s(vdso_syms->findSym(vdso_tab[i].ve_name));
+		guest_ptr	fn_base(m.offset.o + (s->getBaseAddr() & 0xfff));
+
+		if (s == NULL) continue;
+
+		mem->memcpy(fn_base, vdso_tab[i].ve_f, vdso_tab[i].ve_sz);
+	}
+	mem->mprotect(m.offset, m.length, m.cur_prot);
+
+	delete vdso_syms;
 }

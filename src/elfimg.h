@@ -44,6 +44,10 @@ public:
 	static Arch::Arch getArch(const char* fname)
 	{ return readHeader(fname, false); }
 
+	static Arch::Arch getArch(const void* base)
+	{ bool x; return readHeaderMem((const uint8_t*)base, false, x); }
+
+
 	static bool isDynamic(const char* fname)
 	{ bool x; readHeader(fname, false, x); return x; }
 
@@ -53,10 +57,9 @@ public:
 	static void writeCore(const Guest *gs, std::ostream& os);
 
 private:
-	ElfImg(const char* fname, Arch::Arch arch, bool linked,
-		bool map_segs);
-	ElfImg(GuestMem* m, const char* fname, Arch::Arch arch,
-		bool linked, bool map_segs);
+	ElfImg(const char* fname, Arch::Arch arch, bool map_segs);
+	ElfImg(GuestMem* m, const char* fname, Arch::Arch arch, bool map_segs);
+
 	void setup(void);
 	void setupBits(void);
 	void setupImgMMap(void);
@@ -70,6 +73,10 @@ private:
 
 	static Arch::Arch readHeader(const char* fname,
 		bool require_exe, bool &is_dyn);
+	static Arch::Arch readHeaderMem(
+		const uint8_t* ident,
+		bool require_exe,
+		bool& is_dyn);
 
 	static Arch::Arch readHeader32(const Elf32_Ehdr* hdr,
 		bool require_exe);
@@ -91,8 +98,7 @@ private:
 		Elf64_Ehdr	*hdr64;
 	};
 
-	ElfImg* interp;
-	bool linked;
+	ElfImg			*interp;
 	unsigned		address_bits;
 	std::string		library_root;
 	Arch::Arch		arch;

@@ -69,6 +69,9 @@ public:
 		return (lookupMapping(addr) != NULL);
 	}
 
+
+	bool lookupMapping(const char* name, Mapping& mapping) const;
+
 	std::list<Mapping> getMaps(void) const;
 	void setType(guest_ptr addr, Mapping::MapType);
 

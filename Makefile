@@ -99,9 +99,11 @@ OBJSLLVM=	vexxlate.o		\
 		vexexecfastchk.o	\
 		vexhelpers.o		\
 
+VDSO_OBJ=	vdso/vdso_none.o
+
 ifeq ($(shell uname -m), armv7l)
 CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/ -lcrypto -lcrypt -lrt -lpthread
-OBJBASE += cpu/ptimgarm.o
+OBJBASE += cpu/ptimgarm.o vdso/vdso_none.s
 VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
 endif
 
@@ -110,7 +112,10 @@ VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
 OBJBASE +=	cpu/ptimgamd64.o	\
 		cpu/ptimgi386.o		\
 		cpu/amd64_trampoline.o
+VDSO_OBJ= vdso/vdso_x64.o
 endif
+
+OBJBASE += $(VDSO_OBJ)
 
 
 

@@ -35,7 +35,7 @@ ElfImg* ElfImg::create(const char* fname, bool linked, bool map_segs)
 	Arch::Arch arch = readHeader(fname, linked);
 	if(arch == Arch::Unknown)
 		return NULL;
-	return new ElfImg(fname, arch, linked, map_segs);
+	return new ElfImg(fname, arch, map_segs);
 }
 
 ElfImg* ElfImg::create(GuestMem* m, const char* fname, bool linked, bool map_segs)
@@ -43,7 +43,7 @@ ElfImg* ElfImg::create(GuestMem* m, const char* fname, bool linked, bool map_seg
 	Arch::Arch arch = readHeader(fname, linked);
 	if(arch == Arch::Unknown)
 		return NULL;
-	return new ElfImg(m, fname, arch, linked, map_segs);
+	return new ElfImg(m, fname, arch, map_segs);
 }
 
 ElfImg::~ElfImg(void)
@@ -82,9 +82,8 @@ void ElfImg::setupBits(void)
 	}
 }
 
-ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked, bool map_segs)
+ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool map_segs)
 : interp(NULL)
-, linked(in_linked)
 , arch(in_arch)
 , owns_mem(true)
 {
@@ -98,9 +97,8 @@ ElfImg::ElfImg(const char* fname, Arch::Arch in_arch, bool in_linked, bool map_s
 
 ElfImg::ElfImg(
 	GuestMem* m,
-	const char* fname, Arch::Arch in_arch, bool in_linked, bool map_segs)
+	const char* fname, Arch::Arch in_arch, bool map_segs)
 : interp(NULL)
-, linked(in_linked)
 , arch(in_arch)
 , mem(m)
 , owns_mem(false)
@@ -112,8 +110,6 @@ ElfImg::ElfImg(
 	setupImgMMap();
 	if (map_segs) setup();
 }
-
-
 
 void ElfImg::setupImgMMap(void)
 {
@@ -235,61 +231,55 @@ Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe)
 Arch::Arch ElfImg::readHeader(const char* fname, bool require_exe, bool& is_dyn)
 {
 	struct header_cleanup {
-		header_cleanup() : fd(-1), data(NULL), size(0) {}
+		header_cleanup() : fd(-1), ident(0) {}
 		~header_cleanup() {
-			if(data) {
-				munmap(data, size);
-			}
-			if(fd >= 0) {
-				close(fd);
-			}
+			if (ident) delete [] ident;
+			if (fd >= 0) close(fd);
 		}
 		int fd;
-		void* data;
-		size_t size;
+		uint8_t* ident;
 	} header;
+	int	sz, res;
 
 	is_dyn = false;
 
 	header.fd = open(fname, O_RDONLY);
-	if (header.fd == -1) {
-		return Arch::Unknown;
-	}
+	if (header.fd == -1) return Arch::Unknown;
 
-	unsigned char ident[IDENT_SIZE];
-	int res = read(header.fd, &ident[0], IDENT_SIZE);
+	sz = std::max(sizeof(Elf32_Ehdr), sizeof(Elf64_Ehdr));
+	header.ident = new uint8_t[sz];
+	res = read(header.fd, header.ident, sz);
+	if (res < sz) return Arch::Unknown;
 
-	if(res < IDENT_SIZE) {
-		return Arch::Unknown;
-	}
+	return readHeaderMem(header.ident, require_exe, is_dyn);
+}
 
-	unsigned int address_bits = 0;
-	if(memcmp(&ok_ident_64[0], &ident[0], IDENT_SIZE) == 0) {
+Arch::Arch ElfImg::readHeaderMem(
+	const uint8_t* ident,
+	bool require_exe,
+	bool& is_dyn)
+{
+	unsigned address_bits = 0;
+
+	if (memcmp(&ok_ident_64[0], &ident[0], IDENT_SIZE) == 0) {
 		address_bits = 64;
-	} else if(memcmp(&ok_ident_32[0], &ident[0], IDENT_SIZE) == 0) {
+	} else if (memcmp(&ok_ident_32[0], &ident[0], IDENT_SIZE) == 0) {
 		address_bits = 32;
 	} else {
 		return Arch::Unknown;
 	}
 
-	if(sizeof(void*) < address_bits / 8) {
+	if (sizeof(void*) < address_bits / 8) {
 		EXPECTED("Host with matching addressing capabilities");
 		return Arch::Unknown;
 	}
 
-	header.size = std::max(sizeof(Elf32_Ehdr), sizeof(Elf64_Ehdr));
-	header.data = mmap(NULL, header.size, PROT_READ, MAP_PRIVATE,
-		header.fd, 0);
-	if (header.data == MAP_FAILED) {
-		return Arch::Unknown;
-	}
-
-	if(address_bits == 32) {
-		Elf32_Ehdr	*e32 = (Elf32_Ehdr*)header.data;
+	if (address_bits == 32) {
+		const Elf32_Ehdr	*e32((const Elf32_Ehdr*)ident);
 		is_dyn = (e32->e_type == ET_DYN);
 		return readHeader32(e32, require_exe);
 	} else if (address_bits == 64) {
-		Elf64_Ehdr	*e64 = (Elf64_Ehdr*)header.data;
+		const Elf64_Ehdr	*e64((const Elf64_Ehdr*)ident);
 		is_dyn = (e64->e_type == ET_DYN);
 		return readHeader64(e64, require_exe);
 	}
@@ -385,7 +375,7 @@ static unsigned writeNote(std::ostream& os, int ty, const void* b, unsigned b_c)
 	nhdr.n_type = ty;
 	os.write((char*)&nhdr, sizeof(nhdr));
 	os.write("CORE\0\0\0\0", 8); /* lol */
-	os.write((char*)b, b_c);
+	os.write((const char*)b, b_c);
 	
 	return sizeof(nhdr) + nhdr.n_namesz + nhdr.n_descsz;
 }

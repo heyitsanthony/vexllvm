@@ -7,6 +7,8 @@
 class ProcMap
 {
 public:
+	ProcMap(GuestMem* mem, pid_t pid, const char* mapline, bool copy=true);
+
 	virtual ~ProcMap(void);
 	unsigned int getByteCount() const
 	{ return ((uintptr_t)mem_end - (uintptr_t)mem_begin); }
@@ -25,9 +27,6 @@ public:
 		GuestMem* mem, pid_t pid, const char* mapline, bool copy=true);
 
 	static bool dump_maps;
-
-protected:
-	ProcMap(GuestMem* mem, pid_t pid, const char* mapline, bool copy=true);
 private:
 	void copyRange(pid_t pid, guest_ptr m_beg, guest_ptr m_end);
 	bool procMemCopy(pid_t pid, guest_ptr m_beg, guest_ptr m_end);

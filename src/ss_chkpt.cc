@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/mman.h>
 #include <sys/ptrace.h>
 
 #if defined(__amd64__)
@@ -45,6 +46,7 @@ public:
 	void doFixupSyscallRegs(int pid) { fixupSyscallRegs(pid); }
 	void loadMemDiff(int pid, std::set<guest_ptr>& changed_maps);
 	virtual void checkpoint(int pid, unsigned seq) = 0;
+	void splitStack(void);
 protected:
 	GuestChkPt(const char* binpath, bool use_entry)
 	: GuestPTImg(binpath, use_entry) {}
@@ -70,6 +72,24 @@ public:
 	void checkpoint(int pid, unsigned seq);
 };
 
+
+void GuestChkPt::splitStack(void)
+{
+	GuestMem::Mapping	m;
+
+	if (mem->lookupMapping("[stack]", m) == false)
+		return;
+
+	/* change protection on every page individually
+	 * because guestmem is stupid, it won't merge pages--
+	 * the large segment will split on each mprotect */
+	for (unsigned i = 0; i < m.length / (4096*4); i++) {
+		guest_ptr	base(m.offset.o + i*(4096*4));
+		mem->mprotect(base, 4*4096, PROT_READ);
+		mem->mprotect(base, 4*4096, m.req_prot);
+	}
+}
+
 pid_t GuestChkPt::createSlurpedAttach(int pid)
 {
 	int	err, status;
@@ -88,7 +108,7 @@ pid_t GuestChkPt::createSlurpedAttach(int pid)
 	fprintf(stderr, "Attached to PID=%d\n", pid);
 
 	/* for multi-threaded apps */
-	ptrace(PTRACE_SETOPTIONS, pid, NULL, PTRACE_O_TRACECLONE);
+	// ptrace(PTRACE_SETOPTIONS, pid, NULL, PTRACE_O_TRACECLONE);
 
 	attachSyscall(pid);
 	entry_pt = getCPUState()->getPC();
@@ -316,8 +336,17 @@ int main(int argc, char* argv[], char* envp[])
 	gs = createAttached(pid);
 	assert (gs != NULL && "could not create attached");
 
+	/* break up stack so checkpointing is cheaper */
+	/* XXX: doesn't work because of procmap slurping. crap! */
+	// gs->splitStack();
+
 	/* take first snapshot */
 	gs->save("chkpt-0000");
+
+	/* XXX: this should use the dual MMU support to patch over
+	 * the native process too */
+	gs->patchVDSO();
+
 	gettimeofday(&tv[1],NULL);
 
 	fprintf(stderr, "base_time: %g sec\n", get_tv_diff(&tv[0], &tv[1])/1e6);
