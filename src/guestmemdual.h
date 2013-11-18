@@ -9,6 +9,12 @@
 class GuestMemDual : public GuestMem
 {
 public:
+	static GuestMemDual* createImported(GuestMem* gm0, GuestMem* gm1)
+	{
+		GuestMemDual* gmd = new GuestMemDual(gm0, gm1);
+		gmd->maps = gm0->getMapMap();
+		return gmd;
+	}
 	GuestMemDual(GuestMem* gm0, GuestMem* gm1);
 	virtual ~GuestMemDual(void);
 

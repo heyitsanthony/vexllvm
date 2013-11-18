@@ -6,7 +6,7 @@ GuestMemDual::GuestMemDual(GuestMem* gm0, GuestMem* gm1)
 	m[1] = gm1;
 }
 
-GuestMemDual::~GuestMemDual(void) {}
+GuestMemDual::~GuestMemDual(void) { maps.clear(); }
 
 #define DEFREAD(x)	\
 uint##x##_t GuestMemDual::read##x(guest_ptr offset) const	\

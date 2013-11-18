@@ -159,17 +159,17 @@ void Guest::toCore(const char* path) const
 }
 
 /* this is kind of platform specific, not sure if it should go here */
-void Guest::patchVDSO(void)
+bool Guest::patchVDSO(void)
 {
 	GuestMem::Mapping	m;
 	Symbols			*vdso_syms;
 
 	if (!mem->lookupMapping("[vdso]", m))
-		return;
+		return false;
 
 	vdso_syms = ElfDebug::getSyms(mem->getHostPtr(m.offset));
 	if (vdso_syms == NULL)
-		return;
+		return false;
 
 	mem->mprotect(m.offset, m.length, m.cur_prot | PROT_WRITE);
 	for (unsigned i = 0; vdso_tab[i].ve_f; i++) {
@@ -183,4 +183,6 @@ void Guest::patchVDSO(void)
 	mem->mprotect(m.offset, m.length, m.cur_prot);
 
 	delete vdso_syms;
+
+	return true;
 }

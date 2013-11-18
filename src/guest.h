@@ -77,7 +77,7 @@ public:
 
 
 	/* XXX: does this go here even? */
-	void patchVDSO(void);
+	bool patchVDSO(void);
 protected:
 	friend class GuestPTImg;
 	void setBinPath(const char* b);

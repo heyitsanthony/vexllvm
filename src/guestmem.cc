@@ -307,7 +307,6 @@ bool GuestMem::lookupMapping(guest_ptr addr, Mapping& mapping) const
 	return true;
 }
 
-
 bool GuestMem::lookupMapping(const char* name, Mapping& mapping) const
 {
 	foreach (it, maps.begin(), maps.end()) {

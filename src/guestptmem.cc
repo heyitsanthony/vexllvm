@@ -20,8 +20,7 @@ GuestPTMem::~GuestPTMem(void)
 }
 
 #define DEFREAD(x)	\
-uint##x##_t GuestPTMem::read##x(guest_ptr offset) const	\
-{	\
+uint##x##_t GuestPTMem::read##x(guest_ptr offset) const { \
 	uint64_t	n;	\
 	n = ptrace(PTRACE_PEEKDATA, pid, (void*)offset.o, NULL);	\
 	return (uint##x##_t)n;	}
@@ -33,11 +32,16 @@ DEFREAD(64)
 
 #define DEFWRITE(x)	\
 void GuestPTMem::write##x(guest_ptr offset, uint##x##_t t)	\
-{	uint64_t	n;						\
-	n = ptrace(PTRACE_PEEKDATA, pid, (void*)offset.o, NULL);	\
-	n &= ~(uint64_t)(((uint##x##_t)(~0)));			\
-	n |= t;								\
-	ptrace(PTRACE_POKEDATA, pid, (void*)offset.o, (void*)n); }
+{	uint64_t	n;					\
+	long		err;					\
+	if (sizeof(t) == 8) {					\
+		n = ptrace(PTRACE_PEEKDATA, pid, (void*)offset.o, NULL);\
+		n &= ~(uint64_t)(((uint##x##_t)(~0)));			\
+		n |= t;							\
+	} else								\
+		n = t;							\
+	err = ptrace(PTRACE_POKEDATA, pid, (void*)offset.o, (void*)n);	\
+	assert (err != -1 && "BAD WRITE"); }
 DEFWRITE(8)
 DEFWRITE(16)
 DEFWRITE(32)
@@ -52,11 +56,11 @@ void GuestPTMem::memcpy(guest_ptr dest, const void* src, size_t len)
 	rem = len % sizeof(long);
 	if (rem > 0) {
 		for (unsigned i = 0; i < rem; i++)
-			write8(dest + i, ((char*)src)[i]);
+			write8(dest + i, ((const char*)src)[i]);
 	}
 
 	len -= rem;
-	g_ptimg->getPTArch()->copyIn(dest + rem, (char*)src + rem, len);
+	g_ptimg->getPTArch()->copyIn(dest + rem, (const char*)src + rem, len);
 }
 
 void GuestPTMem::memcpy(void* dest, guest_ptr src, size_t len) const

@@ -25,6 +25,8 @@
 #endif
 
 
+#include "guestmemdual.h"
+#include "guestptmem.h"
 #include "guestcpustate.h"
 #include "guestptimg.h"
 #include "guestsnapshot.h"
@@ -316,6 +318,24 @@ void GuestChkPtSlow::checkpoint(int pid, unsigned seq)
 		get_tv_diff(&tv[0], &tv[1])/1e6);
 }
 
+static void patchVDSOs(GuestChkPt* gs, int pid)
+{
+	GuestMem	*jit_mem, *pt_mem, *dual_mem;
+	bool		ok;
+	
+	jit_mem = gs->getMem();
+	pt_mem = new GuestPTMem(gs, pid);
+	dual_mem = GuestMemDual::createImported(jit_mem, pt_mem);
+	
+	gs->setMem(dual_mem);
+	ok = gs->patchVDSO();
+	assert (ok && "Did not patch VDSO?");
+	gs->setMem(jit_mem);
+
+	delete dual_mem;
+	delete pt_mem;
+}
+
 int main(int argc, char* argv[], char* envp[])
 {
 	GuestChkPt	*gs;
@@ -339,13 +359,12 @@ int main(int argc, char* argv[], char* envp[])
 	/* break up stack so checkpointing is cheaper */
 	/* XXX: doesn't work because of procmap slurping. crap! */
 	// gs->splitStack();
+	patchVDSOs(gs, pid);
+
 
 	/* take first snapshot */
 	gs->save("chkpt-0000");
 
-	/* XXX: this should use the dual MMU support to patch over
-	 * the native process too */
-	gs->patchVDSO();
 
 	gettimeofday(&tv[1],NULL);
 

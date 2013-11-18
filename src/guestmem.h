@@ -184,6 +184,9 @@ public:
 
 	unsigned getNumMaps(void) const { return maps.size(); }
 
+
+	typedef std::map<guest_ptr, Mapping*> mapmap_t;
+	const mapmap_t getMapMap(void) const { return maps; }
 protected:
 	virtual void* sys_mmap(void*, size_t len, int prot, int fl,
 		int fd, off_t off) const;
@@ -206,7 +209,6 @@ protected:
 	bool canUseRange(guest_ptr base, unsigned int len) const;
 
 
-	typedef std::map<guest_ptr, Mapping*> mapmap_t;
 	mapmap_t	maps;
 	char*		base;
 
