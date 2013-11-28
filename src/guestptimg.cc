@@ -104,10 +104,11 @@ void GuestPTImg::attachSyscall(int pid)
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
 //	fprintf(stderr, "Got syscall from PID=%d\n", pid);
 	slurpBrains(pid);
-	fixupSyscallRegs(pid);
+	fixupRegsPreSyscall(pid);
 }
 
-void GuestPTImg::fixupSyscallRegs(int pid)
+/* fixes the registers when on a PTRACE_SYSCALL at syscall entry */
+void GuestPTImg::fixupRegsPreSyscall(int pid)
 {
 #if defined(__amd64__)
 	int	err;

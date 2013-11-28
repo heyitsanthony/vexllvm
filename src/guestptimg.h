@@ -136,7 +136,7 @@ protected:
 	virtual void slurpBrains(pid_t pid);
 	virtual pid_t createSlurpedAttach(int pid);
 	void attachSyscall(int pid);
-	void fixupSyscallRegs(int pid);
+	void fixupRegsPreSyscall(int pid);
 
 	PTImgArch		*pt_arch;
 	Arch::Arch		arch;

@@ -35,6 +35,12 @@
 #define DEFAULT_SC_NUM	100
 #define DEFAULT_SC_GAP	1
 
+static void clearSoftDirty(int pid);
+static void stepHalfSyscall(int pid);
+static void stepSyscalls(int pid, unsigned skip_c = 1);
+static double get_tv_diff(struct timeval* tv_begin, struct timeval* tv_end);
+static void patchVDSOs(class GuestChkPt* gs, int pid);
+
 void dumpIRSBs(void)
 {
 	fprintf(stderr, "shouldn't be decoding\n");
@@ -45,10 +51,11 @@ class GuestChkPt : public GuestPTImg
 {
 public:
 	virtual ~GuestChkPt(void) {}
-	void doFixupSyscallRegs(int pid) { fixupSyscallRegs(pid); }
+	void doFixupSyscallRegs(int pid) { fixupRegsPreSyscall(pid); }
 	void loadMemDiff(int pid, std::set<guest_ptr>& changed_maps);
 	virtual void checkpoint(int pid, unsigned seq) = 0;
 	void splitStack(void);
+	virtual void saveInitialChkPt(int pid);
 protected:
 	GuestChkPt(const char* binpath, bool use_entry)
 	: GuestPTImg(binpath, use_entry) {}
@@ -65,6 +72,16 @@ public:
 	void checkpoint(int pid, unsigned seq);
 };
 
+class GuestChkPtPrePost : public GuestChkPtFast
+{
+public:
+	GuestChkPtPrePost(const char* binpath, bool use_entry)
+	: GuestChkPtFast(binpath, use_entry) {}
+	virtual ~GuestChkPtPrePost(void) {}
+	void checkpoint(int pid, unsigned seq);
+	virtual void saveInitialChkPt(int pid);
+};
+
 class GuestChkPtSlow : public GuestChkPt
 {
 public:
@@ -74,6 +91,36 @@ public:
 	void checkpoint(int pid, unsigned seq);
 };
 
+
+void GuestChkPtPrePost::saveInitialChkPt(int pid)
+{
+	std::set<guest_ptr>	changed_maps;
+	int			err;
+
+	save("chkpt-0000-pre");
+	err = symlink("chkpt-0000-pre", "chkpt-0000");
+	assert (err == 0 && "Error saving chkpt-0000 symlink");
+
+	/* complete initial system call */
+	clearSoftDirty(pid);
+	stepHalfSyscall(pid);
+
+	mkdir("chkpt-0000-post", 0755);
+	slurpRegisters(pid);
+	loadMemDiff(pid, changed_maps);
+	GuestSnapshot::saveDiff(
+		this,
+		"chkpt-0000-post",
+		"chkpt-0000-pre",
+		changed_maps);
+}
+
+
+
+void GuestChkPt::saveInitialChkPt(int pid)
+{
+	save("chkpt-0000");
+}
 
 void GuestChkPt::splitStack(void)
 {
@@ -129,6 +176,12 @@ GuestChkPt* createAttached(int pid)
 			pa->getArgc(),
 			pa->getArgv(),
 			pa->getEnv());
+	} else if (getenv("VEXLLVM_CHKPT_PREPOST") != NULL) {
+		return GuestPTImg::createAttached<GuestChkPtPrePost>(
+			pid,
+			pa->getArgc(),
+			pa->getArgv(),
+			pa->getEnv());
 	}
 
 	return GuestPTImg::createAttached<GuestChkPtFast>(
@@ -138,7 +191,7 @@ GuestChkPt* createAttached(int pid)
 		pa->getEnv());
 }
 
-double get_tv_diff(struct timeval* tv_begin, struct timeval* tv_end)
+static double get_tv_diff(struct timeval* tv_begin, struct timeval* tv_end)
 {
 	return	(tv_end->tv_usec+(tv_end->tv_sec*1.0e6)) -
 		(tv_begin->tv_usec+(tv_begin->tv_sec*1.0e6));
@@ -147,22 +200,22 @@ double get_tv_diff(struct timeval* tv_begin, struct timeval* tv_end)
 #define is_soft_dirty(x)	(((x) & (1ULL << 55)) != 0)
 #define is_present(x)		(((x) & ((1ULL << 62) | (1UL << 63))) != 0)
 
-static void stepSyscalls(int pid, unsigned skip_c = 1)
+static void stepHalfSyscall(int pid)
+{
+	int	err, status;
+	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
+	assert (err != -1);
+	wait(&status);
+	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+}
+
+static void stepSyscalls(int pid, unsigned skip_c)
 {
 	for (unsigned i = 0; i < skip_c; i++) {
-		int	err, status;
-
 		/* complete last syscall */
-		err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
-		assert (err != -1);
-		wait(&status);
-		assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
-
+		stepHalfSyscall(pid);
 		/* run to beginning of next syscall */
-		err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
-		assert (err != -1);
-		wait(&status);
-		assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+		stepHalfSyscall(pid);
 	}
 }
 
@@ -250,6 +303,56 @@ static void clearSoftDirty(int pid)
 	if (bw != 2) perror("couldn't clear refs");
 	assert (bw == 2);
 	close(fd);
+}
+
+void GuestChkPtPrePost::checkpoint(int pid, unsigned seq)
+{
+	char			fname[64], fname_last[64];
+	struct timeval		tv[2];
+	std::set<guest_ptr>	changed_maps;
+
+	assert (seq > 0 && "fast checkpoint can't make base checkpoint");
+
+	gettimeofday(&tv[0], NULL);
+
+	/* run up to system call entry */
+	clearSoftDirty(pid);
+
+	/* run up to entry of syscall */
+	stepHalfSyscall(pid);
+
+	sprintf(fname, "chkpt-%04d-pre", seq);
+	mkdir(fname, 0755);
+	sprintf(fname_last, "chkpt-%04d-post", seq-1);
+
+	slurpRegisters(pid);
+	doFixupSyscallRegs(pid);
+	loadMemDiff(pid, changed_maps);
+	GuestSnapshot::saveDiff(this, fname, fname_last, changed_maps);
+
+	changed_maps.clear();
+	/* chkpt-nnnn-pre now saved */
+
+	/* complete system call */
+	clearSoftDirty(pid);
+
+	/* last chkpt is chkpt-<seq>-pre, so use that as backing */
+	strcpy(fname_last, fname);
+	stepHalfSyscall(pid);
+	sprintf(fname, "chkpt-%04d-post", seq);
+	mkdir(fname, 0755);
+
+	slurpRegisters(pid);
+	/* post-syscall so no need to call doFixupSyscallRegs */
+	loadMemDiff(pid, changed_maps);
+	GuestSnapshot::saveDiff(this, fname, fname_last, changed_maps);
+	/* chkpt-nnnn-post now saved */
+
+	gettimeofday(&tv[1], NULL);
+	fprintf(stderr, "chkpt_time %d: %g sec\n",
+		seq,
+		get_tv_diff(&tv[0], &tv[1])/1e6);
+
 }
 
 /* check pagemap for changes, only load that into guest */
@@ -361,10 +464,8 @@ int main(int argc, char* argv[], char* envp[])
 	// gs->splitStack();
 	patchVDSOs(gs, pid);
 
-
 	/* take first snapshot */
-	gs->save("chkpt-0000");
-
+	gs->saveInitialChkPt(pid);
 
 	gettimeofday(&tv[1],NULL);
 
