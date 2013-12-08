@@ -68,15 +68,12 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 		ret = VexExprConst::createConst(in_parent, expr);
 		break;
 
-#ifndef USE_SVN
-	EXPR_TAGOP(Mux0X);
-#else
 	case Iex_ITE:
 	ret = new VexExprMux0X(in_parent, expr);
 	break;
 
 	EXPR_TAGOP(BBPTR);
-#endif
+
 	EXPR_TAGOP(CCall);
 	case Iex_Binder:
 	default:
@@ -116,7 +113,6 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpEQ32);
 	BINOP_TAGOP(CmpEQ64);
 
-#ifdef USE_SVN
 	BINOP_TAGOP(ExpCmpNE8);
 	BINOP_TAGOP(ExpCmpNE16);
 	BINOP_TAGOP(ExpCmpNE32);
@@ -124,7 +120,6 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(GetMSBs8x8);
 	UNOP_TAGOP(GetMSBs8x16);
 	QOP_TAGOP(MAddF64);
-#endif
 
 	BINOP_TAGOP(CmpNE8);
 	BINOP_TAGOP(CmpNE16);
@@ -867,15 +862,9 @@ void VexExprBBPTR::print(std::ostream& os) const { os << "BPP"; }
 
 VexExprMux0X::VexExprMux0X(VexStmt* in_parent, const IRExpr* expr)
 : VexExpr(in_parent),
-#ifndef USE_SVN
-  cond(VexExpr::create(in_parent, expr->Iex.Mux0X.cond)),
-  expr0(VexExpr::create(in_parent, expr->Iex.Mux0X.expr0)),
-  exprX(VexExpr::create(in_parent, expr->Iex.Mux0X.exprX))
-#else
   cond(VexExpr::create(in_parent, expr->Iex.ITE.cond)),
   expr0(VexExpr::create(in_parent, expr->Iex.ITE.iffalse)),
   exprX(VexExpr::create(in_parent, expr->Iex.ITE.iftrue))
-#endif
 { }
 
 VexExprMux0X::~VexExprMux0X(void)

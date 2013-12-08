@@ -30,11 +30,6 @@ using namespace llvm;
 const char* getVexOpName(IROp op)
 {
 	switch(op) {
-#ifndef USE_SVN
-	CASE_OP(SqrtF64r32)
-	CASE_OP(I16StoF64)
-	CASE_OP(CalcFPRF)
-#endif
 	OP_32_64(SqrtF)
 	OP_32_64(NegF)
 	OP_32_64(AbsF)
@@ -858,8 +853,6 @@ Value* VexExprUnop32UtoV128::emit(void) const
 	return builder->CreateBitCast(v_128i, get_vt(16, 8), "32UtoV128");
 }
 
-#ifdef USE_SVN
-
 
 /* returns x-bit value */
 #define GETMSBS_8xN_EMIT(x)	\
@@ -883,8 +876,6 @@ Value* VexExprUnopGetMSBs8x##x::emit(void) const	\
 
 GETMSBS_8xN_EMIT(16)
 GETMSBS_8xN_EMIT(8)
-
-#endif
 
 Value* VexExprUnop64UtoV128::emit(void) const
 {
@@ -1030,12 +1021,10 @@ BINOP_EMIT(CmpNE16, ICmpNE)
 BINOP_EMIT(CmpNE32, ICmpNE)
 BINOP_EMIT(CmpNE64, ICmpNE)
 
-#ifdef USE_SVN
 BINOP_EMIT(ExpCmpNE8, ICmpNE)
 BINOP_EMIT(ExpCmpNE16, ICmpNE)
 BINOP_EMIT(ExpCmpNE32, ICmpNE)
 BINOP_EMIT(ExpCmpNE64, ICmpNE)
-#endif
 
 BINOP_EMIT(CasCmpEQ8, ICmpEQ)
 BINOP_EMIT(CasCmpEQ16, ICmpEQ)

@@ -169,9 +169,7 @@ private:
 	VexExpr			*guard;
 	llvm::Function*		func;
 	PtrList<VexExpr>	args;
-#ifndef USE_SVN
 	bool			needs_state_ptr;
-#endif
 	int			tmp_reg;	/* where to store */
 };
 
@@ -201,7 +199,6 @@ private:
 	guest_ptr	dst;	/* target constant */
 };
 
-#ifdef USE_SVN
 class VexStmtStoreG : public VexStmt
 {
 public:
@@ -229,6 +226,5 @@ private:
 	VexExpr		*alt;
 	VexExpr		*guard;
 };
-#endif
 
 #endif
