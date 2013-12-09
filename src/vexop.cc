@@ -1097,6 +1097,32 @@ EMIT_HELPER_UNOP(Clz64, "vexop_clz64")
 EMIT_HELPER_UNOP(Ctz32, "vexop_ctz32")
 EMIT_HELPER_UNOP(Clz32, "vexop_clz32")
 
+
+
+#define EMIT_HELPER_UNOP_VEC(x,y,fn)			\
+Value* VexExprUnop##x::emit(void) const			\
+{							\
+	IRBuilder<>     *builder(theGenLLVM->getBuilder());	\
+	llvm::Function	*f;	\
+	llvm::Value	*v;	\
+	Value *res(builder->CreateBitCast(get_c(y->getBitWidth(), 0), y)); \
+	v = builder->CreateBitCast(args[0]->emit(), y); 	\
+	f = theVexHelpers->getHelper(fn);			\
+	assert (f != NULL);		\
+	for (unsigned i = 0; i < y->getNumElements(); i++) {	\
+		Value	*e;	\
+		e = builder->CreateCall(	\
+			f,	\
+			builder->CreateExtractElement(v, get_32i(i)));	\
+		res = builder->CreateInsertElement(res, e, get_32i(i)); \
+	} \
+	return res;	\
+}
+
+EMIT_HELPER_UNOP_VEC(Cls32Sx4, get_vt(32, 4), "vexop_cls32")
+EMIT_HELPER_UNOP_VEC(Cls32Sx2, get_vt(32, 2), "vexop_cls32")
+
+
 EMIT_HELPER_UNOP(AbsF64, "vexop_absf64")
 EMIT_HELPER_UNOP(AbsF32, "vexop_absf32")
 

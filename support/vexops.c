@@ -2,6 +2,34 @@
 #include <stdint.h>
 #include <valgrind/libvex_ir.h>
 
+/* leading sign bits (not including topmost) */
+uint32_t vexop_cls32(uint32_t v)
+{
+	unsigned ret = 0;
+	if (!(v & 0x80000000)) return 0;
+	v <<= 1;
+	while ((v & 0x80000000)) {
+		ret++;
+		v <<= 1;
+	}
+	return ret;
+}
+
+/* leading sign bits (not including topmost) */
+uint64_t vexop_cls64(uint64_t v)
+{
+	unsigned ret = 0;
+	if (!(v & 0x8000000000000000)) return 0;
+	v <<= 1;
+	while ((v & 0x8000000000000000)) {
+		ret++;
+		v <<= 1;
+	}
+	return ret;
+}
+
+
+/* count trailing zeros-- 11100 = 2, 110 = 1, 11000 = 3 */
 uint64_t vexop_ctz64(uint64_t v)
 {
 	int	ret = 0;
@@ -13,6 +41,7 @@ uint64_t vexop_ctz64(uint64_t v)
 	return ret;
 }
 
+/* count leading zeros-- 00001 = 4, 01 = 1, 0001, = 3 */
 uint64_t vexop_clz64(uint64_t v)
 {
 	int	ret = 0;

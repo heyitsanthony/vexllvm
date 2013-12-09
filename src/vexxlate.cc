@@ -318,8 +318,10 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	if (res.status == VexTranslateResult::VexTransAccessFail)
 		return NULL;
 
-	if (g_cb.cb_vexsb == NULL)
+	if (g_cb.cb_vexsb == NULL) {
+
 		return patchBadDecode(guest_bytes, guest_addr);
+	}
 
 	if (g_cb.cb_vexsb->getSize()) {
 		if (frag_cache)
