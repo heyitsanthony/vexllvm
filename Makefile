@@ -78,7 +78,6 @@ OBJBASE=	guest.o			\
 		symbols.o		\
 		elfimg.o		\
 		elfdebug.o		\
-		dllib.o			\
 		ptctl.o			\
 		ptimgremote.o		\
 		ptimgchk.o		\
@@ -198,6 +197,10 @@ bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
 
 bin/vexllvm_ss: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
 	g++ $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC) -ldl -lrt
+
+bin/vexllvm_ss-static: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
+	g++ -static $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC) -ldl -lrt -lcrypt -lcrypto
+
 
 bin/vexllvm_ss_rebase: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
 	g++ $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC2) -ldl -lrt
