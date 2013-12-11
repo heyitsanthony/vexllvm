@@ -311,8 +311,11 @@ tests/traces-i386-obj/%.o: tests/traces-src/%.c
  #  #     #  #    #
  #  ### ###  #  ###
 
-tests: test-traces
+tests: test-traces tests-snapshot
 tests-softfloat: tests-softfloat-traces
+
+tests-snapshot: bin/pt_run
+	tests/snapshot.sh
 
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/* tests/meta/*

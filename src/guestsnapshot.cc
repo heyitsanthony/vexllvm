@@ -347,7 +347,7 @@ static void saveSundries(const Guest* g, const char* dirpath)
 	END_F()
 
 	if (g->getArgcPtr() != 0) {
-		SETUP_F_W("argv");
+		SETUP_F_W("argc");
 		fprintf(f, "%p\n", (void*)g->getArgcPtr().o);
 		END_F();
 	}
