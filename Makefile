@@ -102,7 +102,7 @@ VDSO_OBJ=	vdso/vdso_none.o
 
 ifeq ($(shell uname -m), armv7l)
 CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/ -lcrypto -lcrypt -lrt -lpthread
-OBJBASE += cpu/ptimgarm.o vdso/vdso_none.s
+OBJBASE += cpu/ptimgarm.o
 VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
 endif
 
