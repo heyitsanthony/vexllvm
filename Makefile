@@ -102,7 +102,7 @@ VDSO_OBJ=	vdso/vdso_none.o
 
 ifeq ($(shell uname -m), armv7l)
 CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/ -lcrypto -lcrypt -lrt -lpthread
-OBJBASE += cpu/ptimgarm.o vdso/vdso_none.s
+OBJBASE += cpu/ptimgarm.o
 VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
 endif
 
@@ -311,8 +311,11 @@ tests/traces-i386-obj/%.o: tests/traces-src/%.c
  #  #     #  #    #
  #  ### ###  #  ###
 
-tests: test-traces
+tests: test-traces tests-snapshot
 tests-softfloat: tests-softfloat-traces
+
+tests-snapshot: bin/pt_run
+	tests/snapshot.sh
 
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/* tests/meta/*
