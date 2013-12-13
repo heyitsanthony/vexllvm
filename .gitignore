@@ -1,4 +1,5 @@
 tests/opcodes/x86_64/OP*
+tests/*bin/*
 src/._*
 src/cpu/._*
 src/syscall/._*

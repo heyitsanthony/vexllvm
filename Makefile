@@ -314,7 +314,10 @@ tests/traces-i386-obj/%.o: tests/traces-src/%.c
 tests: test-traces tests-snapshot
 tests-softfloat: tests-softfloat-traces
 
-tests-snapshot: bin/pt_run
+tests/snapshot-bin/threads: tests/snapshot-src/threads.c
+	gcc -lpthread -O3 -o $@ $<
+	
+tests-snapshot: bin/pt_run tests/snapshot-bin/threads
 	tests/snapshot.sh
 
 tests-clean:

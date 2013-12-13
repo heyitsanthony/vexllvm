@@ -382,6 +382,35 @@ void GuestPTImg::slurpBrains(pid_t pid)
 {
 	ProcMap::slurpMappings(pid, mem, mappings);
 	slurpRegisters(pid);
+	slurpThreads();
+}
+
+void GuestPTImg::slurpThreads(void)
+{
+	std::list<GuestMem::Mapping>	m(mem->getMaps());
+	std::vector<int>		t_pids;
+
+	/* get thread pids from stack names */
+	foreach (it, m.begin(), m.end()) {
+		int	t_pid, c;
+		c = sscanf(it->getName().c_str(), "[stack:%d]", &t_pid);
+		if (c != 1) continue;
+		t_pids.push_back(t_pid);
+	}
+
+	if (t_pids.empty()) return;
+
+	/* load all thread registers */
+	thread_cpus.resize(t_pids.size());
+	for (unsigned i = 0; i < t_pids.size(); i++) {
+		GuestCPUState	*cur_cpu(GuestCPUState::create(getArch()));
+		/* slurpRegisters stores to cpu_state; temporarily swap out */
+		thread_cpus[i] = cpu_state;
+		cpu_state = cur_cpu;
+		slurpRegisters(t_pids[i]);
+		cpu_state = thread_cpus[i];
+		thread_cpus[i] = cur_cpu;
+	}
 }
 
 void GuestPTImg::waitForEntry(int pid)
