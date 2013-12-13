@@ -32,6 +32,15 @@ public:
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
 	GuestCPUState* getCPUState(void) { return cpu_state; }
 
+	void switchThread(unsigned i);
+
+	unsigned getNumThreads(void) const { return thread_cpus.size(); }
+	const GuestCPUState* getThreadCPU(unsigned i) const
+	{ return (i == 0) ? cpu_state : thread_cpus[i-1]; }
+	GuestCPUState* getThreadCPU(unsigned i)
+	{ return (i == 0) ? cpu_state : thread_cpus[i-1]; }
+
+
 	SyscallParams getSyscallParams(void) const;
 	void setSyscallResult(uint64_t ret);
 
@@ -83,10 +92,15 @@ protected:
 	void setBinPath(const char* b);
 	Guest(const char* bin_path);
 
+	/* active thread */
 	GuestCPUState	*cpu_state;
 	GuestMem	*mem;
 	char		*bin_path;
 	GuestABI	*abi;
+
+	/* idle threads; does NOT contain cpu_state */
+	/* XXX: should this be a ptrlist? */
+	std::vector<GuestCPUState*>	thread_cpus;
 };
 
 #endif

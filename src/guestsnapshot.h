@@ -44,6 +44,7 @@ private:
 
 	Symbols* loadSymbols(const char* name);
 	void loadMappings(void);
+	void loadThreads(void);
 
 	bool			is_valid;
 	guest_ptr		entry_pt;

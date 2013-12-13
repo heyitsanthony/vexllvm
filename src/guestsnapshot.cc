@@ -82,20 +82,7 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	assert (sz == 1);
 	END_F()
 
-	SETUP_F_R("regs")
-	cpu_state = GuestCPUState::create(arch);
-	sz = fread(
-		cpu_state->getStateData(),
-		1,
-		cpu_state->getStateSize(),
-		f);
-	if (sz != cpu_state->getStateSize()) {
-		std::cerr << "Bad register size. Expected " <<
-			cpu_state->getStateSize() << " got " <<
-			sz << '\n';
-	}
-	assert (sz == cpu_state->getStateSize());
-	END_F()
+	loadThreads();
 
 	SETUP_F_R("argv")
 	argv_ptrs.clear();
@@ -125,52 +112,6 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 		abi = GuestABI::create(this);
 	} else {
 		abi = new I386WindowsABI(this);
-		END_F()
-	}
-
-	SETUP_F_R_MAYBE("regs.ldt")
-	if (f != NULL) {
-		I386CPUState	*i386;
-		char		*buf;
-		int		res;
-		guest_ptr	gp;
-
-		i386 =  dynamic_cast<I386CPUState*>(cpu_state);
-		assert (i386 != NULL && "ONLY I386 HAS LDT");
-		buf = new char[8192*8];
-		res = fread(buf, 8, 8192, f);
-		assert (res == 8192 && "not enough LDT entries??");
-		res = mem->mmap(gp, guest_ptr(0), 8192*8,
-				PROT_WRITE | PROT_READ,
-				MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-		assert (gp.o && res == 0 && "failed to map ldt");
-
-		mem->memcpy(gp, buf, 8192*8);
-		i386->setLDT(gp);
-		delete [] buf;
-		END_F()
-	}
-
-	SETUP_F_R_MAYBE("regs.gdt")
-	if (f != NULL) {
-		I386CPUState	*i386;
-		char		*buf;
-		int		res;
-		guest_ptr	gp;
-
-		i386 =  dynamic_cast<I386CPUState*>(cpu_state);
-		assert (i386 != NULL && "ONLY I386 HAS LDT");
-		buf = new char[8192*8];
-		res = fread(buf, 8, 8192, f);
-		assert (res == 8192 && "not enough LDT entries??");
-		res = mem->mmap(gp, guest_ptr(0), 8192*8,
-				PROT_WRITE | PROT_READ,
-				MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-		assert (gp.o && res == 0 && "failed to map ldt");
-
-		mem->memcpy(gp, buf, 8192*8);
-		i386->setGDT(gp);
-		delete [] buf;
 		END_F()
 	}
 
@@ -307,6 +248,33 @@ GuestSnapshot::~GuestSnapshot(void)
 	assert (f != NULL && "failed to open "#x);
 #define END_F()	fclose(f); }
 
+static void saveThreads(const Guest* g, const char* dirpath)
+{
+	char		t_path[512];
+	unsigned	thread_c(g->getNumThreads());
+
+	/* no idle threads to save? */
+	if (g->getNumThreads() == 0) return;
+
+	/* create thread directory */
+	snprintf(t_path, sizeof(t_path), "%s/threads", dirpath);
+	mkdir(t_path, 0755);
+
+	/* save all sleeping threads to thread directory */
+	for (unsigned i = 0; i < thread_c; i++) {
+		const GuestCPUState*	cpu(g->getThreadCPU(i+1));
+		FILE			*f;
+		ssize_t			wsz;
+
+		snprintf(t_path, sizeof(t_path), "%s/threads/%d", dirpath, i);
+		f = fopen(t_path, "w");
+		assert (f != NULL);
+		wsz = fwrite(cpu->getStateData(), cpu->getStateSize(), 1, f);
+		assert (wsz == 1);
+		fclose(f);
+	}
+}
+
 static void saveSundries(const Guest* g, const char* dirpath)
 {
 	ssize_t	wsz;
@@ -347,10 +315,12 @@ static void saveSundries(const Guest* g, const char* dirpath)
 	END_F()
 
 	if (g->getArgcPtr() != 0) {
-		SETUP_F_W("argv");
+		SETUP_F_W("argc");
 		fprintf(f, "%p\n", (void*)g->getArgcPtr().o);
 		END_F();
 	}
+
+	saveThreads(g, dirpath);
 }
 
 /* lame-o procfs */
@@ -619,4 +589,84 @@ bool GuestSnapshot::getPlatform(const char* plat_key, void* buf, unsigned len) c
 	fclose(f);
 
 	return true;
+}
+
+void GuestSnapshot::loadThreads(void)
+{
+	ssize_t		sz;
+
+	SETUP_F_R("regs")
+	cpu_state = GuestCPUState::create(arch);
+	sz = fread(
+		cpu_state->getStateData(),
+		1,
+		cpu_state->getStateSize(),
+		f);
+	if (sz != cpu_state->getStateSize()) {
+		std::cerr << "Bad register size. Expected " <<
+			cpu_state->getStateSize() << " got " <<
+			sz << '\n';
+	}
+	assert (sz == cpu_state->getStateSize());
+	END_F()
+
+	SETUP_F_R_MAYBE("regs.ldt")
+	if (f != NULL) {
+		I386CPUState	*i386;
+		char		*buf;
+		int		res;
+		guest_ptr	gp;
+
+		i386 =  dynamic_cast<I386CPUState*>(cpu_state);
+		assert (i386 != NULL && "ONLY I386 HAS LDT");
+		buf = new char[8192*8];
+		res = fread(buf, 8, 8192, f);
+		assert (res == 8192 && "not enough LDT entries??");
+		res = mem->mmap(gp, guest_ptr(0), 8192*8,
+				PROT_WRITE | PROT_READ,
+				MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		assert (gp.o && res == 0 && "failed to map ldt");
+
+		mem->memcpy(gp, buf, 8192*8);
+		i386->setLDT(gp);
+		delete [] buf;
+		END_F()
+	}
+
+	SETUP_F_R_MAYBE("regs.gdt")
+	if (f != NULL) {
+		I386CPUState	*i386;
+		char		*buf;
+		int		res;
+		guest_ptr	gp;
+
+		i386 =  dynamic_cast<I386CPUState*>(cpu_state);
+		assert (i386 != NULL && "ONLY I386 HAS LDT");
+		buf = new char[8192*8];
+		res = fread(buf, 8, 8192, f);
+		assert (res == 8192 && "not enough LDT entries??");
+		res = mem->mmap(gp, guest_ptr(0), 8192*8,
+				PROT_WRITE | PROT_READ,
+				MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		assert (gp.o && res == 0 && "failed to map ldt");
+
+		mem->memcpy(gp, buf, 8192*8);
+		i386->setGDT(gp);
+		delete [] buf;
+		END_F()
+	}
+
+	/* TODO: load ldt/gdt for threads too */
+	for (unsigned i = 0; ; i++) {
+		char		fname[32];
+		GuestCPUState	*cpu;
+
+		snprintf(fname, 32, "threads/%d", i);
+		SETUP_F_R_MAYBE(fname);
+		if (f == NULL) break;
+		cpu = GuestCPUState::create(arch);
+		sz = fread(cpu->getStateData(), 1, cpu->getStateSize(), f);
+		thread_cpus.push_back(cpu);
+		END_F();
+	}
 }

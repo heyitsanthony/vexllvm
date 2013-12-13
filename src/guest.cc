@@ -38,6 +38,9 @@ Guest::~Guest(void)
 	if (bin_path) free(bin_path);
 	if (mem) delete mem;
 	if (cpu_state) delete cpu_state;
+
+	foreach (it, thread_cpus.begin(), thread_cpus.end()) {
+	}
 }
 
 void Guest::setBinPath(const char* p)
@@ -185,4 +188,14 @@ bool Guest::patchVDSO(void)
 	delete vdso_syms;
 
 	return true;
+}
+
+
+void Guest::switchThread(unsigned i)
+{
+	GuestCPUState	*old_st;
+	assert (i > 0 && "but i == 0 => running thread!");
+	old_st = cpu_state;
+	cpu_state = thread_cpus[i - 1];
+	thread_cpus[i - 1] = old_st;
 }
