@@ -306,7 +306,7 @@ ProcMap::ProcMap(GuestMem* in_mem, pid_t pid, const char* mapline, bool _copy)
 	int		rc;
 
 	libname[0] = '\0';
-	rc = sscanf(mapline, "%p-%p %s %x %d:%d %d %s",
+	rc = sscanf(mapline, "%p-%p %s %x %x:%x %d %s",
 		(void**)&mem_begin,
 		(void**)&mem_end,
 		perms,
@@ -334,6 +334,7 @@ ProcMap::ProcMap(GuestMem* in_mem, pid_t pid, const char* mapline, bool _copy)
 
 	mapLib(pid);
 	if (strcmp(libname, "[stack]") == 0) {
+		/* there are [stack:nnnn] entries for other threads */
 		mem->setType(getBase(), GuestMem::Mapping::STACK);
 	} else if (strcmp(libname, "[heap]") == 0) {
 		mem->setType(getBase(), GuestMem::Mapping::HEAP);
