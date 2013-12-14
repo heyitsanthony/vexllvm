@@ -109,40 +109,7 @@ void GuestPTImg::attachSyscall(int pid)
 
 /* fixes the registers when on a PTRACE_SYSCALL at syscall entry */
 void GuestPTImg::fixupRegsPreSyscall(int pid)
-{
-#if defined(__amd64__)
-	int	err;
-
-	/* URK. syscall's RAX isn't stored in RAX!?? */
-	uint8_t* x = (uint8_t*)getMem()->getHostPtr(getCPUState()->getPC());
-
-	assert ((((x[-1] == 0x05 && x[-2] == 0x0f) /* syscall */ ||
-		(x[-2] == 0xcd && x[-1] == 0x80) /* int0x80 */) ||
-		(x[-2] == 0xeb && x[-1] == 0xf3)) /* sysenter nop trampoline*/
-		&& "not syscall opcode?");
-
-	if (x[-2] == 0xcd || x[-2] == 0xeb) {
-		/* XXX:int only used by i386, never amd64? */
-		assert (arch == Arch::I386);
-
-		if (x[-2] == 0xcd) {
-			getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-2));
-		} else {
-			/* backup to sysenter */
-			getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-11));
-		}
-	} else {
-		struct user_regs_struct	r;
-		err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
-		assert (err == 0);
-
-		getCPUState()->setPC(guest_ptr(getCPUState()->getPC()-2));
-		setSyscallResult(r.orig_rax);
-	}
-#else
-	assert (0 == 1 && "CAN'T HANDLE THIS");
-#endif
-}
+{ pt_arch->fixupRegsPreSyscall(pid); }
 
 pid_t GuestPTImg::createSlurpedAttach(int pid)
 {

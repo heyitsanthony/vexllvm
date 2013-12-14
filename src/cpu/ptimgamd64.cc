@@ -868,3 +868,38 @@ uint64_t PTImgAMD64::dispatchSysCall(const SyscallParams& sp)
 
 	return ret;
 }
+
+void PTImgAMD64::fixupRegsPreSyscall(int pid)
+{
+	int		err;
+	uint8_t		*x;
+	GuestCPUState	*cpu;
+
+	cpu = gs->getCPUState();
+	x = (uint8_t*)gs->getMem()->getHostPtr(cpu->getPC());
+
+	assert ((((x[-1] == 0x05 && x[-2] == 0x0f) /* syscall */ ||
+		(x[-2] == 0xcd && x[-1] == 0x80) /* int0x80 */) ||
+		(x[-2] == 0xeb && x[-1] == 0xf3)) /* sysenter nop trampoline*/
+		&& "not syscall opcode?");
+
+	if (x[-2] == 0xcd || x[-2] == 0xeb) {
+		/* XXX:int only used by i386, never amd64? */
+		guest_ptr	new_pc;
+
+		assert (arch == Arch::I386);
+
+		new_pc = cpu->getPC():
+		new_pc.o -= (x[-2] == 0xcd)
+			? 2	/* int */
+			: 11;	/* sysenter */
+		cpu->setPC(new_pc);
+	} else {
+		/* URK. syscall's RAX isn't stored in RAX! */
+		struct user_regs_struct	r;
+		err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
+		assert (err == 0);
+		cpu->setPC(guest_ptr(cpu->getPC()-2));
+		gs->setSyscallResult(r.orig_rax);
+	}
+}

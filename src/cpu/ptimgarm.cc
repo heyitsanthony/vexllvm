@@ -58,7 +58,9 @@ void PTImgARM::slurpRegisters(void)
 void PTImgARM::stepSysCall(SyscallsMarshalled*) { assert (0 == 1 && "STUB"); }
 
 /* from arch/arm/kernel/ptrace.c */
-#define ARM_BKPT	0xe7f001f0UL
+#define ARM_BKPT	0xe7f001f0UL	// bkpt instruction?
+//#define ARM_BKPT	0xf001f0e7UL	// am I retarded on endian?
+//#define ARM_BKPT	0xe7ffdefeUL	// undefined op
 #define THUMB_BKPT	0xde01UL
 
 long int PTImgARM::setBreakpoint(guest_ptr addr)
@@ -81,6 +83,15 @@ long int PTImgARM::setBreakpoint(guest_ptr addr)
 
 	err = ptrace(PTRACE_POKETEXT, child_pid, addr.o & ~3UL, new_v);
 	assert (err != -1 && "Failed to set breakpoint");
+
+	fprintf(stderr, "setting breakpoint at %p\n", (void*)addr.o);
+
+	struct user_regs	regs;
+	ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
+
+	for (int i = 0; i < 18; i++)
+		fprintf(stderr, "R[%02d]: %p\n", i,  regs.uregs[i]);
+
 
 	return old_v;
 }
@@ -124,3 +135,26 @@ bool PTImgARM::breakpointSysCalls(guest_ptr, guest_ptr) { assert (0 == 1 && "STU
 void PTImgARM::revokeRegs() { assert (0 == 1 && "STUB"); }
 
 
+/* from linux sources.. arch/arm/include/uapi/asm/ptrace.h */
+#define ARM_ORIG_r0 uregs[17]
+#define OPCODE_SVC	0xef000000
+void PTImgARM::fixupRegsPreSyscall(int pid)
+{
+	struct user_regs	r;
+	int			err;
+	uint32_t		*x;
+	GuestCPUState		*cpu;
+
+	cpu = gs->getCPUState();
+	x = (uint32_t*)gs->getMem()->getHostPtr(cpu->getPC());
+	assert (x[-1] == OPCODE_SVC);
+	
+	err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
+	assert (err == 0);
+
+	/* put PC back on svc instruction */
+	cpu->setPC(guest_ptr(cpu->getPC()-4));
+
+	/* restore syscall R0 */
+	gs->setSyscallResult(r.ARM_ORIG_r0);
+}

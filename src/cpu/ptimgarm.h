@@ -30,6 +30,7 @@ public:
 	GuestPTImg::FixupDir canFixup(
 		const std::vector<std::pair<guest_ptr, unsigned char> >&,
 		bool has_memlog) const;
+	void fixupRegsPreSyscall(int pid);
 	bool breakpointSysCalls(guest_ptr, guest_ptr);
 	void revokeRegs();
 	void resetBreakpoint(guest_ptr addr, long v);

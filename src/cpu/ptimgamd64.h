@@ -29,6 +29,7 @@ public:
 	GuestPTImg::FixupDir canFixup(
 		const std::vector<InstExtent>& insts,
 		bool has_memlog) const;
+	void fixupRegsPreSyscall(int pid);
 
 	void getRegs(user_regs_struct&) const;
 	void setRegs(const user_regs_struct& regs);

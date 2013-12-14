@@ -29,6 +29,10 @@ public:
 		const std::vector<InstExtent>& insts,
 		bool has_memlog) const = 0;
 
+
+	virtual void fixupRegsPreSyscall(int pid)
+	{ assert (0 == 1 && "Not implemented for this arch"); }
+
 	virtual bool isMatch(void) const = 0;
 	virtual uintptr_t getSysCallResult() const = 0;
 
