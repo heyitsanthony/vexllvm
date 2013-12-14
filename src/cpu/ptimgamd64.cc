@@ -887,9 +887,9 @@ void PTImgAMD64::fixupRegsPreSyscall(int pid)
 		/* XXX:int only used by i386, never amd64? */
 		guest_ptr	new_pc;
 
-		assert (arch == Arch::I386);
+		assert (gs->getArch() == Arch::I386);
 
-		new_pc = cpu->getPC():
+		new_pc = cpu->getPC();
 		new_pc.o -= (x[-2] == 0xcd)
 			? 2	/* int */
 			: 11;	/* sysenter */
