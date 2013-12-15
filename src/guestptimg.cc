@@ -98,7 +98,7 @@ void GuestPTImg::attachSyscall(int pid)
 	int	err, status;
 
 	/* NOTE: this stops immediately before a syscall... */
-	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
+	err = ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
 	assert (err != -1);
 	wait(&status);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
@@ -109,7 +109,12 @@ void GuestPTImg::attachSyscall(int pid)
 
 /* fixes the registers when on a PTRACE_SYSCALL at syscall entry */
 void GuestPTImg::fixupRegsPreSyscall(int pid)
-{ pt_arch->fixupRegsPreSyscall(pid); }
+{
+	int	old_pid = pt_arch->getPID();
+	if (pid) pt_arch->setPID(pid);
+	pt_arch->fixupRegsPreSyscall();
+	pt_arch->setPID(old_pid);
+}
 
 pid_t GuestPTImg::createSlurpedAttach(int pid)
 {
@@ -120,7 +125,7 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 
 	pt_arch = NEW_ARCH_PT;
 
-	err = ptrace(PTRACE_ATTACH, pid, 0, NULL, NULL);
+	err = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
 	assert (err != -1 && "Couldn't attach to process");
 
 	wait(&status);
@@ -136,7 +141,7 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	entry_pt = getCPUState()->getPC();
 
 	/* release the process */
-	ptrace(PTRACE_DETACH, pid, 0, NULL, NULL);
+	ptrace(PTRACE_DETACH, pid, NULL, NULL);
 
 	return pid;
 }
@@ -343,7 +348,12 @@ pid_t GuestPTImg::createSlurpedChild(
 }
 
 void GuestPTImg::slurpRegisters(pid_t pid)
-{ pt_arch->slurpRegisters(); }
+{
+	pid_t	old_pid(pt_arch->getPID());
+	if (pid != 0) pt_arch->setPID(pid);
+	pt_arch->slurpRegisters();
+	pt_arch->setPID(old_pid);
+}
 
 void GuestPTImg::slurpBrains(pid_t pid)
 {
@@ -371,10 +381,25 @@ void GuestPTImg::slurpThreads(void)
 	thread_cpus.resize(t_pids.size());
 	for (unsigned i = 0; i < t_pids.size(); i++) {
 		GuestCPUState	*cur_cpu(GuestCPUState::create(getArch()));
+		int		err, status;
+
 		/* slurpRegisters stores to cpu_state; temporarily swap out */
 		thread_cpus[i] = cpu_state;
 		cpu_state = cur_cpu;
+		
+		err = ptrace(PTRACE_ATTACH, t_pids[i], NULL, NULL);
+		assert (err != -1);
+
+		/* NB: the __WALL flag was took forever to figure out; ugh */
+		status = 0;
+		err = waitpid(t_pids[i], &status, __WALL);
+		assert (err != -1);
+
 		slurpRegisters(t_pids[i]);
+
+		err = ptrace(PTRACE_DETACH, t_pids[i], NULL, NULL);
+		assert (err != -1);
+
 		cpu_state = thread_cpus[i];
 		thread_cpus[i] = cur_cpu;
 	}

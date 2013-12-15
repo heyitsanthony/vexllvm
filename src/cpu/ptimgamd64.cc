@@ -731,7 +731,7 @@ void PTImgAMD64::vex2ptrace(
 			((uint8_t*)&r), i,
 			get_reg_vex(((const uint8_t*)&v), i));
 	}
-	
+
 	r.eflags = AMD64CPUState::getRFLAGS(v) | 0x200;
 
 	/* XXX: still broken, doesn't handle YMM right */
@@ -760,6 +760,7 @@ void PTImgAMD64::slurpRegisters(void)
 	struct user_regs_struct		regs;
 	struct user_fpregs_struct	fpregs;
 
+
 	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
 	assert(err != -1);
 	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
@@ -769,6 +770,7 @@ void PTImgAMD64::slurpRegisters(void)
 
 
 	/*** linux is busted, quirks ahead ***/
+	/* XXX: I think this is still kind of busted.. need tests.. */
 
 	/* this is kind of a stupid hack but I don't know an easier way
 	 * to get orig_rax */
@@ -869,7 +871,7 @@ uint64_t PTImgAMD64::dispatchSysCall(const SyscallParams& sp)
 	return ret;
 }
 
-void PTImgAMD64::fixupRegsPreSyscall(int pid)
+void PTImgAMD64::fixupRegsPreSyscall(void)
 {
 	int		err;
 	uint8_t		*x;
@@ -897,7 +899,8 @@ void PTImgAMD64::fixupRegsPreSyscall(int pid)
 	} else {
 		/* URK. syscall's RAX isn't stored in RAX! */
 		struct user_regs_struct	r;
-		err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
+		err = ptrace(
+			__ptrace_request(PTRACE_GETREGS), child_pid, NULL, &r);
 		assert (err == 0);
 		cpu->setPC(guest_ptr(cpu->getPC()-2));
 		gs->setSyscallResult(r.orig_rax);

@@ -27,6 +27,12 @@ kill -9 $tpid
 if [ ! -e guest-test/threads ]; then echo no thread dir; exit 5; fi
 tc=`ls guest-test/threads | wc -l`
 if [ "$tc" != 4 ]; then echo wrong thread count; exit 6; fi
+
+diff=`diff guest-test/threads/0 guest-test/threads/1`
+if [ -z "$diff" ]; then
+	echo threads should have different contexts "(e.g. stacks)"
+	exit 7
+fi
 }
 
 test_argc

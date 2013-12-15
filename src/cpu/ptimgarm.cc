@@ -138,7 +138,7 @@ void PTImgARM::revokeRegs() { assert (0 == 1 && "STUB"); }
 /* from linux sources.. arch/arm/include/uapi/asm/ptrace.h */
 #define ARM_ORIG_r0 uregs[17]
 #define OPCODE_SVC	0xef000000
-void PTImgARM::fixupRegsPreSyscall(int pid)
+void PTImgARM::fixupRegsPreSyscall(void)
 {
 	struct user_regs	r;
 	int			err;
@@ -149,7 +149,7 @@ void PTImgARM::fixupRegsPreSyscall(int pid)
 	x = (uint32_t*)gs->getMem()->getHostPtr(cpu->getPC());
 	assert (x[-1] == OPCODE_SVC);
 	
-	err = ptrace(__ptrace_request(PTRACE_GETREGS), pid, NULL, &r);
+	err = ptrace(__ptrace_request(PTRACE_GETREGS), child_pid, NULL, &r);
 	assert (err == 0);
 
 	/* put PC back on svc instruction */

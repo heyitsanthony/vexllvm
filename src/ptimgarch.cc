@@ -100,17 +100,17 @@ void PTImgArch::waitForSingleStep(void)
 
 void PTImgArch::copyIn(guest_ptr dst, const void* src, unsigned int bytes) const
 {
-	char*		in_addr;
+	const char*	in_addr;
 	guest_ptr	out_addr, end_addr;
 
 	assert ((bytes % sizeof(long)) == 0);
 
-	in_addr = (char*)src;
+	in_addr = (const char*)src;
 	out_addr = dst;
 	end_addr = out_addr + bytes;
 
 	while (out_addr < end_addr) {
-		long data = *(long*)in_addr;
+		long data = *(const long*)in_addr;
 		int err = ptrace(PTRACE_POKEDATA, child_pid, out_addr.o, data);
 		assert(err == 0);
 		in_addr += sizeof(long);

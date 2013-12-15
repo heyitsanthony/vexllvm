@@ -17,6 +17,9 @@ public:
 	virtual void stepSysCall(SyscallsMarshalled* sc_m) = 0;
 	virtual void ignoreSysCall(void) { assert (0 == 1 && "STUB"); }
 
+	int getPID(void) const { return child_pid; }
+	void setPID(int in_pid) { child_pid = in_pid; }
+
 	virtual long setBreakpoint(guest_ptr addr) = 0;
 	virtual void resetBreakpoint(guest_ptr addr, long v) = 0;
 	virtual guest_ptr undoBreakpoint() = 0;
@@ -30,7 +33,7 @@ public:
 		bool has_memlog) const = 0;
 
 
-	virtual void fixupRegsPreSyscall(int pid)
+	virtual void fixupRegsPreSyscall(void)
 	{ assert (0 == 1 && "Not implemented for this arch"); }
 
 	virtual bool isMatch(void) const = 0;

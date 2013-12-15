@@ -22,7 +22,7 @@ public:
 	void printFPRegs(std::ostream&) const;
 	void printUserRegs(std::ostream&) const;
 	guest_ptr getStackPtr() const;
-	void slurpRegisters();
+	void slurpRegisters(void);
 	void stepSysCall(SyscallsMarshalled*);
 	long int setBreakpoint(guest_ptr);
 	guest_ptr undoBreakpoint();
@@ -30,7 +30,7 @@ public:
 	GuestPTImg::FixupDir canFixup(
 		const std::vector<std::pair<guest_ptr, unsigned char> >&,
 		bool has_memlog) const;
-	void fixupRegsPreSyscall(int pid);
+	void fixupRegsPreSyscall(void);
 	bool breakpointSysCalls(guest_ptr, guest_ptr);
 	void revokeRegs();
 	void resetBreakpoint(guest_ptr addr, long v);

@@ -18,7 +18,7 @@ public:
 	bool isRegMismatch(void) const;
 	bool doStep(guest_ptr start, guest_ptr end, bool& hit_syscall);
 	uintptr_t getSysCallResult() const;
-	
+
 	void stepSysCall(SyscallsMarshalled* sc_m);
 	void ignoreSysCall(void);
 
@@ -29,7 +29,7 @@ public:
 	GuestPTImg::FixupDir canFixup(
 		const std::vector<InstExtent>& insts,
 		bool has_memlog) const;
-	void fixupRegsPreSyscall(int pid);
+	void fixupRegsPreSyscall(void);
 
 	void getRegs(user_regs_struct&) const;
 	void setRegs(const user_regs_struct& regs);
