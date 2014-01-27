@@ -238,7 +238,7 @@ void AMD64CPUState::print(std::ostream& os, const VexGuestAMD64State& vs)
 	}
 	os << "FPROUND: " << (void*)vs.guest_FPROUND << std::endl;
 	os << "FC3210: " << (void*)vs.guest_FC3210 << std::endl;
-	os << "EMNOTE: " << (void*)vs.guest_EMNOTE << std::endl;
+	os << "EMNOTE: " << (void*)(intptr_t)vs.guest_EMNOTE << std::endl;
 	os << "fs_base = " << (void*)vs.guest_FS_ZERO << std::endl;
 }
 

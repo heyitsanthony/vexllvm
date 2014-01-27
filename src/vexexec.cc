@@ -97,10 +97,13 @@ VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
 	const char	*env_str;
 
 	eb.setErrorStr(&err_str);
+	/* XXX: the default JIT uses my machine's bdver2 opcodes.
+	 * this is OK but llvm-3.4 has a bad bextr template, which
+	 * causes it to generate invalid code. lol */
+#warning using x86-64 mcpu because llvm-3.4 makes bad bextrs
+	eb.setMCPU("x86-64");
 	exeEngine = eb.create();
-	if (!exeEngine) {
-		std::cerr << "Exe Engine Error: " << err_str << '\n';
-	}
+	if (!exeEngine) std::cerr << "Exe Engine Error: " << err_str << '\n';
 	assert (exeEngine && "Could not make exe engine");
 
 	/* XXX need to fix ownership of module exe engine deletes it now! */

@@ -28,7 +28,7 @@ static bool loadEntry(
 	ProcMap m(mem, pid, line_buf);
 
 	std::cerr << m.getBase()
-		<< " sz: " << (void*)m.getByteCount()
+		<< " sz: " << (void*)(intptr_t)m.getByteCount()
 		<< " prot: " << std::hex << m.getProt()
 		<< " lib: " << m.getLib()
 		<< std::endl;

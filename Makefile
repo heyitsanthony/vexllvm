@@ -27,13 +27,9 @@ ifndef LLVMCONFIG_PATH
 LLVMCONFIG_PATH = llvm-config
 endif
 
-ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.1)
-CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=1
-endif
-
-ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.2)
-CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=2
-endif
+#ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.3)
+#CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=3
+#endif
 
 LLVMCC=clang
 LLVMCFLAGS=$(shell echo $(CFLAGS) | sed "s/-g//g")
