@@ -32,6 +32,7 @@
 #include "guestsnapshot.h"
 #include "procargs.h"
 
+#include "guestabi.h"
 #define DEFAULT_SC_NUM	100
 #define DEFAULT_SC_GAP	1
 
@@ -117,10 +118,7 @@ void GuestChkPtPrePost::saveInitialChkPt(int pid)
 
 
 
-void GuestChkPt::saveInitialChkPt(int pid)
-{
-	save("chkpt-0000");
-}
+void GuestChkPt::saveInitialChkPt(int pid) { save("chkpt-0000"); }
 
 void GuestChkPt::splitStack(void)
 {
@@ -144,7 +142,7 @@ pid_t GuestChkPt::createSlurpedAttach(int pid)
 	int	err, status;
 
 	// assert (entry_pt.o == 0 && "Only support attaching immediately");
-	fprintf(stderr, "Attaching to PID=%d\n", pid);
+	fprintf(stderr, "Attaching to PID=%d...\n", pid);
 
 	pt_arch = NEW_ARCH_PT;
 
@@ -154,7 +152,7 @@ pid_t GuestChkPt::createSlurpedAttach(int pid)
 	wait(&status);
 	fprintf(stderr, "ptrace status=%x\n", status);
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSTOP);
-	fprintf(stderr, "Attached to PID=%d\n", pid);
+	fprintf(stderr, "Attached to PID=%d !\n", pid);
 
 	/* for multi-threaded apps */
 	// ptrace(PTRACE_SETOPTIONS, pid, NULL, PTRACE_O_TRACECLONE);
@@ -203,10 +201,34 @@ static double get_tv_diff(struct timeval* tv_begin, struct timeval* tv_end)
 static void stepHalfSyscall(int pid)
 {
 	int	err, status;
+
+	struct user_regs_struct r;
+	err = ptrace((__ptrace_request)PTRACE_GETREGS, pid, NULL, &r);
+	assert (err != -1);
+
 	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
 	assert (err != -1);
 	wait(&status);
+
+	if (WIFEXITED(status)) {
+		fprintf(stderr, "[ss_chkpt] PID=%d exited. Bye\n", pid);
+		exit(0);
+	}
+
+	if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSEGV) {
+		fprintf(stderr,
+			"[ss_chkpt] PID=%d exited with SIGSEGV. Bye\n", pid);
+		exit(0);
+	}
+
+	if (!WIFSTOPPED(status) || WSTOPSIG(status) != SIGTRAP) {
+		fprintf(stderr,
+			"[ss_chkpt] Unexpected ptrace wait() status %x\n",
+			status);
+	}
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+
+	err = ptrace((__ptrace_request)PTRACE_GETREGS, pid, NULL, &r);
 }
 
 static void stepSyscalls(int pid, unsigned skip_c)
@@ -368,13 +390,13 @@ void GuestChkPtFast::checkpoint(int pid, unsigned seq)
 	/* reset dirty bits */
 	clearSoftDirty(pid);
 
+	/* run up to the beginning of next syscall */
 	stepSyscalls(pid, DEFAULT_SC_GAP);
 
 	sprintf(fname, "chkpt-%04d", seq);
 	mkdir(fname, 0755);
 
 	sprintf(fname_last, "chkpt-%04d", seq-1);
-
 	gettimeofday(&tv[0], NULL);
 
 	/* load it */
@@ -462,7 +484,17 @@ int main(int argc, char* argv[], char* envp[])
 	/* break up stack so checkpointing is cheaper */
 	/* XXX: doesn't work because of procmap slurping. crap! */
 	// gs->splitStack();
+	
+	
+	/* patch over vdso page so we can get timer calls */
+	fprintf(stderr, "[ss_chkpt] Patching VDSO\n");
+
+	/* patching vdso screws up the syscall state;
+	 * so reset to before syscall, then half step to pre-syscall */
 	patchVDSOs(gs, pid);
+	/* gs registers are fixed up to immediately before syscall */
+	gs->getPTArch()->pushRegisters();
+	stepHalfSyscall(pid);
 
 	/* take first snapshot */
 	gs->saveInitialChkPt(pid);
@@ -477,8 +509,9 @@ int main(int argc, char* argv[], char* envp[])
 	sc_c = (getenv("VEXLLVM_SC_COUNT"))
 		? atoi(getenv("VEXLLVM_SC_COUNT"))
 		: DEFAULT_SC_NUM;
-	for (unsigned i = 1; i < sc_c; i++)
+	for (unsigned i = 1; i < sc_c; i++) {
 		gs->checkpoint(pid, i);
+	}
 
 	/* release the process */
 	ptrace(PTRACE_DETACH, pid, 0, NULL, NULL);
