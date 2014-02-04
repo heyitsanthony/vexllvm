@@ -35,7 +35,32 @@ if [ -z "$diff" ]; then
 fi
 }
 
+function test_readpost
+{
+	rm -rf p read-post-chkpts
+	mkfifo	p
+	tests/snapshot-bin/read-post p &
+	rp=$!
+	sleep 1s
+	mkdir read-post-chkpts
+	pushd read-post-chkpts
+	echo $rp...
+	pgrep read-post
+	VEXLLVM_CHKPT_PREPOST=1 ss_chkpt $rp &
+	sleep 1s
+	echo "0123456789012345678901234567890" >../p
+	ok=`od -tx8 chkpt-0001-pre/regs -j16 -N8 -An | xargs printf "%d" | grep 0`
+	if [ -z "$ok" ]; then echo Expected sysnr=0; exit 8; fi
+	ok=`od -tx8 chkpt-0001-post/regs -j16 -N8 -An | grep 00020`
+	if [ -z "$ok" ]; then echo BAD read return value; exit 9; fi
+	popd
+	sleep 1s
+	rm -rf p read-post-chkpts
+}
+
 test_argc
 echo ARGC OK
 test_threads
 echo THREADS OK
+test_readpost
+echo READPOST OK

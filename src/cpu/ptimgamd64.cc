@@ -774,7 +774,8 @@ void PTImgAMD64::slurpRegisters(void)
 
 	/* this is kind of a stupid hack but I don't know an easier way
 	 * to get orig_rax */
-	if (regs.orig_rax != ~((uint64_t)0)) {
+#define RAX_IN_SYSCALL	0xffffffda
+	if (regs.orig_rax != ~((uint64_t)0) && regs.rax == RAX_IN_SYSCALL) {
 		regs.rax = regs.orig_rax;
 		if (regs.fs_base == 0) regs.fs_base = 0xdead;
 	} else if (regs.fs_base == 0) {

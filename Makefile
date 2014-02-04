@@ -313,8 +313,11 @@ tests-softfloat: tests-softfloat-traces
 tests/snapshot-bin/threads: tests/snapshot-src/threads.c
 	gcc -lpthread -O3 -o $@ $<
 	
-tests-snapshot: bin/pt_run tests/snapshot-bin/threads
+tests-snapshot: bin/pt_run tests/snapshot-bin/threads tests/snapshot-bin/read-post
 	tests/snapshot.sh
+
+tests/snapshot-bin/read-post: tests/snapshot-src/read-post.c
+	gcc -lpthread -O3 -o $@ $<
 
 tests-clean:
 	rm -f tests/*-bin/* tests/*-obj/* tests/*-out/* tests/meta/*
