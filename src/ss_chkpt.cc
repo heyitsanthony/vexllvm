@@ -57,6 +57,8 @@ public:
 	virtual void checkpoint(int pid, unsigned seq) = 0;
 	void splitStack(void);
 	virtual void saveInitialChkPt(int pid);
+
+	void waitForOpen(int pid, const char* path);
 protected:
 	GuestChkPt(const char* binpath, bool use_entry)
 	: GuestPTImg(binpath, use_entry) {}
@@ -461,6 +463,32 @@ static void patchVDSOs(GuestChkPt* gs, int pid)
 	delete pt_mem;
 }
 
+/* is it worth tracking fds etc for more sophisticated syscall latching? */
+#include <sys/syscall.h>
+void GuestChkPt::waitForOpen(int pid, const char* path)
+{
+	assert (getArch() == Arch::X86_64);
+
+	clearSoftDirty(pid);
+	while (1) {
+		SyscallParams		sp(getSyscallParams());
+		if (sp.getSyscall() == SYS_open) {
+			std::set<guest_ptr>	changed_maps;
+			std::string		s;
+			
+			loadMemDiff(pid, changed_maps);
+			s = getMem()->readString(guest_ptr(sp.getArg(0)));
+
+			/* good to go? */
+			if (s == path) break;
+
+			clearSoftDirty(pid);
+		}
+		stepSyscalls(pid);
+		slurpRegisters(pid);
+	}
+}
+
 int main(int argc, char* argv[], char* envp[])
 {
 	GuestChkPt	*gs;
@@ -495,6 +523,11 @@ int main(int argc, char* argv[], char* envp[])
 	/* gs registers are fixed up to immediately before syscall */
 	gs->getPTArch()->pushRegisters();
 	stepHalfSyscall(pid);
+	/* now at pre-syscall */
+	
+	if (getenv("VEXLLVM_CHKPT_WAITOPEN") != NULL)
+		gs->waitForOpen(pid, getenv("VEXLLVM_CHKPT_WAITOPEN"));
+
 
 	/* take first snapshot */
 	gs->saveInitialChkPt(pid);
