@@ -312,6 +312,8 @@ void GuestChkPt::loadMemDiff(int pid, std::set<guest_ptr>& changed_set)
 	changed_maps.clear();
 
 	ProcMap::slurpMappings(pid, getMem(), mappings);
+
+	entry_pt = getCPUState()->getPC();
 }
 
 static void clearSoftDirty(int pid)
