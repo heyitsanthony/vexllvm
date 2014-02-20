@@ -59,17 +59,21 @@ public:
 	virtual void saveInitialChkPt(int pid);
 
 	void waitForOpen(int pid, const char* path);
+
+	pid_t getChildPID(void) const { return child_pid; }
 protected:
-	GuestChkPt(const char* binpath, bool use_entry)
+	GuestChkPt(const char* binpath, bool use_entry=true)
 	: GuestPTImg(binpath, use_entry) {}
+
 	virtual pid_t createSlurpedAttach(int pid);
- 	virtual void handleChild(pid_t pid) {}
+	virtual void handleChild(pid_t pid) { child_pid = pid; }
+	pid_t	child_pid;
 };
 
 class GuestChkPtFast : public GuestChkPt
 {
 public:
-	GuestChkPtFast(const char* binpath, bool use_entry)
+	GuestChkPtFast(const char* binpath, bool use_entry=true)
 	: GuestChkPt(binpath, use_entry) {}
 	virtual ~GuestChkPtFast(void) {}
 	void checkpoint(int pid, unsigned seq);
@@ -78,7 +82,7 @@ public:
 class GuestChkPtPrePost : public GuestChkPtFast
 {
 public:
-	GuestChkPtPrePost(const char* binpath, bool use_entry)
+	GuestChkPtPrePost(const char* binpath, bool use_entry=true)
 	: GuestChkPtFast(binpath, use_entry) {}
 	virtual ~GuestChkPtPrePost(void) {}
 	void checkpoint(int pid, unsigned seq);
@@ -88,7 +92,7 @@ public:
 class GuestChkPtSlow : public GuestChkPt
 {
 public:
-	GuestChkPtSlow(const char* binpath, bool use_entry)
+	GuestChkPtSlow(const char* binpath, bool use_entry=true)
 	: GuestChkPt(binpath, use_entry) {}
 	virtual ~GuestChkPtSlow(void) {}
 	void checkpoint(int pid, unsigned seq);
@@ -189,6 +193,17 @@ GuestChkPt* createAttached(int pid)
 		pa->getArgc(),
 		pa->getArgv(),
 		pa->getEnv());
+}
+
+GuestChkPt* createNewProc(int argc, char** argv, char** envp)
+{
+	if (getenv("VEXLLVM_CHKPT_SLOW") != NULL) {
+		return GuestPTImg::create<GuestChkPtSlow>(argc, argv, envp);
+	} else if (getenv("VEXLLVM_CHKPT_PREPOST") != NULL) {
+		return GuestPTImg::create<GuestChkPtPrePost>(argc, argv, envp);
+	}
+
+	return GuestPTImg::create<GuestChkPtFast>(argc, argv, envp);
 }
 
 static double get_tv_diff(struct timeval* tv_begin, struct timeval* tv_end)
@@ -491,6 +506,9 @@ void GuestChkPt::waitForOpen(int pid, const char* path)
 	}
 }
 
+static int is_num(const char* s)
+{ for (; *s; s++) { if (*s < '0' || *s > '9') return 0; } return 1; }
+
 int main(int argc, char* argv[], char* envp[])
 {
 	GuestChkPt	*gs;
@@ -499,17 +517,23 @@ int main(int argc, char* argv[], char* envp[])
 	struct timeval	tv[2];
 
 	if (argc != 2) {
-		fprintf(stderr, "Usage: %s pid\n", argv[0]);
+		fprintf(stderr, "Usage: %s [pid | argv]\n", argv[0]);
 		return -1;
 	}
 
 	/* TODO: check kernel version for soft-dirty bit support? */
 
-	pid = atoi(argv[1]);
-
 	gettimeofday(&tv[0],NULL);
-	gs = createAttached(pid);
-	assert (gs != NULL && "could not create attached");
+
+	if (is_num(argv[1])) {
+		pid = atoi(argv[1]);
+		gs = createAttached(pid);
+		assert (gs != NULL && "could not create attached");
+	} else {
+		gs = createNewProc(argc-1, argv+1, envp);
+		assert (gs != NULL && "could not create new proc");
+		pid = gs->getChildPID();
+	}
 
 	/* break up stack so checkpointing is cheaper */
 	/* XXX: doesn't work because of procmap slurping. crap! */
