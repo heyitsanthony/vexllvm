@@ -18,7 +18,8 @@ vdso_x64_clock_gettime:
 	pop    %r12
 	pop    %r13
 	pop    %rbp
-	retq   
+	retq
+.string "KLEE"
 .Lvdso_x64_clock_gettime_end:
 .size vdso_x64_clock_gettime, .Lvdso_x64_clock_gettime_end - vdso_x64_clock_gettime
 

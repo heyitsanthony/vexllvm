@@ -190,6 +190,29 @@ bool Guest::patchVDSO(void)
 	return true;
 }
 
+bool Guest::isPatchedVDSO(void) const
+{
+	GuestMem::Mapping	m;
+	bool			found = false;
+	char			*pg;
+
+	if (!mem->lookupMapping("[vdso]", m))
+		return false;
+
+	/* find 'KLEE' */
+	pg = new char[4096];
+	mem->memcpy(pg, m.offset, 4096);
+	for (unsigned i = 0; i < 4090; i++) {
+		if (strcmp(&pg[i], "KLEE") == 0) {
+			found = true;
+			break;
+		}
+	}
+
+	delete [] pg;
+	return found;
+}
+
 
 void Guest::switchThread(unsigned i)
 {

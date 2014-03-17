@@ -47,6 +47,9 @@ int main(int argc, char* argv[], char* envp[])
 	} else {
 		gs = GuestPTImg::create<GuestPTImg>(argc - 1, argv + 1, envp);
 	}
+
+	gs->patchVDSO();
+
 	vexexec = VexExec::create<VexExec,Guest>(gs);
 	assert (vexexec && "Could not create vexexec");
 	
