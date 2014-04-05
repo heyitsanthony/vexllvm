@@ -37,6 +37,7 @@ public:
 		GuestPTImg		*pt_img;
 		T			*pt_t;
 		pid_t			slurped_pid;
+		int			sys_nr;
 		const char		*bp;
 
 		bp = (getenv("VEXLLVM_REAL_BINPATH"))
@@ -44,7 +45,16 @@ public:
 			: argv[0];
 		pt_t = new T(bp);
 		pt_img = pt_t;
-		slurped_pid = pt_img->createSlurpedChild(argc, argv, envp);
+		
+		sys_nr = (getenv("VEXLLVM_WAIT_SYSNR") != NULL)
+			? atoi(getenv("VEXLLVM_WAIT_SYSNR"))
+			: -1;
+
+		slurped_pid = (sys_nr == -1)
+			? pt_img->createSlurpedChild(argc, argv, envp)
+			: pt_img->createSlurpedOnSyscall(
+				argc, argv, envp, sys_nr);
+
 		if (slurped_pid <= 0) {
 			delete pt_img;
 			return NULL;
@@ -146,10 +156,14 @@ protected:
 private:
 	pid_t createSlurpedChild(
 		int argc, char *const argv[], char *const envp[]);
-
 	pid_t createFromGuest(Guest* gs);
+	pid_t createSlurpedOnSyscall(
+		int argc, char *const argv[], char *const envp[],
+		unsigned sys_nr);
+
 
 	void waitForEntry(int pid);
+	void slurpArgPtrs(int pid, char *const argv[]);
 
 	std::map<guest_ptr, uint64_t>	breakpoints;
 	mutable Symbols			*symbols; // lazy loaded

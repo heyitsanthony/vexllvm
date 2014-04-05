@@ -219,10 +219,6 @@ static void stepHalfSyscall(int pid)
 {
 	int	err, status;
 
-	struct user_regs_struct r;
-	err = ptrace((__ptrace_request)PTRACE_GETREGS, pid, NULL, &r);
-	assert (err != -1);
-
 	err = ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
 	assert (err != -1);
 	wait(&status);
@@ -244,8 +240,6 @@ static void stepHalfSyscall(int pid)
 			status);
 	}
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
-
-	err = ptrace((__ptrace_request)PTRACE_GETREGS, pid, NULL, &r);
 }
 
 static void stepSyscalls(int pid, unsigned skip_c)

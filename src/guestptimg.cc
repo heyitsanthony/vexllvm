@@ -41,6 +41,8 @@
 
 #define ANDROID_SYS_BEGIN	0x40000000
 
+#define IS_SIGTRAP(x) (WIFSTOPPED(x) && WSTOPSIG(x) == SIGTRAP)
+
 GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 : Guest(binpath)
 , pt_arch(NULL)
@@ -101,7 +103,7 @@ void GuestPTImg::attachSyscall(int pid)
 	err = ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
 	assert (err != -1);
 	wait(&status);
-	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+	assert (IS_SIGTRAP(status));
 //	fprintf(stderr, "Got syscall from PID=%d\n", pid);
 	slurpBrains(pid);
 	fixupRegsPreSyscall(pid);
@@ -214,7 +216,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 
 	/* wait for child to SIGTRAP itself */
 	waitpid(pid, &status, 0);
-	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+	assert (IS_SIGTRAP(status));
 
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
@@ -252,6 +254,71 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	entry_pt = cur_pc;
 
 	fprintf(stderr, "[GuestPTImg] Guest state cloned to process %d\n", pid);
+	return pid;
+}
+
+/* this is mainly to support programs that are shared libraries;
+ * use VEXLLVM_WAIT_SYSNR=sys_munmap */
+pid_t GuestPTImg::createSlurpedOnSyscall(
+	int argc, char *const argv[], char *const envp[],
+	unsigned sys_nr)
+{
+	int			status;
+	pid_t			pid;
+	guest_ptr		break_addr;
+	unsigned		sc_c = 0;
+
+	pid = fork();
+	if (pid == 0) setupChild(argv, envp);
+	if (pid < 0) return pid;
+
+	pt_arch = NEW_ARCH_PT;
+
+	/* wait for child to call execve and send us a trap signal */
+	wait(&status);
+	assert (IS_SIGTRAP(status));
+
+	/* run up to expected syscall */
+	while (1) {
+		/* entry into syscall */
+		ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
+		wait(&status);
+		if (!IS_SIGTRAP(status)) {
+			std::cerr << "[GuestPTImg] Child exited before sys_nr="
+				<< sys_nr << '\n';
+			return 0;
+		}
+
+		slurpRegisters(pid);
+		SyscallParams	sp(getSyscallParams());
+		if (sp.getSyscall() == sys_nr) {
+			std::cerr << "[GuestPTImg] got sys_nr=" << sys_nr
+				<< " on syscall #" << sc_c << '\n';
+			break;
+		}
+
+		/* step through syscall */
+		ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
+		wait(&status);
+		if (!IS_SIGTRAP(status)) {
+			std::cerr << "[GuestPTImg] Child exited before sys_nr="
+				<< sys_nr << '\n';
+			return 0;
+		}
+		sc_c++;
+	}
+
+	if (ProcMap::dump_maps) dumpSelfMap();
+
+	std::cerr << "[GuestPTImg] Loading child process\n";
+	/* slurp brains after trap code is removed so that we don't
+	 * copy the trap code into the parent process */
+	slurpBrains(pid);
+
+	// can't slurp argptrs because not on main(). hm.
+	// slurpArgPtrs(pid, argv);
+
+	entry_pt = getCPUState()->getPC();
 	return pid;
 }
 
@@ -298,6 +365,14 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* slurp brains after trap code is removed so that we don't
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
+	slurpArgPtrs(pid, argv);
+
+	return pid;
+}
+
+void GuestPTImg::slurpArgPtrs(int pid, char *const argv[])
+{
+	int	argc = 0;
 
 #if (defined(__amd64__) || defined(__arm__) || defined(__x86__))
 	/* XXX there should be a better place for this */
@@ -343,8 +418,6 @@ pid_t GuestPTImg::createSlurpedChild(
 	fprintf(stderr,
 		"[VEXLLVM] WARNING: can not get argv for current arch\n");
 #endif
-
-	return pid;
 }
 
 void GuestPTImg::slurpRegisters(pid_t pid)
@@ -386,7 +459,7 @@ void GuestPTImg::slurpThreads(void)
 		/* slurpRegisters stores to cpu_state; temporarily swap out */
 		thread_cpus[i] = cpu_state;
 		cpu_state = cur_cpu;
-		
+
 		err = ptrace(PTRACE_ATTACH, t_pids[i], NULL, NULL);
 		assert (err != -1);
 
