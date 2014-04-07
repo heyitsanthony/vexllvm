@@ -257,6 +257,7 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 	VexGuestExtents		vge;
 	VexTranslateResult	res;
 	Int			host_bytes_used;	/* WHY A PTR?? */
+	unsigned		unhandled_c;
 	uint8_t			b[1024 /* bogus buffer for VX->MC dump */];
 
 	memset(&vta, 0, sizeof(vta));
@@ -308,6 +309,8 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 
 	vta.needs_self_check = vex_needs_self_check;
 
+	unhandled_c = VexExpr::getUnhandledCount();
+
 	if (setjmp(g_env) == 0) {
 		res = LibVEX_Translate(&vta);
 	} else {
@@ -319,7 +322,6 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 		return NULL;
 
 	if (g_cb.cb_vexsb == NULL) {
-
 		return patchBadDecode(guest_bytes, guest_addr);
 	}
 
@@ -337,6 +339,12 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 			(void)bw;
 			/* bw == -1 when we run the fucking syscall page */
 		}
+	}
+
+	if (unhandled_c != VexExpr::getUnhandledCount()) {
+		/* VEX could decode but couldn't handle an opcode in LLVM */
+		delete g_cb.cb_vexsb;
+		return NULL;
 	}
 
 	return g_cb.cb_vexsb;

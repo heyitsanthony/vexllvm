@@ -14,6 +14,7 @@
 using namespace llvm;
 
 unsigned int VexExpr::vex_expr_op_count[VEX_MAX_OP];
+unsigned VexExpr::unhandled_expr_c = 0;
 
 static IROp getNaryOp(const IRExpr* expr)
 {
@@ -32,7 +33,7 @@ static const IRExpr** getNaryArgs(const IRExpr* expr)
 {
 	switch (expr->tag) {
 	case Iex_Unop:
-		return (const IRExpr** )((const void*)(&expr->Iex.Unop.arg));
+		return (const IRExpr**)((const void*)(&expr->Iex.Unop.arg));
 	case Iex_Binop:
 		return (const IRExpr**)((const void*)(&expr->Iex.Binop.arg1));
 	case Iex_Triop:
@@ -621,6 +622,7 @@ return new VexExprUnop##x(in_parent, expr)
 	}
 
 	/* unhandled ops */
+	unhandled_expr_c++;
 	switch (expr->tag) {
 	case Iex_Qop: return new VexExprQop(in_parent, expr);
 	case Iex_Triop: return new VexExprTriop(in_parent, expr);
