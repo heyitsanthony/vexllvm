@@ -4,6 +4,12 @@ ifndef CFLAGS
 CFLAGS=
 endif
 
+ifdef VEXLLVM_CFLAGS
+# for termios from the qemu stuff on ubuntoo
+# CFLAGS += -ltinfo
+CFLAGS += $(VEXLLVM_CFLAGS)
+endif
+
 ifeq ($(shell uname -m), armv7l)
 #fucking ubuntu mystery commands
 CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed
