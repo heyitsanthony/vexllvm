@@ -9,7 +9,7 @@ ifeq ($(shell uname -m), armv7l)
 CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed
 endif
 
-CFLAGS += -lssl -g -O3 -I`pwd`/src/ -lcrypto
+CFLAGS += -g -O3 -I`pwd`/src/ -lcrypto -ldl -lrt -lcrypt -lpthread -lssl 
 
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
@@ -97,7 +97,7 @@ OBJSLLVM=	vexxlate.o		\
 VDSO_OBJ=	vdso/vdso_none.o
 
 ifeq ($(shell uname -m), armv7l)
-CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/ -lcrypto -lcrypt -lrt -lpthread
+CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/
 OBJBASE += cpu/ptimgarm.o
 VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
 endif
@@ -181,7 +181,11 @@ all:	bitcode 				\
 all-rebase: all $(BINTARGETS_REBASE)
 
 clean:
-	rm -f $(BINOBJS) obj/*vexop*.o $(OBJDIRDEPS) $(BINTARGETS_ALL) $(LIBTARGETS) bitcode/*softfloat*
+	rm -f $(BINOBJS) obj/*vexop*.o $(OBJDIRDEPS) $(BINTARGETS_ALL) $(LIBTARGETS)
+
+# don't wipe out softfloat because it mostly relies on fpu.git
+clean-all: clean
+	rm -f bitcode/*softfloat*
 
 bitcode: $(BITCODE_FILES)
 
@@ -192,26 +196,26 @@ bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
 	ar r $@ $^
 
 bin/vexllvm_ss: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	g++ $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC) -ldl -lrt
+	g++ $^ $(VEXLIB) -o $@ $(LDRELOC) $(CFLAGS)
 
 bin/vexllvm_ss-static: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	g++ -static $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC) -ldl -lrt -lcrypt -lcrypto
+	g++ -static $^ $(VEXLIB) -o $@ $(LDRELOC) $(CFLAGS)
 
 
 bin/vexllvm_ss_rebase: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	g++ $(CFLAGS) $^ $(VEXLIB) -o $@ $(LDRELOC2) -ldl -lrt
+	g++ $^ $(VEXLIB) -o $@ $(LDRELOC2) $(CFLAGS) 
 
 bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) -ldl -lrt
+	g++ $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS) 
 
 bin/%: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) -ldl -lrt
+	g++ $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS) 
 
 bin/softfloat/%_rebase: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) -ldl -lrt
+	g++ $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS) 
 
 bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	g++ $(CFLAGS) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) -ldl -lrt
+	g++ $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS) 
 
 #obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
 #	llc  $< -o $@
@@ -244,13 +248,13 @@ bitcode/%.bc: support/%.c
 	$(LLVMCC) $(LLVMCFLAGS) -emit-llvm -O3 -c $< -o $@
 
 obj/%.o: src/%.s
-	gcc $(CFLAGS) -c -o $@ $<
+	gcc -c -o $@ $< $(CFLAGS) 
 
 obj/%.o: src/%.cc src/%.h
-	$(CORECC) $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
+	$(CORECC) -c -o $@ $< $(CFLAGS) $(LLVMFLAGS) 
 
 obj/%.o: src/%.cc
-	$(CORECC) $(CFLAGS) $(LLVMFLAGS) -c -o $@ $<
+	$(CORECC) -c -o $@ $< $(CFLAGS) $(LLVMFLAGS) 
 
 # TEST DATA
 TRACEDEPS= nested_call strlen strrchr 	\
