@@ -543,33 +543,63 @@ const Symbols* GuestPTImg::getDynSymbols(void) const
 	return dyn_symbols;
 }
 
-Symbols* GuestPTImg::loadSymbols(const PtrList<ProcMap>& mappings)
+/* This is a really shitty hack to force VEXLLVM_PRELOAD libraries
+ * to override default symbols. In the future, we need to support
+ * duplicate symbols */
+void GuestPTImg::forcePreloads(
+	Symbols			*symbols,
+	std::set<std::string>	&mmap_fnames,
+	const PtrList<ProcMap>& mappings)
 {
-	Symbols			*symbols;
-	std::set<std::string>	mmap_fnames;
-	const char		*preload_lib;
+	const char*	preload_str;
+	unsigned	preload_len;
+	char*		preload_libs;
 
-	symbols = new Symbols();
+	preload_str = getenv("VEXLLVM_PRELOAD");
+	if (preload_str == NULL) return;
 
-	/* This is a really shitty hack to force VEXLLVM_PRELOAD libraries
-	 * to override default symbols. In the future, we need to support
-	 * duplicate symbols */
-	preload_lib = getenv("VEXLLVM_PRELOAD");
-	if (preload_lib != NULL) {
+	preload_len = strlen(preload_str);
+	preload_libs = strdup(preload_str);
+
+	for (unsigned i = 0; i < preload_len; i++)
+		if (preload_libs[i] == ':')
+			preload_libs[i] = '\0';
+	
+	for (	char* cur_lib = preload_libs;
+		(cur_lib - preload_libs) < preload_len;
+		cur_lib += strlen(cur_lib) + 1)
+	{
 		guest_ptr	base(0);
 
 		foreach (it, mappings.begin(), mappings.end()) {
-			if ((*it)->getLib() == preload_lib) {
+			if ((*it)->getLib() == cur_lib) {
 				base = (*it)->getBase();
 				break;
 			}
 		}
 
-		assert (base.o && "Could not find VEXLLVM_PRELOAD library!");
-		addLibrarySyms(preload_lib, base, symbols);
+		if (base.o == 0) {
+			std::cerr << "[Warning] "
+				<< "Could not find VEXLLVM_PRELOAD library '"
+				<< cur_lib << "'\n";
+			continue;
+		}
 
-		mmap_fnames.insert(preload_lib);
+		addLibrarySyms(cur_lib, base, symbols);
+		mmap_fnames.insert(cur_lib);
 	}
+
+	free(preload_libs);
+}
+
+Symbols* GuestPTImg::loadSymbols(const PtrList<ProcMap>& mappings)
+{
+	Symbols			*symbols;
+	std::set<std::string>	mmap_fnames;
+
+	symbols = new Symbols();
+
+	forcePreloads(symbols, mmap_fnames, mappings);
 
 	foreach (it, mappings.begin(), mappings.end()) {
 		std::string	libname((*it)->getLib());

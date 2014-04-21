@@ -3,6 +3,7 @@
 #define GUESTSTATEPTIMG_H
 
 #include <map>
+#include <set>
 #include <stdlib.h>
 #include "collection.h"
 #include "guest.h"
@@ -164,6 +165,11 @@ private:
 
 	void waitForEntry(int pid);
 	void slurpArgPtrs(int pid, char *const argv[]);
+	static void forcePreloads(
+		Symbols			*symbols,
+		std::set<std::string>	&mmap_fnames,
+		const PtrList<ProcMap>& mappings);
+
 
 	std::map<guest_ptr, uint64_t>	breakpoints;
 	mutable Symbols			*symbols; // lazy loaded
