@@ -241,6 +241,9 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	mem =  gs->mem;
 	bin_path = gs->bin_path;
 	argv_ptrs = gs->getArgvPtrs();
+#ifndef BROKEN_OSDI
+	argc_ptr = gs->getArgcPtr();
+#endif
 
 	symbols = new Symbols(*gs->getSymbols());
 
