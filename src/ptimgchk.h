@@ -42,7 +42,12 @@ private:
 
 	void printMemory(std::ostream& os) const;
 	bool printRootTrace(std::ostream& os) const;
+	void printRootTraceDat(std::ostream& os, uint64_t dat,
+		std::set<guest_ptr>	&mptrs,
+		std::set<guest_ptr>	&cptrs) const;
+
 	guest_ptr getPageMismatch(guest_ptr p) const;
+	bool isWatchPtrMatch(void) const;
 
 	void readMemLogData(char* data) const;
 
@@ -59,6 +64,8 @@ private:
 	MemLog		*mem_log;
 	bool		xchk_stack;
 	bool		xchk_rootptrs;
+
+	guest_ptr	xchk_watchptr;
 
 	unsigned	fixup_c;
 };

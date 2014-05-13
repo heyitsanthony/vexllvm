@@ -28,6 +28,8 @@ PTImgChk::PTImgChk(const char* binname, bool use_entry)
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 , xchk_stack(getenv("VEXLLVM_XCHK_STACK") ? true : false)
 , xchk_rootptrs(getenv("VEXLLVM_XCHK_ROOTPTRS") ? true : false)
+, xchk_watchptr(getenv("VEXLLVM_XCHK_WATCHPTR")
+	? atol(getenv("VEXLLVM_XCHK_WATCHPTR"))	: 0)
 , fixup_c(0)
 {}
 
@@ -140,19 +142,39 @@ void PTImgChk::doFixupGuest(void)
 
 bool PTImgChk::isMatch() const
 {
-	if (!pt_arch->isMatch())
-		return false;
-
-	if (!isStackMatch())
-		return false;
-
-	if (!isMatchMemLog())
-		return false;
-
-	if (xchk_rootptrs && !printRootTrace(std::cerr))
-		return false;
+	if (!pt_arch->isMatch()) return false;
+	if (!isStackMatch()) return false;
+	if (!isMatchMemLog()) return false;
+	if (xchk_watchptr && !isWatchPtrMatch()) return false;
+	if (xchk_rootptrs && !printRootTrace(std::cerr)) return false;
 
 	return true;
+}
+
+bool PTImgChk::isWatchPtrMatch(void) const
+{
+	GuestMem::Mapping	mp;
+	guest_ptr		p;
+	GuestPTMem		ptmem(const_cast<PTImgChk*>(this), child_pid);
+	uint64_t		buf_v(0), buf_p(0);
+
+	p.o = xchk_watchptr.o & ~7UL;
+
+	/* no match found, so impossible to have mismatch */
+	if (getMem()->lookupMapping(p, mp) == false)
+		return true;
+
+	ptmem.memcpy(&buf_p, p, 8);
+	getMem()->memcpy(&buf_v, p, 8);
+
+	if (buf_p != buf_v) {
+		std::cerr << "[PTImgChk] WatchPtr Mismatch. Ptr="
+			<< (void*)p.o << ". VEX="
+			<< (void*)buf_v << ". PT="
+			<< (void*)buf_p << ".\n";
+	}
+
+	return (buf_p == buf_v);
 }
 
 #define MEMLOG_BUF_SZ	(MemLog::MAX_STORE_SIZE / 8 + sizeof(long))
@@ -289,6 +311,68 @@ guest_ptr PTImgChk::getPageMismatch(guest_ptr p) const
 	return guest_ptr(0);
 }
 
+static void printMismatch(
+	std::ostream& os,
+	const PTImgChk* ptc, int pid, guest_ptr p)
+{
+	GuestPTMem	ptmem(const_cast<PTImgChk*>(ptc), pid);
+	uint64_t	buf_v(0), buf_p(0);
+	unsigned	sz;
+
+	sz = 4096 - (p.o & 0xfff);
+	if (sz > 8) sz = 8;
+
+	ptmem.memcpy(&buf_p, p, sz);
+	ptc->getMem()->memcpy(&buf_v, p, sz);
+
+	os	<< "[PTImgChk] Mismatch on ptr="
+		<< (void*)(p.o)
+		<< ". VEX=" << (void*)buf_v
+		<< ". PT=" << (void*)buf_p
+		<< '\n';
+
+	p.o &= ~7UL;
+	ptmem.memcpy(&buf_p, p, 8);
+	ptc->getMem()->memcpy(&buf_v, p, 8);
+	os	<< "[PTImgChk] Mismatch aligned ptr="
+		<< (void*)(p.o)
+		<< ". VEX=" << (void*)buf_v
+		<< ". PT=" << (void*)buf_p
+		<< '\n';
+}
+
+
+void PTImgChk::printRootTraceDat(
+	std::ostream& os,
+	uint64_t dat,
+	std::set<guest_ptr>	&mptrs,
+	std::set<guest_ptr>	&cptrs) const
+{
+	guest_ptr	mismatch_ptr, chk_ptr;
+
+	/* get page before */
+	chk_ptr = guest_ptr((dat - 4096) & ~0xfffUL);
+	if (!cptrs.count(chk_ptr)) {
+		mismatch_ptr = getPageMismatch(chk_ptr);
+		if (mismatch_ptr) {
+			printMismatch(os, this, child_pid, mismatch_ptr);
+			mptrs.insert(mismatch_ptr);
+		}
+	}
+	cptrs.insert(chk_ptr);
+
+	/* get page after */
+	chk_ptr = guest_ptr(dat & ~0xfffUL);
+	if (!cptrs.count(chk_ptr)) {
+		mismatch_ptr = getPageMismatch(chk_ptr);
+		if (mismatch_ptr) {
+			printMismatch(os, this, child_pid, mismatch_ptr);
+			mptrs.insert(mismatch_ptr);
+		}
+	}
+	cptrs.insert(chk_ptr);
+}
+
 bool PTImgChk::printRootTrace(std::ostream& os) const
 {
 	const GuestCPUState	*gcpu;
@@ -301,31 +385,7 @@ bool PTImgChk::printRootTrace(std::ostream& os) const
 	dat_elems = gcpu->getStateSize() / sizeof(*dat);
 
 	for (unsigned i = 0; i < dat_elems; i++) {
-		guest_ptr mismatch_ptr, chk_ptr;
-
-		/* get page before */
-		chk_ptr = guest_ptr((dat[i] - 4096) & ~0xfffUL);
-		if (!cptrs.count(chk_ptr)) {
-		mismatch_ptr = getPageMismatch(chk_ptr);
-		if (mismatch_ptr) {
-			os	<< "[PTImgChk] Mismatch on ptr="
-				<< (void*)(mismatch_ptr.o) << '\n';
-			mptrs.insert(mismatch_ptr);
-		}
-		}
-		cptrs.insert(chk_ptr);
-
-		/* get page after */
-		chk_ptr = guest_ptr(dat[i] & ~0xfffUL);
-		if (!cptrs.count(chk_ptr)) {
-		mismatch_ptr = getPageMismatch(chk_ptr);
-		if (mismatch_ptr) {
-			os	<< "[PTImgChk] Mismatch on ptr="
-				<< (void*)(mismatch_ptr.o) << '\n';
-			mptrs.insert(mismatch_ptr);
-		}
-		}
-		cptrs.insert(chk_ptr);
+		printRootTraceDat(os, dat[i], mptrs, cptrs);
 	}
 
 	/* false if mismatch */
