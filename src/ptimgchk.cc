@@ -27,6 +27,7 @@ PTImgChk::PTImgChk(const char* binname, bool use_entry)
 , blocks(0)
 , mem_log(getenv("VEXLLVM_LAST_STORE") ? new MemLog() : NULL)
 , xchk_stack(getenv("VEXLLVM_XCHK_STACK") ? true : false)
+, xchk_rootptrs(getenv("VEXLLVM_XCHK_ROOTPTRS") ? true : false)
 , fixup_c(0)
 {}
 
@@ -146,6 +147,9 @@ bool PTImgChk::isMatch() const
 		return false;
 
 	if (!isMatchMemLog())
+		return false;
+
+	if (xchk_rootptrs && !printRootTrace(std::cerr))
 		return false;
 
 	return true;
@@ -285,31 +289,47 @@ guest_ptr PTImgChk::getPageMismatch(guest_ptr p) const
 	return guest_ptr(0);
 }
 
-void PTImgChk::printRootTrace(std::ostream& os) const
+bool PTImgChk::printRootTrace(std::ostream& os) const
 {
 	const GuestCPUState	*gcpu;
 	const uint64_t		*dat;
 	unsigned		dat_elems;
+	std::set<guest_ptr>	mptrs, cptrs;
 
 	gcpu = getCPUState();
 	dat = (const uint64_t*)gcpu->getStateData();
 	dat_elems = gcpu->getStateSize() / sizeof(*dat);
 
 	for (unsigned i = 0; i < dat_elems; i++) {
-		guest_ptr mismatch_ptr;
+		guest_ptr mismatch_ptr, chk_ptr;
 
-		mismatch_ptr = getPageMismatch(guest_ptr(dat[i] - 4096));
+		/* get page before */
+		chk_ptr = guest_ptr((dat[i] - 4096) & ~0xfffUL);
+		if (!cptrs.count(chk_ptr)) {
+		mismatch_ptr = getPageMismatch(chk_ptr);
 		if (mismatch_ptr) {
 			os	<< "[PTImgChk] Mismatch on ptr="
 				<< (void*)(mismatch_ptr.o) << '\n';
+			mptrs.insert(mismatch_ptr);
 		}
+		}
+		cptrs.insert(chk_ptr);
 
-		mismatch_ptr = getPageMismatch(guest_ptr(dat[i]));
+		/* get page after */
+		chk_ptr = guest_ptr(dat[i] & ~0xfffUL);
+		if (!cptrs.count(chk_ptr)) {
+		mismatch_ptr = getPageMismatch(chk_ptr);
 		if (mismatch_ptr) {
 			os	<< "[PTImgChk] Mismatch on ptr="
 				<< (void*)(mismatch_ptr.o) << '\n';
+			mptrs.insert(mismatch_ptr);
 		}
+		}
+		cptrs.insert(chk_ptr);
 	}
+
+	/* false if mismatch */
+	return (mptrs.size() == 0);
 }
 
 void PTImgChk::printShadow(std::ostream& os) const

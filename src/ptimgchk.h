@@ -41,7 +41,7 @@ private:
 	void waitForSingleStep(void);
 
 	void printMemory(std::ostream& os) const;
-	void printRootTrace(std::ostream& os) const;
+	bool printRootTrace(std::ostream& os) const;
 	guest_ptr getPageMismatch(guest_ptr p) const;
 
 	void readMemLogData(char* data) const;
@@ -58,6 +58,7 @@ private:
 
 	MemLog		*mem_log;
 	bool		xchk_stack;
+	bool		xchk_rootptrs;
 
 	unsigned	fixup_c;
 };
