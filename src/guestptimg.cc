@@ -43,6 +43,8 @@
 
 #define IS_SIGTRAP(x) (WIFSTOPPED(x) && WSTOPSIG(x) == SIGTRAP)
 
+#include "guestptmem.h"
+
 GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 : Guest(binpath)
 , pt_arch(NULL)
@@ -206,11 +208,13 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 		 * ... jump to it */
 		cpu_state = gs->getCPUState();
 		pt_arch = NEW_ARCH_PT;
+
 		pt_arch->restore();
 
 		assert (0 == 1 && "OOPS");
 		exit(-1);
 	}
+
 
 	pt_arch = NEW_ARCH_PT;
 
@@ -225,7 +229,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 		"[GuestPTImg] setting bp on cur_pc=%p\n", (void*)cur_pc.o);
 	setBreakpointByPID(pid, cur_pc);
 
-	/* run until child hits entry point */
+	/* run until child hits cur_pc */
 	waitForEntry(pid);
 
 	break_addr = undoBreakpoint(pid);
@@ -567,7 +571,7 @@ void GuestPTImg::forcePreloads(
 	for (unsigned i = 0; i < preload_len; i++)
 		if (preload_libs[i] == ':')
 			preload_libs[i] = '\0';
-	
+
 	for (	char* cur_lib = preload_libs;
 		(cur_lib - preload_libs) < preload_len;
 		cur_lib += strlen(cur_lib) + 1)

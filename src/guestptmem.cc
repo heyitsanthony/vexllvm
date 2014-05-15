@@ -19,14 +19,20 @@ GuestPTMem::~GuestPTMem(void)
 	maps.clear();
 }
 
+uint8_t GuestPTMem::read8(guest_ptr offset) const
+{
+	uint64_t	n;
+	n = ptrace(PTRACE_PEEKDATA, pid, (void*)(offset.o & ~7UL), NULL);
+	return (uint8_t)((n >> (8*(offset.o & 7UL))) & 0xff);
+}
+
 #define DEFREAD(x)	\
 uint##x##_t GuestPTMem::read##x(guest_ptr offset) const { \
 	uint64_t	n;	\
 	n = ptrace(PTRACE_PEEKDATA, pid, (void*)offset.o, NULL);	\
 	return (uint##x##_t)n;	}
-DEFREAD(8)
-DEFREAD(16)
-DEFREAD(32)
+DEFREAD(16) // wrong?
+DEFREAD(32) // wrong?
 DEFREAD(64)
 #undef DEFREAD
 
@@ -65,9 +71,19 @@ void GuestPTMem::memcpy(guest_ptr dest, const void* src, size_t len)
 
 void GuestPTMem::memcpy(void* dest, guest_ptr src, size_t len) const
 {
-	char	*v = (char*)dest;
+	uint8_t		*v8 = (uint8_t*)dest;
+
+	/* fast path */
+	if ((src.o & 7UL) == 0 && (len & 7UL) == 0) {
+		uint64_t	*v64 = (uint64_t*)dest;
+		for (unsigned i = 0; i < len / 8; i++)
+			v64[i] = read64(src + i*8);
+		return;
+	}
+
+	/* XXX: this can be done faster, but have to worry about alignments. */
 	for (unsigned i = 0; i < len; i++)
-		v[i] = read8(src + i);
+		v8[i] = read8(src + i);
 }
 
 void GuestPTMem::memset(guest_ptr dest, char d, size_t len)

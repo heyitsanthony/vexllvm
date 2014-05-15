@@ -72,6 +72,9 @@ public:
 
 	bool lookupMapping(const char* name, Mapping& mapping) const;
 
+	typedef std::pair<Mapping, uint64_t> mapchksum_t;
+	std::list<mapchksum_t> getChksums(void) const;
+
 	std::list<Mapping> getMaps(void) const;
 	void setType(guest_ptr addr, Mapping::MapType);
 
@@ -207,6 +210,8 @@ protected:
 	bool findFreeRegionByMaps(size_t len, Mapping& m) const;
 
 	bool canUseRange(guest_ptr base, unsigned int len) const;
+
+	uint64_t chksumMapping(Mapping& mapping) const;
 
 
 	mapmap_t	maps;

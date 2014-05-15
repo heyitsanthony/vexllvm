@@ -791,3 +791,28 @@ void GuestMem::nameMapping(guest_ptr addr, const std::string& s)
 }
 
 void GuestMem::import(GuestMem* m) { assert (0 == 1 && "STUB"); }
+
+
+/* XXX: dumb */
+uint64_t GuestMem::chksumMapping(Mapping& m) const
+{
+	uint64_t	*p;
+	uint64_t	ret = 0;
+
+	p = (uint64_t*)getHostPtr(m.offset);
+	for (unsigned i = 0; i < m.length/sizeof(*p); i++) {
+		ret += (i+1)*p[i];
+	}
+
+	return ret;
+}
+
+std::list<GuestMem::mapchksum_t> GuestMem::getChksums(void) const
+{
+	std::list<mapchksum_t>	l;
+	foreach (it, maps.begin(), maps.end()) {
+		l.push_back(mapchksum_t(
+			*(it->second), chksumMapping(*(it->second))));
+	}
+	return l;
+}
