@@ -40,7 +40,7 @@ DEFREAD(64)
 void GuestPTMem::write##x(guest_ptr offset, uint##x##_t t)	\
 {	uint64_t	n;					\
 	long		err;					\
-	if (sizeof(t) == 8) {					\
+	if (sizeof(t) != 8) {					\
 		n = ptrace(PTRACE_PEEKDATA, pid, (void*)offset.o, NULL);\
 		n &= ~(uint64_t)(((uint##x##_t)(~0)));			\
 		n |= t;							\
@@ -66,6 +66,8 @@ void GuestPTMem::memcpy(guest_ptr dest, const void* src, size_t len)
 	}
 
 	len -= rem;
+	if (len == 0) return;
+
 	g_ptimg->getPTArch()->copyIn(dest + rem, (const char*)src + rem, len);
 }
 
