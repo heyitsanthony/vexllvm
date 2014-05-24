@@ -63,6 +63,9 @@ public:
 	{ assert (0 == 1 && "Not implemented"); }
 
 	void copyIn(guest_ptr dst, const void* src, unsigned int bytes) const;
+
+	int getWaitStatus(void) const { return wss_status; }
+	bool isSigSegv(void) const;
 protected:
 	PTImgArch(GuestPTImg* in_gs, int in_pid);
 	virtual void waitForSingleStep(void);

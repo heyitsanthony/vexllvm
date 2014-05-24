@@ -118,3 +118,5 @@ void PTImgArch::copyIn(guest_ptr dst, const void* src, unsigned int bytes) const
 		out_addr.o += sizeof(long);
 	}
 }
+
+bool PTImgArch::isSigSegv(void) const { return WSTOPSIG(wss_status) == SIGSEGV; }

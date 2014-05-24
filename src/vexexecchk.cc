@@ -116,8 +116,21 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 {
 	bool fixed;
 
+	/* OK. */
 	if (cross_check->isMatch())
 		 return;
+
+#ifndef BROKEN_OSDI
+	/* bad address? */
+	if (	gs->getMem()->isMapped(gs->getCPUState()->getPC()) == false &&
+		cross_check->getPTArch()->isSigSegv() == true)
+	{
+		fprintf(stderr,
+			"[VexExecChk] Jump to invalid address %p\n",
+			(void*)gs->getCPUState()->getPC().o);
+		exit(0);
+	}
+#endif
 
 	fixed = cross_check->fixup(vsb->getInstExtents());
 	if (fixed) {
