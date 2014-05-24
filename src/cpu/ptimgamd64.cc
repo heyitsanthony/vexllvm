@@ -283,6 +283,10 @@ GuestPTImg::FixupDir PTImgAMD64::canFixup(
 			EFLAG_FIXUP("bt");
 		case 0xbc0f: reason = "bsf"; goto do_fixup;
 		case 0xbd0f: reason = "bsr"; goto do_fixup;
+		#ifndef BROKEN_OSDI
+		case 0xae0f: /* mxcsr registers */
+			reason = "mxcsr"; goto do_fixup;
+		#endif
 		default:
 			break;
 		}
@@ -293,12 +297,14 @@ GuestPTImg::FixupDir PTImgAMD64::canFixup(
 				(ins_buf[i+2] << 16) | (ins_buf[i+3] << 24);
 			fix_op = op32;
 			switch (op32) {
+		#ifndef BROKEN_OSDI
 			case 0xc05e0ff2:
 				/* so LLVM will translate this to use 0x7ff80...
 				 * when xmm0 is known to be zero when hardware
 				 * generate 0xfff80... */
 				reason = "divsd %xmm0, %xmm0";
 				goto do_fixup;
+		#endif
 			/* accessing kernel timer page */
 			case 0xff5ff080:
 				reason = "readtimer-80";
