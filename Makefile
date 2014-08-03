@@ -77,6 +77,7 @@ OBJBASE=	guest.o			\
 		syscall/syscalls.o		\
 		syscall/spimsyscalls.o		\
 		syscall/syscallsmarshalled.o	\
+		syscall/syscallnamer.o	\
 		symbols.o		\
 		elfimg.o		\
 		elfdebug.o		\
@@ -192,6 +193,23 @@ clean:
 # don't wipe out softfloat because it mostly relies on fpu.git
 clean-all: clean
 	rm -f bitcode/*softfloat*
+
+gen-sc-headers: src/syscall/xlate-linux-x86.h src/syscall/xlate-linux-x64.h
+
+src/syscall/xlate-linux-x86.h: /usr/include/asm/unistd_32.h
+	echo  "#ifndef XLATE_LINUX_X86_H" >src/syscall/xlate-linux-x86.h
+	echo  "const char *xlate_tab_x86[] = {" >>src/syscall/xlate-linux-x86.h
+	grep NR_ /usr/include/asm/unistd_32.h | sed "s/__NR_//g" | awk ' BEGIN { last = 0; } { x = last; while (x < $$3) {  print "NULL, ";  x++; } last = x+1; print "\"" $$2 "\","; }' >>src/syscall/xlate-linux-x86.h
+	echo -e -n "};\n#endif" >>src/syscall/xlate-linux-x86.h
+	
+
+src/syscall/xlate-linux-x64.h: /usr/include/asm/unistd_64.h
+	echo  "#ifndef XLATE_LINUX_X64_H" >src/syscall/xlate-linux-x64.h
+	echo  "const char *xlate_tab_x64[] = {" >>src/syscall/xlate-linux-x64.h
+	grep NR_ /usr/include/asm/unistd_64.h | sed "s/__NR_//g" | awk ' BEGIN { last = 0; } { x = last; while (x < $$3) {  print "NULL, ";  x++; } last = x+1; print "\"" $$2 "\","; }' >>src/syscall/xlate-linux-x64.h
+	echo -e -n "};\n#endif" >>src/syscall/xlate-linux-x64.h
+
+
 
 bitcode: $(BITCODE_FILES)
 
