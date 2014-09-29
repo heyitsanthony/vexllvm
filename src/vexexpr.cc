@@ -33,12 +33,13 @@ static const IRExpr** getNaryArgs(const IRExpr* expr)
 {
 	switch (expr->tag) {
 	case Iex_Unop:
-		return (const IRExpr**)((const void*)(&expr->Iex.Unop.arg));
+		return const_cast<const IRExpr**>(&expr->Iex.Unop.arg);
 	case Iex_Binop:
-		return (const IRExpr**)((const void*)(&expr->Iex.Binop.arg1));
+		return const_cast<const IRExpr**>(&expr->Iex.Binop.arg1);
 	case Iex_Triop:
 	case Iex_Qop:
-		return (const IRExpr**)((void*)(&expr->Iex.Triop.details->arg1));
+		return const_cast<const IRExpr**>(
+			&expr->Iex.Triop.details->arg1);
 	default:
 		assert (0 == 1 && "BAD TAG");
 	}
@@ -174,11 +175,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(Sub32F0x4);
 
 	UNOP_TAGOP(Sqrt32F0x4);
-	UNOP_TAGOP(Recip32F0x4);
-	UNOP_TAGOP(RSqrt32F0x4);
 	UNOP_TAGOP(Sqrt64F0x2);
-	UNOP_TAGOP(Recip64F0x2);
-	UNOP_TAGOP(RSqrt64F0x2);
 
 	BINOP_TAGOP(Min64F0x2);
 	BINOP_TAGOP(Max32F0x4);
@@ -249,11 +246,11 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Sqrt32Fx4);
 	UNOP_TAGOP(Sqrt64Fx2);
 
-	UNOP_TAGOP(RSqrt32Fx4);
-	UNOP_TAGOP(RSqrt64Fx2);
+	UNOP_TAGOP(RSqrtEst32Fx4);
+//	UNOP_TAGOP(RSqrtEst64Fx2);
 
-	UNOP_TAGOP(Recip32Fx4);
-	UNOP_TAGOP(Recip64Fx2);
+	UNOP_TAGOP(RecipEst32Fx4);
+//	UNOP_TAGOP(RecipEst64Fx2);
 
 	BINOP_TAGOP(Or8);
 	BINOP_TAGOP(Or16);
@@ -363,8 +360,8 @@ return new VexExprUnop##x(in_parent, expr)
 	UNOP_TAGOP(Clz64);
 	UNOP_TAGOP(Clz32);
 
-	UNOP_TAGOP(Cls32Sx2);
-	UNOP_TAGOP(Cls32Sx4);
+	UNOP_TAGOP(Cls32x2);
+	UNOP_TAGOP(Cls32x4);
 
 	BINOP_TAGOP(Shl8x8);
 	BINOP_TAGOP(Shr8x8);

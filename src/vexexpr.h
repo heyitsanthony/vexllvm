@@ -12,20 +12,6 @@ extern "C" {
 
 #include "collection.h"
 
-#ifdef VALGRIND_TRUNK
-/* they changed the name of a bunch of opcodes... great */
-#define Iop_QNarrow16Sx4	Iop_QNarrowBin16Sto8Sx8
-#define Iop_QNarrow16Sx8	Iop_QNarrowBin16Sto8Sx16
-#define Iop_QNarrow32Sx2	Iop_QNarrowBin32Sto16Sx4
-#define Iop_QNarrow32Sx4	Iop_QNarrowBin32Sto16Sx8
-#define Iop_QNarrow16Ux4	Iop_QNarrowUn16Sto8Ux8
-#define Iop_QNarrow16Ux8	Iop_QNarrowBin16Sto8Ux16
-#define Iop_QNarrow32Ux4	Iop_QNarrowBin32Sto16Ux8
-#define Iop_Narrow16x8		Iop_NarrowBin16to8x16
-#define Iop_Narrow32x4		Iop_NarrowBin32to16x8
-
-#endif
-
 class VexStmt;
 
 namespace llvm

@@ -85,7 +85,7 @@ void PTImgArch::waitForSingleStep(void)
 			break;
 		}
 	} else {
-		fprintf(stderr, "STATUS: %lx\n", wss_status);
+		fprintf(stderr, "STATUS: %lx\n", (unsigned long)wss_status);
 		perror("Unknown status in waitForSingleStep");
 		abort();
 	}

@@ -82,10 +82,10 @@ static struct guest_ctx_field arm_fields[] =
 	{32, 1, "GEFLAG2"},
 	{32, 1, "GEFLAG3"},
 	
-	{32, 1, "EMWARN"},
+	{32, 1, "EMNOTE"},
 	
-	{32, 1, "TISTART"},
-	{32, 1, "TILEN"},
+	{32, 1, "CMSTART"},
+	{32, 1, "CMLEN"},
 
 	/* unredirected guest addr at start of translation whose
 	 * start has been redirected */
@@ -154,9 +154,9 @@ const char* ARMCPUState::off2Name(unsigned int off) const
 	CASE_OFF2NAME(GEFLAG1)
 	CASE_OFF2NAME(GEFLAG2)
 	CASE_OFF2NAME(GEFLAG3)
-	// CASE_OFF2NAME(EMWARN) changed to EMNOTE in SVN
-	CASE_OFF2NAME(TISTART)
-	CASE_OFF2NAME(TILEN)
+	CASE_OFF2NAME(EMNOTE)
+	CASE_OFF2NAME(CMSTART)
+	CASE_OFF2NAME(CMLEN)
 	CASE_OFF2NAME(NRADDR)
 	CASE_OFF2NAME(IP_AT_SYSCALL)
 	CASE_OFF2NAME_NUM(D,0)

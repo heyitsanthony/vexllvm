@@ -57,8 +57,8 @@ static struct guest_ctx_field mips32_fields[] =
 	{32, 1, "ULR"},
 	{32, 1, "EMWARN"},
 
-	{32, 1, "TISTART"},
-	{32, 1, "TILEN"},
+	{32, 1, "CMSTART"},
+	{32, 1, "CMLEN"},
 	{32, 1, "NRADDR"},
 
 	{32, 1, "FAILADDR"},
@@ -121,8 +121,8 @@ const char* MIPS32CPUState::off2Name(unsigned int off) const
 
 	CASE_OFF2NAME(ULR)
 //	CASE_OFF2NAME(EMWARN) EMNOTE in svn
-	CASE_OFF2NAME(TISTART)
-	CASE_OFF2NAME(TILEN)
+	CASE_OFF2NAME(CMSTART)
+	CASE_OFF2NAME(CMLEN)
 	CASE_OFF2NAME(NRADDR)
 
 //	CASE_OFF2NAME(FAILADDR)

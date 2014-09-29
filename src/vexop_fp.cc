@@ -103,12 +103,12 @@ OPF0X_SEL_EMIT(Max64F0x2, get_vtd(2), FCmpUGT)
 OPF0X_SEL_EMIT(Min64F0x2, get_vtd(2), FCmpULT)
 
 OPF0X_RSQ(Sqrt64F0x2 , get_vtd(2), sqrt, NONE, F0XINT(get_d(), sqrt))
-OPF0X_RSQ(Recip64F0x2, get_vtd(2), sqrt, NONE, F0XRCP(DBL_1))
-OPF0X_RSQ(RSqrt64F0x2, get_vtd(2), sqrt, F0XINT(get_d(), sqrt), F0XRCP(DBL_1))
+//OPF0X_RSQ(RecipEst64F0x2, get_vtd(2), sqrt, NONE, F0XRCP(DBL_1))
+//OPF0X_RSQ(RSqrtEst64F0x2, get_vtd(2), sqrt, F0XINT(get_d(), sqrt), F0XRCP(DBL_1))
 
 OPF0X_RSQ(Sqrt32F0x4 , get_vtf(4), sqrt, NONE, F0XINT(get_f(), sqrt))
-OPF0X_RSQ(Recip32F0x4, get_vtf(4), sqrt, NONE, F0XRCP(FLT_1))
-OPF0X_RSQ(RSqrt32F0x4, get_vtf(4), sqrt, F0XINT(get_f(), sqrt), F0XRCP(FLT_1))
+OPF0X_RSQ(RecipEst32F0x4, get_vtf(4), sqrt, NONE, F0XRCP(FLT_1))
+OPF0X_RSQ(RSqrtEst32F0x4, get_vtf(4), sqrt, F0XINT(get_f(), sqrt), F0XRCP(FLT_1))
 
 EMIT_HELPER_BINOP(CmpF64, "vexop_cmpf64", get_d())
 
@@ -223,18 +223,17 @@ Value* VexExprTriopPRemC3210F64::emit(void) const
 }
 
 OPV_RSQ(Sqrt64Fx2 , get_vtd(2), sqrt, NONE, VINT(get_vtd(2), sqrt))
-OPV_RSQ(Recip64Fx2, get_vtd(2), sqrt, NONE, VRCP(DBL_1x2))
-OPV_RSQ(RSqrt64Fx2, get_vtd(2), sqrt, VINT(get_vtd(2), sqrt), VRCP(DBL_1x2))
+//OPV_RSQ(Recip64Fx2, get_vtd(2), sqrt, NONE, VRCP(DBL_1x2))
+//OPV_RSQ(RSqrtEst64Fx2, get_vtd(2), sqrt, VINT(get_vtd(2), sqrt), VRCP(DBL_1x2))
 
 OPV_RSQ(Sqrt32Fx4 , get_vtf(4), sqrt, NONE, VINT(get_vtf(4), sqrt))
-OPV_RSQ(Recip32Fx4, get_vtf(4), sqrt, NONE, VRCP(FLT_1x4))
-OPV_RSQ(RSqrt32Fx4, get_vtf(4), sqrt, VINT(get_vtf(4), sqrt), VRCP(FLT_1x4))
+OPV_RSQ(RecipEst32Fx4, get_vtf(4), sqrt, NONE, VRCP(FLT_1x4))
+OPV_RSQ(RSqrtEst32Fx4, get_vtf(4), sqrt, VINT(get_vtf(4), sqrt), VRCP(FLT_1x4))
 
 // UNOP_TAGOP(RSqrt32Fx4);
 // UNOP_TAGOP(RSqrt64Fx2);
 // 
 // UNOP_TAGOP(Recip32Fx4);
-// UNOP_TAGOP(Recip64Fx2);
 //
 
 Value* VexExprQopMAddF64::emit(void) const

@@ -115,8 +115,10 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 		vai_host.hwcaps = ARM_HWCAPS;
 	else if (in_arch == Arch::MIPS32)
 		vai_host.hwcaps = VEX_PRID_COMP_MIPS;
+	vai_host.endness = VexEndnessLE;
 
 	LibVEX_default_VexArchInfo(&vai_guest);
+	vai_guest.endness = VexEndnessLE;
 
 	switch(in_arch) {
 	case Arch::X86_64:
@@ -186,7 +188,7 @@ VexXlate::~VexXlate()
 		return;
 
 	std::cerr << "VexLate: Dumping op stats\n";
-	for (unsigned i = Iop_INVALID+1; i < Iop_Rsqrte32x4 /* XXX */; ++i) {
+	for (unsigned i = Iop_INVALID+1; i < Iop_LAST; ++i) {
 		IROp	op = (IROp)i;
 		std::cerr <<
 			"[VEXLLVM] [VEXXLATESTAT] " <<

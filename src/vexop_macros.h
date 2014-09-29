@@ -23,20 +23,26 @@
 #define UNOP_SETUP				\
 	Value		*v1;			\
 	IRBuilder<>	*builder(theGenLLVM->getBuilder());	\
-	v1 = args[0]->emit();
+	v1 = args[0]->emit();			\
+	(void)v1;
 
 #define BINOP_SETUP				\
 	Value		*v1, *v2;		\
 	IRBuilder<>	*builder(theGenLLVM->getBuilder()); \
 	v1 = args[0]->emit();			\
-	v2 = args[1]->emit();
+	v2 = args[1]->emit();			\
+	(void)v1;				\
+	(void)v2;
 
 #define TRIOP_SETUP				\
 	Value		*v1, *v2, *v3;		\
 	IRBuilder<>	*builder(theGenLLVM->getBuilder());	\
 	v1 = args[0]->emit();			\
 	v2 = args[1]->emit();			\
-	v3 = args[2]->emit();
+	v3 = args[2]->emit();			\
+	(void)v1;				\
+	(void)v2;				\
+	(void)v3;
 
 #define QOP_SETUP				\
 	Value		*v1, *v2, *v3, *v4;	\
