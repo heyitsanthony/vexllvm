@@ -5,10 +5,10 @@
 
 // Lame C++ sugar.  I'm pretty sure there better definitions.
 
-#define let(_lhs, _rhs)  typeof(_rhs) _lhs = _rhs
+#define let(_lhs, _rhs)  auto _lhs = _rhs
 
 #define foreach(_i, _b, _e) \
-	  for(typeof(_b) _i = _b, _i ## end = _e; _i != _i ## end;  ++ _i)
+	  for(auto _i = _b, _i ## end = _e; _i != _i ## end;  ++ _i)
 
 
 struct ltstr

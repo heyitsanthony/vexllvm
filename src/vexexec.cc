@@ -2,7 +2,6 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
-#include <llvm/Analysis/Verifier.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
@@ -383,7 +382,7 @@ void VexExec::dumpLogs(std::ostream& os) const
 
 void VexExec::flushTamperedCode(guest_ptr begin, guest_ptr end)
 {
-	to_flush = std::make_pair((uintptr_t)begin, (uintptr_t)end);
+	to_flush = std::make_pair(begin, end);
 }
 
 /* this happens when executing JITed code. Be careful about not flushing

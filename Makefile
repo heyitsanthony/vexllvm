@@ -15,7 +15,7 @@ ifeq ($(shell uname -m), armv7l)
 CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed
 endif
 
-CFLAGS += -g -O3 -I`pwd`/src/ -lcrypto -ldl -lrt -lcrypt -lpthread -lssl 
+CFLAGS += -g -O3 -I`pwd`/src/ -lcrypto -ldl -lrt -lcrypt -lpthread -lssl -lz -lncurses
 
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g

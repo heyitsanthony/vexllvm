@@ -78,16 +78,16 @@ static inline int copy_to_user(abi_ulong d, void* s, abi_ulong l) {
     int size = sizeof(*hptr);\
     switch(size) {\
     case 1:\
-        *(uint8_t *)(hptr) = (uint8_t)(typeof(*hptr))(x);\
+        *(uint8_t *)(hptr) = (uint8_t)(x);\
         break;\
     case 2:\
-        *(uint16_t *)(hptr) = tswap16((typeof(*hptr))(x));\
+        *(uint16_t *)(hptr) = tswap16((x));\
         break;\
     case 4:\
-        *(uint32_t *)(hptr) = tswap32((typeof(*hptr))(x));\
+        *(uint32_t *)(hptr) = tswap32((x));\
         break;\
     case 8:\
-        *(uint64_t *)(hptr) = tswap64((typeof(*hptr))(x));\
+        *(uint64_t *)(hptr) = tswap64((x));\
         break;\
     default:\
         abort();\
@@ -100,16 +100,16 @@ static inline int copy_to_user(abi_ulong d, void* s, abi_ulong l) {
     int size = sizeof(*hptr);\
     switch(size) {\
     case 1:\
-        x = (typeof(*hptr))*(uint8_t *)(hptr);\
+        x = (decltype(*hptr))*(uint8_t *)(hptr);\
         break;\
     case 2:\
-        x = (typeof(*hptr))tswap16(*(uint16_t *)(hptr));\
+        x = (decltype(*hptr))tswap16(*(uint16_t *)(hptr));\
         break;\
     case 4:\
-        x = (typeof(*hptr))tswap32(*(uint32_t *)(hptr));\
+        x = (decltype(*hptr))tswap32(*(uint32_t *)(hptr));\
         break;\
     case 8:\
-        x = (typeof(*hptr))tswap64(*(uint64_t *)(hptr));\
+        x = (decltype(*hptr))tswap64(*(uint64_t *)(hptr));\
         break;\
     default:\
         /* avoid warning */\

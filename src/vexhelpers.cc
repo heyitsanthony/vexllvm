@@ -6,7 +6,8 @@
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/IR/TypeBuilder.h>
-#include <llvm/Support/system_error.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/SourceMgr.h>
 
 #include <iostream>
 #include <stdio.h>
@@ -75,35 +76,31 @@ Module* VexHelpers::loadMod(const char* path)
 
 Module* VexHelpers::loadModFromPath(const char* path)
 {
-	Module			*ret_mod;
-	std::string		ErrorMsg;
+	Module		*ret_mod;
+	SMDiagnostic	diag;	
+	auto		mb(MemoryBuffer::getFile(path));
 
-	OwningPtr<MemoryBuffer> Buffer;
-	bool			materialize_fail;
-
-	MemoryBuffer::getFile(path, Buffer);
-
-	if (!Buffer) {
+	if (!mb) {
 		std::cerr <<  "Bad membuffer on " << path << std::endl;
-		assert (Buffer && "Couldn't get mem buffer");
+		assert (0 && "Couldn't get mem buffer");
 	}
 
-	ret_mod = ParseBitcodeFile(Buffer.get(), getGlobalContext(), &ErrorMsg);
+	ret_mod = llvm::ParseIR(mb.get().get(), diag, getGlobalContext());
 	if (ret_mod == NULL) {
+		std::string	s(diag.getMessage());
 		std::cerr
 			<< "Error Parsing Bitcode File '"
-			<< path << "': " << ErrorMsg << '\n';
+			<< path << "': " << s << '\n';
 	}
 	assert (ret_mod && "Couldn't parse bitcode mod");
-	materialize_fail = ret_mod->MaterializeAllPermanently(&ErrorMsg);
-	if (materialize_fail) {
-		std::cerr << "Materialize failed: " << ErrorMsg << std::endl;
+	auto err = ret_mod->materializeAllPermanently();
+	if (err) {
+		std::cerr << "Materialize failed... " << std::endl;
 		assert (0 == 1 && "BAD MOD");
 	}
 
 	if (ret_mod == NULL) {
-		std::cerr << "OOPS: " << ErrorMsg
-			<< " (path=" << path << ")\n";
+		std::cerr << "OOPS. No mod. (path=" << path << ")\n";
 	}
 	return ret_mod;
 }
