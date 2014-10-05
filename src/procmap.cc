@@ -184,8 +184,15 @@ void ProcMap::mapLib(pid_t pid)
 		return;
 	}
 
-	/* don't load /dev/ files-- had a problem with alsa stuff in dosbox */
-	if (strncmp(libname, "/dev/", 5) == 0) {
+	if (strcmp(libname, "[vvar]") == 0) {
+		/* can't ptrace because of weirdo semantics; if vdso is replaced
+		 * it shouldn't matter though */
+		fprintf(stderr, "[ProcMap] Ignoring idiotic [vvar]\n");
+		libname[1] = 'X';
+		mmap_fd = -1;
+		copy = false;
+	} else if (strncmp(libname, "/dev/", 5) == 0) {
+		/* don't load /dev/ files-- problems with alsa in dosbox */
 		fprintf(stderr, "[ProcMap] Ignoring device file %s\n", libname);
 		libname[0] = 'X';
 		libname[1] = '\0';
@@ -251,8 +258,10 @@ void ProcMap::ptraceCopyRange(
 		peek_data = ptrace(PTRACE_PEEKDATA, pid, copy_addr.o, NULL);
 		if (peek_data == -1 && errno) {
 			fprintf(stderr,
-				"Bad access: addr=%p err=%s\n",
-				(void*)copy_addr.o, strerror(errno));
+				"Bad access: addr=%p lib=%s (%p--%p) err=%s\n",
+				(void*)copy_addr.o, libname,
+				(void*)mem_begin.o, (void*)mem_end.o,
+				strerror(errno));
 		}
 		assert (peek_data != -1 || errno == 0);
 
