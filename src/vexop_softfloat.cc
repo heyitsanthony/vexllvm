@@ -20,7 +20,7 @@ void vexop_setup_fp(VexHelpers* vh)
 /* bit casts are important or the codegen will fuck up */
 #define OPF0X_EMIT_SOFTFLOAT_OP(x,y,z)					\
 	Function	*f = theVexHelpers->getHelper(z);		\
-	assert (f != NULL && "Could not find "z);			\
+	assert (f != NULL && "Could not find " z);			\
 	if (!lo_op_lhs->getType()->isIntegerTy())			\
 		lo_op_lhs = builder->CreateBitCast(lo_op_lhs,		\
 			get_i(lo_op_lhs->getType()->getPrimitiveSizeInBits())); \

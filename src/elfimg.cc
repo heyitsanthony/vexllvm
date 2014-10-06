@@ -22,7 +22,7 @@
 
 #include <vector>
 
-#define WARNING(x)	fprintf(stderr, "WARNING: "x"\n")
+#define WARNING(x)	fprintf(stderr, "WARNING: " x "\n")
 
 
 extern "C" { extern uint64_t LibVEX_GuestAMD64_get_rflags(const void* s); }
@@ -206,7 +206,7 @@ void ElfImg::setupSegments(void)
 static const unsigned char ok_ident_64[] = "\x7f""ELF\x2\x1\x1";
 static const unsigned char ok_ident_32[] = "\x7f""ELF\x1\x1\x1";
 
-#define EXPECTED(x)	fprintf(stderr, "ELF: expected "x"!\n")
+#define EXPECTED(x)	fprintf(stderr, "ELF: expected " x "!\n")
 
 guest_ptr ElfImg::getEntryPoint(void) const
 {

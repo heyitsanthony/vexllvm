@@ -219,7 +219,7 @@ Symbols* GuestSnapshot::loadSymbols(const char* name)
 
 		elems = fscanf(
 			f,
-			"%"BUFSZ_STR"s %"PRIx64"-%"PRIx64"\n",
+			"%" BUFSZ_STR "s %" PRIx64 "-%" PRIx64 "\n",
 			buf, &begin, &end);
 		if (elems != 3)
 			break;
@@ -457,7 +457,7 @@ void GuestSnapshot::saveSymbols(
 
 	foreach (it, g_syms->begin(), g_syms->end()) {
 		const Symbol	*cur_sym = it->second;
-		fprintf(f, "%s %"PRIx64"-%"PRIx64"\n",
+		fprintf(f, "%s %" PRIx64 "-%" PRIx64 "\n",
 			it->first.c_str(),
 			(uint64_t)cur_sym->getBaseAddr(),
 			(uint64_t)cur_sym->getEndAddr());
@@ -532,7 +532,7 @@ char* GuestSnapshot::readMemory(
 	assert (dir != NULL);
 	while ((de = readdir(dir)) != NULL) {
 		uint64_t	addr;
-		sz = sscanf(de->d_name, "0x%"PRIx64, &addr);
+		sz = sscanf(de->d_name, "0x%" PRIx64, &addr);
 		if (sz != 1)
 			continue;
 		addrs.push_back(addr);
@@ -551,7 +551,7 @@ char* GuestSnapshot::readMemory(
 	if (target_addr == 0)
 		return NULL;
 
-	snprintf(buf, 256, "%s/maps/0x%"PRIx64, dirpath, target_addr);
+	snprintf(buf, 256, "%s/maps/0x%" PRIx64, dirpath, target_addr);
 	f = fopen(buf, "rb");
 	assert (f != NULL);
 	if (fseek(f, p.o - target_addr, SEEK_SET) != 0) {
