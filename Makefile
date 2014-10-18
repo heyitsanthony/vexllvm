@@ -40,7 +40,7 @@ endif
 LLVMCC=clang
 LLVMCFLAGS=$(shell echo $(CFLAGS) | sed "s/-g//g")
 #CORECC=g++-4.4.5
-CORECC=g++
+CORECC=clang
 
 # XXX, MAKES BINARY SIZE EXPLODE
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
@@ -138,6 +138,9 @@ ifeq ($(HAS_VALGRIND_TRUNK), 'yes')
 	VEXLIB=$(VALGRIND_TRUNK)/lib/valgrind/libvex-amd64-linux.a
 	CFLAGS += -I$(VALGRIND_TRUNK)/include -DVALGRIND_TRUNK
 endif
+
+CFLAGS0= $(shell echo $(CFLAGS) | sed "s|-[lL][A-Za-z].*[^ ] | |g")
+LLVMFLAGS0= $(shell echo $(LLVMFLAGS) | sed "s|-[lL][A-Za-z].*[^ ] | |g;s|-L/usr/lib64[/ ]| |g")
 
 
 FPDEPS= vexop_fp.o
@@ -272,13 +275,13 @@ bitcode/%.bc: support/%.c
 	$(LLVMCC) $(LLVMCFLAGS) -emit-llvm -O3 -c $< -o $@
 
 obj/%.o: src/%.s
-	gcc -c -o $@ $< $(CFLAGS) 
+	gcc -c -o $@ $< $(CFLAGS0) 
 
 obj/%.o: src/%.cc src/%.h
-	$(CORECC) -c -o $@ $< $(CFLAGS) $(LLVMFLAGS) 
+	$(CORECC) -c -o $@ $< $(CFLAGS0) $(LLVMFLAGS0) 
 
 obj/%.o: src/%.cc
-	$(CORECC) -c -o $@ $< $(CFLAGS) $(LLVMFLAGS) 
+	$(CORECC) -c -o $@ $< $(CFLAGS0) $(LLVMFLAGS0) 
 
 # TEST DATA
 TRACEDEPS= nested_call strlen strrchr 	\
