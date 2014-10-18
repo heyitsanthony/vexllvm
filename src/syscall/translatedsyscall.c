@@ -3097,7 +3097,7 @@ static abi_long do_ioctl_ifconf(const IOCTLEntry *ie, uint8_t *buf_temp,
 
         argptr = lock_user(VERIFY_WRITE, target_ifc_buf, target_ifc_len, 0);
         for (i = 0; i < nb_ifreq ; i++) {
-            thunk_convert(argptr + i * target_ifreq_size,
+            thunk_convert(((char*)argptr) + i * target_ifreq_size,
                           host_ifc_buf + i * sizeof(struct ifreq),
                           ifreq_arg_type, THUNK_TARGET);
         }

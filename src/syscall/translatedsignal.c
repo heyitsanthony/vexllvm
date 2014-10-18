@@ -1199,8 +1199,8 @@ struct rt_sigframe_v2
 #define SWI_THUMB_RT_SIGRETURN	(0xdf00 << 16 | 0x2700 | (TARGET_NR_rt_sigreturn))
 
 static const abi_ulong retcodes[4] = {
-	SWI_SYS_SIGRETURN,	SWI_THUMB_SIGRETURN,
-	SWI_SYS_RT_SIGRETURN,	SWI_THUMB_RT_SIGRETURN
+	(abi_ulong)SWI_SYS_SIGRETURN,	(abi_ulong)SWI_THUMB_SIGRETURN,
+	(abi_ulong)SWI_SYS_RT_SIGRETURN,(abi_ulong)SWI_THUMB_RT_SIGRETURN
 };
 
 
