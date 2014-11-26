@@ -272,7 +272,7 @@ bitcode/fpu-linuxmips.bc: bitcode/linux-fpu-mips.bca bitcode/vexops_softfloat.bc
 
 
 bitcode/%.bc: support/%.c
-	$(LLVMCC) $(LLVMCFLAGS) -emit-llvm -O3 -c $< -o $@
+	$(LLVMCC) $(LLVMCFLAGS0) -emit-llvm -O3 -c $< -o $@
 
 obj/%.o: src/%.s
 	gcc -c -o $@ $< $(CFLAGS0) 
