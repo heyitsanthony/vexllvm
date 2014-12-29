@@ -157,7 +157,7 @@ void GuestSnapshot::loadMappings(void)
 		length =(uintptr_t)end - (uintptr_t)begin;
 
 		snprintf(buf, BUFSZ, "%s/maps/%p", srcdir.c_str(), (void*)begin.o);
-		fd = open(buf, O_RDONLY);
+		fd = open(buf, O_RDONLY | O_CLOEXEC);
 		assert (fd != -1);
 
 		if (mem->is32Bit() && (begin.o > (1ULL << 32))) {
