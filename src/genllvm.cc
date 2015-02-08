@@ -114,6 +114,10 @@ Type* GenLLVM::vexTy2LLVM(IRType ty)
 		return VectorType::get(
 			Type::getInt8Ty(getGlobalContext()),
 			16);
+	case Ity_V256:
+		return VectorType::get(
+			Type::getInt8Ty(getGlobalContext()),
+			32);
 	default:
 		std::cout << "COULDN'T HANDLE " << ty << std::endl;
 	}
