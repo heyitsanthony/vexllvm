@@ -190,6 +190,13 @@ all:	bitcode 				\
 
 all-rebase: all $(BINTARGETS_REBASE)
 
+scan-build:
+	mkdir -p scan-out
+	scan-build \
+		`clang -cc1 -analyzer-checker-help | awk ' { print "-enable-checker="$1 } ' | grep '\.' | grep -v debug ` \
+		-o `pwd`/scan-out make -j7 all
+
+
 clean:
 	rm -f $(BINOBJS) obj/*vexop*.o $(OBJDIRDEPS) $(BINTARGETS_ALL) $(LIBTARGETS)
 
