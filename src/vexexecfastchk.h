@@ -11,7 +11,7 @@ friend class VexExec;
 public:
 	virtual ~VexExecFastChk(void) {}
 protected:
-	VexExecFastChk(PTImgChk* gs, VexXlate* vx);
+	VexExecFastChk(PTImgChk* gs, std::shared_ptr<VexXlate> vx);
 
 	virtual guest_ptr doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);

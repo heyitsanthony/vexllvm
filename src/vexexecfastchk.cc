@@ -6,7 +6,7 @@
 #include "memlog.h"
 #include "ptimgchk.h"
 
-VexExecFastChk::VexExecFastChk(PTImgChk* gs, VexXlate* vx)
+VexExecFastChk::VexExecFastChk(PTImgChk* gs, std::shared_ptr<VexXlate> vx)
 : VexExecChk(gs, vx),
   pt_sc_req_c(0),
   pt_sc_done_c(0)

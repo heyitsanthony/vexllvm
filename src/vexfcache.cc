@@ -12,16 +12,14 @@
 using namespace llvm;
 
 VexFCache::VexFCache(Arch::Arch arch)
-: xlate(new VexXlate(arch)),
-  owns_xlate(true),
+: xlate(std::make_shared<VexXlate>(arch)),
   max_cache_ents(~0) /* don't evict by default */
 {
 	dump_llvm = (getenv("VEXLLVM_DUMP_LLVM")) ? true : false;
 }
 
-VexFCache::VexFCache(VexXlate* in_xlate)
+VexFCache::VexFCache(std::shared_ptr<VexXlate> in_xlate)
 : xlate(in_xlate),
-  owns_xlate(false),
   max_cache_ents(~0)
 {
 	assert (xlate != NULL);
@@ -31,7 +29,6 @@ VexFCache::VexFCache(VexXlate* in_xlate)
 VexFCache::~VexFCache(void)
 {
 	flush();
-	if (owns_xlate) delete xlate;
 }
 
 void VexFCache::setMaxCache(unsigned int x)
@@ -176,18 +173,14 @@ void VexFCache::dumpLog(std::ostream& os) const
 
 void VexFCache::flush(void)
 {
-	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
-		VexSB*	vsb = it->second;
-		delete vsb;
-	}
-
+	for (auto &p : vexsb_cache) delete p.second;
 	vexsb_cache.clear();
+
 	vexsb_dc.flush();
 
-	foreach (it, func_cache.begin(), func_cache.end()) {
-		it->second->eraseFromParent();
-	}
+	for (auto &p : func_cache) p.second->eraseFromParent();
 	func_cache.clear();
+
 	func_dc.flush();
 }
 

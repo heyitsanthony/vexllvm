@@ -15,7 +15,11 @@ ifeq ($(shell uname -m), armv7l)
 CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed
 endif
 
-CFLAGS += -g -O3 -I`pwd`/src/ -lcrypto -ldl -lrt -lcrypt -lpthread -lssl -lz -lncurses
+PROF_FLAGS += -pg -gprof
+# XXX broken because of mapping in weird addresses
+ASAN_FLAGS += -fsanitize=address
+
+CFLAGS += -std=c++14 -g -O3 -I`pwd`/src/ -lcrypto -ldl -lrt -lcrypt -lpthread -lssl -lz -lncurses
 
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
@@ -94,6 +98,7 @@ OBJSLLVM=	vexxlate.o		\
 		vexop.o			\
 		memlog.o		\
 		genllvm.o		\
+		jitengine.o		\
 		vexfcache.o		\
 		vexjitcache.o		\
 		vexexec.o		\
@@ -128,7 +133,7 @@ CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)
 LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
 LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
 LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
-LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
+LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/c++11/c++14/g;s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
 
 ifndef VALGRIND_TRUNK
 VALGRIND_TRUNK=/home4/ajromano/valgrind

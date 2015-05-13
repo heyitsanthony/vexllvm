@@ -6,7 +6,7 @@
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/ExecutionEngine/JIT.h>
+#include <llvm/ExecutionEngine/MCJIT.h>
 #include "guestptimg.h"
 
 #include <inttypes.h>
@@ -30,6 +30,7 @@
 #include "vexhelpers.h"
 #include "guest.h"
 #include "elfimg.h"
+#include "jitengine.h"
 
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
@@ -45,7 +46,7 @@ void VexExec::setupStatics(Guest* in_gs)
 {
 	const char* saveas;
 
-	if (!theGenLLVM) theGenLLVM = new GenLLVM(in_gs);
+	if (!theGenLLVM) theGenLLVM = std::make_unique<GenLLVM>(*in_gs);
 	if (!theVexHelpers) theVexHelpers = VexHelpers::create(in_gs->getArch());
 
 	/* stupid hack to save right before execution */
@@ -72,45 +73,25 @@ const VexSB* VexExec::getCachedVSB(guest_ptr p) const
 VexExec::~VexExec()
 {
 	if (gs == NULL) return;
-
-	delete jit_cache;
 	delete sc;
-
-	if (owns_xlate) delete xlate;
 }
 
-VexExec::VexExec(Guest* in_gs, VexXlate* in_xlate)
+VexExec::VexExec(Guest* in_gs, std::shared_ptr<VexXlate> in_xlate)
 : gs(in_gs)
 , next_addr(0)
 , sb_executed_c(0)
 , exited(false)
 , trace_c(0)
 , save_core(getenv("VEXLLVM_CORE") != NULL)
-, owns_xlate(in_xlate == NULL)
 , xlate(in_xlate)
 {
-	InitializeNativeTarget();
-	EngineBuilder	eb(theGenLLVM->getModule());
-	ExecutionEngine	*exeEngine;
-	std::string	err_str;
-	const char	*env_str;
+	const char			*env_str;
+	std::unique_ptr<JITEngine>	je(std::make_unique<JITEngine>());
 
-	eb.setErrorStr(&err_str);
-	/* XXX: the default JIT uses my machine's bdver2 opcodes.
-	 * this is OK but llvm-3.4 has a bad bextr template, which
-	 * causes it to generate invalid code. lol */
-#warning using x86-64 mcpu because llvm-3.4 makes bad bextrs
-	eb.setMCPU("x86-64");
-	exeEngine = eb.create();
-	if (!exeEngine) std::cerr << "Exe Engine Error: " << err_str << '\n';
-	assert (exeEngine && "Could not make exe engine");
+	theVexHelpers->moveToJITEngine(*je);
+	if (!xlate) xlate = std::make_shared<VexXlate>(gs->getArch());
 
-	/* XXX need to fix ownership of module exe engine deletes it now! */
-	theVexHelpers->bindToExeEngine(exeEngine);
-
-	if (!xlate) xlate = new VexXlate(gs->getArch());
-
-	jit_cache = new VexJITCache(xlate, exeEngine);
+	jit_cache = std::make_unique<VexJITCache>(xlate, std::move(je));
 	if (getenv("VEXLLVM_VSB_MAXCACHE")) {
 		jit_cache->setMaxCache(atoi(getenv("VEXLLVM_VSB_MAXCACHE")));
 	}

@@ -14,7 +14,7 @@ public:
 	virtual ~VexExecChk(void) {}
 
 protected:
-	VexExecChk(PTImgChk* gs, VexXlate* vx = NULL);
+	VexExecChk(PTImgChk* gs, std::shared_ptr<VexXlate> vx = NULL);
 
 	virtual guest_ptr doVexSB(VexSB* vsb);
 	virtual void doSysCall(VexSB* vsb);

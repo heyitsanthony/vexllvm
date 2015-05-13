@@ -35,7 +35,7 @@ class VexExec
 {
 public:
 	template <class T, class U>
-	static T* create(U* in_gs, VexXlate* in_xlate = NULL)
+	static T* create(U* in_gs, std::shared_ptr<VexXlate> in_xlate = NULL)
 	{
 		T	*ve;
 
@@ -66,7 +66,7 @@ public:
 
 	virtual void setSyscalls(Syscalls* in_sc);
 protected:
-	VexExec(Guest* gs, VexXlate* in_xlate = NULL);
+	VexExec(Guest* gs, std::shared_ptr<VexXlate> in_xlate = NULL);
 	virtual guest_ptr doVexSB(VexSB* vsb);
 	guest_ptr doVexSBAux(VexSB* vsb, void* aux);
 
@@ -85,7 +85,7 @@ private:
 	VexSB*		getSBFromGuestAddr(guest_ptr elfptr);
 	const VexSB*	doNextSB(void);
 
-	VexJITCache		*jit_cache;
+	std::unique_ptr<VexJITCache> jit_cache;
 	static VexExec		*exec_context;
 	static void signalHandler(int sig, siginfo_t* si, void* raw_context);
 	void flushTamperedCode(guest_ptr start, guest_ptr end);
@@ -109,8 +109,7 @@ private:
 
 	bool		save_core;
 
-	bool		owns_xlate;
-	VexXlate	*xlate;
+	std::shared_ptr<VexXlate>	xlate;
 	std::pair<guest_ptr, guest_ptr>	to_flush;
 };
 

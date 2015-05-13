@@ -1,44 +1,38 @@
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Instructions.h>
 
-#include <llvm/Bitcode/ReaderWriter.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/CommandLine.h>
-#include <llvm/IR/TypeBuilder.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/Transforms/Utils/Cloning.h>
 
 #include <iostream>
 #include <stdio.h>
 #include "Sugar.h"
 #include "genllvm.h"
 
+#include "jitengine.h"
 #include "vexhelpers.h"
 
 #define VEXOP_BC_FILE "vexops.bc"
 
 using namespace llvm;
 
-VexHelpers* theVexHelpers;
+std::unique_ptr<VexHelpers> theVexHelpers;
 extern void vexop_setup_fp(VexHelpers* vh);
 
 VexHelpers::VexHelpers(Arch::Arch in_arch)
 : arch(in_arch)
-, helper_mod(0)
-, vexop_mod(0)
-, ext_mod(0)
 {
 	/* env not set => assume running from git root */
 	bc_dirpath = getenv("VEXLLVM_HELPER_PATH");
-	if (bc_dirpath == NULL) bc_dirpath = "bitcode";
+	if (bc_dirpath == nullptr) bc_dirpath = "bitcode";
 }
 
 void VexHelpers::loadDefaultModules(void)
 {
 	char		path_buf[512];
 
-	const char* helper_file = NULL;
+	const char* helper_file = nullptr;
 	switch(arch) {
 	case Arch::X86_64: helper_file = "libvex_amd64_helpers.bc"; break;
 	case Arch::I386: helper_file = "libvex_x86_helpers.bc"; break;
@@ -58,35 +52,28 @@ void VexHelpers::loadDefaultModules(void)
 
 	vexop_setup_fp(this);
 
-	assert (vexop_mod && (helper_file == NULL || helper_mod));
+	assert (vexop_mod && (helper_file == nullptr || helper_mod));
 }
 
-VexHelpers* VexHelpers::create(Arch::Arch arch)
+std::unique_ptr<VexHelpers> VexHelpers::create(Arch::Arch arch)
 {
 	VexHelpers	*vh;
 
 	vh = new VexHelpers(arch);
 	vh->loadDefaultModules();
 
-	return vh;
+	return std::unique_ptr<VexHelpers>(vh);
 }
 
-Module* VexHelpers::loadMod(const char* path)
+std::unique_ptr<Module> VexHelpers::loadMod(const char* path)
 { return loadModFromPath(path); }
 
-Module* VexHelpers::loadModFromPath(const char* path)
+std::unique_ptr<Module> VexHelpers::loadModFromPath(const char* path)
 {
-	Module		*ret_mod;
 	SMDiagnostic	diag;	
-	auto		mb(MemoryBuffer::getFile(path));
 
-	if (!mb) {
-		std::cerr <<  "Bad membuffer on " << path << std::endl;
-		assert (0 && "Couldn't get mem buffer");
-	}
-
-	ret_mod = llvm::ParseIR(mb.get().get(), diag, getGlobalContext());
-	if (ret_mod == NULL) {
+	auto ret_mod = llvm::parseIRFile(path, diag, getGlobalContext());
+	if (ret_mod == nullptr) {
 		std::string	s(diag.getMessage());
 		std::cerr
 			<< "Error Parsing Bitcode File '"
@@ -99,7 +86,7 @@ Module* VexHelpers::loadModFromPath(const char* path)
 		assert (0 == 1 && "BAD MOD");
 	}
 
-	if (ret_mod == NULL) {
+	if (ret_mod == nullptr) {
 		std::cerr << "OOPS. No mod. (path=" << path << ")\n";
 	}
 	return ret_mod;
@@ -107,34 +94,31 @@ Module* VexHelpers::loadModFromPath(const char* path)
 
 mod_list VexHelpers::getModules(void) const
 {
-	mod_list	l = user_mods;
-	if (helper_mod) l.push_back(helper_mod);
-	l.push_back(vexop_mod);
+	mod_list	l;
+	for (auto& m : user_mods) {
+		l.push_back(m.get());
+	}
+	if (helper_mod) l.push_back(helper_mod.get());
+	l.push_back(vexop_mod.get());
 	return l;
 }
 
 void VexHelpers::loadUserMod(const char* path)
 {
-	Module*	m;
 	char	pathbuf[512];
 
 	assert ((strlen(path)+strlen(bc_dirpath)) < 512);
 	snprintf(pathbuf, 512, "%s/%s", bc_dirpath, path);
 
-	m = loadMod(pathbuf);
-	assert (m != NULL && "Could not load user module");
-	user_mods.push_back(m);
+	auto m = loadMod(pathbuf);
+	assert (m != nullptr && "Could not load user module");
+	user_mods.push_back(std::move(m));
 }
 
 void VexHelpers::destroyMods(void)
 {
-	if (helper_mod) delete helper_mod;
-	if (vexop_mod) delete vexop_mod;
-	foreach (it, user_mods.begin(), user_mods.end())
-		delete (*it);
-
-	helper_mod = NULL;
-	vexop_mod = NULL;
+	helper_mod = nullptr;
+	vexop_mod = nullptr;
 	user_mods.clear();
 }
 
@@ -153,30 +137,39 @@ Function* VexHelpers::getHelper(const char* s) const
 
 	/* TODO why not start using a better algorithm sometime */
 	if (helper_mod && (f = helper_mod->getFunction(s))) return f;
+
+	assert (vexop_mod);
 	if ((f = vexop_mod->getFunction(s))) return f;
-	foreach (it, user_mods.begin(), user_mods.end()) {
-		if ((f = (*it)->getFunction(s)))
+
+	for (auto &m : user_mods) {
+		if ((f = m->getFunction(s)))
 			return f;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
-void VexHelpers::bindToExeEngine(ExecutionEngine* exe)
+void VexHelpers::moveToJITEngine(JITEngine& je)
 {
-	if (helper_mod) exe->addModule(helper_mod);
-	exe->addModule(vexop_mod);
+	if (helper_mod)
+		je.moveModule(
+			std::unique_ptr<Module>(
+				CloneModule(helper_mod.get())));
+	if (vexop_mod)
+		je.moveModule(
+			std::unique_ptr<Module>(
+				CloneModule(vexop_mod.get())));
 }
 
-llvm::Module* VexHelperDummy::loadMod(const char* path)
+std::unique_ptr<llvm::Module> VexHelperDummy::loadMod(const char* path)
 {
 	fprintf(stderr, "FAILING LOAD MOD %s\n", path);
-	return NULL;
+	return nullptr;
 }
 
-void VexHelpers::useExternalMod(Module* m)
+void VexHelpers::useExternalMod(std::unique_ptr<Module> m)
 {
-	assert (ext_mod == NULL);
+	assert (ext_mod == nullptr);
 	destroyMods();
-	ext_mod = m;
+	ext_mod = std::move(m);
 }

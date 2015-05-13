@@ -13,7 +13,7 @@
 #include "syscall/syscallsmarshalled.h"
 #include "vexexecchk.h"
 
-VexExecChk::VexExecChk(PTImgChk* gs, VexXlate* vx)
+VexExecChk::VexExecChk(PTImgChk* gs, std::shared_ptr<VexXlate> vx)
 : VexExec(gs, vx)
 , hit_syscall(false)
 , is_deferred(false)

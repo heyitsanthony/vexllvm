@@ -23,11 +23,12 @@ struct guest_ctx_field;
 class GenLLVM
 {
 public:
-	GenLLVM(const Guest* gs, const char* modname = "vexllvm");
-	virtual ~GenLLVM(void);
+	GenLLVM(const Guest& gs, const char* modname = "vexllvm");
+	virtual ~GenLLVM(void) {}
 
-	llvm::IRBuilder<>* getBuilder(void) { return builder; }
-	llvm::Module* getModule(void) { return mod; }
+	llvm::IRBuilder<>* getBuilder(void) { return builder.get(); }
+	llvm::Module* getModule(void) { return mod.get(); }
+	std::unique_ptr<llvm::Module> takeModule(const char* new_name = nullptr);
 
 	static llvm::Type* vexTy2LLVM(IRType ty);
 	
@@ -61,12 +62,12 @@ private:
 	llvm::Type* getGuestTy(void);
 	void mkFuncTy(void);
 
-	const Guest		*guest;
+	const Guest		&guest;
 	llvm::Type		*guestCtxTy;
 
-	llvm::IRBuilder<>	*builder;
-	llvm::Module		*mod;
-	llvm::FunctionType	*funcTy;
+	std::unique_ptr<llvm::IRBuilder<>> builder;
+	std::unique_ptr<llvm::Module>	mod;
+	llvm::FunctionType		*funcTy;
 
 	/* current state data */
 	typedef std::map<
@@ -88,8 +89,10 @@ private:
 
 	bool			fake_vsys_reads;
 	bool			use_reloc;
+
+	static unsigned int	mod_c;
 };
 
-extern class GenLLVM* theGenLLVM;
+extern std::unique_ptr<GenLLVM> theGenLLVM;
 
 #endif

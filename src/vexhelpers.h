@@ -13,34 +13,36 @@ class Function;
 class ExecutionEngine;
 }
 
-typedef std::list<llvm::Module*>	mod_list;
+typedef std::list<std::unique_ptr<llvm::Module>>	umod_list;
+typedef std::list<llvm::Module*>			mod_list;
+class JITEngine;
 
 class VexHelpers
 {
 public:
-	static VexHelpers* create(Arch::Arch);
+	static std::unique_ptr<VexHelpers> create(Arch::Arch);
 	virtual ~VexHelpers();
 	mod_list getModules(void) const;
 	virtual llvm::Function* getHelper(const char* s) const;
-	void bindToExeEngine(llvm::ExecutionEngine*);
+	void moveToJITEngine(JITEngine&);
 	void loadUserMod(const char* path);
-	void useExternalMod(llvm::Module* m);
+	void useExternalMod(std::unique_ptr<llvm::Module> m);
 
-	static llvm::Module* loadModFromPath(const char* path);
+	static std::unique_ptr<llvm::Module> loadModFromPath(const char* path);
 protected:
 	VexHelpers(Arch::Arch arch);
 	virtual void loadDefaultModules(void);
-	virtual llvm::Module*	loadMod(const char* path);
+	virtual std::unique_ptr<llvm::Module>	loadMod(const char* path);
 private:
 	void destroyMods(void);
 
 	Arch::Arch		arch;
-	llvm::Module*		helper_mod;
-	llvm::Module*		vexop_mod;
-	mod_list		user_mods;
+	std::unique_ptr<llvm::Module>		helper_mod;
+	std::unique_ptr<llvm::Module>		vexop_mod;
+	umod_list		user_mods;
 	const char		*bc_dirpath;
 
-	llvm::Module*		ext_mod;
+	std::unique_ptr<llvm::Module>		ext_mod;
 };
 
 class VexHelperDummy : public VexHelpers
@@ -57,10 +59,10 @@ public:
 	}
 
 protected:
-	virtual llvm::Module* loadMod(const char* path);
+	virtual std::unique_ptr<llvm::Module> loadMod(const char* path);
 };
 
 
-extern VexHelpers* theVexHelpers;
+extern std::unique_ptr<VexHelpers> theVexHelpers;
 
 #endif

@@ -1,21 +1,23 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/ExecutionEngine/JIT.h>
+#include <llvm/ExecutionEngine/MCJIT.h>
 
 #include "Sugar.h"
 #include "vexjitcache.h"
+#include "jitengine.h"
+#include "genllvm.h"
 
 using namespace llvm;
 
-VexJITCache::VexJITCache(VexXlate* xlate, ExecutionEngine *in_exe)
-: VexFCache(xlate),
-  exeEngine(in_exe)
+VexJITCache::VexJITCache(std::shared_ptr<VexXlate> xlate,
+			 std::unique_ptr<JITEngine> je)
+: VexFCache(xlate)
+, jit_engine(std::move(je))
 {
 }
 
 VexJITCache::~VexJITCache(void)
 {
 	flush();
-	delete exeEngine;
 }
 
 vexfunc_t VexJITCache::getCachedFPtr(guest_ptr guest_addr)
@@ -46,7 +48,9 @@ vexfunc_t VexJITCache::getFPtr(void* host_addr, guest_ptr guest_addr)
 	llvm_f = getFunc(host_addr, guest_addr);
 	assert (llvm_f != NULL && "Could not get function");
 
-	ret_f = (vexfunc_t)exeEngine->getPointerToFunction(llvm_f);
+	ret_f = (vexfunc_t)jit_engine->getPointerToFunction(
+		llvm_f,
+		theGenLLVM->takeModule());
 	assert (ret_f != NULL && "Could not JIT");
 
 	jit_cache[guest_addr] = ret_f;
@@ -59,7 +63,7 @@ void VexJITCache::evict(guest_ptr guest_addr)
 {
 	Function	*f;
 	if ((f = getCachedFunc(guest_addr)) != NULL) {
-		exeEngine->freeMachineCodeForFunction(f);
+		delete f;
 	}
 	jit_cache.erase(guest_addr);
 	jit_dc.put(guest_addr, NULL);
@@ -68,10 +72,6 @@ void VexJITCache::evict(guest_ptr guest_addr)
 
 void VexJITCache::flush(void)
 {
-	foreach (it, funcBegin(), funcEnd()) {
-		Function	*f = it->second;
-		exeEngine->freeMachineCodeForFunction(f);
-	}
 	jit_cache.clear();
 	jit_dc.flush();
 	VexFCache::flush();
@@ -80,8 +80,6 @@ void VexJITCache::flush(void)
 void VexJITCache::flush(guest_ptr begin, guest_ptr end)
 {
 	foreach (it, funcBegin(begin), funcEnd(end)) {
-		Function	*f = it->second;
-		exeEngine->freeMachineCodeForFunction(f);
 		jit_cache.erase(it->first);
 		jit_dc.put(it->first, NULL);
 	}

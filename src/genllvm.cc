@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <iostream>
+#include <sstream>
 
 #include "guest.h"
 #include "guestcpustate.h"
@@ -13,11 +14,13 @@
 #include "genllvm.h"
 #include "memlog.h"
 
-GenLLVM* theGenLLVM;
+std::unique_ptr<GenLLVM> theGenLLVM;
 
 using namespace llvm;
 
-GenLLVM::GenLLVM(const Guest* gs, const char* name)
+unsigned int GenLLVM::mod_c = 0;
+
+GenLLVM::GenLLVM(const Guest& gs, const char* name)
 : guest(gs)
 , guestCtxTy(NULL)
 , funcTy(NULL)
@@ -29,10 +32,27 @@ GenLLVM::GenLLVM(const Guest* gs, const char* name)
 , fake_vsys_reads(getenv("VEXLLVM_FAKE_VSYS") != NULL)
 , use_reloc(true)
 {
-	builder = new IRBuilder<>(getGlobalContext());
+	builder = std::make_unique<IRBuilder<>>(getGlobalContext());
 	assert (builder != NULL && "Could not create builder");
 
-	mod = new Module(name, getGlobalContext());
+	takeModule(name);
+	assert (mod != NULL && "Could not create mod");
+
+	assert (guest.getCPUState() && "No CPU state set in Guest");
+	mkFuncTy();
+}
+
+std::unique_ptr<Module> GenLLVM::takeModule(const char *name)
+{
+	std::unique_ptr<Module>	ret(std::move(mod));
+
+	if (!name) {
+		std::stringstream ss;
+		ss << "genllvm_mod_" << mod_c++;
+		mod = std::make_unique<Module>(ss.str(), getGlobalContext());
+	} else {
+		mod = std::make_unique<Module>(name, getGlobalContext());
+	}
 	assert (mod != NULL && "Could not create mod");
 
 	// *any* data layout *should* work, but klee will horribly fail
@@ -46,15 +66,9 @@ GenLLVM::GenLLVM(const Guest* gs, const char* name)
 //		"e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:"
 //		"64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:"
 //		"0:64-s0:64:64-f80:128:128-n8:16:32:64-S128");
+	mod->setTargetTriple("x86_64-pc-linux-gnu");
 
-	assert (guest->getCPUState() && "No CPU state set in Guest");
-	mkFuncTy();
-}
-
-GenLLVM::~GenLLVM(void)
-{
-	delete mod;
-	delete builder;
+	return ret;
 }
 
 void GenLLVM::beginBB(const char* name)
@@ -64,7 +78,7 @@ void GenLLVM::beginBB(const char* name)
 		funcTy,
 		Function::ExternalLinkage,
 		name,
-		mod);
+		mod.get());
 
 	entry_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
 	builder->SetInsertPoint(entry_bb);
@@ -269,7 +283,7 @@ Value* GenLLVM::getCtxTyGEP(Value* off, Type* accessTy)
 		uint64_t	off_u64;
 
 		off_u64 = c_off->getZExtValue();
-		gep_name = guest->getCPUState()->off2Name(
+		gep_name = guest.getCPUState()->off2Name(
 			access_bytes  * off_u64);
 	}
 
@@ -293,16 +307,16 @@ void GenLLVM::store(Value* addr_v, Value* data_v)
 
 	ptrTy = PointerType::get(data_v->getType(), 0);
 #ifdef __amd64__
-	if(guest->getMem()->is32Bit()) {
+	if(guest.getMem()->is32Bit()) {
 		addr_v = builder->CreateZExt(addr_v, IntegerType::get(
 			getGlobalContext(), sizeof(void*)*8));
 	}
 #endif
-	if (guest->getMem()->getBase() && use_reloc) {
+	if (guest.getMem()->getBase() && use_reloc) {
 		addr_v = builder->CreateAdd(addr_v,
 			ConstantInt::get(getGlobalContext(),
 				APInt(sizeof(intptr_t)*8,
-				(uintptr_t)guest->getMem()->getBase())));
+				(uintptr_t)guest.getMem()->getBase())));
 	}
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "storePtr");
 	si = builder->CreateStore(data_v, addr_ptr);
@@ -318,7 +332,7 @@ Value* GenLLVM::load(Value* addr_v, Type* ty)
 
 	ptrTy = PointerType::get(ty, 0);
 #ifdef __amd64__
-	if(guest->getMem()->is32Bit()) {
+	if(guest.getMem()->is32Bit()) {
 		addr_v = builder->CreateZExt(addr_v, IntegerType::get(
 			getGlobalContext(), sizeof(void*)*8));
 	}
@@ -332,7 +346,7 @@ Value* GenLLVM::load(Value* addr_v, Type* ty)
 		addr_ci->getBitWidth() <= 64)
 	{
 		const void	*sys_addr;
-		sys_addr = guest->getMem()->getSysHostAddr(
+		sys_addr = guest.getMem()->getSysHostAddr(
 			guest_ptr(addr_ci->getLimitedValue()));
 		if (sys_addr != NULL) {
 			unsigned int	ty_sz;
@@ -349,11 +363,11 @@ Value* GenLLVM::load(Value* addr_v, Type* ty)
 	}
 
 
-	if (guest->getMem()->getBase() && use_reloc) {
+	if (guest.getMem()->getBase() && use_reloc) {
 		addr_v = builder->CreateAdd(addr_v,
 			ConstantInt::get(getGlobalContext(),
 				APInt(sizeof(intptr_t)*8,
-				(uintptr_t)guest->getMem()->getBase())));
+				(uintptr_t)guest.getMem()->getBase())));
 	}
 	addr_ptr = builder->CreateIntToPtr(addr_v, ptrTy, "loadPtr");
 	loadInst = builder->CreateLoad(addr_ptr);
@@ -380,7 +394,7 @@ Value* GenLLVM::getLinked() {
 void GenLLVM::setExitType(uint8_t exit_type)
 {
 	writeCtx(
-		guest->getCPUState()->getExitTypeOffset(),
+		guest.getCPUState()->getExitTypeOffset(),
 		ConstantInt::get(
 			getGlobalContext(),
 			APInt(8, exit_type)));
@@ -415,7 +429,7 @@ Type* GenLLVM::getGuestTy(void)
 	if (guestCtxTy)
 		return guestCtxTy;
 
-	const struct guest_ctx_field* f(guest->getCPUState()->getFields());
+	const struct guest_ctx_field* f(guest.getCPUState()->getFields());
 	std::vector<Type*>	types;
 	Type			*i8ty, *i16ty, *i32ty,
 				*i64ty, *i128ty, *i256ty;

@@ -3,10 +3,7 @@
 
 #include "vexfcache.h"
 #include "guestmem.h"
-
-namespace llvm {
-class ExecutionEngine;
-}
+#include <memory>
 
 typedef guest_ptr (*vexfunc_t)(void* /* guest cpu state */);
 typedef std::map<guest_ptr, vexfunc_t> jit_map;
@@ -20,24 +17,27 @@ typedef guest_ptr(*vexauxfunc_t)(
 	void* /* guest cpu state */,
 	void* /* auxiliary state */);
 
+class JITEngine;
 
+/**
+ * JIT caches compiled functions as well as translated superblocks
+ */
 class VexJITCache : public VexFCache
 {
 public:
-	VexJITCache(
-		VexXlate* xlate,
-		llvm::ExecutionEngine *exeEngine);
+	VexJITCache(std::shared_ptr<VexXlate>, std::unique_ptr<JITEngine>);
 	virtual ~VexJITCache(void);
 
 	vexfunc_t getCachedFPtr(guest_ptr guest_addr);
 	vexfunc_t getFPtr(void* host_addr, guest_ptr guest_addr);
-	virtual void evict(guest_ptr guest_addr);
-	virtual void flush(void);
-	virtual void flush(guest_ptr begin, guest_ptr end);
+
+	void evict(guest_ptr guest_addr) override;
+	void flush(void) override;
+	void flush(guest_ptr begin, guest_ptr end) override;
 private:
-	llvm::ExecutionEngine	*exeEngine;
-	jit_map			jit_cache;
-	DirectCache<vexfunc_t>	jit_dc;
+	std::unique_ptr<JITEngine>	jit_engine;
+	jit_map				jit_cache;
+	DirectCache<vexfunc_t>		jit_dc;
 };
 
 #endif

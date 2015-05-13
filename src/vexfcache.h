@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <memory>
 
 #include "arch.h"
 #include "directcache.h"
@@ -25,7 +26,7 @@ public:
 	/* makes own vexxlate */
 	VexFCache(Arch::Arch arch);
 	/* claims ownership of vexxlate */
-	VexFCache(VexXlate* vexxlate);
+	VexFCache(std::shared_ptr<VexXlate> vexxlate);
 
 	virtual ~VexFCache(void);
 
@@ -60,9 +61,8 @@ private:
 
 	bool			dump_llvm;
 
-	VexXlate*		xlate;
-	bool			owns_xlate;
-	unsigned int		max_cache_ents;
+	std::shared_ptr<VexXlate>	xlate;
+	unsigned int			max_cache_ents;
 
 	vexsb_map		vexsb_cache;
 	DirectCache<VexSB>	vexsb_dc;
