@@ -91,7 +91,8 @@ OBJBASE=	guest.o			\
 		ptimgremote.o		\
 		ptimgchk.o		\
 		ptimgarch.o		\
-		elfsegment.o
+		elfsegment.o		\
+		usage.o
 
 OBJSLLVM=	vexxlate.o		\
 		vexstmt.o		\
