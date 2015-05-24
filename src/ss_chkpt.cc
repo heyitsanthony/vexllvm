@@ -299,22 +299,18 @@ void GuestChkPt::loadMemDiff(int pid, std::set<guest_ptr>& changed_set)
 
 	/* remove mappings that have been changed so that the next
 	 * slurp picks them up */
-	foreach (it, changed_maps.begin(), changed_maps.end()) {
-		ProcMap	*pm(NULL);
-
-		foreach (it2, mappings.begin(), mappings.end()) {
-			pm = *it2;
-			if (pm->getBase() == it->offset) break;
-			pm = NULL;
+	for (auto &m : changed_maps) {
+		bool erased = false;
+		foreach (it, mappings.begin(), mappings.end()) {
+			if ((*it)->getBase() == m.offset) {
+				mappings.erase(it);
+				erased = true;
+				break;
+			}
 		}
-
-		if (pm == NULL) {
+		if (!erased) {
 			std::cerr << "COULD NOT FIND PM FOR MAPPING!\n";
-			continue;
 		}
-
-		mappings.remove(pm);
-		delete pm;
 	}
 
 	std::cerr << "Changed mappings: " << changed_maps.size() << '\n';

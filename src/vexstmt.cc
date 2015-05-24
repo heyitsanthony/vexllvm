@@ -335,7 +335,8 @@ VexStmtDirty::VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
 
 	in_args = in_stmt->Ist.Dirty.details->args;
 	for (unsigned int i = 0; in_args[i]; i++)
-		args.push_back(VexExpr::create(this, in_args[i]));
+		args.push_back(std::unique_ptr<VexExpr>(
+			VexExpr::create(this, in_args[i])));
 }
 
 VexStmtDirty::~VexStmtDirty()

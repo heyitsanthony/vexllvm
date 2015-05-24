@@ -169,24 +169,22 @@ void ElfImg::setupSegments(void)
 	Elf_Phdr *phdr = (Elf_Phdr*)(((char*)hdr) + hdr->e_phoff);
 
 	for (unsigned int i = 0; i < hdr->e_phnum; i++) {
-		ElfSegment	*es;
-
 		if (phdr[i].p_type == PT_INTERP) {
 			std::string path((char*)img_mmap + phdr[i].p_offset);
 			path = library_root + path;
 			interp = ElfImg::create(mem, path.c_str(), false);
 			continue;
 		}
-		es = ElfSegment::load(
+		auto es = std::unique_ptr<ElfSegment>(ElfSegment::load(
 			mem,
 			fd,
 			phdr[i],
 			segments.empty()
 				? uintptr_t(0)
-				: getFirstSegment()->relocation());
+				: getFirstSegment()->relocation()));
 		if (!es) continue;
 
-		segments.push_back(es);
+		segments.push_back(std::move(es));
 	}
 	assert(!segments.empty());
 	segments.back()->clearEnd();
@@ -325,10 +323,8 @@ guest_ptr ElfImg::xlateAddr(guest_ptr elfptr) const
 {
 	if (segments.empty()) return elfptr;
 
-	foreach (it, segments.begin(), segments.end()) {
-		ElfSegment	*es = *it;
+	for (auto &es : segments) {
 		guest_ptr	ret;
-
 		ret = es->xlate(elfptr);
 		if (ret) return ret;
 	}
@@ -344,8 +340,8 @@ void ElfImg::getSegments(std::list<ElfSegment*>& r) const
 	   sadly matters... :-( */
 	if (interp) interp->getSegments(r);
 
-	foreach (it, segments.begin(), segments.end()) {
-		r.push_back(*it);
+	for (auto &es : segments) {
+		r.push_back(es.get());
 	}
 }
 
@@ -356,10 +352,7 @@ GuestMem* ElfImg::takeMem(void)
 	mem = NULL;
 
 	if (interp) interp->takeMem();
-	foreach (it, segments.begin(), segments.end()) {
-		ElfSegment *es = *it;
-		es->takeMem();
-	}
+	for (auto &es : segments) es->takeMem();
 
 	return m;
 }

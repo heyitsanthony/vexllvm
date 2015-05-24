@@ -4,9 +4,9 @@
 #include <elf.h>
 
 #include <string>
-#include <vector>
 #include <map>
-#include "collection.h"
+
+#include "Sugar.h"
 #include "arch.h"
 #include "guestmem.h"
 
@@ -30,7 +30,7 @@ public:
 	const char* getFilePath(void) const { return img_path; }
 	const guest_ptr getHeader() const;
 	const guest_ptr getBase() const;
-	ElfSegment* getFirstSegment() const { return segments.front(); }
+	ElfSegment* getFirstSegment() const { return segments.front().get(); }
 	void getSegments(std::list<ElfSegment*>& r) const;
 	unsigned int getPageSize() const { return 4096; }
 	Arch::Arch getArch() const { return arch; }
@@ -88,7 +88,7 @@ private:
 
 	char			*img_path;
 
-	PtrList<ElfSegment>	segments;
+	ptr_list_t<ElfSegment>	segments;
 	void			*img_mmap;
 	unsigned int		img_bytes_c;
 	int			fd;

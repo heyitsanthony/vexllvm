@@ -4,13 +4,12 @@
 #include <stdint.h>
 #include <assert.h>
 #include <iostream>
+#include "Sugar.h"
 
 extern "C" {
 #include <valgrind/libvex.h>
 #include <valgrind/libvex_ir.h>
 }
-
-#include "collection.h"
 
 class VexStmt;
 
@@ -195,8 +194,8 @@ public:
 	virtual llvm::Value* emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:
-	llvm::Function*		func;
-	PtrList<VexExpr>	args;
+	llvm::Function		*func;
+	ptr_vec_t<VexExpr>	args;
 };
 
 class VexExprMux0X : public VexExpr

@@ -5,7 +5,7 @@
 #include <map>
 #include <set>
 #include <stdlib.h>
-#include "collection.h"
+#include "Sugar.h"
 #include "guest.h"
 #include "procmap.h"
 
@@ -124,7 +124,7 @@ public:
 	void setBreakpointByPID(pid_t pid, guest_ptr addr);
 	void resetBreakpointByPID(pid_t pid, guest_ptr addr);
 
-	static Symbols* loadSymbols(const PtrList<ProcMap>& mappings);
+	static Symbols* loadSymbols(const ptr_list_t<ProcMap>& mappings);
 	static Symbols* loadDynSymbols(
 		GuestMem	*mem,
 		const char	*binpath);
@@ -152,7 +152,7 @@ protected:
 
 	PTImgArch		*pt_arch;
 	Arch::Arch		arch;
-	PtrList<ProcMap>	mappings;
+	ptr_list_t<ProcMap>	mappings;
 	guest_ptr		entry_pt;
 private:
 	pid_t createSlurpedChild(
@@ -168,7 +168,7 @@ private:
 	static void forcePreloads(
 		Symbols			*symbols,
 		std::set<std::string>	&mmap_fnames,
-		const PtrList<ProcMap>& mappings);
+		const ptr_list_t<ProcMap>& mappings);
 
 
 	std::map<guest_ptr, uint64_t>	breakpoints;

@@ -822,9 +822,9 @@ VexExprCCall::VexExprCCall(VexStmt* in_parent, const IRExpr* expr)
 	const IRCallee*	callee = expr->Iex.CCall.cee;
 
 	for (int i = 0; expr->Iex.CCall.args[i]; i++) {
-		args.push_back(VexExpr::create(
+		args.push_back(std::unique_ptr<VexExpr>(VexExpr::create(
 			in_parent,
-			expr->Iex.CCall.args[i]));
+			expr->Iex.CCall.args[i])));
 	}
 
 	func = theVexHelpers->getHelper(callee->name);
@@ -836,8 +836,7 @@ Value* VexExprCCall::emit(void) const
 {
 	std::vector<Value*>	args_v;
 
-	foreach (it, args.begin(), args.end())
-		args_v.push_back((*it)->emit());
+	for (auto &arg : args) args_v.push_back(arg->emit());
 
 	return theGenLLVM->getBuilder()->CreateCall(
 		func, llvm::ArrayRef<llvm::Value*>(args_v));

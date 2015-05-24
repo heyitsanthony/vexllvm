@@ -20,7 +20,7 @@ public:
 	static void slurpMappings(
 		pid_t pid,
 		GuestMem* m,
-		PtrList<ProcMap>& ents,
+		ptr_list_t<ProcMap>& ents,
 		bool do_copy = true);
 
 	static ProcMap* create(

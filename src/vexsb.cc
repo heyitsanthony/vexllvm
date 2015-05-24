@@ -27,7 +27,7 @@ VexSB::VexSB(guest_ptr in_guest_addr, const IRSB* irsb)
 	memcpy(types, irsb->tyenv->types, reg_c * sizeof(IRType));
 
 	loadInstructions(irsb);
-	loadJump(irsb->jumpkind, VexExpr::create(stmts.back(), irsb->next));
+	loadJump(irsb->jumpkind, VexExpr::create(stmts.back().get(), irsb->next));
 }
 
 VexSB* VexSB::create(guest_ptr guest_addr, const IRSB* in_irsb)
@@ -68,13 +68,9 @@ void VexSB::load(
 	assert (stmt_c == 0);
 
 	stmt_c = in_stmts.size();
-	foreach (it, in_stmts.begin(), in_stmts.end()) {
-		VexStmt		*stmt;
+	for (auto &stmt : in_stmts) {
 		VexStmtIMark	*imark;
-
-		stmt = *it;
-		stmts.push_back(stmt);
-
+		stmts.push_back(std::unique_ptr<VexStmt>(stmt));
 		imark = dynamic_cast<VexStmtIMark*>(stmt);
 		if (imark != NULL) last_imark = imark;
 	}
@@ -236,13 +232,11 @@ std::vector<InstExtent>	VexSB::getInstExtents(void) const
 {
 	std::vector<InstExtent>	ret;
 
-	foreach (it, stmts.begin(), stmts.end()) {
-		VexStmt		*vs = *it;
+	for (auto &stmt : stmts) {
 		VexStmtIMark	*im;
 
-		im = dynamic_cast<VexStmtIMark*>(vs);
-		if (im == NULL)
-			continue;
+		im = dynamic_cast<VexStmtIMark*>(stmt.get());
+		if (im == nullptr) continue;
 
 		ret.push_back(
 			InstExtent(im->getAddr(), (uint8_t)im->getLen()));
@@ -259,7 +253,7 @@ void VexSB::loadInstructions(const IRSB* irsb)
 		VexStmtIMark	*imark;
 
 		stmt = loadNextInstruction(irsb->stmts[i]);
-		stmts.push_back(stmt);
+		stmts.push_back(std::unique_ptr<VexStmt>(stmt));
 
 		imark = dynamic_cast<VexStmtIMark*>(stmt);
 		if (imark != NULL) last_imark = imark;
@@ -293,7 +287,7 @@ void VexSB::loadJump(IRJumpKind jk, VexExpr* blk_next)
 		delete blk_next;
 		/* stupid linuxism-- fake out the vsyscall page */
 		jump_expr = new VexExprConstU32(
-			stmts.back(),
+			stmts.back().get(),
 			getEndAddr().o+LINUX_SYSENTER_TRAMPOLINE_OFFSET);
 		break;
 	case Ijk_Yield:

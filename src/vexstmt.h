@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <iostream>
 
-#include "collection.h"
+#include "Sugar.h"
 
 extern "C" {
 #include <valgrind/libvex.h>
@@ -168,8 +168,7 @@ public:
 private:
 	VexExpr			*guard;
 	llvm::Function*		func;
-	PtrList<VexExpr>	args;
-	bool			needs_state_ptr;
+	ptr_vec_t<VexExpr>	args;
 	int			tmp_reg;	/* where to store */
 };
 

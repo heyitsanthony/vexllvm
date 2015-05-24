@@ -781,13 +781,10 @@ void GuestMem::nameMapping(guest_ptr addr, const std::string& s)
 	if ((m = lookupMapping(addr)) == NULL)
 		return;
 
-	std::string	*new_s;
-
-	new_s = new std::string(s);
-	mapping_names.push_back(new_s);
+	mapping_names.push_back(std::make_unique<std::string>(s));
 
 	/* fuck it */
-	const_cast<GuestMem::Mapping*>(m)->name = new_s;
+	const_cast<GuestMem::Mapping*>(m)->name = mapping_names.back().get();
 }
 
 void GuestMem::import(GuestMem* m) { assert (0 == 1 && "STUB"); }

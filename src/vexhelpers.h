@@ -3,7 +3,7 @@
 #ifndef VEXHELPERS_H
 #define VEXHELPERS_H
 
-#include <list>
+#include "Sugar.h"
 #include "arch.h"
 
 namespace llvm
@@ -13,8 +13,8 @@ class Function;
 class ExecutionEngine;
 }
 
-typedef std::list<std::unique_ptr<llvm::Module>>	umod_list;
-typedef std::list<llvm::Module*>			mod_list;
+typedef ptr_list_t<llvm::Module>	umod_list;
+typedef std::list<llvm::Module*>	mod_list;
 class JITEngine;
 
 class VexHelpers

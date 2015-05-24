@@ -556,7 +556,7 @@ const Symbols* GuestPTImg::getDynSymbols(void) const
 void GuestPTImg::forcePreloads(
 	Symbols			*symbols,
 	std::set<std::string>	&mmap_fnames,
-	const PtrList<ProcMap>& mappings)
+	const ptr_list_t<ProcMap>& mappings)
 {
 	const char*	preload_str;
 	unsigned	preload_len;
@@ -578,9 +578,9 @@ void GuestPTImg::forcePreloads(
 	{
 		guest_ptr	base(0);
 
-		foreach (it, mappings.begin(), mappings.end()) {
-			if ((*it)->getLib() == cur_lib) {
-				base = (*it)->getBase();
+		for (auto &m : mappings) {
+			if (m->getLib() == cur_lib) {
+				base = m->getBase();
 				break;
 			}
 		}
@@ -599,7 +599,7 @@ void GuestPTImg::forcePreloads(
 	free(preload_libs);
 }
 
-Symbols* GuestPTImg::loadSymbols(const PtrList<ProcMap>& mappings)
+Symbols* GuestPTImg::loadSymbols(const ptr_list_t<ProcMap>& mappings)
 {
 	Symbols			*symbols;
 	std::set<std::string>	mmap_fnames;
@@ -608,9 +608,9 @@ Symbols* GuestPTImg::loadSymbols(const PtrList<ProcMap>& mappings)
 
 	forcePreloads(symbols, mmap_fnames, mappings);
 
-	foreach (it, mappings.begin(), mappings.end()) {
-		std::string	libname((*it)->getLib());
-		guest_ptr	base((*it)->getBase());
+	for (auto &mapping : mappings) {
+		std::string	libname(mapping->getLib());
+		guest_ptr	base(mapping->getBase());
 
 		if (libname.size() == 0)
 			continue;

@@ -359,10 +359,9 @@ ProcMap::~ProcMap(void)
 void ProcMap::slurpMappings(
 	pid_t pid,
 	GuestMem* m,
-	PtrList<ProcMap>& ents,
+	ptr_list_t<ProcMap>& ents,
 	bool do_copy)
 {
-	ProcMap	*mapping;
 	FILE	*f;
 	char	map_fname[256];
 
@@ -371,7 +370,8 @@ void ProcMap::slurpMappings(
 	assert (f != NULL && "Could not open /proc/.../maps");
 
 	while (!feof(f)) {
-		char		line_buf[256];
+		ProcMap	*mapping;
+		char	line_buf[256];
 
 		if (fgets(line_buf, 256, f) == NULL)
 			break;
@@ -380,7 +380,7 @@ void ProcMap::slurpMappings(
 		if (mapping == NULL)
 			continue;
 
-		ents.add(mapping);
+		ents.push_back(std::unique_ptr<ProcMap>(mapping));
 		m->nameMapping(mapping->getBase(), mapping->getLib());
 	}
 	fclose(f);
@@ -390,13 +390,13 @@ void ProcMap::slurpMappings(
 	/* there is nothing I don't hate about this */
 	if (probe_fake_timers()) {
 		// fprintf(stderr, "[ProcMap] !!! Found fake timer pages\n");
-		mapping = ProcMap::create(
+		ProcMap* mapping = ProcMap::create(
 			m,
 			pid,
 			"ffffffffff5fe000-ffffffffff600000  "
 			"r--p 00000000 00:00 0 [FAKEtimers]");
 		if (mapping != NULL) {
-			ents.add(mapping);
+			ents.push_back(std::unique_ptr<ProcMap>(mapping));
 			m->nameMapping(mapping->getBase(), mapping->getLib());
 		}
 	}

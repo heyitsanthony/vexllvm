@@ -6,7 +6,7 @@
 #include <map>
 #include <string.h>
 #include <sys/types.h>
-#include "collection.h"
+#include "Sugar.h"
 #include "guestptr.h"
 
 /* oh good, MAP_32BIT isn't defined in the ARM headers */
@@ -226,7 +226,7 @@ protected:
 
 	char*		syspage_data;
 
-	PtrList<std::string>	mapping_names;
+	ptr_list_t<std::string>	mapping_names;
 };
 
 #endif

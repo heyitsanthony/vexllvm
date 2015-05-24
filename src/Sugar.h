@@ -19,6 +19,11 @@ struct ltstr
     }
 };
 
+#include <vector>
+#include <list>
+#include <memory>
+template<typename T> using ptr_vec_t = std::vector<std::unique_ptr<T>>;
+template<typename T> using ptr_list_t = std::list<std::unique_ptr<T>>;
 
 #endif /* __SUGAR__ */
 

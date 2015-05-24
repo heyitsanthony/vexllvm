@@ -10,7 +10,7 @@ extern "C" {
 #include <valgrind/libvex_ir.h>
 }
 
-#include "collection.h"
+#include "Sugar.h"
 #include "guestmem.h"
 
 class VexStmt;
@@ -79,7 +79,7 @@ private:
 	unsigned int		reg_c;
 	unsigned int		stmt_c;
 	VexStmtIMark		*last_imark;
-	PtrList<VexStmt>	stmts;
+	ptr_vec_t<VexStmt>	stmts;
 	llvm::Value		**values;
 	IRType			*types;
 };
