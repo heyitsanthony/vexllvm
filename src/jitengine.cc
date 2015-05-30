@@ -11,6 +11,7 @@
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Transforms/Scalar.h>
 
+#include <set>
 #include <iostream>
 #include <sstream>
 
@@ -19,18 +20,23 @@
 using namespace llvm;
 using namespace llvm::legacy;
 
-class SymMemMgr : public SectionMemoryManager
-{
-	SymMemMgr(const SymMemMgr&) = delete;
-	void operator=(const SymMemMgr&) = delete;
-public:
-	SymMemMgr(JITEngine &je) : jit_engine(je) {}
-	virtual ~SymMemMgr() {}
+///////////
+// Dumb thing to manage memory across multiple execution engines.
+// JITMem tracks all JITed functions ever.
+// JITMemProxy passes JITed functions to JITMem via exe engine.
+////////////
 
-	/// This method returns the address of the specified function. 
-	/// Our implementation will attempt to find functions in other
-	/// modules associated with the MCJITHelper to cross link functions
-	/// from one generated module to another.
+class JITMem : public SectionMemoryManager
+{
+public:
+	JITMem(JITEngine& in_je) : jit_engine(in_je) {}
+	virtual ~JITMem() {}
+
+	JITMem(const JITMem&) = delete;
+	void operator=(const JITMem&) = delete;
+
+	std::unique_ptr<SectionMemoryManager> createProxy(void);
+
 	void* getPointerToNamedFunction(const std::string &name, bool abort_on_fail)
 		override;
 
@@ -41,14 +47,105 @@ public:
 		return (uint64_t)jit_engine.getPointerToNamedFunction(n);
 	}
 
+	uint8_t *allocateCodeSection(
+		uintptr_t Size, unsigned Alignment, unsigned SectionID,
+		StringRef SectionName) override
+	{
+		uint8_t	*ret;
+
+		ret = SectionMemoryManager::allocateCodeSection(
+			Size, Alignment, SectionID, SectionName);
+
+//		std::cerr << "ALLOC CODE: size:" <<  Size << ". Name: "
+//		<< SectionName.str() << ". ptr: " << (void*)ret << '\n';
+		return ret;
+	}
+
+	uint8_t *allocateDataSection(
+		uintptr_t Size, unsigned Alignment, unsigned SectionID,
+		StringRef SectionName, bool isReadOnly) override
+	{
+		uint8_t *ret;
+
+		ret = SectionMemoryManager::allocateDataSection(
+			Size, Alignment, SectionID, SectionName, isReadOnly);
+	//		std::cerr << "ALLOC DATA: size:" <<  Size << ". Name: "
+	//		<< SectionName.str() << ". ptr: " << (void*)ret << '\n';
+
+		return ret;
+	}
+
+	void reserveAllocationSpace(
+		uintptr_t CodeSize, uintptr_t DataSizeRO,
+		uintptr_t DataSizeRW) override
+	{
+		SectionMemoryManager::reserveAllocationSpace(
+			CodeSize, DataSizeRO, DataSizeRW);
+		// std::cerr << "RSERVE" << CodeSize << " / " << DataSizeRO
+		// << " / " << DataSizeRW << '\n';
+	}
+
 private:
-	JITEngine &jit_engine;
+	JITEngine	&jit_engine;
 };
 
-void* SymMemMgr::getPointerToNamedFunction(const std::string &name, bool abort_on_fail)
+// since SMM is destroyed with each exe engine, have a sacrificial class
+// that only passes method calls to the shared JITMem object
+class JITMemProxy : public SectionMemoryManager
+{
+public:
+	JITMemProxy(JITMem &jit_mem) : jm(jit_mem) {}
+
+	JITMemProxy(const JITMemProxy&) = delete;
+	void operator=(const JITMemProxy&) = delete;
+
+	void* getPointerToNamedFunction(const std::string &name, bool abort_on_fail)
+		override
+	{ return jm.getPointerToNamedFunction(name, abort_on_fail); }
+
+	uint64_t getSymbolAddress(const std::string& n) override
+	{ return jm.getSymbolAddress(n); }
+
+	uint8_t *allocateCodeSection(
+		uintptr_t Size, unsigned Alignment, unsigned SectionID,
+		StringRef SectionName) override
+
+	{
+		return jm.allocateCodeSection(
+			Size, Alignment, SectionID, SectionName);
+	}
+
+	uint8_t *allocateDataSection(
+		uintptr_t Size, unsigned Alignment,
+		unsigned SectionID, StringRef SectionName,
+		bool isReadOnly) override
+	{
+		return jm.allocateDataSection(
+			Size, Alignment, SectionID, SectionName, isReadOnly);
+	}
+
+	void reserveAllocationSpace(
+		uintptr_t CodeSize, uintptr_t DataSizeRO,
+		uintptr_t DataSizeRW) override
+	{
+		jm.reserveAllocationSpace(CodeSize, DataSizeRO, DataSizeRW);
+	}
+
+private:
+	JITMem &jm;
+};
+
+// compiler can't figure out JITMemProxy <: SectionMemoryManager
+std::unique_ptr<SectionMemoryManager> JITMem::createProxy(void)
+{
+	return std::make_unique<JITMemProxy>(*this);
+}
+
+
+void* JITMem::getPointerToNamedFunction(const std::string &name, bool abort_on_fail)
 {
 	void *pfn;
-	
+
 	pfn = SectionMemoryManager::getPointerToNamedFunction(name, false);
 	if (pfn) return pfn;
 
@@ -62,18 +159,21 @@ void* SymMemMgr::getPointerToNamedFunction(const std::string &name, bool abort_o
 
 	return pfn;
 }
+//////////////
 
 bool JITEngine::targets_inited = false;
 
 JITEngine::JITEngine(void)
+	: jit_module_c(0)
 {
 	if (!targets_inited) {
-		llvm::InitializeNativeTarget();
-		llvm::InitializeAllTargetMCs();
+		if (llvm::InitializeNativeTarget()) abort();
 		llvm::InitializeNativeTargetAsmPrinter();
 		llvm::InitializeNativeTargetAsmParser();
 		targets_inited = true;
 	}
+
+	jit_mem = std::make_unique<JITMem>(*this);
 }
 
 JITEngine::~JITEngine(void) {}
@@ -83,56 +183,60 @@ Function* JITEngine::getFunction(const std::string& func_name)
 	assert(false && "STUB");
 }
 
-
 void* JITEngine::getPointerToNamedFunction(const std::string &name)
 {
-	for (auto &e : exe_engines) {
-		void *fptr;
-		if ((fptr = (void*)(e->getFunctionAddress(name))))
-			return fptr;
-	}
-	return nullptr;
+	auto it = func_addrs.find(name);
+	return (it != func_addrs.end())
+		? it->second
+		: nullptr;
 }
 
 void* JITEngine::getPointerToFunction(	Function* f,
 					std::unique_ptr<llvm::Module> m)
 {
+	void	*fptr;
+
+	std::string	s = f->getName().str();
+	if ((fptr = getPointerToNamedFunction(s))) {
+		return fptr;
+	}
 	moveModule(std::move(m));
-	return getPointerToFunction(f);
+	fptr = getPointerToNamedFunction(s);
+	return fptr;
 }
 
 void* JITEngine::getPointerToFunction(Function* f)
 {
-	// See if an existing instance of MCJIT has this function.
-	// This is probably super slow but there's caching to speed it up.
 	void *fptr;
-	for (auto &e : exe_engines) {
-		if ((fptr = e->getPointerToFunction(f)))
-			return fptr;
-	}
+	if ((fptr = getPointerToNamedFunction(f->getName().str())))
+		return fptr;
 
 	// If we didn't find the function, see if we can generate it.
 	if (!open_mod) return nullptr;
 
 	std::unique_ptr<ExecutionEngine> new_engine;
-	
 	new_engine = mod_to_engine(std::move(open_mod));
-	fptr = new_engine->getPointerToFunction(f);
-	exe_engines.push_back(std::move(new_engine));
-
-	return fptr;
+	return new_engine->getPointerToFunction(f);
 }
 
 std::unique_ptr<ExecutionEngine> JITEngine::mod_to_engine(
 	std::unique_ptr<llvm::Module> m)
 {
 	runPasses(*m);
+
+	std::set<std::string> new_fns;
+	for (auto & f : *m) {
+		std::string fn = f.getName().str();
+		assert(!func_addrs.count(fn));
+		new_fns.insert(fn);
+	}
+
 	std::string	err_str;
 	std::unique_ptr<ExecutionEngine> new_engine(
 		EngineBuilder(std::move(m))
 			.setErrorStr(&err_str)
 			.setEngineKind(EngineKind::JIT)
-			.setMCJITMemoryManager(std::make_unique<SymMemMgr>(*this))
+			.setMCJITMemoryManager(jit_mem->createProxy())
 			.create());
 	// XXX selectTarget?
 
@@ -143,6 +247,15 @@ std::unique_ptr<ExecutionEngine> JITEngine::mod_to_engine(
 	}
 
 	new_engine->finalizeObject();
+	for (auto & fn : new_fns) {
+		void	*fptr = new_engine->getPointerToNamedFunction(fn, false);
+		if (!fptr) {
+			// std::cerr << "Ignoring " << fn << '\n';
+			continue;
+		}
+		func_addrs[fn] = fptr;
+	}
+
 	return new_engine;
 }
 
@@ -152,10 +265,10 @@ Module& JITEngine::getModuleForNewFunction(void)
 
 	std::stringstream	ss;
 	std::string		s;
-	ss << "mcjit_module_" << exe_engines.size();
+	ss << "mcjit_module_" << jit_module_c++;
 	s = ss.str();
-	open_mod = std::make_unique<Module>(	s.c_str(),
-						getGlobalContext());
+
+	open_mod = std::make_unique<Module>(s.c_str(), getGlobalContext());
 	open_mod->setDataLayout(
 		"e-m:e-i64:64-f80:128-n8:16:32:64-S128");
 //		"e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:"
@@ -167,12 +280,13 @@ Module& JITEngine::getModuleForNewFunction(void)
 
 void JITEngine::runPasses(llvm::Module& m)
 {
+#if 1
 	// Create a function pass manager for this engine
 	auto fpm = std::make_unique<FunctionPassManager>(&m);
 
-     // Set up the optimizer pipeline.  Start with registering info about how the
-    // target lays out data structures.
-//    fpm->add(new DataLayoutPass(*NewEngine->getDataLayout()));
+	// Set up the optimizer pipeline.  Start with registering info about how the
+	// target lays out data structures.
+	// fpm->add(new DataLayoutPass(*NewEngine->getDataLayout()));
 
 	// Provide basic AliasAnalysis support for GVN.
 	fpm->add(createBasicAliasAnalysisPass());
@@ -190,11 +304,12 @@ void JITEngine::runPasses(llvm::Module& m)
 	// For each function in the module
 
 	for (auto &f : m) fpm->run(f);
+#endif
 }
 
 void JITEngine::moveModule(std::unique_ptr<llvm::Module> mod)
 {
 	assert (mod);
-	exe_engines.push_back(mod_to_engine(std::move(mod)));
+	mod_to_engine(std::move(mod));
 	assert (!mod);
 }

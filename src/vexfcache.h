@@ -16,7 +16,7 @@ namespace llvm
 class VexSB;
 class VexXlate;
 
-typedef std::map<guest_ptr, VexSB*> vexsb_map;
+typedef std::map<guest_ptr, std::unique_ptr<VexSB>> vexsb_map;
 typedef std::map<guest_ptr, llvm::Function*> func_map;
 
 // function cache of vsb's */

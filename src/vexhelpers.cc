@@ -167,9 +167,9 @@ std::unique_ptr<llvm::Module> VexHelperDummy::loadMod(const char* path)
 	return nullptr;
 }
 
-void VexHelpers::useExternalMod(std::unique_ptr<Module> m)
+void VexHelpers::useExternalMod(std::shared_ptr<Module> m)
 {
 	assert (ext_mod == nullptr);
 	destroyMods();
-	ext_mod = std::move(m);
+	ext_mod = m;
 }

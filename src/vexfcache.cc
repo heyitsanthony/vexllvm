@@ -43,9 +43,9 @@ guest_ptr VexFCache::selectVictimAddress(void) const
 	int		choice = rand() % vexsb_cache.size();
 	guest_ptr	evict_addr(0);
 
-	foreach (it, vexsb_cache.begin(), vexsb_cache.end()) {
+	for (const auto &p : vexsb_cache) {
 		if (!choice) {
-			evict_addr = it->second->getGuestAddr();
+			evict_addr = p.second->getGuestAddr();
 			break;
 		}
 		choice--;
@@ -77,7 +77,7 @@ VexSB* VexFCache::allocCacheVSB(void* hostptr, guest_ptr guest_addr)
 		evict(selectVictimAddress());
 	assert (vexsb_cache.size() < max_cache_ents);
 
-	vexsb_cache[guest_addr] = vsb;
+	vexsb_cache[guest_addr] = std::unique_ptr<VexSB>(vsb);
 	vexsb_dc.put(guest_addr, vsb);
 	return vsb;
 }
@@ -87,13 +87,16 @@ VexSB* VexFCache::getCachedVSB(guest_ptr guest_addr)
 	VexSB				*vsb;
 	vexsb_map::const_iterator	it;
 
+	// lookup in direct cache
 	vsb = vexsb_dc.get(guest_addr);
 	if (vsb) return vsb;
 
+	// lookup in slower cache
 	it = vexsb_cache.find(guest_addr);
 	if (it == vexsb_cache.end()) return NULL;
 
-	vsb = (*it).second;
+	// replace in direct cache
+	vsb = it->second.get();
 	vexsb_dc.put(guest_addr, vsb);
 	return vsb;
 }
@@ -160,9 +163,8 @@ void VexFCache::evict(guest_ptr guest_addr)
 	}
 
 	if ((vsb = getCachedVSB(guest_addr)) != NULL) {
-		vexsb_cache.erase(guest_addr);
 		vexsb_dc.put(guest_addr, NULL);
-		delete vsb;
+		vexsb_cache.erase(guest_addr);
 	}
 }
 
@@ -173,14 +175,12 @@ void VexFCache::dumpLog(std::ostream& os) const
 
 void VexFCache::flush(void)
 {
-	for (auto &p : vexsb_cache) delete p.second;
 	vexsb_cache.clear();
 
 	vexsb_dc.flush();
 
-	for (auto &p : func_cache) p.second->eraseFromParent();
+//	for (auto &p : func_cache) p.second->eraseFromParent();
 	func_cache.clear();
-
 	func_dc.flush();
 }
 
@@ -192,14 +192,12 @@ void VexFCache::flush(guest_ptr begin, guest_ptr end)
 	foreach (it,
 		vexsb_cache.lower_bound(begin), vexsb_cache.upper_bound(end))
 	{
-		VexSB*	vsb = it->second;
 		delete_addrs.push_back(it->first);
-		delete vsb;
 	}
 
 	foreach (it, delete_addrs.begin(), delete_addrs.end()) {
-		vexsb_cache.erase(*it);
 		vexsb_dc.put(*it, NULL);
+		vexsb_cache.erase(*it);
 	}
 	delete_addrs.clear();
 

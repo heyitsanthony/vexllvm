@@ -6,6 +6,8 @@
 #include <map>
 #include <string.h>
 #include <sys/types.h>
+#include <assert.h>
+
 #include "Sugar.h"
 #include "guestptr.h"
 
