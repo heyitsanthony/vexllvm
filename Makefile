@@ -15,11 +15,15 @@ ifeq ($(shell uname -m), armv7l)
 CFLAGS=-Wl,-Bsymbolic-functions -Wl,--no-as-needed
 endif
 
-PROF_FLAGS += -pg -gprof
-# XXX broken because of mapping in weird addresses
-ASAN_FLAGS += -fsanitize=address
+PROF_FLAGS = -pg -gprof
 
-CFLAGS += -std=c++14 -g -O3 -I`pwd`/src/ -lcrypto -ldl -lrt -lcrypt -lpthread -lssl -lz -lncurses
+# jit does some weird memory accesses, but functions are annotated with
+# ATTRIBUTE_NO_SANITIZE_ADDRESS so there's no false positive.
+ASAN_FLAGS = -fsanitize=address
+
+# linker flags get stripped off so clang won't complain too hard
+CFLAGS +=  	-std=c++14 -g -O3 -I`pwd`/src/ \
+		-lcrypto -ldl -lrt -lcrypt -lpthread -lssl -lz -lncurses
 
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
@@ -37,14 +41,12 @@ ifndef LLVMCONFIG_PATH
 LLVMCONFIG_PATH = llvm-config
 endif
 
-#ifeq ($(shell $(LLVMCONFIG_PATH) --version),3.3)
-#CFLAGS += -DLLVM_VERSION_MAJOR=3 -DLLVM_VERSION_MINOR=3
-#endif
-
 LLVMCC=clang
 LLVMCFLAGS=$(shell echo $(CFLAGS) | sed "s/-g//g")
 #CORECC=g++-4.4.5
+#CORELINK=g++
 CORECC=clang
+CORELINK=clang++
 
 # XXX, MAKES BINARY SIZE EXPLODE
 LDRELOC="-Wl,-Ttext-segment=$(BIN_BASE)"
@@ -235,26 +237,25 @@ bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
 	ar r $@ $^
 
 bin/vexllvm_ss: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	g++ $^ $(VEXLIB) -o $@ $(LDRELOC) $(CFLAGS)
+	$(CORELINK) $^ $(VEXLIB) -o $@ $(LDRELOC) $(CFLAGS)
 
 bin/vexllvm_ss-static: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	g++ -static $^ $(VEXLIB) -o $@ $(LDRELOC) $(CFLAGS)
-
+	$(CORELINK) -static $^ $(VEXLIB) -o $@ $(LDRELOC) $(CFLAGS)
 
 bin/vexllvm_ss_rebase: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	g++ $^ $(VEXLIB) -o $@ $(LDRELOC2) $(CFLAGS) 
+	$(CORELINK) $^ $(VEXLIB) -o $@ $(LDRELOC2) $(CFLAGS)
 
 bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS) 
+	$(CORELINK) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS)
 
 bin/%: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	g++ $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS) 
+	$(CORELINK) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS)
 
 bin/softfloat/%_rebase: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	g++ $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS) 
+	$(CORELINK) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS)
 
 bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	g++ $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS) 
+	$(CORELINK) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS)
 
 #obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
 #	llc  $< -o $@
@@ -287,13 +288,13 @@ bitcode/%.bc: support/%.c
 	$(LLVMCC) $(LLVMCFLAGS0) -emit-llvm -O3 -c $< -o $@
 
 obj/%.o: src/%.s
-	gcc -c -o $@ $< $(CFLAGS0) 
+	gcc -c -o $@ $< $(CFLAGS0)
 
 obj/%.o: src/%.cc src/%.h
-	$(CORECC) -c -o $@ $< $(CFLAGS0) $(LLVMFLAGS0) 
+	$(CORECC) -c -o $@ $< $(CFLAGS0) $(LLVMFLAGS0)
 
 obj/%.o: src/%.cc
-	$(CORECC) -c -o $@ $< $(CFLAGS0) $(LLVMFLAGS0) 
+	$(CORECC) -c -o $@ $< $(CFLAGS0) $(LLVMFLAGS0)
 
 # TEST DATA
 TRACEDEPS= nested_call strlen strrchr 	\
