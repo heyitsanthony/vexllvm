@@ -8,9 +8,7 @@
 	  for(auto _i = _b, _i ## end = _e; _i != _i ## end;  ++ _i)
 #endif
 
-#if 	defined(__has_feature) &&		\
-	__has_feature(address_sanitizer) &&	\
-	(defined(__clang__) || defined (__GNUC__))
+#if 	(defined(__clang__) || defined (__GNUC__))
 #define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
 #else
 #define ATTRIBUTE_NO_SANITIZE_ADDRESS
