@@ -64,7 +64,7 @@ public:
 
 	guest_ptr getNextAddr(void) const { return next_addr; }
 
-	virtual void setSyscalls(Syscalls* in_sc);
+	virtual void setSyscalls(std::unique_ptr<Syscalls> in_sc);
 protected:
 	VexExec(Guest* gs, std::shared_ptr<VexXlate> in_xlate = NULL);
 	virtual guest_ptr doVexSB(VexSB* vsb);
@@ -77,7 +77,7 @@ protected:
 	void setExit(int ec) { exited = true; exit_code = ec; }
 
 	Guest		*gs;
-	Syscalls	*sc;
+	std::unique_ptr<Syscalls>	sc;
 	VexFCache	*f_cache;
 	guest_ptr	next_addr;
 

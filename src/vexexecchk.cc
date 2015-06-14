@@ -20,9 +20,7 @@ VexExecChk::VexExecChk(PTImgChk* gs, std::shared_ptr<VexXlate> vx)
 {
 	cross_check = (getGuest()) ? gs : NULL;
 	if (!cross_check) return;
-
-	if (sc != NULL) delete sc;
-	sc = new SyscallsMarshalled(gs);
+	sc = std::make_unique<SyscallsMarshalled>(gs);
 }
 
 /* ensures that shadow process's state <= llvm process's state */
@@ -147,7 +145,7 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 
 void VexExecChk::stepSysCall(VexSB* vsb)
 {
-	cross_check->stepSysCall(static_cast<SyscallsMarshalled*>(sc));
+	cross_check->stepSysCall(static_cast<SyscallsMarshalled*>(sc.get()));
 	gs->getCPUState()->resetSyscall();
 }
 

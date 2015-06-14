@@ -34,12 +34,15 @@ uint64_t Syscalls::apply(void)
 	return apply(sp);
 }
 
-Syscalls* Syscalls::create(Guest* gs)
+std::unique_ptr<Syscalls> Syscalls::create(Guest* gs)
 {
-	if (gs->getArch() == Arch::MIPS32)
-		return new SPIMSyscalls(gs);
+	Syscalls	*sc;
 
-	return new Syscalls(gs);
+	sc = (gs->getArch() == Arch::MIPS32)
+		? new SPIMSyscalls(gs)
+		: new Syscalls(gs);
+
+	return std::unique_ptr<Syscalls>(sc);
 }
 
 /* pass through */

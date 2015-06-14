@@ -70,11 +70,7 @@ const VexSB* VexExec::getCachedVSB(guest_ptr p) const
 		p);
 }
 
-VexExec::~VexExec()
-{
-	if (gs == NULL) return;
-	delete sc;
-}
+VexExec::~VexExec() {}
 
 VexExec::VexExec(Guest* in_gs, std::shared_ptr<VexXlate> in_xlate)
 : gs(in_gs)
@@ -406,8 +402,7 @@ void VexExec::signalHandler(int sig, siginfo_t* si, void* raw_context)
 	}
 }
 
-void VexExec::setSyscalls(Syscalls* in_sc)
+void VexExec::setSyscalls(std::unique_ptr<Syscalls> in_sc)
 {
-	delete sc;
-	sc = in_sc;
+	sc = std::move(in_sc);
 }

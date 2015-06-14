@@ -37,7 +37,7 @@ public:
 	
 	int translateSyscall(int guest) const;
 
-	static Syscalls* create(Guest*);
+	static std::unique_ptr<Syscalls> create(Guest*);
 protected:
 	Syscalls(Guest*);
 
