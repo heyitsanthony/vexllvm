@@ -55,9 +55,6 @@ public:
 
 		ret = SectionMemoryManager::allocateCodeSection(
 			Size, Alignment, SectionID, SectionName);
-
-//		std::cerr << "ALLOC CODE: size:" <<  Size << ". Name: "
-//		<< SectionName.str() << ". ptr: " << (void*)ret << '\n';
 		return ret;
 	}
 
@@ -69,9 +66,6 @@ public:
 
 		ret = SectionMemoryManager::allocateDataSection(
 			Size, Alignment, SectionID, SectionName, isReadOnly);
-	//		std::cerr << "ALLOC DATA: size:" <<  Size << ". Name: "
-	//		<< SectionName.str() << ". ptr: " << (void*)ret << '\n';
-
 		return ret;
 	}
 
@@ -81,8 +75,6 @@ public:
 	{
 		SectionMemoryManager::reserveAllocationSpace(
 			CodeSize, DataSizeRO, DataSizeRW);
-		// std::cerr << "RSERVE" << CodeSize << " / " << DataSizeRO
-		// << " / " << DataSizeRW << '\n';
 	}
 
 private:
@@ -280,7 +272,7 @@ Module& JITEngine::getModuleForNewFunction(void)
 
 void JITEngine::runPasses(llvm::Module& m)
 {
-#if 1
+#if 0
 	// Create a function pass manager for this engine
 	auto fpm = std::make_unique<FunctionPassManager>(&m);
 
