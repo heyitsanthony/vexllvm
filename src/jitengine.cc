@@ -15,6 +15,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "jitobjcache.h"
 #include "jitengine.h"
 
 using namespace llvm;
@@ -151,7 +152,6 @@ void* JITMem::getPointerToNamedFunction(const std::string &name, bool abort_on_f
 
 	return pfn;
 }
-//////////////
 
 bool JITEngine::targets_inited = false;
 
@@ -166,6 +166,7 @@ JITEngine::JITEngine(void)
 	}
 
 	jit_mem = std::make_unique<JITMem>(*this);
+	jit_objcache = JITObjectCache::create();
 }
 
 JITEngine::~JITEngine(void) {}
@@ -216,6 +217,9 @@ std::unique_ptr<ExecutionEngine> JITEngine::mod_to_engine(
 {
 	runPasses(*m);
 
+	// set a new name so it can be picked up by object cache
+	m->setModuleIdentifier(JITObjectCache::getModuleHash(*m));
+
 	std::set<std::string> new_fns;
 	for (auto & f : *m) {
 		std::string fn = f.getName().str();
@@ -237,6 +241,9 @@ std::unique_ptr<ExecutionEngine> JITEngine::mod_to_engine(
 			  << err_str << '\n';
 		abort();
 	}
+
+	if (jit_objcache)
+		new_engine->setObjectCache(jit_objcache.get());
 
 	new_engine->finalizeObject();
 	for (auto & fn : new_fns) {
@@ -305,3 +312,4 @@ void JITEngine::moveModule(std::unique_ptr<llvm::Module> mod)
 	mod_to_engine(std::move(mod));
 	assert (!mod);
 }
+

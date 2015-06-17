@@ -12,6 +12,7 @@ namespace llvm
 }
 
 class JITMem;
+class JITObjectCache;
 
 class JITEngine
 {
@@ -35,8 +36,9 @@ private:
 
 	static bool targets_inited;
 
-	std::map<std::string, void*>	func_addrs;
-	std::unique_ptr<JITMem>		jit_mem;
+	std::map<std::string, void*>		func_addrs;
+	std::unique_ptr<JITMem>			jit_mem;
+	std::unique_ptr<JITObjectCache>		jit_objcache;
 	unsigned	jit_module_c;
 };
 
