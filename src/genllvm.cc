@@ -80,6 +80,14 @@ void GenLLVM::beginBB(const char* name)
 		name,
 		mod.get());
 
+	// XXX: marking the regctx as noalias could mess up any instrumentation
+	// that wants to modify registers, but I'm not sure if that would ever
+	// be a thing I'd want to do
+	auto aa = Attribute::AttrKind::NoAlias;
+	ArrayRef<decltype(aa)>	ar(aa);
+	auto as = AttributeSet::get(getGlobalContext(), 0, ar);
+	cur_f->arg_begin()->addAttr(as);
+
 	entry_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
 	builder->SetInsertPoint(entry_bb);
 
