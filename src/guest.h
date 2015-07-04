@@ -66,7 +66,7 @@ public:
 	/* guest has an interface to saving/loading, but all the legwork
 	 * is done by guestsnapshot to keep things tidy */
 	void save(const char* dirpath = NULL) const;
-	static Guest* load(const char* dirpath = NULL);
+	static std::unique_ptr<Guest> load(const char* dirpath = NULL);
 
 	/* saves the guest snapshot to a 'core' file which
 	 * is meant to be loadable by the *guest* platform's debugger */

@@ -25,7 +25,7 @@ void dumpIRSBs(void)
 
 int main(int argc, char* argv[])
 {
-	Guest		*g;
+	std::unique_ptr<Guest> g;
 	uint64_t	addr;
 	size_t		sz;
 
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 	}
 
 	assert (g && "Could not load guest");
-	vexexec = VexExec::create<VexExec,Guest>(g);
+	vexexec = VexExec::create<VexExec,Guest>(g.get());
 	assert (vexexec && "Could not create vexexec");
 
 	g->getCPUState()->setPC(guest_ptr(addr));
@@ -93,7 +93,5 @@ int main(int argc, char* argv[])
 	}
 
 	delete vexexec;
-	delete g;
-
 	return 0;
 }

@@ -24,7 +24,7 @@ void dumpIRSBs(void)
 
 int main(int argc, char* argv[], char* envp[])
 {
-	Guest	*g;
+	std::unique_ptr<Guest>	g;
 
 	if (argc == 1) {
 		g = Guest::load();
@@ -39,13 +39,11 @@ int main(int argc, char* argv[], char* envp[])
 	}
 
 	assert (g && "Could not load guest");
-	vexexec = VexExec::create<VexExec,Guest>(g);
+	vexexec = VexExec::create<VexExec,Guest>(g.get());
 	assert (vexexec && "Could not create vexexec");
 
 	vexexec->run();
 
 	delete vexexec;
-	delete g;
-
 	return 0;
 }

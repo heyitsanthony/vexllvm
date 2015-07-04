@@ -118,15 +118,13 @@ void Guest::save(const char* dirpath) const
 	GuestSnapshot::save(this, dirpath);
 }
 
-Guest* Guest::load(const char* dirpath)
+std::unique_ptr<Guest> Guest::load(const char* dirpath)
 {
-	GuestSnapshot*	ret;
-
 	/* use most recent dir if don't care */
-	if (dirpath == NULL) dirpath = LAST_SYMLINK;
-
-	ret = GuestSnapshot::create(dirpath);
-	return ret;
+	return std::unique_ptr<Guest>(GuestSnapshot::create(
+		(dirpath == nullptr)
+			? LAST_SYMLINK
+			: dirpath));
 }
 
 void Guest::addLibrarySyms(const char* path, guest_ptr base)
