@@ -8,6 +8,7 @@
 
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/DataLayout.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Transforms/Scalar.h>
 
@@ -277,16 +278,22 @@ Module& JITEngine::getModuleForNewFunction(void)
 	return *open_mod;
 }
 
+#include "debugprintpass.h"
+
 void JITEngine::runPasses(llvm::Module& m)
 {
-#if 0
+	const char *pass_lib = getenv("VEXLLVM_DEBUG_PASS");
+
+	if (!pass_lib || pass_lib != m.getName().str())
+		return;
+
 	// Create a function pass manager for this engine
 	auto fpm = std::make_unique<FunctionPassManager>(&m);
 
 	// Set up the optimizer pipeline.  Start with registering info about how the
 	// target lays out data structures.
 	// fpm->add(new DataLayoutPass(*NewEngine->getDataLayout()));
-
+#if 0
 	// Provide basic AliasAnalysis support for GVN.
 	fpm->add(createBasicAliasAnalysisPass());
 	// Promote allocas to registers.
@@ -299,11 +306,15 @@ void JITEngine::runPasses(llvm::Module& m)
 	fpm->add(createGVNPass());
 	// Simplify the control flow graph (deleting unreachable blocks, etc).
 	fpm->add(createCFGSimplificationPass());
-	fpm->doInitialization();
-	// For each function in the module
-
-	for (auto &f : m) fpm->run(f);
 #endif
+	fpm->add(new DebugPrintPass());
+	fpm->add(createVerifierPass());
+	fpm->doInitialization();
+
+	// For each function in the module
+	for (auto &f : m) {
+		fpm->run(f);
+	}
 }
 
 void JITEngine::moveModule(std::unique_ptr<llvm::Module> mod)

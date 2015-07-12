@@ -101,6 +101,7 @@ OBJSLLVM=	vexxlate.o		\
 		vexop.o			\
 		memlog.o		\
 		genllvm.o		\
+		debugprintpass.o	\
 		jitengine.o		\
 		jitobjcache.o		\
 		vexfcache.o		\
