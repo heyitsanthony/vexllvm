@@ -12,14 +12,13 @@ char DebugPrintPass::ID;
 
 using namespace llvm;
 
-void debug_print(const char* s, uint64_t v)
+static void debug_print(const char* s, uint64_t v)
 {
 	std::cerr << s << ": " << v << '\n';
 }
 
 bool DebugPrintPass::runOnFunction(Function &f)
 {
-	bool changed = false;
 	Instruction* last_inst = nullptr;
 	std::set<std::pair<Instruction*, Instruction*>> debug_insts;
 
@@ -42,7 +41,6 @@ bool DebugPrintPass::runOnFunction(Function &f)
 		last_inst = &i;
 	}
 	}
-
 
 	auto i64ty = IntegerType::get(getGlobalContext(), 64);
 	auto i8ty = IntegerType::get(getGlobalContext(), 8);
@@ -94,7 +92,7 @@ bool DebugPrintPass::runOnFunction(Function &f)
 		builder.CreateCall2(fptr, sint, v64);
 	}
 
-	return changed;
+	return !debug_insts.empty();
 }
 
 FunctionType* DebugPrintPass::getFuncType(void) const
