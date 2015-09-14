@@ -89,7 +89,10 @@ bool DebugPrintPass::runOnFunction(Function &f)
 			v64 = builder.CreateBitCast(v64, i64ty);
 		}
 
-		builder.CreateCall2(fptr, sint, v64);
+		std::vector<Value*>	args(2);
+		args[0] = sint;
+		args[1] = v64;
+		builder.CreateCall(fptr, args);
 	}
 
 	return !debug_insts.empty();

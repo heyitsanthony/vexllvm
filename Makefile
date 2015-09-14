@@ -45,7 +45,7 @@ LLVMCC=clang
 LLVMCFLAGS=$(shell echo $(CFLAGS) | sed "s/-g//g")
 #CORECC=g++-4.4.5
 #CORELINK=g++
-CORECC=clang
+CORECC=clang++
 CORELINK=clang++
 
 # XXX, MAKES BINARY SIZE EXPLODE
@@ -138,7 +138,7 @@ CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)
 LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
 LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
 LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
-LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/c++11/c++14/g;s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;") -Wall
+LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/c++11/c++14/g;s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;s/-Wno-maybe-uninitialized//g;") -Wall
 
 ifndef VALGRIND_TRUNK
 VALGRIND_TRUNK=/home4/ajromano/valgrind
@@ -150,8 +150,7 @@ ifeq ($(HAS_VALGRIND_TRUNK), 'yes')
 endif
 
 CFLAGS0= $(shell echo $(CFLAGS) | sed "s|-[lL][A-Za-z].*[^ ] | |g")
-LLVMFLAGS0= $(shell echo $(LLVMFLAGS) | sed "s|-[lL][A-Za-z].*[^ ] | |g;s|-L/usr/lib64[/ ]| |g")
-
+LLVMFLAGS0= $(shell echo $(LLVMFLAGS) | sed "s| -[lL][A-Za-z0-9]*| |g;s|-L/usr/lib64[/ ]| |g")
 
 FPDEPS= vexop_fp.o
 SOFTFLOATDEPS=vexop_softfloat.o

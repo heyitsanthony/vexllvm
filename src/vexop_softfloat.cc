@@ -27,7 +27,10 @@ void vexop_setup_fp(VexHelpers* vh)
 	if (!lo_op_rhs->getType()->isIntegerTy())			\
 		lo_op_rhs = builder->CreateBitCast(lo_op_rhs,		\
 			get_i(lo_op_rhs->getType()->getPrimitiveSizeInBits())); \
-	result = builder->CreateCall2(f, lo_op_lhs, lo_op_rhs);	
+	std::vector<Value*>	v_(2);					\
+	v_[0] = lo_op_lhs;						\
+	v_[1] = lo_op_rhs;						\
+	result = builder->CreateCall(f, v_);
 
 #define OPF0X_EMIT_CMP_SOFTFLOAT_OP(x,y,z)				\
 	OPF0X_EMIT_SOFTFLOAT_OP(x,y,z);					\
@@ -96,9 +99,10 @@ Value * VexExprBinopCmpF64::emit(void) const
 	BINOP_SETUP
 	f = theVexHelpers->getHelper("vexop_softfloat_cmpf64");
 	assert (f != NULL && "Could not find vexop_softfloat_cmpf64");
-	v1 = builder->CreateBitCast(v1, get_i(64));
-	v2 = builder->CreateBitCast(v2, get_i(64));
-	return builder->CreateCall2(f, v1, v2);
+	std::vector<Value*>	v_(2);
+	v_[0] = builder->CreateBitCast(v1, get_i(64));
+	v_[1] = builder->CreateBitCast(v2, get_i(64));
+	return builder->CreateCall(f, v_);
 }
 
 BINOP_UNIMPL(CmpGE32Fx2)
@@ -157,9 +161,10 @@ Value* VexExprTriop##x::emit(void) const		\
 	TRIOP_SETUP					\
 	f = theVexHelpers->getHelper(y);		\
 	assert (f != NULL);				\
-	v2 = builder->CreateBitCast(v2, z);		\
-	v3 = builder->CreateBitCast(v3, z);		\
-	return builder->CreateCall2(f, v2, v3);		\
+	std::vector<Value*>	v_(2);			\
+	v_[0] = builder->CreateBitCast(v2, z);		\
+	v_[1] = builder->CreateBitCast(v3, z);		\
+	return builder->CreateCall(f, v_);		\
 }
 
 EMIT_HELPER_IGNORE_ROUNDING(AddF32, "float32_add", get_i(32))

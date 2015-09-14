@@ -190,9 +190,10 @@ Value* VexExprBinop##x::emit(void) const	\
 	BINOP_SETUP				\
 	f = theVexHelpers->getHelper(y);	\
 	assert (f != NULL);			\
-	v1 = builder->CreateBitCast(v1, z);	\
-	v2 = builder->CreateBitCast(v2, z);	\
-	return builder->CreateCall2(f, v1, v2);	\
+	std::vector<Value*>	v_(2);		\
+	v_[0] = builder->CreateBitCast(v1, z);	\
+	v_[1] = builder->CreateBitCast(v2, z);	\
+	return builder->CreateCall(f, v_);	\
 }
 
 #define OPV_CMP_T_EMIT(x, y, z, w)			\
