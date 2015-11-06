@@ -16,6 +16,8 @@
 
 std::unique_ptr<GenLLVM> theGenLLVM;
 
+#define GET_VEXSTATE	((VexCPUState*)guest.getCPUState())
+
 using namespace llvm;
 
 unsigned int GenLLVM::mod_c = 0;
@@ -404,7 +406,7 @@ Value* GenLLVM::getLinked() {
 void GenLLVM::setExitType(uint8_t exit_type)
 {
 	writeCtx(
-		guest.getVexState()->getExitTypeOffset(),
+		GET_VEXSTATE->getExitTypeOffset(),
 		ConstantInt::get(
 			getGlobalContext(),
 			APInt(8, exit_type)));

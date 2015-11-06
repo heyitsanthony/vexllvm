@@ -38,6 +38,8 @@ extern "C" {
 
 using namespace llvm;
 
+#define GET_VEXSTATE	((VexCPUState*)gs->getCPUState())
+
 VexExec* VexExec::exec_context = NULL;
 
 #define TRACE_MAX	500
@@ -155,7 +157,7 @@ const VexSB* VexExec::doNextSB(void)
 	/* check for special exits */
 	/* NOTE: we set the exit type *after* we process so that
 	 * klee-mc will work */
-	exit_type = gs->getVexState()->getExitType();
+	exit_type = GET_VEXSTATE->getExitType();
 	switch(exit_type) {
 	case GE_IGNORE:
 		break;
@@ -170,14 +172,14 @@ const VexSB* VexExec::doNextSB(void)
 	case GE_SYSCALL:
 		doSysCall(vsb);
 		if (exited) {
-			gs->getVexState()->setExitType(GE_IGNORE);
+			GET_VEXSTATE->setExitType(GE_IGNORE);
 			return NULL;
 		}
 		break;
 	case GE_SIGTRAP:
 		doTrap(vsb);
 		if (exited) {
-			gs->getVexState()->setExitType(GE_IGNORE);
+			GET_VEXSTATE->setExitType(GE_IGNORE);
 			return NULL;
 		}
 		break;
@@ -190,7 +192,7 @@ const VexSB* VexExec::doNextSB(void)
 		assert (0 == 1 && "SPECIAL EXIT TYPE");
 	}
 
-	gs->getVexState()->setExitType(GE_IGNORE);
+	GET_VEXSTATE->setExitType(GE_IGNORE);
 
 	/* next address to go to */
 	next_addr = new_jmpaddr;
