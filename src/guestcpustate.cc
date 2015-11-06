@@ -4,6 +4,8 @@
 
 #include "guestcpustate.h"
 
+std::map<Arch::Arch, make_guestcpustate_t> GuestCPUState::makers;
+
 GuestCPUState::GuestCPUState()
 : state_data(NULL)
 , state_byte_c(0)
@@ -153,5 +155,16 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 		assert (0 == 1 && "Could not resolve byte offset");
 	}
 	return (*it).second;
+}
 
+void GuestCPUState::registerCPU(Arch::Arch a, make_guestcpustate_t f)
+{
+	assert (makers.count(a) == 0);
+	makers[a] = f;
+}
+
+GuestCPUState* GuestCPUState::create(Arch::Arch a)
+{
+	assert(makers.count(a) && "unsupported guest architecture");
+	return makers[a]();
 }

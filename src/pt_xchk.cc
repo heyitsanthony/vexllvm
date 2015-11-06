@@ -9,6 +9,7 @@
 
 #include "vexexecchk.h"
 #include "vexexecfastchk.h"
+#include "vexcpustate.h"
 #include "ptimgchk.h"
 
 static VexExec *vexexec;
@@ -27,6 +28,8 @@ int main(int argc, char* argv[], char* envp[])
 		fprintf(stderr, "Usage: %s program_path <args>\n", argv[0]);
 		return -1;
 	}
+
+	VexCPUState::registerCPUs();
 
 	gs = GuestPTImg::create<PTImgChk>(argc - 1, argv + 1, envp);
 	if (getenv("VEXLLVM_XCHK_SAVE")) {

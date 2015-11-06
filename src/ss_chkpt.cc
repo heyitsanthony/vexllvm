@@ -27,7 +27,7 @@
 
 #include "guestmemdual.h"
 #include "guestptmem.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestptimg.h"
 #include "guestsnapshot.h"
 #include "procargs.h"
@@ -512,6 +512,8 @@ int main(int argc, char* argv[], char* envp[])
 	}
 
 	/* TODO: check kernel version for soft-dirty bit support? */
+
+	VexCPUState::registerCPUs();
 
 	gettimeofday(&tv[0],NULL);
 

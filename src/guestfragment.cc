@@ -73,7 +73,7 @@ GuestFragment::GuestFragment(
 	assert (code != MAP_FAILED && "Could not map fragment");
 	memcpy(code, data, code_len);
 
-	cpu_state = VexCPUState::create(arch);
+	cpu_state = GuestCPUState::create(arch);
 	abi = GuestABI::create(this);
 
 	/* our one fragment mapping */

@@ -43,3 +43,16 @@ void PTCPUState::copyIn(guest_ptr dst, const void* src, unsigned int bytes) cons
 	}
 }
 
+
+#ifdef __amd64__
+#include "cpu/ptamd64cpustate.h"
+#endif
+
+void PTCPUState::registerCPUs(pid_t pid)
+{
+#ifdef __amd64__
+	GuestCPUState::registerCPU(
+		Arch::X86_64,
+		[pid] { return new PTAMD64CPUState(pid); });
+#endif
+}

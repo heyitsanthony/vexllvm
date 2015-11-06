@@ -10,7 +10,7 @@
 
 #include "elfimg.h"
 #include "vexexec.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestelf.h"
 
 static VexExec *vexexec;
@@ -51,6 +51,7 @@ int main(int argc, char* argv[], char* envp[])
 		return -2;
 	}
 
+	VexCPUState::registerCPUs();
 	gs = new GuestELF(img);
 	gs->setArgv(argc-1-skip, const_cast<const char**>(argv+1+skip),
 		env.size(), const_cast<const char**>(&env[0]));

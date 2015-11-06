@@ -81,7 +81,7 @@ GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 		mem->mark32Bit();
 	}
 
-	cpu_state = VexCPUState::create(getArch());
+	cpu_state = GuestCPUState::create(getArch());
 	abi = GuestABI::create(this);
 }
 

@@ -10,7 +10,7 @@
 
 #include "elfimg.h"
 #include "vexexec.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestptimg.h"
 #include "procargs.h"
 
@@ -41,6 +41,8 @@ int main(int argc, char* argv[], char* envp[])
 		fprintf(stderr, "Usage: %s program_path <args>\n", argv[0]);
 		return -1;
 	}
+
+	VexCPUState::registerCPUs();
 
 	if (getenv("VEXLLVM_ATTACH") != NULL) {
 		gs = createAttached();

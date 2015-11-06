@@ -36,6 +36,8 @@ public:
 		return old;
 	}
 
+	static void registerCPUs(void);
+
 protected:
 	uint8_t		*exit_type;
 };

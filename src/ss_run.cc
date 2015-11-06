@@ -9,7 +9,7 @@
 
 
 #include "vexexec.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestsnapshot.h"
 
 using namespace llvm;
@@ -25,6 +25,8 @@ void dumpIRSBs(void)
 int main(int argc, char* argv[], char* envp[])
 {
 	std::unique_ptr<Guest>	g;
+
+	VexCPUState::registerCPUs();
 
 	if (argc == 1) {
 		g = Guest::load();

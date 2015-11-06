@@ -22,6 +22,8 @@ public:
 
 	virtual uintptr_t getSysCallResult() const = 0;
 
+	static void registerCPUs(pid_t);
+
 protected:
 	PTCPUState(pid_t in_pid)
 		: pid(in_pid)

@@ -16,3 +16,19 @@ VexCPUState* VexCPUState::create(Arch::Arch arch)
 		assert(!"supported guest architecture");
 	}
 }
+
+void VexCPUState::registerCPUs(void)
+{
+	GuestCPUState::registerCPU(
+		Arch::X86_64,
+		[] { return new AMD64CPUState(); });
+	GuestCPUState::registerCPU(
+		Arch::I386,
+		[] { return new I386CPUState(); });
+	GuestCPUState::registerCPU(
+		Arch::ARM,
+		[] { return new ARMCPUState(); });
+	GuestCPUState::registerCPU(
+		Arch::MIPS32,
+		[] { return new MIPS32CPUState(); });
+}

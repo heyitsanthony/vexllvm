@@ -9,7 +9,7 @@
 
 #include "vexsb.h"
 #include "vexexec.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestsnapshot.h"
 #include "fragcache.h"
 
@@ -41,6 +41,8 @@ int main(int argc, char* argv[])
 		return -2;
 	}
 	printf("[frag-run] Fragment=%p\n", (void*)((intptr_t)addr));
+
+	VexCPUState::registerCPUs();
 
 	FragCache* fc = FragCache::create(NULL);
 	if (fc) {

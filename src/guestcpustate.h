@@ -7,7 +7,9 @@
 #include <sys/user.h>
 #include <assert.h>
 #include <map>
+#include <functional>
 
+#include "arch.h"
 #include "guestptr.h"
 
 struct guest_ctx_field
@@ -30,6 +32,9 @@ struct guest_ctx_field
 	case 6+offsetof(s, m):	\
 	case 7+offsetof(s, m):
 
+class GuestCPUState;
+
+typedef std::function<GuestCPUState*(void)> make_guestcpustate_t;
 
 class GuestCPUState
 {
@@ -38,6 +43,9 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 typedef std::map<std::string, unsigned int> reg2byte_map;
 	GuestCPUState();
 	virtual ~GuestCPUState() {}
+
+	static void registerCPU(Arch::Arch, make_guestcpustate_t);
+	static GuestCPUState *create(Arch::Arch);
 
 	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 
@@ -89,6 +97,9 @@ protected:
 	reg2byte_map	reg2OffMap;
 	uint8_t		*state_data;
 	unsigned int	state_byte_c;
+
+private:
+	static std::map<Arch::Arch, make_guestcpustate_t> makers;
 };
 
 #endif
