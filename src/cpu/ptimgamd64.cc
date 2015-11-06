@@ -93,6 +93,13 @@ PTImgAMD64::PTImgAMD64(GuestPTImg* gs, int in_pid)
 , xchk_eflags(getenv("VEXLLVM_XCHK_EFLAGS") ? true : false)
 , fixup_eflags(getenv("VEXLLVM_NO_EFLAGS_FIXUP") ? false : true)
 {
+	if (in_pid)
+		pt_cpu = std::make_unique<PTAMD64CPUState>(in_pid);
+}
+
+void PTImgAMD64::setPID(int in_pid)
+{
+	child_pid = in_pid;
 	pt_cpu = std::make_unique<PTAMD64CPUState>(in_pid);
 }
 
@@ -628,7 +635,7 @@ bool PTImgAMD64::breakpointSysCalls(
 
 	while (rip != ip_end) {
 		if (((getInsOp(rip) & 0xffff) == 0x050f)) {
-			gs->setBreakpointByPID(child_pid, rip);
+			gs->setBreakpoint(rip);
 			set_bp = true;
 		}
 		rip.o++;

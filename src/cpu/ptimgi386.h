@@ -17,6 +17,7 @@ public:
 	PTImgI386(GuestPTImg* gs, int in_pid);
 	virtual ~PTImgI386();
 
+	void setPID(int in_pid) { assert(false && "STUB"); abort(); }
 	bool isMatch(void) const;
 	bool doStep(guest_ptr start, guest_ptr end, bool& hit_syscall);
 	uintptr_t getSysCallResult() const;

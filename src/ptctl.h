@@ -26,14 +26,12 @@ public:
 
 	bool breakpointSysCalls(guest_ptr ip_begin, guest_ptr ip_end);
 
-	int getPID(void) const { return ctl_pid; }
-	void setPID(int pid) { ctl_pid = pid; }
-
 	uintptr_t getSysCallResult(void) const;
-	void resetBreakpoint(guest_ptr addr);
-	void setBreakpoint(guest_ptr addr);
+
+protected:
+	int		pid;
+
 private:
-	int		ctl_pid;
 	GuestPTImg	&gpi;
 	bool		hit_syscall;
 	bool		log_steps;

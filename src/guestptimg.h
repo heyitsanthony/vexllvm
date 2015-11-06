@@ -121,8 +121,8 @@ public:
 	virtual guest_ptr getArgcPtr(void) const { return argc_ptr; }
 
 
-	void setBreakpointByPID(pid_t pid, guest_ptr addr);
-	void resetBreakpointByPID(pid_t pid, guest_ptr addr);
+	void setBreakpoint(guest_ptr addr);
+	void resetBreakpoint(guest_ptr addr);
 
 	static Symbols* loadSymbols(const ptr_list_t<ProcMap>& mappings);
 	static Symbols* loadDynSymbols(
@@ -137,7 +137,7 @@ public:
 	static void dumpSelfMap(void);
 
 	PTImgArch* getPTArch(void) const { return pt_arch; }
-	guest_ptr undoBreakpoint(pid_t pid);
+	guest_ptr undoBreakpoint();
 
 	void slurpRegisters(pid_t pid);
 protected:
@@ -164,7 +164,7 @@ private:
 
 
 	void waitForEntry(int pid);
-	void slurpArgPtrs(int pid, char *const argv[]);
+	void slurpArgPtrs(char *const argv[]);
 	static void forcePreloads(
 		Symbols			*symbols,
 		std::set<std::string>	&mmap_fnames,

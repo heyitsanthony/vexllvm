@@ -10,7 +10,7 @@
 #include "ptctl.h" 
 
 PTCtl::PTCtl(GuestPTImg& _gpi)
-: ctl_pid(0)
+: pid(0)
 , gpi(_gpi)
 , hit_syscall(false)
 , bp_steps(0)
@@ -33,7 +33,7 @@ guest_ptr PTCtl::stepToBreakpoint(void)
 
 	bp_steps++;
 	gpi.getPTArch()->getPTCPU().revokeRegs();
-	err = ptrace(PTRACE_CONT, ctl_pid, NULL, NULL);
+	err = ptrace(PTRACE_CONT, pid, NULL, NULL);
 	if(err < 0) {
 		perror("PTCtl::doStep ptrace single step");
 		exit(1);
@@ -50,7 +50,7 @@ guest_ptr PTCtl::stepToBreakpoint(void)
 	}
 
 	/* ptrace executes trap, so child process's IP needs to be fixed */
-	return gpi.undoBreakpoint(ctl_pid);
+	return gpi.undoBreakpoint();
 }
 
 
@@ -65,7 +65,7 @@ void PTCtl::pushPage(guest_ptr p) { pushPage(gpi.getMem(), p); }
 void PTCtl::pushPage(GuestMem* m, guest_ptr p)
 {
 	GuestMem::Mapping	mp;
-	GuestPTMem		ptmem(&gpi, ctl_pid);
+	GuestPTMem		ptmem(&gpi, pid);
 	char			buf[4096];
 
 	p.o &= ~0xfffUL;
@@ -111,9 +111,3 @@ guest_ptr PTCtl::continueForwardWithBounds(guest_ptr start, guest_ptr end)
 	gpi.getPTArch()->incBlocks();
 	return gpi.getPTArch()->getPTCPU().getPC();
 }
-
-void PTCtl::setBreakpoint(guest_ptr addr)
-{ gpi.setBreakpointByPID(ctl_pid, addr); }
-
-void PTCtl::resetBreakpoint(guest_ptr addr)
-{ gpi.resetBreakpointByPID(ctl_pid, addr); }

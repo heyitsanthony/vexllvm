@@ -18,7 +18,7 @@ public:
 	virtual void ignoreSysCall(void) { assert (0 == 1 && "STUB"); }
 
 	int getPID(void) const { return child_pid; }
-	void setPID(int in_pid) { child_pid = in_pid; }
+	virtual void setPID(int in_pid) = 0;
 
 	virtual bool doStep(
 		guest_ptr start, guest_ptr end, bool& hit_syscall) = 0;

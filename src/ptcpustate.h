@@ -26,7 +26,9 @@ protected:
 	PTCPUState(pid_t in_pid)
 		: pid(in_pid)
 		, recent_shadow(false)
-	{}
+	{
+		assert(pid != 0);
+	}
 
 	pid_t		pid;
 	mutable bool	recent_shadow;

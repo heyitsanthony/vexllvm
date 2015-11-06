@@ -55,8 +55,6 @@ private:
 	void doFixupGuest(void);
 	void doFixupNative(void);
 
-	pid_t		child_pid;
-
 	uint64_t	blocks;
 
 	bool		log_steps;

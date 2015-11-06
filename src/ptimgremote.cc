@@ -30,7 +30,7 @@ PTImgRemote::PTImgRemote(const char* binname, bool use_entry)
 PTImgRemote::~PTImgRemote() {}
 
 /* replace physically backed memory with remote memory */
-void PTImgRemote::slurpBrains(pid_t pid)
+void PTImgRemote::slurpBrains(pid_t in_pid)
 {
 	GuestMem	*tmp_mem;
 	bool		is_32;
@@ -43,10 +43,10 @@ void PTImgRemote::slurpBrains(pid_t pid)
 
 	/* read in with sink guestmem */
 	std::cerr << "[PTImgRemote] Slurp brains\n";
-	ProcMap::slurpMappings(pid, mem, mappings, false);
-	slurpRegisters(pid);
+	ProcMap::slurpMappings(in_pid, mem, mappings, false);
+	slurpRegisters(in_pid);
 
-	tmp_mem = new GuestPTMem(this, pid);
+	tmp_mem = new GuestPTMem(this, in_pid);
 	if (is_32) tmp_mem->mark32Bit();
 	tmp_mem->import(mem);
 
@@ -56,8 +56,9 @@ void PTImgRemote::slurpBrains(pid_t pid)
 	mem = tmp_mem;
 }
 
-void PTImgRemote::handleChild(pid_t pid)
+void PTImgRemote::handleChild(pid_t in_pid)
 {
 	/* keep child around */
-	setPID(pid);
+	pid = in_pid;
+	pt_arch->setPID(pid);
 }

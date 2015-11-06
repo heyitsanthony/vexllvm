@@ -14,6 +14,7 @@ public:
 	PTImgAMD64(GuestPTImg* gs, int in_pid);
 	virtual ~PTImgAMD64(void) {}
 
+	void setPID(int in_pid) override;
 	bool isMatch(void) const override;
 	bool isRegMismatch(void) const override;
 	bool doStep(guest_ptr start, guest_ptr end, bool& hit_syscall) override;

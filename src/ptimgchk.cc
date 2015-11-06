@@ -38,11 +38,10 @@ PTImgChk::~PTImgChk()
 	if (mem_log) delete mem_log;
 }
 
-void PTImgChk::handleChild(pid_t pid)
+void PTImgChk::handleChild(pid_t in_pid)
 {
 	/* keep child around */
-	child_pid = pid;
-	PTCtl::setPID(pid);
+	pid = in_pid;
 
 	//we need the fds to line up.  child will have only 0-4
 	//TODO: actually check that
@@ -107,11 +106,11 @@ void PTImgChk::doFixupGuest(void)
 {
 	GuestCPUState*	gcpu;
 	GuestMem*	m;
-	GuestPTMem	ptmem(this, child_pid);
+	GuestPTMem	ptmem(this, pid);
 	const uint64_t*	dat;
 	unsigned	dat_elems;
 
-	slurpRegisters(child_pid);
+	slurpRegisters(pid);
 
 	/* load all nearby pointers */
 
@@ -155,7 +154,7 @@ bool PTImgChk::isWatchPtrMatch(void) const
 {
 	GuestMem::Mapping	mp;
 	guest_ptr		p;
-	GuestPTMem		ptmem(const_cast<PTImgChk*>(this), child_pid);
+	GuestPTMem		ptmem(const_cast<PTImgChk*>(this), pid);
 	uint64_t		buf_v(0), buf_p(0);
 
 	p.o = xchk_watchptr.o & ~7UL;
@@ -194,7 +193,7 @@ void PTImgChk::readMemLogData(char* data) const
 		aligned < end;
 		aligned += sizeof(long), ++mem)
 	{
-		*mem = ptrace(PTRACE_PEEKDATA, child_pid, aligned, NULL);
+		*mem = ptrace(PTRACE_PEEKDATA, pid, aligned, NULL);
 	}
 
 	if (extra != 0)
@@ -238,7 +237,7 @@ bool PTImgChk::isStackMatch(void) const
 		guest_ptr	stack_ptr(stack_base.o+sizeof(long)*i);
 		long		pt_val, guest_val;
 
-		pt_val = ptrace(PTRACE_PEEKDATA, child_pid, stack_ptr.o, NULL);
+		pt_val = ptrace(PTRACE_PEEKDATA, pid, stack_ptr.o, NULL);
 
 		guest_val = getMem()->read<long>(stack_ptr);
 		if (pt_val == guest_val)
@@ -257,7 +256,7 @@ bool PTImgChk::isStackMatch(void) const
 
 void PTImgChk::stackTraceShadow(
 	std::ostream& os, guest_ptr begin, guest_ptr end)
-{ stackTrace(os, getBinaryPath(), child_pid, begin, end); }
+{ stackTrace(os, getBinaryPath(), pid, begin, end); }
 
 void PTImgChk::printMemory(std::ostream& os) const
 {
@@ -288,7 +287,7 @@ void PTImgChk::printMemory(std::ostream& os) const
 guest_ptr PTImgChk::getPageMismatch(guest_ptr p) const
 {
 	GuestMem::Mapping	mp;
-	GuestPTMem		ptmem(const_cast<PTImgChk*>(this), child_pid);
+	GuestPTMem		ptmem(const_cast<PTImgChk*>(this), pid);
 	char			buf_pt[4096], buf_vex[4096];
 
 	p.o = p.o & ~0xfffUL;
@@ -355,7 +354,7 @@ void PTImgChk::printRootTraceDat(
 	if (!cptrs.count(chk_ptr)) {
 		mismatch_ptr = getPageMismatch(chk_ptr);
 		if (mismatch_ptr) {
-			printMismatch(os, this, child_pid, mismatch_ptr);
+			printMismatch(os, this, pid, mismatch_ptr);
 			mptrs.insert(mismatch_ptr);
 		}
 	}
@@ -366,7 +365,7 @@ void PTImgChk::printRootTraceDat(
 	if (!cptrs.count(chk_ptr)) {
 		mismatch_ptr = getPageMismatch(chk_ptr);
 		if (mismatch_ptr) {
-			printMismatch(os, this, child_pid, mismatch_ptr);
+			printMismatch(os, this, pid, mismatch_ptr);
 			mptrs.insert(mismatch_ptr);
 		}
 	}
