@@ -39,7 +39,7 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	GuestCPUState();
 	virtual ~GuestCPUState() {}
 
-	virtual unsigned int byteOffset2ElemIdx(unsigned int off) const = 0;
+	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 
 	void* getStateData(void) { return state_data; }
 	const void* getStateData(void) const { return state_data; }
@@ -52,7 +52,6 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	virtual void setPC(guest_ptr) = 0;
 	virtual guest_ptr getPC(void) const = 0;
 
-	virtual void setFuncArg(uintptr_t arg_val, unsigned int arg_num) = 0;
 	virtual unsigned int getFuncArgOff(unsigned int arg_num) const
 	{ assert (0 == 1 && "STUB"); return 0; }
 	virtual unsigned int getRetOff(void) const

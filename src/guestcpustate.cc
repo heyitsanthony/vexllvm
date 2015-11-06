@@ -136,3 +136,22 @@ uint8_t* GuestCPUState::copyOutStateData(void)
 	state_data = copyStateData();
 	return old_dat;
 }
+
+unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
+{
+	auto it = off2ElemMap.find(off);
+	if (it == off2ElemMap.end()) {
+		unsigned int	c = 0;
+		auto		fields = getFields();
+
+		fprintf(stderr, "WTF IS AT %d\n", off);
+		// dumpIRSBs();
+		for (int i = 0; fields[i].f_len; i++) {
+			fprintf(stderr, "%s@%d\n", fields[i].f_name, c);
+			c += (fields[i].f_len/8) * fields[i].f_count;
+		}
+		assert (0 == 1 && "Could not resolve byte offset");
+	}
+	return (*it).second;
+
+}

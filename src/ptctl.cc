@@ -6,6 +6,7 @@
 
 #include "guestptmem.h"
 #include "ptimgarch.h"
+#include "ptcpustate.h"
 #include "ptctl.h" 
 
 PTCtl::PTCtl(GuestPTImg& _gpi)
@@ -18,7 +19,7 @@ PTCtl::PTCtl(GuestPTImg& _gpi)
 }
 
 uintptr_t PTCtl::getSysCallResult(void) const
-{ return gpi.getPTArch()->getSysCallResult(); }
+{ return gpi.getPTArch()->getPTCPU().getSysCallResult(); }
 
 void PTCtl::stepSysCall(SyscallsMarshalled* sc_m)
 { gpi.getPTArch()->stepSysCall(sc_m); }
@@ -31,7 +32,7 @@ guest_ptr PTCtl::stepToBreakpoint(void)
 	int	err, status;
 
 	bp_steps++;
-	gpi.getPTArch()->revokeRegs();
+	gpi.getPTArch()->getPTCPU().revokeRegs();
 	err = ptrace(PTRACE_CONT, ctl_pid, NULL, NULL);
 	if(err < 0) {
 		perror("PTCtl::doStep ptrace single step");
@@ -101,14 +102,14 @@ guest_ptr PTCtl::continueForwardWithBounds(guest_ptr start, guest_ptr end)
 
 	hit_syscall = false;
 	while (gpi.getPTArch()->doStep(start, end, hit_syscall)) {
-		guest_ptr	pc(gpi.getPTArch()->getPC());
+		guest_ptr	pc(gpi.getPTArch()->getPTCPU().getPC());
 		/* so we trap on backjumps */
 		if (pc > start)
 			start = pc;
 	}
 
 	gpi.getPTArch()->incBlocks();
-	return gpi.getPTArch()->getPC();
+	return gpi.getPTArch()->getPTCPU().getPC();
 }
 
 void PTCtl::setBreakpoint(guest_ptr addr)

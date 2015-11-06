@@ -9,8 +9,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include "Sugar.h"
-#include "guestcpustate.h"
 #include "cpu/ptimgamd64.h"
+#include "cpu/ptamd64cpustate.h"
 #include "cpu/amd64cpustate.h"
 #include "syscall/syscallsmarshalled.h"
 
@@ -24,6 +24,8 @@ struct user_regs_desc
 	int		user_off;
 	int		vex_off;
 };
+
+#define _pt_cpu	((PTAMD64CPUState*)pt_cpu.get())
 
 #define USERREG_ENTRY(x,y)	{ 		\
 	#x,					\
@@ -88,10 +90,11 @@ static inline bool fcompare(unsigned int* a, long d)
 
 PTImgAMD64::PTImgAMD64(GuestPTImg* gs, int in_pid)
 : PTImgArch(gs, in_pid)
-, recent_shadow(false)
 , xchk_eflags(getenv("VEXLLVM_XCHK_EFLAGS") ? true : false)
 , fixup_eflags(getenv("VEXLLVM_NO_EFLAGS_FIXUP") ? false : true)
-{}
+{
+	pt_cpu = std::make_unique<PTAMD64CPUState>(in_pid);
+}
 
 bool PTImgAMD64::isRegMismatch(void) const
 {
@@ -99,7 +102,7 @@ bool PTImgAMD64::isRegMismatch(void) const
 	const uint8_t *vex_reg_ctx;
 
 	vex_reg_ctx = (const uint8_t*)&getVexState();
-	user_regs_ctx = (const uint8_t*)&getRegs();
+	user_regs_ctx = (const uint8_t*)&_pt_cpu->getRegs();
 
 	for (unsigned int i = 0; i < GPR_COUNT; i++) {
 		uint64_t	ureg, vreg;
@@ -110,34 +113,6 @@ bool PTImgAMD64::isRegMismatch(void) const
 	}
 
 	return false;
-}
-
-struct user_regs_struct& PTImgAMD64::getRegs(void) const
-{
-	int	err;
-
-	if (recent_shadow) {
-		return shadow_reg_cache;
-	}
-
-	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &shadow_reg_cache);
-	recent_shadow = true;
-	if (err >= 0)
-		return shadow_reg_cache;
-
-	perror("PTImgAMD64::getRegs");
-
-	/* The politics of failure have failed.
-	 * It is time to make them work again.
-	 * (this is temporary nonsense to get
-	 *  /usr/bin/make xchk tests not to hang). */
-	waitpid(child_pid, NULL, 0);
-	kill(child_pid, SIGABRT);
-	raise(SIGKILL);
-	_exit(-1);
-	abort();
-
-	return shadow_reg_cache;
 }
 
 const VexGuestAMD64State& PTImgAMD64::getVexState(void) const
@@ -155,7 +130,7 @@ bool PTImgAMD64::isMatch(void) const
 	bool			x86_fail, sse_ok, seg_fail, x87_ok;
 	const VexGuestAMD64State& state(getVexState());
 
-	regs = &getRegs();
+	regs = &_pt_cpu->getRegs();
 
 	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
 	assert (err != -1 && "couldn't PTRACE_GETFPREGS");
@@ -396,18 +371,13 @@ void PTImgAMD64::printFPRegs(std::ostream& os) const
 	}
 }
 
-uintptr_t PTImgAMD64::getSysCallResult() const { return getRegs().rax; }
-guest_ptr PTImgAMD64::getPC(void) { return guest_ptr(getRegs().rip); }
-guest_ptr PTImgAMD64::getStackPtr(void) const {return guest_ptr(getRegs().rsp);}
-
-
 void PTImgAMD64::printUserRegs(std::ostream& os) const
 {
 	const uint8_t	*user_regs_ctx;
 	const uint8_t	*vex_reg_ctx;
 	uint64_t	guest_eflags;
 	const VexGuestAMD64State& ref(getVexState());
-	const user_regs_struct& regs(getRegs());
+	const user_regs_struct& regs(_pt_cpu->getRegs());
 
 	user_regs_ctx = (const uint8_t*)&regs;
 	vex_reg_ctx = (const uint8_t*)&ref;
@@ -432,7 +402,7 @@ void PTImgAMD64::printUserRegs(std::ostream& os) const
 	os << '\n';
 }
 
-long PTImgAMD64::getInsOp(void) { return getInsOp(getRegs().rip); }
+long PTImgAMD64::getInsOp(void) { return getInsOp(_pt_cpu->getRegs().rip); }
 
 long PTImgAMD64::getInsOp(long pc)
 {
@@ -486,7 +456,7 @@ bool PTImgAMD64::isPushF()
 
 bool PTImgAMD64::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
 {
-	struct user_regs_struct	&regs(getRegs());
+	struct user_regs_struct	&regs(_pt_cpu->getRegs());
 
 	/* check rip before executing possibly out of bounds instruction*/
 	if (regs.rip < start || regs.rip >= end) {
@@ -516,7 +486,7 @@ bool PTImgAMD64::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
 		regs.rip += 2;
 		regs.rax = 1;
 		regs.rdx = 0;
-		setRegs(regs);
+		_pt_cpu->setRegs(regs);
 		return true;
 	}
 
@@ -556,7 +526,7 @@ bool PTImgAMD64::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
 		regs.rbx = fakeState.guest_RBX;
 		regs.rcx = fakeState.guest_RCX;
 		regs.rdx = fakeState.guest_RDX;
-		setRegs(regs);
+		_pt_cpu->setRegs(regs);
 		return true;
 	}
 
@@ -588,7 +558,7 @@ bool PTImgAMD64::filterSysCall(
 	case SYS_mmap:
 		regs.rdi = state.guest_RAX;
 		regs.r10 |= MAP_FIXED;
-		setRegs(regs);
+		_pt_cpu->setRegs(regs);
 		return false;
 	}
 
@@ -597,16 +567,9 @@ bool PTImgAMD64::filterSysCall(
 
 void PTImgAMD64::ignoreSysCall(void)
 {
-	user_regs_struct	*regs;
-
 	/* do special syscallhandling if we're on an opcode */
 	assert (isOnSysCall());
-
-	regs = &getRegs();
-	regs->rip += 2;
-	/* kernel clobbers these */
-	regs->rcx = regs->r11 = 0;
-	setRegs(*regs);
+	_pt_cpu->ignoreSysCall();
 	return;
 }
 
@@ -617,7 +580,7 @@ void PTImgAMD64::stepSysCall(SyscallsMarshalled* sc_m)
 	bool			syscall_restore_rdi_r10;
 	int			sys_nr;
 
-	regs = &getRegs();
+	regs = &_pt_cpu->getRegs();
 
 	/* do special syscallhandling if we're on an opcode */
 	assert (isOnSysCall());
@@ -638,7 +601,7 @@ void PTImgAMD64::stepSysCall(SyscallsMarshalled* sc_m)
 
 	waitForSingleStep();
 
-	regs = &getRegs();
+	regs = &_pt_cpu->getRegs();
 	if (syscall_restore_rdi_r10) {
 		regs->r10 = old_r10;
 		regs->rdi = old_rdi;
@@ -646,33 +609,14 @@ void PTImgAMD64::stepSysCall(SyscallsMarshalled* sc_m)
 
 	//kernel clobbers these, assuming that the generated code, causes
 	regs->rcx = regs->r11 = 0;
-	setRegs(*regs);
+	_pt_cpu->setRegs(*regs);
 
 	/* fixup any calls that affect memory */
 	if (sc_m->isSyscallMarshalled(sys_nr)) {
 		SyscallPtrBuf	*spb = sc_m->takePtrBuf();
-		copyIn(spb->getPtr(), spb->getData(), spb->getLength());
+		_pt_cpu->copyIn(spb->getPtr(), spb->getData(), spb->getLength());
 		delete spb;
 	}
-}
-
-void PTImgAMD64::setRegs(const user_regs_struct& regs)
-{
-	int	err;
-
-	err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
-	if (err < 0) {
-		fprintf(stderr, "DIDN'T TAKE?? pid=%d\n", child_pid);
-		perror("PTImgAMD64::setregs");
-		abort();
-		exit(1);
-	}
-
-	if (&regs != &shadow_reg_cache) {
-		memcpy(&shadow_reg_cache, &regs, sizeof(regs));
-	}
-
-	recent_shadow = true;
 }
 
 bool PTImgAMD64::breakpointSysCalls(
@@ -691,38 +635,6 @@ bool PTImgAMD64::breakpointSysCalls(
 	}
 
 	return set_bp;
-}
-
-guest_ptr PTImgAMD64::undoBreakpoint(void)
-{
-	struct user_regs_struct	regs;
-	int			err;
-
-	/* should be halted on our trapcode. need to set rip prior to
-	 * trapcode addr */
-	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	assert (err != -1);
-
-	regs.rip--; /* backtrack before int3 opcode */
-	err = ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
-
-	/* run again w/out reseting BP and you'll end up back here.. */
-	return guest_ptr(regs.rip);
-}
-
-long PTImgAMD64::setBreakpoint(guest_ptr addr)
-{
-	uint64_t		old_v, new_v;
-	int			err;
-
-	old_v = ptrace(PTRACE_PEEKTEXT, child_pid, addr.o, NULL);
-	new_v = old_v & ~0xff;
-	new_v |= 0xcc;
-
-	err = ptrace(PTRACE_POKETEXT, child_pid, addr.o, new_v);
-	assert (err != -1 && "Failed to set breakpoint");
-
-	return old_v;
 }
 
 void PTImgAMD64::ptrace2vex(
@@ -757,42 +669,20 @@ void PTImgAMD64::vex2ptrace(
 
 void PTImgAMD64::pushRegisters(void)
 {
-	struct user_regs_struct		&r(getRegs());
+	struct user_regs_struct		&r(_pt_cpu->getRegs());
 	struct user_fpregs_struct	fp;
 	const VexGuestAMD64State	&v(getVexState());
 
 	vex2ptrace(v, r, fp);
-	setRegs(r);
+	_pt_cpu->setRegs(r);
 }
 
 void PTImgAMD64::slurpRegisters(void)
 {
-	AMD64CPUState			*amd64_cpu_state;
-	int				err;
-	struct user_regs_struct		regs;
-	struct user_fpregs_struct	fpregs;
+	_pt_cpu->loadRegs();
 
-
-	err = ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
-	assert(err != -1);
-	err = ptrace(PTRACE_GETFPREGS, child_pid, NULL, &fpregs);
-	assert(err != -1);
-
-	amd64_cpu_state = (AMD64CPUState*)gs->getCPUState();
-
-
-	/*** linux is busted, quirks ahead ***/
-	/* XXX: I think this is still kind of busted.. need tests.. */
-
-	/* this is kind of a stupid hack but I don't know an easier way
-	 * to get orig_rax */
-#define RAX_IN_SYSCALL	0xffffffda
-	if (	regs.orig_rax != ~((uint64_t)0) &&
-		(regs.rax & 0xffffffff) == RAX_IN_SYSCALL)
-	{
-		regs.rax = regs.orig_rax;
-		if (regs.fs_base == 0) regs.fs_base = 0xdead;
-	} else if (regs.fs_base == 0) {
+	auto regs = _pt_cpu->getRegs();
+	if (regs.fs_base == 0) {
 		/* if it's static, it'll probably be using
 		 * some native register bullshit for the TLS and it'll read 0.
 		 *
@@ -822,26 +712,16 @@ void PTImgAMD64::slurpRegisters(void)
 		assert (res == 0);
 		regs.fs_base = base_addr.o + 4096;
 	}
-	amd64_cpu_state->setRegs(regs, fpregs);
-}
 
-void PTImgAMD64::waitForSingleStep(void)
-{
-	PTImgArch::waitForSingleStep();
-	recent_shadow = false;
+	auto amd64_cpu_state = (AMD64CPUState*)gs->getCPUState();
+	amd64_cpu_state->setRegs(regs, _pt_cpu->getFPRegs());
 }
-
-void PTImgAMD64::revokeRegs(void)
-{ recent_shadow = false; }
 
 void PTImgAMD64::getRegs(user_regs_struct& r) const
-{ memcpy(&r, &getRegs(), sizeof(r)); }
+{ memcpy(&r, &_pt_cpu->getRegs(), sizeof(r)); }
 
-void PTImgAMD64::resetBreakpoint(guest_ptr addr, long v)
-{
-	int err = ptrace(PTRACE_POKETEXT, child_pid, addr.o, v);
-	assert (err != -1 && "Failed to reset breakpoint");
-}
+void PTImgAMD64::setRegs(const user_regs_struct& r)
+{ _pt_cpu->setRegs(r); }
 
 extern "C" { extern void amd64_trampoline(void* x); }
 void PTImgAMD64::restore(void)
@@ -850,40 +730,6 @@ void PTImgAMD64::restore(void)
 
 	state.guest_CC_NDEP = AMD64CPUState::getRFLAGS(state);
 	amd64_trampoline(&state);
-}
-
-
-uint64_t PTImgAMD64::dispatchSysCall(const SyscallParams& sp)
-{
-	struct user_regs_struct	old_regs, new_regs;
-	uint64_t		ret;
-	uint64_t		old_op;
-
-	old_regs = getRegs();
-
-	/* patch in system call opcode */
-	old_op = ptrace(PTRACE_PEEKDATA, child_pid, old_regs.rip, NULL);
-	ptrace(PTRACE_POKEDATA, child_pid, old_regs.rip, (void*)OPCODE_SYSCALL);
-
-	new_regs = old_regs;
-	new_regs.rax = sp.getSyscall();
-	new_regs.rdi = sp.getArg(0);
-	new_regs.rsi = sp.getArg(1);
-	new_regs.rdx = sp.getArg(2);
-	new_regs.r10 = sp.getArg(3);
-	new_regs.r8 = sp.getArg(4);
-	new_regs.r9 =  sp.getArg(5);
-	ptrace(PTRACE_SETREGS, child_pid, NULL, &new_regs);
-
-	waitForSingleStep();
-
-	ret = getSysCallResult();
-
-	/* reload old state */
-	ptrace(PTRACE_POKEDATA, child_pid, old_regs.rip, (void*)old_op);
-	setRegs(old_regs);
-
-	return ret;
 }
 
 void PTImgAMD64::fixupRegsPreSyscall(void)

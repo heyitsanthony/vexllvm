@@ -16,7 +16,7 @@
 #include "ptimgchk.h"
 #include "memlog.h"
 #include "guestptmem.h"
-#include "guestcpustate.h"
+#include "ptcpustate.h"
 
 /*
  * single step shadow program while counter is in specific range
@@ -231,7 +231,7 @@ bool PTImgChk::isStackMatch(void) const
 		return true;
 
 	/* reg.rsp */
-	stack_base = pt_arch->getStackPtr();
+	stack_base = pt_arch->getPTCPU().getStackPtr();
 
 	/* -128 for amd64 redzone */
 	for (int i = -128/((int)sizeof(long)); i < STACK_XCHK_LONGS; i++) {

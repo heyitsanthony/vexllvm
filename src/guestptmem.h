@@ -47,7 +47,7 @@ public:
 
 	virtual void import(GuestMem* m);
 private:
-	GuestPTImg	*g_ptimg;	/* not owner, do not delete */
+	PTImgArch	&ptimgarch;
 	pid_t		pid;
 };
 

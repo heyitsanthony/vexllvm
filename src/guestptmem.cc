@@ -3,10 +3,11 @@
 #include <sys/mman.h>
 #include "guestptmem.h"
 #include "ptimgarch.h"
+#include "ptcpustate.h"
 #include "Sugar.h"
 
 GuestPTMem::GuestPTMem(GuestPTImg* gpimg, pid_t in_pid)
-: g_ptimg(gpimg)
+: ptimgarch(*gpimg->getPTArch())
 , pid(in_pid)
 { /* should I bother with tracking the memory maps?*/
 	assert (pid != 0);
@@ -68,7 +69,7 @@ void GuestPTMem::memcpy(guest_ptr dest, const void* src, size_t len)
 	len -= rem;
 	if (len == 0) return;
 
-	g_ptimg->getPTArch()->copyIn(dest + rem, (const char*)src + rem, len);
+	ptimgarch.getPTCPU().copyIn(dest + rem, (const char*)src + rem, len);
 }
 
 void GuestPTMem::memcpy(void* dest, guest_ptr src, size_t len) const
@@ -114,21 +115,21 @@ int GuestPTMem::mmap(
 #define SYS_mmap 9
 #endif
 	SyscallParams	sp(SYS_mmap, addr.o, length, prot, flags, fd, offset);
-	result.o = g_ptimg->getPTArch()->dispatchSysCall(sp);
+	result.o = ptimgarch.dispatchSysCall(sp);
 	return ((void*)result.o == MAP_FAILED) ? -1 : 0;
 }
 
 int GuestPTMem::mprotect(guest_ptr offset, size_t length, int prot)
 {
 	SyscallParams	sp(SYS_mprotect, offset.o, length, prot, 0, 0, 0);
-	g_ptimg->getPTArch()->dispatchSysCall(sp);
+	ptimgarch.dispatchSysCall(sp);
 	return 0;
 }
 
 int GuestPTMem::munmap(guest_ptr offset, size_t length)
 {
 	SyscallParams	sp(SYS_munmap, offset.o, length, 0, 0, 0, 0);
-	g_ptimg->getPTArch()->dispatchSysCall(sp);
+	ptimgarch.dispatchSysCall(sp);
 	return 0;
 }
 

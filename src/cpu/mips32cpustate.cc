@@ -75,9 +75,6 @@ static struct guest_ctx_field mips32_fields[] =
 const struct guest_ctx_field* MIPS32CPUState::getFields(void) const
 { return mips32_fields; }
 
-extern void dumpIRSBs(void);
-
-
 const char* MIPS32CPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
@@ -134,25 +131,6 @@ const char* MIPS32CPUState::off2Name(unsigned int off) const
 	return NULL;
 }
 
-/* gets the element number so we can do a GEP */
-unsigned int MIPS32CPUState::byteOffset2ElemIdx(unsigned int off) const
-{
-	byte2elem_map::const_iterator it;
-	it = off2ElemMap.find(off);
-	if (it == off2ElemMap.end()) {
-		unsigned int	c = 0;
-		fprintf(stderr, "WTF IS AT %d\n", off);
-		dumpIRSBs();
-		for (int i = 0; mips32_fields[i].f_len; i++) {
-			fprintf(stderr, "%s@%d\n", mips32_fields[i].f_name, c);
-			c += (mips32_fields[i].f_len/8)*
-				mips32_fields[i].f_count;
-		}
-		assert (0 == 1 && "Could not resolve byte offset");
-	}
-	return (*it).second;
-}
-
 void MIPS32CPUState::setStackPtr(guest_ptr stack_ptr)
 { state2mips32()->guest_r29 = (uint64_t)stack_ptr; }
 
@@ -190,7 +168,3 @@ void MIPS32CPUState::print(std::ostream& os, const void* regctx) const
 	PRINT_REG(FENR);
 	PRINT_REG(FCSR);
 }
-
-/* set a function argument */
-void MIPS32CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
-{ assert(!"allowed to set args on mips32, no std calling convention"); }

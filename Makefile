@@ -66,6 +66,7 @@ OBJBASE=	guest.o			\
 		guestmemdual.o		\
 		guestcpustate.o		\
 		vexcpustate.o		\
+		ptcpustate.o		\
 		guestelf.o		\
 		guestfragment.o		\
 		guestptimg.o		\
@@ -124,6 +125,7 @@ ifeq ($(shell uname -m), x86_64)
 VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
 OBJBASE +=	cpu/ptimgamd64.o	\
 		cpu/ptimgi386.o		\
+		cpu/ptamd64cpustate.o	\
 		cpu/amd64_trampoline.o
 VDSO_OBJ= vdso/vdso_x64.o
 endif

@@ -102,8 +102,6 @@ static struct guest_ctx_field amd64_fields[] =
 const struct guest_ctx_field* AMD64CPUState::getFields(void) const
 { return amd64_fields; }
 
-extern void dumpIRSBs(void);
-
 const char* AMD64CPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
@@ -160,25 +158,6 @@ const char* AMD64CPUState::off2Name(unsigned int off) const
 	default: return NULL;
 	}
 	return NULL;
-}
-
-/* gets the element number so we can do a GEP */
-unsigned int AMD64CPUState::byteOffset2ElemIdx(unsigned int off) const
-{
-	byte2elem_map::const_iterator it;
-	it = off2ElemMap.find(off);
-	if (it == off2ElemMap.end()) {
-		unsigned int	c = 0;
-		fprintf(stderr, "WTF IS AT %d\n", off);
-		dumpIRSBs();
-		for (int i = 0; amd64_fields[i].f_len; i++) {
-			fprintf(stderr, "%s@%d\n", amd64_fields[i].f_name, c);
-			c += (amd64_fields[i].f_len/8)*
-				amd64_fields[i].f_count;
-		}
-		assert (0 == 1 && "Could not resolve byte offset");
-	}
-	return (*it).second;
 }
 
 void AMD64CPUState::setStackPtr(guest_ptr stack_ptr)
@@ -274,13 +253,6 @@ static const int arg2reg[] =
 	offsetof(VexGuestAMD64State, guest_R8),
 	offsetof(VexGuestAMD64State, guest_R9)
 };
-
-/* set a function argument */
-void AMD64CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
-{
-	assert (arg_num <= 5);
-	*((uint64_t*)((uintptr_t)state_data + arg2reg[arg_num])) = arg_val;
-}
 
 #ifdef __amd64__
 void AMD64CPUState::setRegs(

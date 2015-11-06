@@ -14,41 +14,28 @@ public:
 	PTImgAMD64(GuestPTImg* gs, int in_pid);
 	virtual ~PTImgAMD64(void) {}
 
-	bool isMatch(void) const;
-	bool isRegMismatch(void) const;
-	bool doStep(guest_ptr start, guest_ptr end, bool& hit_syscall);
-	uintptr_t getSysCallResult() const;
-
-	void stepSysCall(SyscallsMarshalled* sc_m);
-	void ignoreSysCall(void);
+	bool isMatch(void) const override;
+	bool isRegMismatch(void) const override;
+	bool doStep(guest_ptr start, guest_ptr end, bool& hit_syscall) override;
 
 	bool breakpointSysCalls(
 		const guest_ptr ip_begin,
-		const guest_ptr ip_end);
+		const guest_ptr ip_end) override;
 
 	GuestPTImg::FixupDir canFixup(
 		const std::vector<InstExtent>& insts,
-		bool has_memlog) const;
-	void fixupRegsPreSyscall(void);
+		bool has_memlog) const override;
+	void fixupRegsPreSyscall(void) override;
 
-	void getRegs(user_regs_struct&) const;
-	void setRegs(const user_regs_struct& regs);
-	guest_ptr getPC(void);
-	guest_ptr getStackPtr(void) const;
-	virtual void pushRegisters(void);
+	void stepSysCall(SyscallsMarshalled* sc_m) override;
+	void ignoreSysCall(void) override;
+	void pushRegisters(void) override;
+	void slurpRegisters(void) override;
+	void restore(void) override;
 
-	void resetBreakpoint(guest_ptr addr, long v);
-	void printFPRegs(std::ostream& os) const;
-	void printUserRegs(std::ostream& os) const;
-	void slurpRegisters(void);
+	void printFPRegs(std::ostream& os) const override;
+	void printUserRegs(std::ostream& os) const override;
 
-	long setBreakpoint(guest_ptr addr);
-	guest_ptr undoBreakpoint(void);
-	void revokeRegs(void);
-
-	virtual void restore(void);
-
-	virtual uint64_t dispatchSysCall(const SyscallParams& sp);
 
 	static void ptrace2vex(
 		const user_regs_struct& urs,
@@ -59,9 +46,9 @@ public:
 		const VexGuestAMD64State& vs,
 		user_regs_struct& urs,
 		user_fpregs_struct& fpregs);
-protected:
-	virtual void waitForSingleStep(void);
 
+	void getRegs(user_regs_struct&) const;
+	void setRegs(const user_regs_struct&);
 private:
 	bool isPushF(void);
 	bool isOnCPUID(void);
@@ -74,15 +61,8 @@ private:
 		const VexGuestAMD64State& state,
 		user_regs_struct& regs);
 
-
-	struct user_regs_struct& getRegs(void) const;
 	const VexGuestAMD64State& getVexState(void) const;
 	VexGuestAMD64State& getVexState(void);
-
-	// don't reference directly-- use getRegs() to
-	// ensure most current version
-	mutable struct user_regs_struct	shadow_reg_cache;
-	mutable bool	recent_shadow;
 
 	bool	xchk_eflags;
 	bool	fixup_eflags;

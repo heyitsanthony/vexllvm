@@ -21,13 +21,11 @@ public:
 
 	AMD64CPUState();
 	~AMD64CPUState();
-	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 	void setStackPtr(guest_ptr);
 	guest_ptr getStackPtr(void) const;
 	void setPC(guest_ptr);
 	guest_ptr getPC(void) const;
 
-	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
 	virtual unsigned int getFuncArgOff(unsigned int arg_num) const;
 	virtual unsigned int getRetOff(void) const;
 	virtual unsigned int getStackRegOff(void) const;

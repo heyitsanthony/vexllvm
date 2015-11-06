@@ -113,9 +113,6 @@ static struct guest_ctx_field arm_fields[] =
 const struct guest_ctx_field* ARMCPUState::getFields(void) const
 { return arm_fields; }
 
-extern void dumpIRSBs(void);
-
-
 const char* ARMCPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
@@ -201,32 +198,13 @@ const char* ARMCPUState::off2Name(unsigned int off) const
 #define CASE_OFF2NAME2(x,y)	\
 	case offsetof(ExtVexGuestARMState, guest_##y) ... 3+offsetof(VexGuestARMState, guest_##y): \
 	return #x;
-#define CASE_OFF2NAME(x)	\
-	case offsetof(ExtVexGuestARMState, guest_##x) ...	3+offsetof(ExtVexGuestARMState, guest_##x): \
+#define CASE_OFF2NAME(x)				\
+	CASE_OFF2NAME_4(ExtVexGuestARMState, guest_##x)	\
 	return #x;
 	CASE_OFF2NAME(LINKED)
 	default: return NULL;
 	}
 	return NULL;
-}
-
-/* gets the element number so we can do a GEP */
-unsigned int ARMCPUState::byteOffset2ElemIdx(unsigned int off) const
-{
-	byte2elem_map::const_iterator it;
-	it = off2ElemMap.find(off);
-	if (it == off2ElemMap.end()) {
-		unsigned int	c = 0;
-		fprintf(stderr, "WTF IS AT %d\n", off);
-		dumpIRSBs();
-		for (int i = 0; arm_fields[i].f_len; i++) {
-			fprintf(stderr, "%s@%d\n", arm_fields[i].f_name, c);
-			c += (arm_fields[i].f_len/8)*
-				arm_fields[i].f_count;
-		}
-		assert (0 == 1 && "Could not resolve byte offset");
-	}
-	return (*it).second;
 }
 
 void ARMCPUState::setStackPtr(guest_ptr stack_ptr)
@@ -261,20 +239,6 @@ void ARMCPUState::print(std::ostream& os, const void* regctx) const
 	/* tls */
 	os << "TPIDRURO: "<< (void*)((long)s->guest_vex.guest_TPIDRURO)<<"\n";
 	os << "LINKED: "  << (void*)((long)s->guest_LINKED) << "\n";
-}
-
-/* set a function argument */
-void ARMCPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
-{
-	const int arg2reg[] = {
-		offsetof(VexGuestARMState, guest_R0),
-		offsetof(VexGuestARMState, guest_R1),
-		offsetof(VexGuestARMState, guest_R2),
-		offsetof(VexGuestARMState, guest_R3)
-		};
-
-	assert (arg_num <= 3);
-	*((uint64_t*)((uintptr_t)state_data + arg2reg[arg_num])) = arg_val;
 }
 
 #ifdef __arm__

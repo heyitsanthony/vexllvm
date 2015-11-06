@@ -87,7 +87,7 @@
 #sbin
 #
 /sbin/arp
-/sbin/rtstat
+/sbin/rtstat --count 2
 /sbin/ifconfig
 /sbin/iwlist
 #

@@ -15,13 +15,11 @@ class ARMCPUState : public VexCPUState
 public:
 	ARMCPUState();
 	~ARMCPUState();
-	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 	void setStackPtr(guest_ptr);
 	guest_ptr getStackPtr(void) const;
 	void setPC(guest_ptr);
 	guest_ptr getPC(void) const;
 
-	void setFuncArg(uintptr_t arg_val, unsigned int arg_num);
 #ifdef __arm__
 	void setRegs(
 		const user_regs* regs, const uint8_t* vfpregs,

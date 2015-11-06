@@ -24,6 +24,7 @@
 #include "guestptimg.h"
 #include "vexcpustate.h"
 #include "guestabi.h"
+#include "ptcpustate.h"
 
 #if defined(__amd64__)
 #include <asm/ptrace-abi.h>
@@ -394,14 +395,14 @@ void GuestPTImg::slurpArgPtrs(int pid, char *const argv[])
 	guest_ptr		in_argv;
 
 	argv_ptrs.clear();
-	argc_ptr = pt_arch->getStackPtr();
+	argc_ptr = pt_arch->getPTCPU().getStackPtr();
 	argc = mem->readNative(argc_ptr);
-	in_argv = guest_ptr(mem->readNative(pt_arch->getStackPtr(), 1));
+	in_argv = guest_ptr(mem->readNative(pt_arch->getPTCPU().getStackPtr(), 1));
 #ifdef __arm__
 	/* so so stupid, but I can't figure out how to get argv[0]! */
 	if (!in_argv) {
 		in_argv = guest_ptr(
-			mem->readNative(pt_arch->getStackPtr(), 2));
+			mem->readNative(pt_arch->getPTCPU().getStackPtr(), 2));
 	}
 
 	while (strcmp((const char*)mem->getHostPtr(in_argv), argv[0]) != 0)
@@ -513,12 +514,12 @@ void GuestPTImg::setBreakpointByPID(pid_t pid, guest_ptr addr)
 	if (breakpoints.count(addr))
 		return;
 
-	breakpoints[addr] = pt_arch->setBreakpoint(addr);
+	breakpoints[addr] = pt_arch->getPTCPU().setBreakpoint(addr);
 }
 
 
 guest_ptr GuestPTImg::undoBreakpoint(pid_t pid)
-{ return pt_arch->undoBreakpoint(); }
+{ return pt_arch->getPTCPU().undoBreakpoint(); }
 
 void GuestPTImg::resetBreakpointByPID(pid_t pid, guest_ptr addr)
 {
@@ -527,7 +528,7 @@ void GuestPTImg::resetBreakpointByPID(pid_t pid, guest_ptr addr)
 	assert (breakpoints.count(addr) && "Resetting non-BP!");
 
 	old_v = breakpoints[addr];
-	pt_arch->resetBreakpoint(addr, old_v);
+	pt_arch->getPTCPU().resetBreakpoint(addr, old_v);
 	breakpoints.erase(addr);
 }
 

@@ -7,10 +7,11 @@
 #include <sys/wait.h>
 #include <sys/ptrace.h>
 #include "ptimgarch.h"
-#include "guestcpustate.h"
+#include "ptcpustate.h"
 
 PTImgArch::PTImgArch(GuestPTImg* in_gs, int in_pid)
 : gs(in_gs)
+, pt_cpu(nullptr)
 , child_pid(in_pid)
 , steps(0)
 , blocks(0)
@@ -40,18 +41,16 @@ void PTImgArch::pushBadProgress(void)
 	gs->getCPUState()->setPC(cur_pc);
 }
 
-void PTImgArch::waitForSingleStep(void)
+uint64_t PTImgArch::dispatchSysCall(const SyscallParams& sp)
 {
-	int	err;
-
+	uint64_t ret = pt_cpu->dispatchSysCall(sp, wss_status);
 	steps++;
-	err = ptrace(PTRACE_SINGLESTEP, child_pid, NULL, NULL);
-	if(err < 0) {
-		perror("PTImgChk::doStep ptrace single step");
-		exit(1);
-	}
-	wait(&wss_status);
+	checkWSS();
+	return ret;
+}
 
+void PTImgArch::checkWSS(void)
+{
 	//TODO: real signal handling needed, but the main process
 	//doesn't really have that yet...
 	// 1407
@@ -89,6 +88,14 @@ void PTImgArch::waitForSingleStep(void)
 		perror("Unknown status in waitForSingleStep");
 		abort();
 	}
+}
+
+void PTImgArch::waitForSingleStep(void)
+{
+	steps++;
+	wss_status = pt_cpu->waitForSingleStep(); 
+	checkWSS();
+	pt_cpu->revokeRegs();
 
 	if (log_gauge_overflow && (steps % log_gauge_overflow) == 0) {
 		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
@@ -96,26 +103,6 @@ void PTImgArch::waitForSingleStep(void)
 			//"STEPS %09"PRIu64" %c %09"PRIu64" BLOCKS\r",
 			"STEPS %09" PRIu64 " %c %09" PRIu64 " BLOCKS\n",
 			steps, c, blocks);
-	}
-}
-
-void PTImgArch::copyIn(guest_ptr dst, const void* src, unsigned int bytes) const
-{
-	const char*	in_addr;
-	guest_ptr	out_addr, end_addr;
-
-	assert ((bytes % sizeof(long)) == 0);
-
-	in_addr = (const char*)src;
-	out_addr = dst;
-	end_addr = out_addr + bytes;
-
-	while (out_addr < end_addr) {
-		long data = *(const long*)in_addr;
-		int err = ptrace(PTRACE_POKEDATA, child_pid, out_addr.o, data);
-		assert(err == 0);
-		in_addr += sizeof(long);
-		out_addr.o += sizeof(long);
 	}
 }
 

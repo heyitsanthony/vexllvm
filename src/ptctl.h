@@ -33,8 +33,7 @@ public:
 	void resetBreakpoint(guest_ptr addr);
 	void setBreakpoint(guest_ptr addr);
 private:
-	int		 ctl_pid;
-	PTImgArch	*ptctl_arch;
+	int		ctl_pid;
 	GuestPTImg	&gpi;
 	bool		hit_syscall;
 	bool		log_steps;

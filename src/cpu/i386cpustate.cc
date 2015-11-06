@@ -103,9 +103,6 @@ static struct guest_ctx_field x86_fields[] =
 	{0}	/* time to stop */
 };
 
-extern void dumpIRSBs(void);
-
-
 const char* I386CPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
@@ -169,25 +166,6 @@ const char* I386CPUState::off2Name(unsigned int off) const
 const struct guest_ctx_field* I386CPUState::getFields(void) const
 { return x86_fields; }
 
-/* gets the element number so we can do a GEP */
-unsigned int I386CPUState::byteOffset2ElemIdx(unsigned int off) const
-{
-	byte2elem_map::const_iterator it;
-	it = off2ElemMap.find(off);
-	if (it == off2ElemMap.end()) {
-		unsigned int	c = 0;
-		fprintf(stderr, "WTF IS AT %d\n", off);
-		dumpIRSBs();
-		for (int i = 0; x86_fields[i].f_len; i++) {
-			fprintf(stderr, "%s@%d\n", x86_fields[i].f_name, c);
-			c += (x86_fields[i].f_len/8)*
-				x86_fields[i].f_count;
-		}
-		assert (0 == 1 && "Could not resolve byte offset");
-	}
-	return (*it).second;
-}
-
 void I386CPUState::setStackPtr(guest_ptr stack_ptr)
 {
 	state2i386()->guest_ESP = (uint64_t)stack_ptr;
@@ -240,12 +218,6 @@ void I386CPUState::print(std::ostream& os, const void* regctx) const
 		os << seg_tab[i] << ": "
 			<< (void*)(uintptr_t)((short*)(&s->guest_CS))[i] << '\n';
 	}
-}
-
-/* set a function argument */
-void I386CPUState::setFuncArg(uintptr_t arg_val, unsigned int arg_num)
-{
-	assert(!"allowed to set args on x86, no std calling convention");
 }
 
 #ifdef __i386__
