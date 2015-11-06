@@ -7,14 +7,14 @@
 #include <assert.h>
 #include <map>
 
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 extern "C" {
 #include <valgrind/libvex_guest_amd64.h>
 }
 
 class SyscallParams;
 
-class AMD64CPUState : public GuestCPUState
+class AMD64CPUState : public VexCPUState
 {
 public:
 	const static unsigned REGFILE_BYTES = 921;

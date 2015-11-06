@@ -3,28 +3,11 @@
 #include <stdio.h>
 
 #include "guestcpustate.h"
-#include "cpu/amd64cpustate.h"
-#include "cpu/armcpustate.h"
-#include "cpu/i386cpustate.h"
-#include "cpu/mips32cpustate.h"
 
 GuestCPUState::GuestCPUState()
 : state_data(NULL)
-, exit_type(NULL)
 , state_byte_c(0)
 {}
-
-GuestCPUState* GuestCPUState::create(Arch::Arch arch)
-{
-	switch(arch) {
-	case Arch::X86_64:	return new AMD64CPUState();
-	case Arch::I386:	return new I386CPUState();
-	case Arch::ARM:		return new ARMCPUState();
-	case Arch::MIPS32:	return new MIPS32CPUState();
-	default:
-		assert(!"supported guest architecture");
-	}
-}
 
 uint8_t* GuestCPUState::copyStateData(void) const
 {
@@ -149,8 +132,7 @@ bool GuestCPUState::save(const char* fname)
 
 uint8_t* GuestCPUState::copyOutStateData(void)
 {
-	uint8_t*	old_dat = state_data;
+	uint8_t	*old_dat = state_data;
 	state_data = copyStateData();
-	exit_type = &state_data[state_byte_c];
 	return old_dat;
 }

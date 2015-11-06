@@ -10,6 +10,7 @@
 #include "syscall/syscallparams.h"
 
 class GuestCPUState;
+class VexCPUState;
 class GuestSnapshot;
 class GuestPTImg;
 class GuestABI;
@@ -31,6 +32,13 @@ public:
 
 	const GuestCPUState* getCPUState(void) const { return cpu_state; }
 	GuestCPUState* getCPUState(void) { return cpu_state; }
+
+	const VexCPUState* getVexState(void) const {
+		return (VexCPUState*)cpu_state;
+	}
+	VexCPUState* getVexState(void) {
+		return (VexCPUState*)cpu_state;
+	}
 
 	void switchThread(unsigned i);
 

@@ -81,8 +81,8 @@ extern void dumpIRSBs(void);
 const char* MIPS32CPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
-#define CASE_OFF2NAME(x)	\
-	case offsetof(VexGuestMIPS32State, guest_##x) ... 3+offsetof(VexGuestMIPS32State, guest_##x): \
+#define CASE_OFF2NAME(x)				\
+	CASE_OFF2NAME_4(VexGuestMIPS32State, guest_##x)	\
 	return #x;
 
 	CASE_OFF2NAME(r0) CASE_OFF2NAME(r1) CASE_OFF2NAME(r2)

@@ -65,6 +65,7 @@ OBJBASE=	guest.o			\
 		guestptmem.o		\
 		guestmemdual.o		\
 		guestcpustate.o		\
+		vexcpustate.o		\
 		guestelf.o		\
 		guestfragment.o		\
 		guestptimg.o		\

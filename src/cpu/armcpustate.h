@@ -6,11 +6,11 @@
 #include <sys/user.h>
 #include <assert.h>
 #include <map>
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 
 class SyscallParams;
 
-class ARMCPUState : public GuestCPUState
+class ARMCPUState : public VexCPUState
 {
 public:
 	ARMCPUState();

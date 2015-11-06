@@ -107,13 +107,13 @@ extern void dumpIRSBs(void);
 const char* AMD64CPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
-#define CASE_OFF2NAME(x)	\
-	case offsetof(VexGuestAMD64State, guest_##x) ... (7+offsetof(VexGuestAMD64State, guest_##x)): \
+#define CASE_OFF2NAME(x) \
+	CASE_OFF2NAME_8(VexGuestAMD64State, guest_##x)	\
 	return #x;
-#define CASE_OFF2NAMEN(x,y)	\
-	case offsetof(VexGuestAMD64State, guest_##x##y) ... (7+offsetof(VexGuestAMD64State, guest_##x##y)): \
-	return #x"["#y"]";
 
+#define CASE_OFF2NAMEN(x,y)	\
+	CASE_OFF2NAME_8(VexGuestAMD64State, guest_##x##y)	\
+	return #x"["#y"]";
 
 	CASE_OFF2NAME(RAX)
 	CASE_OFF2NAME(RCX)

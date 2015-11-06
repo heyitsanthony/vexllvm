@@ -9,7 +9,7 @@
 #include "elfimg.h"
 #include "elfsegment.h"
 #include "guestelf.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestabi.h"
 #include "Sugar.h"
 
@@ -30,7 +30,7 @@ GuestELF::GuestELF(ElfImg* in_img)
 , arg_pages(MAX_ARG_PAGES)
 {
 	mem = in_img->takeMem();
-	cpu_state = GuestCPUState::create(img->getArch());
+	cpu_state = VexCPUState::create(img->getArch());
 	abi = GuestABI::create(this);
 }
 

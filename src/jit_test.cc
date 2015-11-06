@@ -23,7 +23,7 @@
 #include "vexsb.h"
 #include "vexhelpers.h"
 #include "genllvm.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestabi.h"
 #include "guest.h"
 
@@ -63,7 +63,7 @@ class GuestIdent : public Guest
 public:
 	GuestIdent() : Guest("ident")
 	{
-		cpu_state = GuestCPUState::create(Arch::X86_64);
+		cpu_state = VexCPUState::create(Arch::X86_64);
 		mem = new GuestMem();
 		abi = GuestABI::create(this);
 	}

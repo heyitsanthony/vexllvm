@@ -13,7 +13,7 @@
 #include "Sugar.h"
 #include "symbols.h"
 #include "util.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestsnapshot.h"
 #include "guestabi.h"
 #include "cpu/i386cpustate.h"
@@ -596,7 +596,7 @@ void GuestSnapshot::loadThreads(void)
 	ssize_t		sz;
 
 	SETUP_F_R("regs")
-	cpu_state = GuestCPUState::create(arch);
+	cpu_state = VexCPUState::create(arch);
 	sz = fread(
 		cpu_state->getStateData(),
 		1,
@@ -664,7 +664,7 @@ void GuestSnapshot::loadThreads(void)
 		snprintf(fname, 32, "threads/%d", i);
 		SETUP_F_R_MAYBE(fname);
 		if (f == NULL) break;
-		cpu = GuestCPUState::create(arch);
+		cpu = VexCPUState::create(arch);
 		sz = fread(cpu->getStateData(), 1, cpu->getStateSize(), f);
 		thread_cpus.push_back(cpu);
 		END_F();

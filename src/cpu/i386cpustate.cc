@@ -109,8 +109,8 @@ extern void dumpIRSBs(void);
 const char* I386CPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
-#define CASE_OFF2NAME(x)	\
-	case offsetof(VexGuestX86State, guest_##x) ... 3+offsetof(VexGuestX86State, guest_##x): \
+#define CASE_OFF2NAME(x) \
+	CASE_OFF2NAME_4(VexGuestX86State, guest_##x) \
 	return #x;
 
 	CASE_OFF2NAME(EAX)
@@ -144,8 +144,10 @@ const char* I386CPUState::off2Name(unsigned int off) const
 	
 #undef CASE_OFF2NAME
 #define CASE_OFF2NAME(x)	\
-	case offsetof(VexGuestX86State, guest_##x) ... 1+offsetof(VexGuestX86State, guest_##x): \
+	case offsetof(VexGuestX86State, guest_##x):	\
+	case 1+offsetof(VexGuestX86State, guest_##x):	\
 	return #x;
+
 	CASE_OFF2NAME(CS)
 	CASE_OFF2NAME(DS)
 	CASE_OFF2NAME(ES)
@@ -154,8 +156,8 @@ const char* I386CPUState::off2Name(unsigned int off) const
 	CASE_OFF2NAME(SS)
 	
 #undef CASE_OFF2NAME	
-#define CASE_OFF2NAME(x)	\
-	case offsetof(VexGuestX86State, guest_##x) ... sizeof(void*) - 1 + offsetof(VexGuestX86State, guest_##x): \
+#define CASE_OFF2NAME(x)				\
+	CASE_OFF2NAME_8(VexGuestX86State, guest_##x)	\
 	return #x;
 	CASE_OFF2NAME(LDT)
 	CASE_OFF2NAME(GDT)

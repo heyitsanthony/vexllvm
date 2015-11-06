@@ -119,14 +119,16 @@ extern void dumpIRSBs(void);
 const char* ARMCPUState::off2Name(unsigned int off) const
 {
 	switch (off) {
-#define CASE_OFF2NAME2(x,y)	\
-	case offsetof(VexGuestARMState, guest_##y) ... 3+offsetof(VexGuestARMState, guest_##y): \
+#define CASE_OFF2NAME2(x,y)				\
+	CASE_OFF2NAME_4(VexGuestARMState, guest_##y)	\
 	return #x;
+
 #define CASE_OFF2NAME(x)	\
-	case offsetof(VexGuestARMState, guest_##x) ... 3+offsetof(VexGuestARMState, guest_##x): \
+	CASE_OFF2NAME_4(VexGuestARMState, guest_##x)	\
 	return #x;
+
 #define CASE_OFF2NAME_NUM(x,y)	\
-	case offsetof(VexGuestARMState, guest_##x##y) ... 3+offsetof(VexGuestARMState, guest_##x##y): \
+	CASE_OFF2NAME_4(VexGuestARMState, guest_##x##y)	\
 	return #x"["#y"]";
 
 	CASE_OFF2NAME_NUM(R,0)

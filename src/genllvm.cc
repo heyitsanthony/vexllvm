@@ -9,7 +9,7 @@
 #include <sstream>
 
 #include "guest.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 
 #include "genllvm.h"
 #include "memlog.h"
@@ -39,6 +39,8 @@ GenLLVM::GenLLVM(const Guest& gs, const char* name)
 	assert (mod != NULL && "Could not create mod");
 
 	assert (guest.getCPUState() && "No CPU state set in Guest");
+	assert (dynamic_cast<const VexCPUState*>(guest.getCPUState())
+		&& "Not Vex?");
 	mkFuncTy();
 }
 
@@ -402,7 +404,7 @@ Value* GenLLVM::getLinked() {
 void GenLLVM::setExitType(uint8_t exit_type)
 {
 	writeCtx(
-		guest.getCPUState()->getExitTypeOffset(),
+		guest.getVexState()->getExitTypeOffset(),
 		ConstantInt::get(
 			getGlobalContext(),
 			APInt(8, exit_type)));

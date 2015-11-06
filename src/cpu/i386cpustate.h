@@ -6,11 +6,11 @@
 #include <sys/user.h>
 #include <assert.h>
 #include <map>
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 
 class SyscallParams;
 
-class I386CPUState : public GuestCPUState
+class I386CPUState : public VexCPUState
 {
 public:
 typedef std::map<unsigned int, unsigned int> byte2elem_map;

@@ -11,7 +11,7 @@
 #include "vexexpr.h"
 #include "guest.h"
 #include "guestabi.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 
 using namespace llvm;
 

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "Sugar.h"
 
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "genllvm.h"
 #include "vexhelpers.h"
 #include "vexexpr.h"

@@ -22,7 +22,7 @@
 #include "elfdebug.h"
 #include "ptimgchk.h"
 #include "guestptimg.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestabi.h"
 
 #if defined(__amd64__)
@@ -80,7 +80,7 @@ GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 		mem->mark32Bit();
 	}
 
-	cpu_state = GuestCPUState::create(getArch());
+	cpu_state = VexCPUState::create(getArch());
 	abi = GuestABI::create(this);
 }
 
@@ -460,7 +460,7 @@ void GuestPTImg::slurpThreads(void)
 	/* load all thread registers */
 	thread_cpus.resize(t_pids.size());
 	for (unsigned i = 0; i < t_pids.size(); i++) {
-		GuestCPUState	*cur_cpu(GuestCPUState::create(getArch()));
+		GuestCPUState	*cur_cpu(VexCPUState::create(getArch()));
 		int		err, status;
 
 		/* slurpRegisters stores to cpu_state; temporarily swap out */

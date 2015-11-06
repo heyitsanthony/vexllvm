@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "arch.h"
-#include "guestcpustate.h"
+#include "vexcpustate.h"
 #include "guestabi.h"
 #include "guestfragment.h"
 
@@ -73,7 +73,7 @@ GuestFragment::GuestFragment(
 	assert (code != MAP_FAILED && "Could not map fragment");
 	memcpy(code, data, code_len);
 
-	cpu_state = GuestCPUState::create(arch);
+	cpu_state = VexCPUState::create(arch);
 	abi = GuestABI::create(this);
 
 	/* our one fragment mapping */
