@@ -126,6 +126,7 @@ VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
 OBJBASE +=	cpu/ptimgamd64.o	\
 		cpu/ptimgi386.o		\
 		cpu/ptamd64cpustate.o	\
+		cpu/pti386cpustate.o	\
 		cpu/amd64_trampoline.o
 VDSO_OBJ= vdso/vdso_x64.o
 endif

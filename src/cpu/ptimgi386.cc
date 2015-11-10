@@ -11,6 +11,7 @@
 #include "Sugar.h"
 #include "cpu/i386_macros.h"
 #include "cpu/ptimgi386.h"
+#include "cpu/pti386cpustate.h"
 #include "cpu/i386cpustate.h"
 
 #define WARNSTR "[PTimgI386] Warning: "
@@ -21,44 +22,7 @@ extern "C" {
 extern void x86g_dirtyhelper_CPUID_sse2 ( VexGuestX86State* st );
 }
 
-/* HAHA TOO BAD I CAN'T REUSE A HEADER. */
-struct x86_user_regs
-{
-  long int ebx;
-  long int ecx;
-  long int edx;
-  long int esi;
-  long int edi;
-  long int ebp;
-  long int eax;
-  long int xds;
-  long int xes;
-  long int xfs;
-  long int xgs;
-  long int orig_eax;
-  long int eip;
-  long int xcs;
-  long int eflags;
-  long int esp;
-  long int xss;
-};
-
-struct x86_user_fpxregs
-{
-  unsigned short int cwd;
-  unsigned short int swd;
-  unsigned short int twd;
-  unsigned short int fop;
-  long int fip;
-  long int fcs;
-  long int foo;
-  long int fos;
-  long int mxcsr;
-  long int reserved;
-  long int st_space[32];   /* 8*16 bytes for each FP-reg = 128 bytes */
-  long int xmm_space[32];  /* 8*16 bytes for each XMM-reg = 128 bytes */
-  long int padding[56];
-};
+#define _pt_cpu	((PTI386CPUState*)pt_cpu.get())
 
 /* from linux sources. whatever */
 struct user_desc {
@@ -77,16 +41,21 @@ struct user_desc {
 PTImgI386::PTImgI386(GuestPTImg* gs, int in_pid)
 : PTImgArch(gs, in_pid)
 {
-	memset(shadow_user_regs, 0, sizeof(shadow_user_regs));
+	if (in_pid != 0)
+		pt_cpu = std::make_unique<PTI386CPUState>(in_pid);
 }
 
 PTImgI386::~PTImgI386() {}
 
+void PTImgI386::setPID(int in_pid)
+{
+	child_pid = in_pid;
+	pt_cpu = std::make_unique<PTI386CPUState>(in_pid);
+}
+
 bool PTImgI386::isMatch(void) const { assert (0 == 1 && "STUB"); }
 bool PTImgI386::doStep(guest_ptr start, guest_ptr end, bool& hit_syscall)
 { assert (0 == 1 && "STUB"); }
-
-uintptr_t PTImgI386::getSysCallResult() const { assert (0 == 1 && "STUB"); }
 
 const VexGuestX86State& PTImgI386::getVexState(void) const
 { return *((const VexGuestX86State*)gs->getCPUState()->getStateData()); }
@@ -97,32 +66,10 @@ void PTImgI386::printUserRegs(std::ostream&) const { assert (0 == 1 && "STUB"); 
 
 #define I386CPU	((I386CPUState*)gs->getCPUState())
 
-guest_ptr PTImgI386::getStackPtr() const
-{
-	uint32_t esp;
-	esp = ((const VexGuestX86State*)I386CPU->getStateData())->guest_ESP;
-	return guest_ptr(esp);
-}
-
 void PTImgI386::slurpRegisters(void)
 {
-
-	int				err;
-//	struct x86_user_regs		regs;
-//	struct x86_user_fpxregs		fpregs;
-	struct user_regs_struct		regs;
-	struct user_fpregs_struct	fpregs;
-	VexGuestX86State		*vgs;
-
-	err = ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
-	assert(err != -1);
-
-	err = ptrace(
-		(__ptrace_request)PTRACE_GETFPREGS,
-		child_pid, NULL, &fpregs);
-	assert(err != -1);
-
-	vgs = (VexGuestX86State*)gs->getCPUState()->getStateData();
+	auto vgs = (VexGuestX86State*)gs->getCPUState()->getStateData();
+	auto regs = _pt_cpu->getRegs();
 
 	vgs->guest_EAX = regs.orig_rax;
 	vgs->guest_EBX = regs.rbx;
@@ -211,7 +158,6 @@ void PTImgI386::setupGDT(void)
 
 bool PTImgI386::readThreadEntry(unsigned idx, VEXSEG* buf)
 {
-
 	int			err;
 	struct user_desc	ud;
 
@@ -234,55 +180,9 @@ bool PTImgI386::readThreadEntry(unsigned idx, VEXSEG* buf)
 	return true;
 }
 
-
-void PTImgI386::stepSysCall(SyscallsMarshalled*) { assert (0 == 1 && "STUB"); }
-
-long int PTImgI386::setBreakpoint(guest_ptr addr)
-{
-	uint64_t		old_v, new_v;
-	int			err;
-
-	old_v = ptrace(PTRACE_PEEKTEXT, child_pid, addr.o, NULL);
-	new_v = old_v & ~0xff;
-	new_v |= 0xcc;
-
-	err = ptrace(PTRACE_POKETEXT, child_pid, addr.o, new_v);
-	assert (err != -1 && "Failed to set breakpoint");
-
-	return old_v;
-}
-
-void PTImgI386::resetBreakpoint(guest_ptr addr, long v)
-{
-	int err = ptrace(PTRACE_POKETEXT, child_pid, addr.o, v);
-	assert (err != -1 && "Failed to reset breakpoint");
-}
-
-guest_ptr PTImgI386::undoBreakpoint()
-{
-	// struct x86_user_regs	regs;
-	struct user_regs_struct		regs;
-	int				err;
-
-	/* should be halted on our trapcode. need to set rip prior to
-	 * trapcode addr */
-	err = ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
-	assert (err != -1);
-
-	regs.rip--; /* backtrack before int3 opcode */
-	err = ptrace((__ptrace_request)PTRACE_SETREGS, child_pid, NULL, &regs);
-
-	/* run again w/out reseting BP and you'll end up back here.. */
-	return guest_ptr((uint32_t)regs.rip);
-}
-
-guest_ptr PTImgI386::getPC() { assert (0 == 1 && "STUB"); }
 GuestPTImg::FixupDir PTImgI386::canFixup(
 	const std::vector<std::pair<guest_ptr, unsigned char> >&,
 	bool has_memlog) const { assert (0 == 1 && "STUB"); }
-bool PTImgI386::breakpointSysCalls(guest_ptr, guest_ptr) { assert (0 == 1 && "STUB"); }
-void PTImgI386::revokeRegs() { assert (0 == 1 && "STUB"); }
-
 
 void PTImgI386::setFakeInfo(const char* info_file)
 {
@@ -427,7 +327,7 @@ bool PTImgI386::stepInitFixup(void)
 	 * replace all CPUID instructions with trap instruction. */
 	foreach (it, patch_offsets.begin(), patch_offsets.end()) {
 		uint64_t	addr = *it + bias;
-		cpuid_insts[addr] = setBreakpoint(guest_ptr(addr));
+		cpuid_insts[addr] = _pt_cpu->setBreakpoint(guest_ptr(addr));
 	}
 
 	/* trap on replaced cpuid instructions until non-cpuid instruction */
@@ -441,8 +341,8 @@ bool PTImgI386::stepInitFixup(void)
 	/* child process should be on a legitimate int3 instruction now */
 
 	/* restore CPUID instructions */
-	foreach (it, cpuid_insts.begin(), cpuid_insts.end()) {
-		resetBreakpoint(guest_ptr(it->first), it->second);
+	for (const auto& p : cpuid_insts) {
+		_pt_cpu->resetBreakpoint(guest_ptr(p.first), p.second);
 	}
 
 	return true;
