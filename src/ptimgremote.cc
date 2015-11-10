@@ -23,7 +23,6 @@
  */
 PTImgRemote::PTImgRemote(const char* binname, bool use_entry)
 : GuestPTImg(binname, use_entry)
-, PTCtl((GuestPTImg&)*this)
 , blocks(0)
 {}
 
@@ -58,7 +57,5 @@ void PTImgRemote::slurpBrains(pid_t in_pid)
 
 void PTImgRemote::handleChild(pid_t in_pid)
 {
-	/* keep child around */
-	pid = in_pid;
-	pt_arch->setPID(pid);
+	pt_arch->setPID(in_pid);
 }

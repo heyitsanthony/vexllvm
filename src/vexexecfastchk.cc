@@ -18,7 +18,7 @@ guest_ptr VexExecFastChk::doVexSB(VexSB* vsb)
 	MemLog	*ml;
 	guest_ptr new_ip;
 
-	cross_check->breakpointSysCalls(
+	cross_check->getPTArch()->breakpointSysCalls(
 		vsb->getGuestAddr(),
 		vsb->getEndAddr());
 	if ((ml = cross_check->getMemLog())) {
@@ -55,7 +55,7 @@ void VexExecFastChk::doSysCall(VexSB* vsb)
 	 */
 
 	/* scoot shadow process up to k+1 syscall opcodes, executed k */
-	bp_addr = cross_check->stepToBreakpoint();
+	bp_addr = pt_arch->stepToBreakpoint();
 	pt_sc_req_c++;
 
 	/* vexllvm state expects to be past syscall, we are currently

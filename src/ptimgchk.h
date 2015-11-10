@@ -5,12 +5,11 @@
 #include <sys/user.h>
 #include "guestptimg.h"
 #include "ptimgarch.h"
-#include "ptctl.h"
 
 class MemLog;
 class SyscallsMarshalled;
 
-class PTImgChk : public GuestPTImg, public PTCtl
+class PTImgChk : public GuestPTImg
 {
 public:
 	PTImgChk(
@@ -31,8 +30,10 @@ public:
 	bool fixup(const std::vector<InstExtent>& insts);
 	MemLog* getMemLog(void) { return mem_log; }
 	unsigned getNumFixups(void) const { return fixup_c; }
+
 protected:
 	virtual void handleChild(pid_t pid);
+	void pushPage(guest_ptr p, GuestMem* = nullptr);
 
 private:
 	bool isStackMatch(void) const;

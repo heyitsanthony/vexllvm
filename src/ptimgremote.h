@@ -5,12 +5,11 @@
 #include <sys/user.h>
 #include "guestptimg.h"
 #include "ptimgarch.h"
-#include "ptctl.h"
 
 class MemLog;
 class SyscallsMarshalled;
 
-class PTImgRemote : public GuestPTImg, public PTCtl
+class PTImgRemote : public GuestPTImg
 {
 public:
 	PTImgRemote(

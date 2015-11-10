@@ -10,6 +10,7 @@
 #include "guestcpustate.h"
 #include "memlog.h"
 #include "ptimgchk.h"
+#include "ptcpustate.h"
 #include "syscall/syscallsmarshalled.h"
 #include "vexexecchk.h"
 
@@ -60,7 +61,7 @@ guest_ptr VexExecChk::doVexSB(VexSB* vsb)
 		 * However, if it jumps out of a basic block, you're safe
 		 * to step through the entire bounds.
 		 * */
-		cross_check->stepThroughBounds(
+		cross_check->getPTArch()->stepThroughBounds(
 			vsb->getGuestAddr(),
 			vsb->getEndAddr());
 
@@ -73,7 +74,7 @@ guest_ptr VexExecChk::doVexSB(VexSB* vsb)
 		goto states_should_be_equal;
 	} else if (is_deferred && !new_ip_in_bounds) {
 		/* can step out of the block now we call this a "resume" */
-		cross_check->stepThroughBounds(
+		cross_check->getPTArch()->stepThroughBounds(
 			deferred_bound_start, deferred_bound_end);
 		is_deferred = false;
 		deferred_bound_start = guest_ptr(0);
@@ -145,7 +146,7 @@ void VexExecChk::verifyBlockRun(VexSB* vsb)
 
 void VexExecChk::stepSysCall(VexSB* vsb)
 {
-	cross_check->stepSysCall(static_cast<SyscallsMarshalled*>(sc.get()));
+	cross_check->getPTArch()->stepSysCall(static_cast<SyscallsMarshalled*>(sc.get()));
 	gs->getCPUState()->resetSyscall();
 }
 
@@ -167,7 +168,7 @@ void VexExecChk::doSysCallCore(VexSB* vsb)
 		   other process... blek to that... no nice api */
 
 		stepSysCall(vsb);
-		sp.setArg(0, cross_check->getSysCallResult());
+		sp.setArg(0, cross_check->getPTArch()->getPTCPU().getSysCallResult());
 		VexExec::doSysCall(vsb, sp);
 		return;
 	}

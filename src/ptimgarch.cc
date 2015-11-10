@@ -14,7 +14,9 @@ PTImgArch::PTImgArch(GuestPTImg* in_gs, int in_pid)
 , pt_cpu(nullptr)
 , child_pid(in_pid)
 , steps(0)
+, bp_steps(0)
 , blocks(0)
+, hit_syscall(false)
 {
 	const char* step_gauge;
 
@@ -143,3 +145,61 @@ void PTImgArch::waitForSingleStep(void)
 }
 
 bool PTImgArch::isSigSegv(void) const { return WSTOPSIG(wss_status) == SIGSEGV; }
+
+guest_ptr PTImgArch::stepToBreakpoint(void)
+{
+	int	err, status;
+
+	bp_steps++;
+	pt_cpu->revokeRegs();
+	err = ptrace(PTRACE_CONT, child_pid, NULL, NULL);
+	if(err < 0) {
+		perror("PTImgArch::doStep ptrace single step");
+		exit(1);
+	}
+	wait(&status);
+
+	if (!(WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP)) {
+		fprintf(stderr,
+			"OOPS. status: stopped=%d sig=%d status=%p\n",
+			WIFSTOPPED(status), WSTOPSIG(status),
+			(void*)(long)status);
+		// stackTraceShadow(std::cerr, guest_ptr(0),  guest_ptr(0));
+		assert (0 == 1 && "bad wait from breakpoint");
+	}
+
+	/* ptrace executes trap, so child process's IP needs to be fixed */
+	return pt_cpu->undoBreakpoint();
+}
+
+void PTImgArch::stepThroughBounds(guest_ptr start, guest_ptr end)
+{
+	guest_ptr	new_ip;
+
+	/* TODO: timeout? */
+	do {
+		new_ip = continueForwardWithBounds(start, end);
+		if (hit_syscall)
+			break;
+	} while (new_ip >= start && new_ip < end);
+}
+
+guest_ptr PTImgArch::continueForwardWithBounds(guest_ptr start, guest_ptr end)
+{
+	if (log_steps) {
+		std::cerr << "RANGE: "
+			<< (void*)start.o << "-" << (void*)end.o
+			<< std::endl;
+	}
+
+	hit_syscall = false;
+	while (doStep(start, end, hit_syscall)) {
+		guest_ptr	pc(pt_cpu->getPC());
+		/* so we trap on backjumps */
+		if (pc > start)
+			start = pc;
+	}
+
+	incBlocks();
+	return pt_cpu->getPC();
+}

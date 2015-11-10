@@ -2,35 +2,23 @@
 #define PTIMGARCH_H
 
 #include "guestptimg.h"
+#include "ptshadow.h"
 
-class SyscallsMarshalled;
 class PTCPUState;
 
-class PTImgArch
+class PTImgArch : public PTShadow
 {
 public:
-	virtual bool isRegMismatch(void) const = 0;
-	virtual void printFPRegs(std::ostream& os) const = 0;
-	virtual void printUserRegs(std::ostream& os) const = 0;
-	virtual void slurpRegisters(void) = 0;
-	virtual void pushRegisters(void) { assert (0 == 1 && "STUB"); }
-	virtual void stepSysCall(SyscallsMarshalled* sc_m) = 0;
-	virtual void ignoreSysCall(void) { assert (0 == 1 && "STUB"); }
-
 	int getPID(void) const { return child_pid; }
 	virtual void setPID(int in_pid) = 0;
 
 	virtual bool doStep(
 		guest_ptr start, guest_ptr end, bool& hit_syscall) = 0;
 
-	virtual GuestPTImg::FixupDir canFixup(
-		const std::vector<InstExtent>& insts,
-		bool has_memlog) const = 0;
+	guest_ptr stepToBreakpoint(void);
+	void stepThroughBounds(guest_ptr start, guest_ptr end);
+	guest_ptr continueForwardWithBounds(guest_ptr start, guest_ptr end);
 
-	virtual void fixupRegsPreSyscall(void)
-	{ assert (0 == 1 && "Not implemented for this arch"); }
-
-	virtual bool isMatch(void) const = 0;
 
 	bool breakpointSysCalls(
 		const guest_ptr ip_begin,
@@ -74,9 +62,12 @@ protected:
 	bool		log_steps;
 
 	int		wss_status;
+
 private:
 	uint64_t	steps;
+	uint64_t	bp_steps;
 	uint64_t	blocks;
+	bool		hit_syscall;
 	unsigned int	log_gauge_overflow;
 
 	/* caches check for opcodes */
