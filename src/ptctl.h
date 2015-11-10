@@ -15,8 +15,7 @@ public:
 	virtual ~PTCtl() {}
 
 	void pushRegisters(void);
-	void pushPage(GuestMem* m, guest_ptr p);
-	void pushPage(guest_ptr p);
+	void pushPage(guest_ptr p, GuestMem* = nullptr);
 
 	guest_ptr stepToBreakpoint(void);
 	void stepThroughBounds(guest_ptr start, guest_ptr end);

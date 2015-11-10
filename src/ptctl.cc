@@ -60,15 +60,15 @@ bool PTCtl::breakpointSysCalls(
 { return gpi.getPTArch()->breakpointSysCalls(ip_begin, ip_end); }
 
 
-void PTCtl::pushPage(guest_ptr p) { pushPage(gpi.getMem(), p); }
-
-void PTCtl::pushPage(GuestMem* m, guest_ptr p)
+void PTCtl::pushPage(guest_ptr p, GuestMem* m)
 {
 	GuestMem::Mapping	mp;
 	GuestPTMem		ptmem(&gpi, pid);
 	char			buf[4096];
 
 	p.o &= ~0xfffUL;
+
+	if (!m) m = gpi.getMem();
 
 	if (m->lookupMapping(guest_ptr(p), mp) == false)
 		return;
