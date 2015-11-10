@@ -17,21 +17,17 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 
 	I386CPUState();
 	~I386CPUState();
-	void setStackPtr(guest_ptr);
-	guest_ptr getStackPtr(void) const;
-	void setPC(guest_ptr);
-	guest_ptr getPC(void) const;
+	void setStackPtr(guest_ptr) override;
+	guest_ptr getStackPtr(void) const override;
+	void setPC(guest_ptr) override;
+	guest_ptr getPC(void) const override;
 
-	void setGDT(guest_ptr);
-	void setLDT(guest_ptr);
-	
-	void print(std::ostream& os, const void*) const;
+	void print(std::ostream& os, const void*) const override;
+	const char* off2Name(unsigned int off) const override;
+	const struct guest_ctx_field* getFields(void) const override;
+	unsigned int getStackRegOff(void) const override;
 
-	const char* off2Name(unsigned int off) const;
-
-	const struct guest_ctx_field* getFields(void) const;
-
-	virtual unsigned int getStackRegOff(void) const;
+	void noteRegion(const char* name, guest_ptr addr) override;
 
 	static const char* abi_linux_scregs[];
 };

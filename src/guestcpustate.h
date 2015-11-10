@@ -92,6 +92,8 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	uint64_t getReg(const char* name, unsigned bits, int off=0) const;
 	void setReg(const char* name, unsigned bits, uint64_t v, int off=0);
 
+	virtual void noteRegion(const char* name, guest_ptr);
+
 protected:
 	byte2elem_map	off2ElemMap;
 	reg2byte_map	reg2OffMap;

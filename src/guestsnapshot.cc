@@ -13,10 +13,9 @@
 #include "Sugar.h"
 #include "symbols.h"
 #include "util.h"
-#include "vexcpustate.h"
+#include "guestcpustate.h"
 #include "guestsnapshot.h"
 #include "guestabi.h"
-#include "cpu/i386cpustate.h"
 #include "cpu/i386windowsabi.h"
 #include <algorithm>
 
@@ -612,13 +611,10 @@ void GuestSnapshot::loadThreads(void)
 
 	SETUP_F_R_MAYBE("regs.ldt")
 	if (f != NULL) {
-		I386CPUState	*i386;
 		char		*buf;
 		int		res;
 		guest_ptr	gp;
 
-		i386 =  dynamic_cast<I386CPUState*>(cpu_state);
-		assert (i386 != NULL && "ONLY I386 HAS LDT");
 		buf = new char[8192*8];
 		res = fread(buf, 8, 8192, f);
 		assert (res == 8192 && "not enough LDT entries??");
@@ -628,20 +624,17 @@ void GuestSnapshot::loadThreads(void)
 		assert (gp.o && res == 0 && "failed to map ldt");
 
 		mem->memcpy(gp, buf, 8192*8);
-		i386->setLDT(gp);
+		cpu_state->noteRegion("regs.ldt", gp);
 		delete [] buf;
 		END_F()
 	}
 
 	SETUP_F_R_MAYBE("regs.gdt")
 	if (f != NULL) {
-		I386CPUState	*i386;
 		char		*buf;
 		int		res;
 		guest_ptr	gp;
 
-		i386 =  dynamic_cast<I386CPUState*>(cpu_state);
-		assert (i386 != NULL && "ONLY I386 HAS LDT");
 		buf = new char[8192*8];
 		res = fread(buf, 8, 8192, f);
 		assert (res == 8192 && "not enough LDT entries??");
@@ -651,7 +644,7 @@ void GuestSnapshot::loadThreads(void)
 		assert (gp.o && res == 0 && "failed to map ldt");
 
 		mem->memcpy(gp, buf, 8192*8);
-		i386->setGDT(gp);
+		cpu_state->noteRegion("regs.gdt", gp);
 		delete [] buf;
 		END_F()
 	}

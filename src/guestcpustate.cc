@@ -168,3 +168,9 @@ GuestCPUState* GuestCPUState::create(Arch::Arch a)
 	assert(makers.count(a) && "unsupported guest architecture");
 	return makers[a]();
 }
+
+void GuestCPUState::noteRegion(const char* name, guest_ptr addr)
+{
+	std::cerr	<< "Unexpected region '" << name
+			<< "' at " << (void*)addr.o << '\n';
+}

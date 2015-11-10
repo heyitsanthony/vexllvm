@@ -101,7 +101,7 @@ void PTShadowI386::setupGDT(void)
 		0) == 0)
 	{
 		VEXSEG	*segs;
-		I386CPU->setGDT(gdt);
+		I386CPU->noteRegion("regs.gdt", gdt);
 		segs = (VEXSEG*)gs->getMem()->getHostPtr(gdt);
 		for (unsigned i = 0; i < VEX_GUEST_X86_GDT_NENT; i++) {
 			if (readThreadEntry(i, &segs[i]))
@@ -122,7 +122,7 @@ void PTShadowI386::setupGDT(void)
 		0) == 0)
 	{
 		VEXSEG	*segs;
-		I386CPU->setLDT(ldt);
+		I386CPU->noteRegion("regs.ldt", ldt);
 		segs = (VEXSEG*)gs->getMem()->getHostPtr(ldt);
 		for (unsigned i = 0; i < VEX_GUEST_X86_LDT_NENT; i++) {
 			if (readThreadEntry(i, &segs[i]))

@@ -26,8 +26,15 @@ I386CPUState::I386CPUState()
 	state2i386()->guest_DFLAG = 1;
 }
 
-void I386CPUState::setGDT(guest_ptr g) { state2i386()->guest_GDT = g.o; }
-void I386CPUState::setLDT(guest_ptr g) { state2i386()->guest_LDT = g.o; }
+void I386CPUState::noteRegion(const char* name, guest_ptr g)
+{
+	if (strcmp(name, "regs.ldt") == 0)
+		state2i386()->guest_LDT = g.o;
+	else if (strcmp(name, "regs.gdt") == 0)
+		state2i386()->guest_GDT = g.o;
+	else
+		VexCPUState::noteRegion(name, g);
+}
 
 I386CPUState::~I386CPUState() {	delete [] state_data; }
 
