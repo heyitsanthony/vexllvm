@@ -33,6 +33,42 @@ PTImgArch::PTImgArch(GuestPTImg* in_gs, int in_pid)
 
 PTImgArch::~PTImgArch() {}
 
+bool PTImgArch::breakpointSysCalls(
+	const guest_ptr ip_begin,
+	const guest_ptr ip_end)
+{
+	guest_ptr	pc = ip_begin;
+	bool		set_bp = false;
+
+	while (pc != ip_end) {
+		if (pt_cpu->isSyscallOp(pc, getInsOp(pc))) {
+			gs->setBreakpoint(pc);
+			set_bp = true;
+		}
+		pc.o++;
+	}
+
+	return set_bp;
+}
+
+long PTImgArch::getInsOp(void) const { return getInsOp(pt_cpu->getPC().o); }
+
+long PTImgArch::getInsOp(long pc) const
+{
+	if ((uintptr_t)pc== chk_addr.o)
+		return chk_opcode;
+
+	chk_addr = guest_ptr(pc);
+// SLOW WAY:
+// Don't need to do this so long as we have the data at chk_addr in the guest
+// process also mapped into the parent process at chk_addr.
+//	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
+
+// FAST WAY: read it off like a boss
+	chk_opcode = *((const long*)gs->getMem()->getHostPtr(chk_addr));
+	return chk_opcode;
+}
+
 void PTImgArch::pushBadProgress(void)
 {
 	guest_ptr	cur_pc(gs->getCPUState()->getPC());

@@ -409,25 +409,6 @@ void PTImgAMD64::printUserRegs(std::ostream& os) const
 	os << '\n';
 }
 
-long PTImgAMD64::getInsOp(void) { return getInsOp(_pt_cpu->getRegs().rip); }
-
-long PTImgAMD64::getInsOp(long pc)
-{
-	if ((uintptr_t)pc== chk_addr.o)
-		return chk_opcode;
-
-	chk_addr = guest_ptr(pc);
-// SLOW WAY:
-// Don't need to do this so long as we have the data at chk_addr in the guest
-// process also mapped into the parent process at chk_addr.
-//	chk_opcode = ptrace(PTRACE_PEEKTEXT, child_pid, regs.rip, NULL);
-
-// FAST WAY: read it off like a boss
-	chk_opcode = *((const long*)gs->getMem()->getHostPtr(chk_addr));
-	return chk_opcode;
-}
-
-
 #define OPCODE_SYSCALL	0x050f
 
 bool PTImgAMD64::isOnSysCall()
@@ -624,24 +605,6 @@ void PTImgAMD64::stepSysCall(SyscallsMarshalled* sc_m)
 		_pt_cpu->copyIn(spb->getPtr(), spb->getData(), spb->getLength());
 		delete spb;
 	}
-}
-
-bool PTImgAMD64::breakpointSysCalls(
-	const guest_ptr ip_begin,
-	const guest_ptr ip_end)
-{
-	guest_ptr	rip = ip_begin;
-	bool		set_bp = false;
-
-	while (rip != ip_end) {
-		if (((getInsOp(rip) & 0xffff) == 0x050f)) {
-			gs->setBreakpoint(rip);
-			set_bp = true;
-		}
-		rip.o++;
-	}
-
-	return set_bp;
 }
 
 void PTImgAMD64::ptrace2vex(

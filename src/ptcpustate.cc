@@ -43,7 +43,6 @@ void PTCPUState::copyIn(guest_ptr dst, const void* src, unsigned int bytes) cons
 	}
 }
 
-
 #ifdef __amd64__
 #include "cpu/ptamd64cpustate.h"
 #endif

@@ -19,6 +19,7 @@ public:
 	virtual void loadRegs(void) = 0;
 	virtual guest_ptr undoBreakpoint(void) = 0;
 	virtual long setBreakpoint(guest_ptr addr) = 0;
+	virtual bool isSyscallOp(guest_ptr addr, long v) const = 0;
 
 	virtual uintptr_t getSysCallResult() const = 0;
 

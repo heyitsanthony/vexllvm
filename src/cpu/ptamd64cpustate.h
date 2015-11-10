@@ -22,6 +22,8 @@ public:
 	void setStackPtr(guest_ptr) override;
 	void setPC(guest_ptr) override;
 
+	bool isSyscallOp(guest_ptr addr, long v) const override;
+
 	void print(std::ostream& os, const void*) const override {
 		assert(false && "STUB");
 		abort();
@@ -38,8 +40,6 @@ public:
 		abort();
 		return nullptr;
 	}
-
-
 
 	// used by ptimgarch
 	struct user_regs_struct& getRegs(void) const;

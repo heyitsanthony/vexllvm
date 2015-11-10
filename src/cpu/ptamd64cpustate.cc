@@ -44,6 +44,11 @@ void PTAMD64CPUState::loadRegs(void)
 	}
 }
 
+bool PTAMD64CPUState::isSyscallOp(guest_ptr addr, long v) const
+{
+	return (v & 0xffff) == 0x050f;
+}
+
 guest_ptr PTAMD64CPUState::undoBreakpoint(void)
 {
 	struct user_regs_struct	regs;

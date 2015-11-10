@@ -32,9 +32,9 @@ public:
 
 	virtual bool isMatch(void) const = 0;
 
-	virtual bool breakpointSysCalls(
+	bool breakpointSysCalls(
 		const guest_ptr ip_begin,
-		const guest_ptr ip_end) = 0;
+		const guest_ptr ip_end);
 
 	virtual ~PTImgArch();
 
@@ -64,6 +64,10 @@ protected:
 	void pushBadProgress(void);
 	void checkWSS(void);
 
+	long getInsOp(void) const;
+	long getInsOp(long pc) const;
+
+
 	GuestPTImg	*gs;
 	std::unique_ptr<PTCPUState>	pt_cpu;
 	int		child_pid;
@@ -74,6 +78,10 @@ private:
 	uint64_t	steps;
 	uint64_t	blocks;
 	unsigned int	log_gauge_overflow;
+
+	/* caches check for opcodes */
+	mutable guest_ptr	chk_addr;
+	mutable long		chk_opcode;
 };
 
 #endif

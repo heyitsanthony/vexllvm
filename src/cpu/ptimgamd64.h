@@ -19,10 +19,6 @@ public:
 	bool isRegMismatch(void) const override;
 	bool doStep(guest_ptr start, guest_ptr end, bool& hit_syscall) override;
 
-	bool breakpointSysCalls(
-		const guest_ptr ip_begin,
-		const guest_ptr ip_end) override;
-
 	GuestPTImg::FixupDir canFixup(
 		const std::vector<InstExtent>& insts,
 		bool has_memlog) const override;
@@ -55,8 +51,6 @@ private:
 	bool isOnCPUID(void);
 	bool isOnRDTSC(void);
 	bool isOnSysCall(void);
-	long getInsOp(void);
-	long getInsOp(long pc);
 
 	bool filterSysCall(
 		const VexGuestAMD64State& state,
@@ -67,10 +61,6 @@ private:
 
 	bool	xchk_eflags;
 	bool	fixup_eflags;
-
-	/* caches check for opcodes */
-	guest_ptr	chk_addr;
-	long		chk_opcode;
 };
 
 #endif

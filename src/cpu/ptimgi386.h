@@ -29,9 +29,6 @@ public:
 	GuestPTImg::FixupDir canFixup(
 		const std::vector<std::pair<guest_ptr, unsigned char> >&,
 		bool has_memlog) const override;
-	bool breakpointSysCalls(guest_ptr, guest_ptr) override {
-		assert(false && "STUB");
-	}
 
 	virtual void setFakeInfo(const char* info_file) override;
 	virtual bool stepInitFixup(void) override;

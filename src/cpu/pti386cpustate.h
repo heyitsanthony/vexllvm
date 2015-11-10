@@ -24,6 +24,11 @@ public:
 	void setStackPtr(guest_ptr) override { assert (false && "STUB"); }
 	void setPC(guest_ptr) override { assert (false && "STUB"); }
 
+	bool isSyscallOp(guest_ptr addr, long v) const override {
+		assert(false && "STUB");
+		return false;
+	}
+
 	void print(std::ostream& os, const void*) const override {
 		assert(false && "STUB");
 		abort();
