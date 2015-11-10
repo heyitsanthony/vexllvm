@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "arch.h"
-#include "vexcpustate.h"
+#include "guestcpustate.h"
 #include "guestabi.h"
 #include "guestfragment.h"
 

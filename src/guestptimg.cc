@@ -22,14 +22,13 @@
 #include "elfdebug.h"
 #include "ptimgchk.h"
 #include "guestptimg.h"
-#include "vexcpustate.h"
+#include "guestcpustate.h"
 #include "guestabi.h"
 #include "ptcpustate.h"
 
 #if defined(__amd64__)
 #include <asm/ptrace-abi.h>
 #include <sys/prctl.h>
-#include "cpu/amd64cpustate.h"
 #include "cpu/ptimgamd64.h"
 #include "cpu/ptimgi386.h"
 #endif
@@ -461,7 +460,7 @@ void GuestPTImg::slurpThreads(void)
 	/* load all thread registers */
 	thread_cpus.resize(t_pids.size());
 	for (unsigned i = 0; i < t_pids.size(); i++) {
-		GuestCPUState	*cur_cpu(VexCPUState::create(getArch()));
+		GuestCPUState	*cur_cpu(GuestCPUState::create(getArch()));
 		int		err, status;
 
 		/* slurpRegisters stores to cpu_state; temporarily swap out */
