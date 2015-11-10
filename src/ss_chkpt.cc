@@ -150,7 +150,7 @@ pid_t GuestChkPt::createSlurpedAttach(int pid)
 	// assert (entry_pt.o == 0 && "Only support attaching immediately");
 	fprintf(stderr, "Attaching to PID=%d...\n", pid);
 
-	pt_arch = NEW_ARCH_PT;
+	SETUP_ARCH_PT
 
 	err = ptrace(PTRACE_ATTACH, pid, 0, NULL, NULL);
 	assert (err != -1 && "Couldn't attach to process");
@@ -539,7 +539,7 @@ int main(int argc, char* argv[], char* envp[])
 	 * so reset to before syscall, then half step to pre-syscall */
 	patchVDSOs(gs, pid);
 	/* gs registers are fixed up to immediately before syscall */
-	gs->getPTArch()->pushRegisters();
+	gs->getPTShadow()->pushRegisters();
 	stepHalfSyscall(pid);
 	/* now at pre-syscall */
 	

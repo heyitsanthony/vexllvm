@@ -54,10 +54,10 @@ void PTImgChk::handleChild(pid_t in_pid)
  */
 bool PTImgChk::fixup(const std::vector<InstExtent>& insts)
 {
-	FixupDir	fixup;
+	PTShadow::FixupDir	fixup;
 
-	fixup = pt_arch->canFixup(insts, mem_log != NULL);
-	if (fixup == FIXUP_NONE) {
+	fixup = pt_shadow->canFixup(insts, mem_log != NULL);
+	if (fixup == PTShadow::FIXUP_NONE) {
 		fprintf(stderr, "VAIN ATTEMPT TO FIXUP %p-%p\n",
 			(void*)(insts.front().first.o),
 			(void*)(insts.back().first.o));
@@ -66,7 +66,7 @@ bool PTImgChk::fixup(const std::vector<InstExtent>& insts)
 	}
 
 	fixup_c++;
-	if (fixup == FIXUP_NATIVE)
+	if (fixup == PTShadow::FIXUP_NATIVE)
 		doFixupNative();
 	else
 		doFixupGuest();
@@ -82,7 +82,7 @@ void PTImgChk::doFixupNative(void)
 	const uint64_t*	dat;
 	unsigned	dat_elems;
 
-	pt_arch->pushRegisters();
+	pt_shadow->pushRegisters();
 
 	/* load all nearby pointers */
 
@@ -140,7 +140,7 @@ void PTImgChk::doFixupGuest(void)
 
 bool PTImgChk::isMatch() const
 {
-	if (!pt_arch->isMatch()) return false;
+	if (!pt_shadow->isMatch()) return false;
 	if (!isStackMatch()) return false;
 	if (!isMatchMemLog()) return false;
 	if (xchk_watchptr && !isWatchPtrMatch()) return false;
@@ -394,8 +394,8 @@ bool PTImgChk::printRootTrace(std::ostream& os) const
 
 void PTImgChk::printShadow(std::ostream& os) const
 {
-	pt_arch->printUserRegs(os);
-	pt_arch->printFPRegs(os);
+	pt_shadow->printUserRegs(os);
+	pt_shadow->printFPRegs(os);
 
 	printMemory(os);
 	printRootTrace(os);

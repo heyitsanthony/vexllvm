@@ -48,6 +48,7 @@
 GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 : Guest(binpath)
 , pt_arch(NULL)
+, pt_shadow(NULL)
 , arch(Arch::getHostArch())
 , symbols(NULL)
 , dyn_symbols(NULL)
@@ -86,9 +87,10 @@ GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 
 GuestPTImg::~GuestPTImg(void)
 {
-	if (pt_arch != NULL) delete pt_arch;
-	if (symbols != NULL) delete symbols;
-	if (dyn_symbols != NULL) delete dyn_symbols;
+	delete pt_arch;
+	// delete pt_shadow; aliased if available
+	delete symbols;
+	delete dyn_symbols;
 }
 
 void GuestPTImg::handleChild(pid_t pid)
@@ -127,7 +129,7 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	// assert (entry_pt.o == 0 && "Only support attaching immediately");
 	fprintf(stderr, "Attaching to PID=%d\n", pid);
 
-	pt_arch = NEW_ARCH_PT;
+	SETUP_ARCH_PT
 
 	err = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
 	assert (err != -1 && "Couldn't attach to process");
@@ -207,7 +209,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 		/* parent should have set breakpoint at current IP
 		 * ... jump to it */
 		cpu_state = gs->getCPUState();
-		pt_arch = NEW_ARCH_PT;
+		SETUP_ARCH_PT
 
 		pt_arch->restore();
 
@@ -215,8 +217,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 		exit(-1);
 	}
 
-
-	pt_arch = NEW_ARCH_PT;
+	SETUP_ARCH_PT
 
 	/* wait for child to SIGTRAP itself */
 	waitpid(pid, &status, 0);
@@ -279,7 +280,7 @@ pid_t GuestPTImg::createSlurpedOnSyscall(
 	if (pid == 0) setupChild(argv, envp);
 	if (pid < 0) return pid;
 
-	pt_arch = NEW_ARCH_PT;
+	SETUP_ARCH_PT
 
 	/* wait for child to call execve and send us a trap signal */
 	wait(&status);
@@ -345,7 +346,7 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* failed to create child */
 	if (pid < 0) return pid;
 
-	pt_arch = NEW_ARCH_PT;
+	SETUP_ARCH_PT
 
 	/* wait for child to call execve and send us a trap signal */
 	wait(&status);
@@ -512,6 +513,7 @@ void GuestPTImg::setBreakpoint(guest_ptr addr)
 {
 	if (breakpoints.count(addr))
 		return;
+	assert (pt_arch);
 	breakpoints[addr] = pt_arch->getPTCPU().setBreakpoint(addr);
 }
 

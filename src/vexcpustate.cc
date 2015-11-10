@@ -17,6 +17,15 @@ VexCPUState* VexCPUState::create(Arch::Arch arch)
 	}
 }
 
+#if defined(__amd64__)
+#include "cpu/ptshadowamd64.h"
+#include "cpu/ptshadowi386.h"
+#endif
+
+#ifdef __arm__
+#include "cpu/ptshadowarm.h"
+#endif
+
 void VexCPUState::registerCPUs(void)
 {
 	GuestCPUState::registerCPU(
@@ -31,4 +40,22 @@ void VexCPUState::registerCPUs(void)
 	GuestCPUState::registerCPU(
 		Arch::MIPS32,
 		[] { return new MIPS32CPUState(); });
+
+#if defined(__amd64__)
+	PTShadow::registerCPU(
+		Arch::I386,
+		[] (GuestPTImg* gpi, int pid) {
+			return new PTShadowI386(gpi, pid);
+		}
+	);
+	PTShadow::registerCPU(
+		Arch::X86_64,
+		[] (GuestPTImg* gpi, int pid) {
+			return new PTShadowAMD64(gpi, pid);
+		}
+	);
+#elif defined(__arm__)
+//	pt_arch = new PTImgARM(gpi, pid);
+#endif
+
 }

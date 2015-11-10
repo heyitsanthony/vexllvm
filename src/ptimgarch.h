@@ -5,26 +5,35 @@
 #include "ptshadow.h"
 
 class PTCPUState;
+class SyscallsMarshalled;
 
-class PTImgArch : public PTShadow
+class PTImgArch
 {
 public:
+	PTImgArch(GuestPTImg* in_gs, int in_pid);
+	virtual ~PTImgArch();
+
 	int getPID(void) const { return child_pid; }
 	virtual void setPID(int in_pid) = 0;
 
 	virtual bool doStep(
 		guest_ptr start, guest_ptr end, bool& hit_syscall) = 0;
 
+	virtual void stepSysCall(SyscallsMarshalled* sc_m) = 0;
+	virtual bool filterSysCall(void) { return false; }
+	virtual void ignoreSysCall(void) { assert (0 == 1 && "STUB"); }
+	virtual void fixupRegsPreSyscall(void)
+	{ assert (0 == 1 && "Not implemented for this arch"); }
+
 	guest_ptr stepToBreakpoint(void);
 	void stepThroughBounds(guest_ptr start, guest_ptr end);
 	guest_ptr continueForwardWithBounds(guest_ptr start, guest_ptr end);
 
+	virtual void slurpRegisters(void) = 0;
 
 	bool breakpointSysCalls(
 		const guest_ptr ip_begin,
 		const guest_ptr ip_end);
-
-	virtual ~PTImgArch();
 
 	uint64_t getSteps(void) const { return steps; }
 	void incBlocks(void) { blocks++; }
@@ -47,9 +56,8 @@ public:
 	bool isSigSegv(void) const;
 
 protected:
-	PTImgArch(GuestPTImg* in_gs, int in_pid);
 	void waitForSingleStep(void);
-	void pushBadProgress(void);
+	virtual void handleBadProgress(void) { abort(); }
 	void checkWSS(void);
 
 	long getInsOp(void) const;

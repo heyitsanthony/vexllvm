@@ -11,24 +11,35 @@
 
 class Symbols;
 class PTImgArch;
+class PTShadow;
 
 #if defined(__amd64__)
-#define NEW_ARCH_PT	\
-	(arch != Arch::I386)	\
-	? (PTImgArch*)(new PTImgAMD64(this, pid))	\
-	: (PTImgArch*)(new PTImgI386(this, pid))
+#define SETUP_ARCH_PT	\
+	do {	\
+	pt_shadow = PTShadow::create(arch, this, pid);			\
+	if (!pt_shadow)							\
+		pt_arch = (arch != Arch::I386)				\
+			? (PTImgArch*)(new PTImgAMD64(this, pid))	\
+			: (PTImgArch*)(new PTImgI386(this, pid));	\
+	else								\
+		pt_arch = dynamic_cast<PTImgArch*>(pt_shadow);		\
+	} while (0);
 #elif defined(__arm__)
-#define NEW_ARCH_PT	new PTImgARM(this, pid);
+#define SETUP_ARCH_PT					\
+	do {						\
+	pt_shadow = PTShadow::create(arch, this, pid);	\
+	if (!pt_shadow)					\
+		pt_arch = new PTImgARM(this, pid);	\
+	else						\
+		pt_arch = dynamic_cast<PTImgArch*>(pt_shadow);	\
+	} while (0);
 #else
-#define NEW_ARCH_PT	0; assert (0 == 1 && "UNKNOWN PTRACE HOST ARCHITECTURE! AIEE");
+#define SETUP_ARCH_PT	0; assert (0 == 1 && "UNKNOWN PTRACE HOST ARCHITECTURE! AIEE");
 #endif
 
 class GuestPTImg : public Guest
 {
 public:
-	/* fixup type specifies the state that will get clobbered */
-	enum FixupDir { FIXUP_NATIVE = -1, FIXUP_NONE = 0, FIXUP_GUEST = 1 };
-
 	virtual ~GuestPTImg(void);
 	guest_ptr getEntryPoint(void) const { return entry_pt; }
 
@@ -137,6 +148,8 @@ public:
 	static void dumpSelfMap(void);
 
 	PTImgArch* getPTArch(void) const { return pt_arch; }
+	PTShadow* getPTShadow(void) const { return pt_shadow; }
+
 	guest_ptr undoBreakpoint();
 
 	void slurpRegisters(pid_t pid);
@@ -151,6 +164,7 @@ protected:
 	void slurpThreads(void);
 
 	PTImgArch		*pt_arch;
+	PTShadow		*pt_shadow;
 	Arch::Arch		arch;
 	ptr_list_t<ProcMap>	mappings;
 	guest_ptr		entry_pt;

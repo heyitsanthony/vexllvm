@@ -71,14 +71,6 @@ long PTImgArch::getInsOp(long pc) const
 	return chk_opcode;
 }
 
-void PTImgArch::pushBadProgress(void)
-{
-	guest_ptr	cur_pc(gs->getCPUState()->getPC());
-	gs->getCPUState()->setPC(guest_ptr(0xbadbadbadbad));
-	pushRegisters();
-	gs->getCPUState()->setPC(cur_pc);
-}
-
 uint64_t PTImgArch::dispatchSysCall(const SyscallParams& sp)
 {
 	uint64_t ret = pt_cpu->dispatchSysCall(sp, wss_status);
@@ -99,26 +91,26 @@ void PTImgArch::checkWSS(void)
 			break;
 		case SIGFPE:
 			fprintf(stderr, "[PTImgArch] FPE!\n");
-			pushBadProgress();
+			handleBadProgress();
 			break;
 
 		case SIGSEGV:
 			fprintf(stderr, "[PTImgArch] SIGSEGV!\n");
-			pushBadProgress();
+			handleBadProgress();
 			break;
 
 		case SIGILL: {
 			fprintf(stderr,
 				"[PTImgArch] Illegal instruction at %p!!!\n",
 				(void*)gs->getCPUState()->getPC().o);
-			pushBadProgress();
+			handleBadProgress();
 			break;
 		}
 		default:
 			fprintf(stderr,
 				"[PTImgArch] ptrace bad single step status=%d\n",
 				WSTOPSIG(wss_status));
-			pushBadProgress();
+			handleBadProgress();
 			break;
 		}
 	} else {
