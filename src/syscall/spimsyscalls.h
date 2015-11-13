@@ -1,7 +1,7 @@
 #ifndef SPIMSYSCALLS_H
 #define SPIMSYSCALLS_H
 
-#include "syscalls.h"
+#include "syscall/syscalls.h"
 
 class SPIMSyscalls : public Syscalls
 {

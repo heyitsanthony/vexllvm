@@ -22,8 +22,8 @@ PROF_FLAGS = -pg -gprof
 ASAN_FLAGS = -fsanitize=address
 
 # linker flags get stripped off so clang won't complain too hard
-CFLAGS +=  	-std=c++14 -g -O3 -I`pwd`/src/ \
-		-lcrypto -ldl -lrt -lcrypt -lpthread -lssl -lz -lncurses
+CFLAGS +=  	-std=c++14 -g -O3 -I`pwd`/src/
+CFLAG_LIBS = 	-lcrypto -ldl -lrt -lcrypt -lpthread -lssl -lz -lncurses
 
 ifndef TRACE_CFLAGS
 TRACE_CFLAGS=-g
@@ -40,6 +40,16 @@ endif
 ifndef LLVMCONFIG_PATH
 LLVMCONFIG_PATH = llvm-config
 endif
+
+
+ifeq ($(shell readlink guestlib),)
+$(error "No symlink 'guestlib' pointing to guestlib")
+endif
+GUESTLIB_PATH=`pwd`/guestlib
+GUESTLIB=$(GUESTLIB_PATH)/bin/guestlib.a
+CFLAGS += -I$(GUESTLIB_PATH)/src
+
+CFLAGS += $(CFLAG_LIBS)
 
 LLVMCC=clang
 LLVMCFLAGS=$(shell echo $(CFLAGS) | sed "s/-g//g")
@@ -58,45 +68,19 @@ LDRELOC2="-Wl,-Ttext-segment=$(BIN_BASE2)"
 # # ###  #  ###
 ##  # #  #  # #
 
-OBJBASE=	guest.o			\
-		guestabi.o		\
-		guestmem.o		\
-		guestmemsink.o		\
-		guestptmem.o		\
-		guestmemdual.o		\
-		guestcpustate.o		\
-		vexcpustate.o		\
-		ptcpustate.o		\
-		ptshadow.o		\
-		guestelf.o		\
-		guestfragment.o		\
-		guestptimg.o		\
-		guestsnapshot.o		\
-		procmap.o		\
-		procargs.o		\
+OBJBASE=	vexcpustate.o		\
+		fragcache.o		\
+		elfcore.o		\
+		ptimgchk.o		\
+		usage.o			\
+		syscall/spimsyscalls.o	\
 		cpu/amd64cpustate.o	\
 		cpu/amd64syscalls.o	\
 		cpu/i386cpustate.o	\
 		cpu/i386syscalls.o	\
-		cpu/i386windowsabi.o	\
 		cpu/armcpustate.o	\
 		cpu/armsyscalls.o	\
-		cpu/mips32cpustate.o	\
-		cpu/linux_abi.o		\
-		fragcache.o		\
-		syscall/syscalls.o		\
-		syscall/spimsyscalls.o		\
-		syscall/syscallsmarshalled.o	\
-		syscall/syscallnamer.o	\
-		symbols.o		\
-		elfimg.o		\
-		elfcore.o		\
-		elfdebug.o		\
-		ptimgremote.o		\
-		ptimgchk.o		\
-		ptimgarch.o		\
-		elfsegment.o		\
-		usage.o
+		cpu/mips32cpustate.o
 
 OBJSLLVM=	vexxlate.o		\
 		vexstmt.o		\
@@ -113,31 +97,19 @@ OBJSLLVM=	vexxlate.o		\
 		vexexec.o		\
 		vexexecchk.o		\
 		vexexecfastchk.o	\
-		vexhelpers.o		\
-
-VDSO_OBJ=	vdso/vdso_none.o
+		vexhelpers.o
 
 ifeq ($(shell uname -m), armv7l)
 CFLAGS += -Wl,-Bsymbolic-functions -Wl,--no-as-needed -I/usr/include/arm-linux-gnueabi/
-OBJBASE += cpu/ptimgarm.o
 VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
 endif
 
 ifeq ($(shell uname -m), x86_64)
 VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
-OBJBASE +=	cpu/ptimgamd64.o	\
-		cpu/ptimgi386.o		\
-		cpu/ptamd64cpustate.o	\
-		cpu/pti386cpustate.o	\
-		cpu/ptshadowamd64.o	\
+OBJBASE +=	cpu/ptshadowamd64.o	\
 		cpu/ptshadowi386.o	\
 		cpu/amd64_trampoline.o
-VDSO_OBJ= vdso/vdso_x64.o
 endif
-
-OBJBASE += $(VDSO_OBJ)
-
-
 
 OBJDEPS=$(OBJBASE) $(OBJSLLVM)
 
@@ -200,6 +172,8 @@ BINTARGETS_ALL=$(BINTARGETS_STDBASE) $(BINTARGETS_REBASE)
 LIBTARGETS=	bin/vexllvm.a 			\
 		bin/vexllvm-softfloat.a
 
+LINKLIBS=	$(VEXLIB) $(GUESTLIB)
+
 all:	bitcode 				\
 	$(BINOBJS)				\
 	$(LIBTARGETS)				\
@@ -247,25 +221,25 @@ bin/vexllvm-softfloat.a: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS)
 	ar r $@ $^
 
 bin/vexllvm_ss: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	$(CORELINK) $^ $(VEXLIB) -o $@ $(LDRELOC) $(CFLAGS)
+	$(CORELINK) $^ $(LINKLIBS) -o $@ $(LDRELOC) $(CFLAGS)
 
 bin/vexllvm_ss-static: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	$(CORELINK) -static $^ $(VEXLIB) -o $@ $(LDRELOC) $(CFLAGS)
+	$(CORELINK) -static $^ $(LINKLIBS) -o $@ $(LDRELOC) $(CFLAGS)
 
 bin/vexllvm_ss_rebase: $(OBJBASE:%=obj/%) obj/vexllvm_ss.o
-	$(CORELINK) $^ $(VEXLIB) -o $@ $(LDRELOC2) $(CFLAGS)
+	$(CORELINK) $^ $(LINKLIBS) -o $@ $(LDRELOC2) $(CFLAGS)
 
 bin/%_rebase: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	$(CORELINK) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS)
+	$(CORELINK) $^ $(LINKLIBS) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS)
 
 bin/%: $(OBJDIRDEPS) $(FPDIRDEPS) obj/%.o
-	$(CORELINK) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS)
+	$(CORELINK) $^ $(LINKLIBS) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS)
 
 bin/softfloat/%_rebase: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	$(CORELINK) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS)
+	$(CORELINK) $^ $(LINKLIBS) $(LLVMFLAGS) -o $@ $(LDRELOC2) $(CFLAGS)
 
 bin/softfloat/%: $(OBJDIRDEPS) $(SOFTFLOATDIRDEPS) obj/%.o
-	$(CORELINK) $^ $(VEXLIB) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS)
+	$(CORELINK) $^ $(LINKLIBS) $(LLVMFLAGS) -o $@ $(LDRELOC) $(CFLAGS)
 
 #obj/libvex_amd64_helpers.s: bitcode/libvex_amd64_helpers.bc
 #	llc  $< -o $@
