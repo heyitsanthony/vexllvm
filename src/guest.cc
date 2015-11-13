@@ -147,18 +147,6 @@ void Guest::addLibrarySyms(const char* path, guest_ptr base, Symbols* cur_syms)
 	delete new_syms;
 }
 
-void Guest::toCore(const char* path) const
-{
-	std::ofstream	os(((path) ? path : "core"));
-
-	if (!os.good()) {
-		std::cerr << "[Guest] Couldn't save core.\n";
-		return;
-	}
-
-	ElfImg::writeCore(this, os);
-}
-
 /* this is kind of platform specific, not sure if it should go here */
 bool Guest::patchVDSO(void)
 {

@@ -90,6 +90,7 @@ OBJBASE=	guest.o			\
 		syscall/syscallnamer.o	\
 		symbols.o		\
 		elfimg.o		\
+		elfcore.o		\
 		elfdebug.o		\
 		ptimgremote.o		\
 		ptimgchk.o		\
