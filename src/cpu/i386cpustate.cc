@@ -13,10 +13,6 @@ extern "C" {
 
 #define state2i386()	((VexGuestX86State*)(state_data))
 
-
-const char* I386CPUState::abi_linux_scregs[] =
-{"EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "EBP", NULL};
-
 I386CPUState::I386CPUState()
 {
 	state_byte_c = getFieldsSize(getFields());

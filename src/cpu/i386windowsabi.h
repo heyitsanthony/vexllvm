@@ -6,7 +6,7 @@
 class I386WindowsABI : public RegStrABI
 {
 public:
-	I386WindowsABI(Guest* g_);
+	I386WindowsABI(Guest& g_);
 	virtual ~I386WindowsABI(void) {}
 	SyscallParams getSyscallParams(void) const override;
 private:

@@ -65,7 +65,7 @@ public:
 	{
 		cpu_state = VexCPUState::create(Arch::X86_64);
 		mem = new GuestMem();
-		abi = GuestABI::create(this);
+		abi = GuestABI::create(*this);
 	}
 	virtual ~GuestIdent() {}
 	guest_ptr getEntryPoint(void) const { return guest_ptr(0); }

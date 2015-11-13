@@ -56,10 +56,6 @@ public:
 	virtual int cpu2gdb(int gdb_off) const;
 
 	virtual const struct guest_ctx_field* getFields(void) const;
-
-	static const char* abi_linux_scregs[];
 };
-
-#define	ABI_LINUX_AMD64	AMD64CPUState::abi_linux_scregs, "RAX",	"RDI", false
 
 #endif

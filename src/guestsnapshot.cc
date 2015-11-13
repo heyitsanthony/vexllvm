@@ -108,9 +108,9 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	/* XXX: super-lame windows detection */
 	SETUP_F_R_MAYBE("platform/process_cookie");
 	if (f == NULL) {
-		abi = GuestABI::create(this);
+		abi = GuestABI::create(*this);
 	} else {
-		abi = new I386WindowsABI(this);
+		abi = new I386WindowsABI(*this);
 		END_F()
 	}
 

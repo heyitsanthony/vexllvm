@@ -7,9 +7,6 @@
 
 #include "cpu/amd64cpustate.h"
 
-const char* AMD64CPUState::abi_linux_scregs[] =
-{"RAX", "RDI", "RSI", "RDX", "R10", "R8", "R9", NULL};
-
 #define state2amd64()	((VexGuestAMD64State*)(state_data))
 
 AMD64CPUState::AMD64CPUState()

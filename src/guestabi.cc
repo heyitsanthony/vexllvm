@@ -1,14 +1,12 @@
-#include "cpu/i386cpustate.h"
-#include "cpu/amd64cpustate.h"
-#include "cpu/armcpustate.h"
-#include "cpu/mips32cpustate.h"
 #include "guest.h"
+#include "guestcpustate.h"
 #include "guestabi.h"
+#include "cpu/linux_abi.h"
 
 bool GuestABI::use_linux_sysenter = true;
 
 RegStrABI::RegStrABI(
-	Guest* _g,
+	Guest& _g,
 	const char** sc_regs,
 	const char* sc_ret,
 	const char* exit_reg,
@@ -16,7 +14,7 @@ RegStrABI::RegStrABI(
 : GuestABI(_g)
 , is_32bit(_is_32bit)
 {
-	GuestCPUState	*cpu(g->getCPUState());
+	GuestCPUState	*cpu(g.getCPUState());
 	unsigned	i = 0;
 
 	if (sc_regs) {
@@ -37,7 +35,7 @@ SyscallParams RegStrABI::getSyscallParams(void) const
 
 	memset(v, 0, sizeof(v));
 
-	dat = (const uint8_t*)g->getCPUState()->getStateData();
+	dat = (const uint8_t*)g.getCPUState()->getStateData();
 	for (unsigned i = 0; sc_reg_off[i] != ~0U && i < 7; i++) {
 		v[i] = *((const uint64_t*)(dat + sc_reg_off[i]));
 		if (is_32bit) v[i] &= 0xffffffff;
@@ -51,7 +49,7 @@ uint64_t RegStrABI::getSyscallResult(void) const
 	const void	*dat;
 
 	dat = (const void*)
-		((const uint8_t*)g->getCPUState()->getStateData() + scret_reg_off);
+		((const uint8_t*)g.getCPUState()->getStateData() + scret_reg_off);
 
 	return (is_32bit)
 		? *((const uint32_t*)dat)
@@ -62,7 +60,7 @@ void RegStrABI::setSyscallResult(uint64_t ret)
 {
 	void	*dat;
 
-	dat = (void*)((uint8_t*)g->getCPUState()->getStateData() + scret_reg_off);
+	dat = (void*)((uint8_t*)g.getCPUState()->getStateData() + scret_reg_off);
 	if (is_32bit) {
 		*((uint32_t*)dat) = ret & 0xffffffff;
 	} else {
@@ -72,7 +70,7 @@ void RegStrABI::setSyscallResult(uint64_t ret)
 
 uint64_t RegStrABI::getExitCode(void) const
 {
-	const uint8_t	*dat((const uint8_t*)g->getCPUState()->getStateData());
+	const uint8_t	*dat((const uint8_t*)g.getCPUState()->getStateData());
 	uint64_t	v;
 
 	v = *((const uint64_t*)(dat + exit_reg_off));
@@ -81,20 +79,12 @@ uint64_t RegStrABI::getExitCode(void) const
 	return v;
 }
 
-GuestABI* GuestABI::create(Guest* g)
+GuestABI* GuestABI::create(Guest& g)
 {
-	switch (g->getArch()) {
-	case Arch::X86_64: return new RegStrABI(g, ABI_LINUX_AMD64);
-	case Arch::ARM: return new RegStrABI(g, ABI_LINUX_ARM);
-	/* XXX: windows support */
-	case Arch::I386:
-		return new RegStrABI(g, ABI_LINUX_I386);
-
-	case Arch::MIPS32: return new RegStrABI(g, ABI_SPIM_MIPS32);
-	default:
-		std::cerr << "Unknown guest arch for ABI?\n";
-		break;
-	}
-
-	return NULL;
+#if 0
+	if (g.getArch() == Arch::MIPS32) 
+		return new RegStrABI(g, ABI_SPIM_MIPS32);
+#endif
+	/* XXX: windows support? */
+	return LinuxABI::create(g);
 }

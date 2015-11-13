@@ -19,10 +19,6 @@ struct ExtVexGuestARMState
 #define state2arm()	((VexGuestARMState*)(state_data))
 #define state2arm_ext() ((ExtVexGuestARMState*)(state_data))
 
-
-const char* ARMCPUState::abi_linux_scregs[] =
-{ "R7", "R0", "R1", "R2", "R3", "R4", "R5", NULL };
-
 ARMCPUState::ARMCPUState(void)
 {
 	state_byte_c = getFieldsSize(getFields());

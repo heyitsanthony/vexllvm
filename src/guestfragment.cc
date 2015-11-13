@@ -74,7 +74,7 @@ GuestFragment::GuestFragment(
 	memcpy(code, data, code_len);
 
 	cpu_state = GuestCPUState::create(arch);
-	abi = GuestABI::create(this);
+	abi = GuestABI::create(*this);
 
 	/* our one fragment mapping */
 	mem = new GuestMem();

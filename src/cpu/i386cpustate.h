@@ -13,8 +13,6 @@ class SyscallParams;
 class I386CPUState : public VexCPUState
 {
 public:
-typedef std::map<unsigned int, unsigned int> byte2elem_map;
-
 	I386CPUState();
 	~I386CPUState();
 	void setStackPtr(guest_ptr) override;
@@ -28,15 +26,6 @@ typedef std::map<unsigned int, unsigned int> byte2elem_map;
 	unsigned int getStackRegOff(void) const override;
 
 	void noteRegion(const char* name, guest_ptr addr) override;
-
-	static const char* abi_linux_scregs[];
 };
-
-#define	ABI_LINUX_I386	I386CPUState::abi_linux_scregs, \
-	"EAX",	/* syscall result */	\
-	"EBX",	/* get exit code */	\
-	true	/* 32-bit */
-
-
 
 #endif

@@ -82,6 +82,7 @@ OBJBASE=	guest.o			\
 		cpu/armcpustate.o	\
 		cpu/armsyscalls.o	\
 		cpu/mips32cpustate.o	\
+		cpu/linux_abi.o		\
 		fragcache.o		\
 		syscall/syscalls.o		\
 		syscall/spimsyscalls.o		\

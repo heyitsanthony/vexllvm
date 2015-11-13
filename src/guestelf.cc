@@ -31,7 +31,7 @@ GuestELF::GuestELF(ElfImg* in_img)
 {
 	mem = in_img->takeMem();
 	cpu_state = GuestCPUState::create(img->getArch());
-	abi = GuestABI::create(this);
+	abi = GuestABI::create(*this);
 }
 
 GuestELF::~GuestELF(void) {}

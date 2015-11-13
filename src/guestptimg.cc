@@ -82,7 +82,7 @@ GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 	}
 
 	cpu_state = GuestCPUState::create(getArch());
-	abi = GuestABI::create(this);
+	abi = GuestABI::create(*this);
 }
 
 GuestPTImg::~GuestPTImg(void)
@@ -241,9 +241,8 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 
 	/* copy guest state into our state, destroy old guest */
 	cpu_state = gs->cpu_state;
-	abi = gs->abi;
-	if (abi) abi->setGuest(this);
-	mem =  gs->mem;
+	abi = GuestABI::create(*this);
+	mem = gs->mem;
 	bin_path = gs->bin_path;
 	argv_ptrs = gs->getArgvPtrs();
 #ifndef BROKEN_OSDI
@@ -256,7 +255,6 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	gs->cpu_state = NULL;
 	gs->mem = NULL;
 	gs->bin_path = NULL;
-	gs->abi = NULL;
 	delete gs;
 
 	entry_pt = cur_pc;
