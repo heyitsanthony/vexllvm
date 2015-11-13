@@ -14,7 +14,7 @@
 #include "amd64cpustate.h"
 
 /* this header loads all of the system headers outside of the namespace */
-#include "syscall/translatedsyscall.h"
+#include "qemu/translatedsyscall.h"
 
 static GuestMem* g_mem = NULL;
 static std::vector<char*> g_to_delete;
@@ -47,23 +47,23 @@ namespace AMD64 {
 	#define mmap_find_vma(s, l)	mmap_find_vma_flags(s, l, MAP_32BIT)
 
 	/* our implementations of stuff ripped out of the qemu files */
-	#include "syscall/translatedutil.h"
+	#include "qemu/translatedutil.h"
 	/* generic type conversion utility routines */
-	#include "syscall/translatedthunk.h"
+	#include "qemu/translatedthunk.h"
 	/* terminal io definitions that are plaform dependent */
-	#include "cpu/amd64termbits.h"
+	#include "qemu/amd64termbits.h"
 	/* platform dependent signals */
-	#include "cpu/amd64signal.h"
+	#include "qemu/amd64signal.h"
 	/* structure and flag definitions that are platform independent */
-	#include "syscall/translatedsyscalldefs.h"
+	#include "qemu/translatedsyscalldefs.h"
 	/* we need load our platform specific stuff as well */
-	#include "cpu/amd64syscallnumbers.h"
+	#include "qemu/amd64syscallnumbers.h"
 	/* this constructs all of our syscall translation code */
-	#include "syscall/translatedsyscall.c"
+	#include "qemu/translatedsyscall.c"
 	/* this constructs all of our syscall translation code */
-	#include "syscall/translatedsignal.c"
+	#include "qemu/translatedsignal.c"
 	/* this has some tables and such used for type conversion */
-	#include "syscall/translatedthunk.c"
+	#include "qemu/translatedthunk.c"
 	
 	std::vector<int> g_host_to_guest_syscalls(512);
 	std::vector<int> g_guest_to_host_syscalls(512);

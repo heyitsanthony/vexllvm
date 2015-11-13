@@ -14,7 +14,7 @@
 
 
 /* this header loads all of the system headers outside of the namespace */
-#include "syscall/translatedsyscall.h"
+#include "qemu/translatedsyscall.h"
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
@@ -50,23 +50,23 @@ namespace I386 {
 	#define mmap_find_vma(s, l)	mmap_find_vma_flags(s, l, MAP_32BIT)
 
 	/* our implementations of stuff ripped out of the qemu files */
-	#include "syscall/translatedutil.h"
+	#include "qemu/translatedutil.h"
 	/* generic type conversion utility routines */
-	#include "syscall/translatedthunk.h"
+	#include "qemu/translatedthunk.h"
 	/* terminal io definitions that are plaform dependent */
-	#include "cpu/i386termbits.h"
+	#include "qemu/i386termbits.h"
 	/* platform dependent signals */
-	#include "cpu/i386signal.h"
+	#include "qemu/i386signal.h"
 	/* structure and flag definitions that are platform independent */
-	#include "syscall/translatedsyscalldefs.h"
+	#include "qemu/translatedsyscalldefs.h"
 	/* we need load our platform specific stuff as well */
-	#include "cpu/i386syscallnumbers.h"
+	#include "qemu/i386syscallnumbers.h"
 	/* this constructs all of our syscall translation code */
-	#include "syscall/translatedsyscall.c"
+	#include "qemu/translatedsyscall.c"
 	/* this constructs all of our syscall translation code */
-	#include "syscall/translatedsignal.c"
+	#include "qemu/translatedsignal.c"
 	/* this has some tables and such used for type conversion */
-	#include "syscall/translatedthunk.c"
+	#include "qemu/translatedthunk.c"
 	
 	std::vector<int> g_host_to_guest_syscalls(512);
 	std::vector<int> g_guest_to_host_syscalls(512);
