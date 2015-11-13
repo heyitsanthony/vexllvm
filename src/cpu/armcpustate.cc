@@ -6,6 +6,7 @@
 #include <cstring>
 #include <vector>
 
+#include "sc_xlate.h"
 #include "armcpustate.h"
 extern "C" {
 #include <valgrind/libvex_guest_arm.h>
@@ -25,6 +26,7 @@ ARMCPUState::ARMCPUState(void)
 	state_data = new uint8_t[state_byte_c+1];
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
+	xlate = std::make_unique<ARMSyscallXlate>();
 }
 
 ARMCPUState::~ARMCPUState()

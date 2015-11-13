@@ -7,6 +7,7 @@
 
 #include "guest.h"
 #include "i386cpustate.h"
+#include "sc_xlate.h"
 extern "C" {
 #include <valgrind/libvex_guest_x86.h>
 }
@@ -20,6 +21,7 @@ I386CPUState::I386CPUState()
 	memset(state_data, 0, state_byte_c+1);
 	exit_type = &state_data[state_byte_c];
 	state2i386()->guest_DFLAG = 1;
+	xlate = std::make_unique<I386SyscallXlate>();
 }
 
 void I386CPUState::noteRegion(const char* name, guest_ptr g)

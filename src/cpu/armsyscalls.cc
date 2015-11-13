@@ -2,10 +2,10 @@
 #include <sstream>
 #include "Sugar.h"
 
-#include "syscall/syscalls.h"
+#include "cpu/sc_xlate.h"
 #include "guest.h"
 #include "guestmem.h"
-#include "armcpustate.h"
+#include "cpu/armcpustate.h"
 
 /* this header loads all of the system headers outside of the namespace */
 #include "qemu/translatedsyscall.h"
@@ -89,7 +89,7 @@ namespace ARM {
 }
 
 
-int Syscalls::translateARMSyscall(int sys_nr) const {
+int ARMSyscallXlate::translateSyscall(int sys_nr) const {
 	if((unsigned)sys_nr > ARM::g_guest_to_host_syscalls.size())
 		return -1;
 
@@ -97,7 +97,7 @@ int Syscalls::translateARMSyscall(int sys_nr) const {
 	return host_sys_nr;
 }
 
-std::string Syscalls::getARMSyscallName(int sys_nr) const {
+std::string ARMSyscallXlate::getSyscallName(int sys_nr) const {
 	switch(sys_nr) {
 	case ARM_NR_cacheflush:
 		return "cacheflush";
@@ -113,7 +113,7 @@ std::string Syscalls::getARMSyscallName(int sys_nr) const {
 }
 
 
-uintptr_t Syscalls::applyARMSyscall(SyscallParams& args)
+uintptr_t ARMSyscallXlate::apply(Guest& g, SyscallParams& args)
 {
 	unsigned long sc_ret = ~0UL;
 
@@ -123,24 +123,24 @@ uintptr_t Syscalls::applyARMSyscall(SyscallParams& args)
 	   the other mechanisms finish the job */
 	switch (args.getSyscall()) {
 	case ARM_NR_set_tls:
-		if(ARM_set_tls(args, sc_ret))
+		if(ARM_set_tls(g, args, sc_ret))
 			return sc_ret;
 		break;
 	case ARM_NR_cacheflush:
-		if(ARM_cacheflush(args, sc_ret))
+		if(ARM_cacheflush(g, args, sc_ret))
 			return sc_ret;
 		break;
 	case TARGET_NR_mmap2:
-		if(ARM_mmap2(args, sc_ret))
+		if(ARM_mmap2(g, args, sc_ret))
 			return sc_ret;
 		break;
 	default:
 		break;
 	}
 
-	if (tryPassthrough(args, (uintptr_t&)sc_ret)) return sc_ret;
+	if (tryPassthrough(g, args, (uintptr_t&)sc_ret)) return sc_ret;
 
-	g_mem = mappings;
+	g_mem = g.getMem();
 	sc_ret = ARM::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),
@@ -161,10 +161,11 @@ SYSCALL_BODY(ARM, cacheflush) { return true; }
 
 SYSCALL_BODY(ARM, set_tls)
 {
-	ARMCPUState* cpu_state = (ARMCPUState*)this->cpu_state;
+	auto cpu_state = (ARMCPUState*)g.getCPUState();
 	cpu_state->setThreadPointer(args.getArg(0));
 	//also set the emulation location
 	GuestMem::Mapping tls_area;
+	auto mappings = g.getMem();
 	mappings->lookupMapping(guest_ptr(0xffff0000), tls_area);
 	mappings->mprotect(guest_ptr(0xffff0000), PAGE_SIZE,
 		tls_area.cur_prot | PROT_WRITE);
@@ -178,7 +179,7 @@ SYSCALL_BODY(ARM, set_tls)
 SYSCALL_BODY(ARM, mmap2)
 {
 	guest_ptr m;
-	sc_ret = mappings->mmap(m, 
+	sc_ret = g.getMem()->mmap(m, 
 		guest_ptr(args.getArg(0)),
 		args.getArg(1), 
 		args.getArg(2), 

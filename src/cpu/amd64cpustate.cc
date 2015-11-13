@@ -5,6 +5,7 @@
 #include <cstring>
 #include <vector>
 
+#include "sc_xlate.h"
 #include "cpu/amd64cpustate.h"
 
 #define state2amd64()	((VexGuestAMD64State*)(state_data))
@@ -18,6 +19,7 @@ AMD64CPUState::AMD64CPUState()
 	state2amd64()->guest_DFLAG = 1;
 	state2amd64()->guest_CC_OP = 0 /* AMD64G_CC_OP_COPY */;
 	state2amd64()->guest_CC_DEP1 = (1 << 2);
+	xlate = std::make_unique<AMD64SyscallXlate>();
 }
 
 AMD64CPUState::~AMD64CPUState() { delete [] state_data; }

@@ -9,8 +9,8 @@
 #include "Sugar.h"
 
 #include "guest.h"
-#include "syscall/syscalls.h"
-#include "i386cpustate.h"
+#include "cpu/sc_xlate.h"
+#include "cpu/i386cpustate.h"
 
 
 /* this header loads all of the system headers outside of the namespace */
@@ -95,7 +95,7 @@ namespace I386 {
 }
 
 
-int Syscalls::translateI386Syscall(int sys_nr) const {
+int I386SyscallXlate::translateSyscall(int sys_nr) const {
 	if((unsigned)sys_nr > I386::g_guest_to_host_syscalls.size())
 		return -1;
 
@@ -103,7 +103,7 @@ int Syscalls::translateI386Syscall(int sys_nr) const {
 	return host_sys_nr;
 }
 
-std::string Syscalls::getI386SyscallName(int sys_nr) const {
+std::string I386SyscallXlate::getSyscallName(int sys_nr) const {
 	if((unsigned)sys_nr > I386::g_guest_syscall_names.size()) {
 		std::ostringstream o;
 		o << sys_nr;
@@ -116,7 +116,7 @@ std::string Syscalls::getI386SyscallName(int sys_nr) const {
 SYSCALL_BODY(I386, mmap2)
 {
 	guest_ptr m;
-	sc_ret = mappings->mmap(m,
+	sc_ret = g.getMem()->mmap(m,
 		guest_ptr(args.getArg(0)),
 		args.getArg(1),
 		args.getArg(2),
@@ -128,7 +128,7 @@ SYSCALL_BODY(I386, mmap2)
 	return true;
 }
 
-uintptr_t Syscalls::applyI386Syscall(SyscallParams& args)
+uintptr_t I386SyscallXlate::apply(Guest& g, SyscallParams& args)
 {
 	uintptr_t sc_ret = 0;
 
@@ -140,16 +140,16 @@ uintptr_t Syscalls::applyI386Syscall(SyscallParams& args)
 	   the other mechanisms finish the job */
 	switch (args.getSyscall()) {
 	case TARGET_NR_mmap2:
-		if(I386_mmap2(args, (unsigned long&)sc_ret))
+		if(I386_mmap2(g, args, (unsigned long&)sc_ret))
 			return sc_ret;
 		break;
 	default:
 		break;
 	}
 
-	if (tryPassthrough(args, sc_ret)) return sc_ret;
+	if (tryPassthrough(g, args, sc_ret)) return sc_ret;
 	
-	g_mem = mappings;
+	g_mem = g.getMem();
 	sc_ret = I386::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),

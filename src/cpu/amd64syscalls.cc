@@ -10,7 +10,7 @@
 
 #include "guest.h"
 #include "guestmem.h"
-#include "syscall/syscalls.h"
+#include "cpu/sc_xlate.h"
 #include "amd64cpustate.h"
 
 /* this header loads all of the system headers outside of the namespace */
@@ -92,7 +92,7 @@ namespace AMD64 {
 }
 
 
-int Syscalls::translateAMD64Syscall(int sys_nr) const {
+int AMD64SyscallXlate::translateSyscall(int sys_nr) const {
 	if((unsigned)sys_nr > AMD64::g_guest_to_host_syscalls.size())
 		return -1;
 
@@ -100,7 +100,7 @@ int Syscalls::translateAMD64Syscall(int sys_nr) const {
 	return host_sys_nr;
 }
 
-std::string Syscalls::getAMD64SyscallName(int sys_nr) const {
+std::string AMD64SyscallXlate::getSyscallName(int sys_nr) const {
 	if((unsigned)sys_nr > AMD64::g_guest_syscall_names.size()) {
 		std::ostringstream o;
 		o << sys_nr;
@@ -117,8 +117,7 @@ std::string Syscalls::getAMD64SyscallName(int sys_nr) const {
 #define ARCH_GET_FS	0x1003
 #endif
 
-
-uintptr_t Syscalls::applyAMD64Syscall(SyscallParams& args)
+uintptr_t AMD64SyscallXlate::apply(Guest& g, SyscallParams& args)
 {
 	unsigned long sc_ret = ~0UL;
 
@@ -128,16 +127,16 @@ uintptr_t Syscalls::applyAMD64Syscall(SyscallParams& args)
 	   the other mechanisms finish the job */
 	switch (args.getSyscall()) {
 	case SYS_arch_prctl:
-		if(AMD64_arch_prctl(args, sc_ret))
+		if(AMD64_arch_prctl(g, args, sc_ret))
 			return sc_ret;
 		break;
 	default:
 		break;
 	}
 
-	if (tryPassthrough(args, (uintptr_t&)sc_ret)) return sc_ret;
+	if (tryPassthrough(g, args, (uintptr_t&)sc_ret)) return sc_ret;
 	
-	g_mem = mappings;
+	g_mem = g.getMem();
 	sc_ret = AMD64::do_syscall(NULL,
 		args.getSyscall(),
 		args.getArg(0),
@@ -156,7 +155,7 @@ uintptr_t Syscalls::applyAMD64Syscall(SyscallParams& args)
 
 SYSCALL_BODY(AMD64, arch_prctl)
 {
-	AMD64CPUState* cpu_state = (AMD64CPUState*)this->cpu_state;
+	auto cpu_state = (AMD64CPUState*)g.getCPUState();
 	if(args.getArg(0) == ARCH_GET_FS) {
 		sc_ret = cpu_state->getFSBase();
 	} else if(args.getArg(0) == ARCH_SET_FS) {
