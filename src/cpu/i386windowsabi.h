@@ -3,16 +3,14 @@
 
 #include "guestabi.h"
 
-class I386WindowsABI : public GuestABI
+class I386WindowsABI : public RegStrABI
 {
 public:
-	I386WindowsABI(Guest* g_) : GuestABI(g_) { use_linux_sysenter = false; }
+	I386WindowsABI(Guest* g_);
 	virtual ~I386WindowsABI(void) {}
-
-	virtual SyscallParams getSyscallParams(void) const;
-	virtual void setSyscallResult(uint64_t ret);
-	virtual uint64_t getSyscallResult(void) const;
-	virtual uint64_t getExitCode(void) const; 
+	SyscallParams getSyscallParams(void) const override;
+private:
+	unsigned	edx_off;
 };
 
 

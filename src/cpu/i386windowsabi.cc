@@ -3,18 +3,20 @@
 #include "guestcpustate.h"
 #include "guest.h"
 
-extern "C" {
-#include <valgrind/libvex_guest_x86.h>
+I386WindowsABI::I386WindowsABI(Guest* g_)
+: RegStrABI(g_, nullptr, "EAX", "EAX", true)
+, edx_off(g_->getCPUState()->name2Off("EDX"))
+{
+	use_linux_sysenter = false;
 }
-
-#define state2i386()	((VexGuestX86State*)(g->getCPUState()->getStateData()))
 
 SyscallParams I386WindowsABI::getSyscallParams(void) const
 {
-	const VexGuestX86State	*x86(state2i386());
-#define GET_ARGN(x,n)	g->getMem()->readNative(guest_ptr(x->guest_EDX), n)
+	auto	dat = (const uint8_t*)g->getCPUState()->getStateData();
+	uint32_t edx_v = *((const uint32_t*)(dat + edx_off));
+#define GET_ARGN(x,n)	g->getMem()->readNative(guest_ptr(edx_v), n)
 	return SyscallParams(
-		x86->guest_EAX, /* sysnr */
+		getSyscallResult(), /* sysnr */
 		GET_ARGN(x86,0),
 		GET_ARGN(x86,1),
 		GET_ARGN(x86,2),
@@ -22,12 +24,3 @@ SyscallParams I386WindowsABI::getSyscallParams(void) const
 		GET_ARGN(x86,4),
 		GET_ARGN(x86,5));
 }
-
-void I386WindowsABI::setSyscallResult(uint64_t ret)
-{ state2i386()->guest_EAX = (uint32_t)ret; }
-
-uint64_t I386WindowsABI::getExitCode(void) const
-{ return state2i386()->guest_EAX; }
-
-uint64_t I386WindowsABI::getSyscallResult(void) const
-{ return state2i386()->guest_EAX; }

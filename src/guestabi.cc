@@ -17,10 +17,12 @@ RegStrABI::RegStrABI(
 , is_32bit(_is_32bit)
 {
 	GuestCPUState	*cpu(g->getCPUState());
-	unsigned	i;
+	unsigned	i = 0;
 
-	for (i = 0; sc_regs[i] && i < 7; i++) {
-		sc_reg_off[i] = cpu->name2Off(sc_regs[i]);
+	if (sc_regs) {
+		for (; sc_regs[i] && i < 7; i++) {
+			sc_reg_off[i] = cpu->name2Off(sc_regs[i]);
+		}
 	}
 	sc_reg_off[i] = ~0U;
 
