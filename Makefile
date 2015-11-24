@@ -47,6 +47,11 @@ $(error "No symlink 'guestlib' pointing to guestlib")
 endif
 GUESTLIB_PATH=`pwd`/guestlib
 GUESTLIB=$(GUESTLIB_PATH)/bin/guestlib.a
+ifeq ($(shell ls $(GUESTLIB)),)
+$(error "No guestlib.a compiled?")
+endif
+
+
 CFLAGS += -I$(GUESTLIB_PATH)/src
 
 CFLAGS += $(CFLAG_LIBS)
