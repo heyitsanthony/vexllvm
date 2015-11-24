@@ -18,13 +18,9 @@ void dumpIRSBs(void)
 
 GuestPTImg* createAttached(void)
 {
-	ProcArgs	*pa;
-	int		pid;
-
-	pid = atoi(getenv("VEXLLVM_ATTACH"));
-	pa = new ProcArgs(pid);
-	return GuestPTImg::createAttached<GuestPTImg>(
-		pid, pa->getArgc(), pa->getArgv(), pa->getEnv());
+	pid_t	pid = atoi(getenv("VEXLLVM_ATTACH"));
+	auto	pa = new ProcArgs(pid);
+	return GuestPTImg::createAttached<GuestPTImg>(pid, pa->getArgv());
 }
 
 int main(int argc, char* argv[], char* envp[])

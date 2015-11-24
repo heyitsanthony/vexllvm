@@ -177,22 +177,16 @@ GuestChkPt* createAttached(int pid)
 	if (getenv("VEXLLVM_CHKPT_SLOW") != NULL) {
 		return GuestPTImg::createAttached<GuestChkPtSlow>(
 			pid,
-			pa->getArgc(),
-			pa->getArgv(),
-			pa->getEnv());
+			pa->getArgv());
 	} else if (getenv("VEXLLVM_CHKPT_PREPOST") != NULL) {
 		return GuestPTImg::createAttached<GuestChkPtPrePost>(
 			pid,
-			pa->getArgc(),
-			pa->getArgv(),
-			pa->getEnv());
+			pa->getArgv());
 	}
 
 	return GuestPTImg::createAttached<GuestChkPtFast>(
 		pid,
-		pa->getArgc(),
-		pa->getArgv(),
-		pa->getEnv());
+		pa->getArgv());
 }
 
 GuestChkPt* createNewProc(int argc, char** argv, char** envp)

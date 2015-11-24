@@ -29,8 +29,7 @@ GuestPTImg* createAttached(void)
 
 	pid = atoi(getenv("VEXLLVM_ATTACH"));
 	pa = new ProcArgs(pid);
-	return GuestPTImg::createAttached<GuestPTImg>(
-		pid, pa->getArgc(), pa->getArgv(), pa->getEnv());
+	return GuestPTImg::createAttached<GuestPTImg>(pid, pa->getArgv());
 }
 
 int main(int argc, char* argv[], char* envp[])

@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "vexexec.h"
 #include "vexcpustate.h"
 #include "guestsnapshot.h"
