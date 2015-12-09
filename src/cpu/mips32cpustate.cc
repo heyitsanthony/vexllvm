@@ -16,21 +16,6 @@ extern "C" {
 const char* MIPS32CPUState::abi_spim_scregs[] =
 { "R2", "R4", "R5", "R6", "R7", "R8", "R9", NULL};
 
-MIPS32CPUState::MIPS32CPUState()
-{
-	state_byte_c = getFieldsSize(getFields());
-	state_data = new uint8_t[state_byte_c+1];
-	memset(state_data, 0, state_byte_c+1);
-	exit_type = &state_data[state_byte_c];
-}
-
-MIPS32CPUState::~MIPS32CPUState() { delete [] state_data; }
-
-void MIPS32CPUState::setPC(guest_ptr ip) { state2mips32()->guest_PC = ip; }
-
-guest_ptr MIPS32CPUState::getPC(void) const
-{ return guest_ptr(state2mips32()->guest_PC); }
-
 static struct guest_ctx_field mips32_fields[] =
 {
 //	{32, 32, "GPR"},
@@ -71,65 +56,21 @@ static struct guest_ctx_field mips32_fields[] =
 	{0}	/* time to stop */
 };
 
-
-const struct guest_ctx_field* MIPS32CPUState::getFields(void) const
-{ return mips32_fields; }
-
-const char* MIPS32CPUState::off2Name(unsigned int off) const
+MIPS32CPUState::MIPS32CPUState()
+	: VexCPUState(mips32_fields)
 {
-	switch (off) {
-#define CASE_OFF2NAME(x)				\
-	CASE_OFF2NAME_4(VexGuestMIPS32State, guest_##x)	\
-	return #x;
-
-	CASE_OFF2NAME(r0) CASE_OFF2NAME(r1) CASE_OFF2NAME(r2)
-	CASE_OFF2NAME(r3) CASE_OFF2NAME(r4) CASE_OFF2NAME(r5)
-	CASE_OFF2NAME(r6) CASE_OFF2NAME(r7) CASE_OFF2NAME(r8)
-	CASE_OFF2NAME(r9) CASE_OFF2NAME(r10) CASE_OFF2NAME(r12)
-	CASE_OFF2NAME(r13) CASE_OFF2NAME(r14) CASE_OFF2NAME(r15)
-	CASE_OFF2NAME(r16) CASE_OFF2NAME(r17) CASE_OFF2NAME(r18)
-	CASE_OFF2NAME(r19) CASE_OFF2NAME(r20) CASE_OFF2NAME(r21)
-	CASE_OFF2NAME(r22) CASE_OFF2NAME(r23) CASE_OFF2NAME(r24)
-	CASE_OFF2NAME(r25) CASE_OFF2NAME(r26) CASE_OFF2NAME(r27)
-	CASE_OFF2NAME(r28) CASE_OFF2NAME(r29) CASE_OFF2NAME(r30)
-	CASE_OFF2NAME(r31)
-
-	CASE_OFF2NAME(PC)
-	CASE_OFF2NAME(HI)
-	CASE_OFF2NAME(LO)
-	CASE_OFF2NAME(FIR)
-	CASE_OFF2NAME(FCCR)
-	CASE_OFF2NAME(FEXR)
-	CASE_OFF2NAME(FENR)
-	CASE_OFF2NAME(FCSR)
-
-	CASE_OFF2NAME(f0) CASE_OFF2NAME(f1) CASE_OFF2NAME(f2)
-	CASE_OFF2NAME(f3) CASE_OFF2NAME(f4) CASE_OFF2NAME(f5)
-	CASE_OFF2NAME(f6) CASE_OFF2NAME(f7) CASE_OFF2NAME(f8)
-	CASE_OFF2NAME(f9) CASE_OFF2NAME(f10) CASE_OFF2NAME(f12)
-	CASE_OFF2NAME(f13) CASE_OFF2NAME(f14) CASE_OFF2NAME(f15)
-	CASE_OFF2NAME(f16) CASE_OFF2NAME(f17) CASE_OFF2NAME(f18)
-	CASE_OFF2NAME(f19) CASE_OFF2NAME(f20) CASE_OFF2NAME(f21)
-	CASE_OFF2NAME(f22) CASE_OFF2NAME(f23) CASE_OFF2NAME(f24)
-	CASE_OFF2NAME(f25) CASE_OFF2NAME(f26) CASE_OFF2NAME(f27)
-	CASE_OFF2NAME(f28) CASE_OFF2NAME(f29) CASE_OFF2NAME(f30)
-	CASE_OFF2NAME(f31)
-
-
-	CASE_OFF2NAME(ULR)
-//	CASE_OFF2NAME(EMWARN) EMNOTE in svn
-	CASE_OFF2NAME(CMSTART)
-	CASE_OFF2NAME(CMLEN)
-	CASE_OFF2NAME(NRADDR)
-
-//	CASE_OFF2NAME(FAILADDR)
-//	CASE_OFF2NAME(COUNTER)
-	CASE_OFF2NAME(COND)
-
-	default: return NULL;
-	}
-	return NULL;
+	state_byte_c = sizeof(VexGuestMIPS32State);
+	state_data = new uint8_t[state_byte_c+1];
+	memset(state_data, 0, state_byte_c+1);
+	exit_type = &state_data[state_byte_c];
 }
+
+MIPS32CPUState::~MIPS32CPUState() { delete [] state_data; }
+
+void MIPS32CPUState::setPC(guest_ptr ip) { state2mips32()->guest_PC = ip; }
+
+guest_ptr MIPS32CPUState::getPC(void) const
+{ return guest_ptr(state2mips32()->guest_PC); }
 
 void MIPS32CPUState::setStackPtr(guest_ptr stack_ptr)
 { state2mips32()->guest_r29 = (uint64_t)stack_ptr; }

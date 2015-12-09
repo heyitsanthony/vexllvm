@@ -10,28 +10,6 @@
 
 #define state2amd64()	((VexGuestAMD64State*)(state_data))
 
-AMD64CPUState::AMD64CPUState()
-{
-	state_byte_c = getFieldsSize(getFields());
-	state_data = new uint8_t[state_byte_c+1];
-	memset(state_data, 0, state_byte_c+1);
-	exit_type = &state_data[state_byte_c];
-	state2amd64()->guest_DFLAG = 1;
-	state2amd64()->guest_CC_OP = 0 /* AMD64G_CC_OP_COPY */;
-	state2amd64()->guest_CC_DEP1 = (1 << 2);
-	xlate = std::make_unique<AMD64SyscallXlate>();
-}
-
-AMD64CPUState::~AMD64CPUState() { delete [] state_data; }
-
-void AMD64CPUState::setPC(guest_ptr ip) {
-	state2amd64()->guest_RIP = ip;
-}
-
-guest_ptr AMD64CPUState::getPC(void) const {
-	return guest_ptr(state2amd64()->guest_RIP);
-}
-
 /* ripped from libvex_guest_amd64 */
 static struct guest_ctx_field amd64_fields[] =
 {
@@ -98,65 +76,27 @@ static struct guest_ctx_field amd64_fields[] =
 	{0}	/* time to stop */
 };
 
-const struct guest_ctx_field* AMD64CPUState::getFields(void) const
-{ return amd64_fields; }
-
-const char* AMD64CPUState::off2Name(unsigned int off) const
+AMD64CPUState::AMD64CPUState()
+	: VexCPUState(amd64_fields)
 {
-	switch (off) {
-#define CASE_OFF2NAME(x) \
-	CASE_OFF2NAME_8(VexGuestAMD64State, guest_##x)	\
-	return #x;
+	state_byte_c = sizeof(VexGuestAMD64State);
+	state_data = new uint8_t[state_byte_c+1];
+	memset(state_data, 0, state_byte_c+1);
+	exit_type = &state_data[state_byte_c];
+	state2amd64()->guest_DFLAG = 1;
+	state2amd64()->guest_CC_OP = 0 /* AMD64G_CC_OP_COPY */;
+	state2amd64()->guest_CC_DEP1 = (1 << 2);
+	xlate = std::make_unique<AMD64SyscallXlate>();
+}
 
-#define CASE_OFF2NAMEN(x,y)	\
-	CASE_OFF2NAME_8(VexGuestAMD64State, guest_##x##y)	\
-	return #x"["#y"]";
+AMD64CPUState::~AMD64CPUState() { delete [] state_data; }
 
-	CASE_OFF2NAME(RAX)
-	CASE_OFF2NAME(RCX)
-	CASE_OFF2NAME(RDX)
-	CASE_OFF2NAME(RBX)
-	CASE_OFF2NAME(RSP)
-	CASE_OFF2NAME(RBP)
-	CASE_OFF2NAME(RSI)
-	CASE_OFF2NAME(RDI)
-	CASE_OFF2NAMEN(R,8)
-	CASE_OFF2NAMEN(R,9)
-	CASE_OFF2NAMEN(R,10)
-	CASE_OFF2NAMEN(R,11)
-	CASE_OFF2NAMEN(R,12)
-	CASE_OFF2NAMEN(R,13)
-	CASE_OFF2NAMEN(R,14)
-	CASE_OFF2NAMEN(R,15)
-	CASE_OFF2NAME(CC_OP)
-	CASE_OFF2NAMEN(CC_DEP,1)
-	CASE_OFF2NAMEN(CC_DEP,2)
-	CASE_OFF2NAME(CC_NDEP)
-	CASE_OFF2NAME(DFLAG)
-	CASE_OFF2NAME(RIP)
-	CASE_OFF2NAME(ACFLAG)
-	CASE_OFF2NAME(IDFLAG)
-	CASE_OFF2NAME(SSEROUND)
-	CASE_OFF2NAMEN(YMM,0)
-	CASE_OFF2NAMEN(YMM,1)
-	CASE_OFF2NAMEN(YMM,2)
-	CASE_OFF2NAMEN(YMM,3)
-	CASE_OFF2NAMEN(YMM,4)
-	CASE_OFF2NAMEN(YMM,5)
-	CASE_OFF2NAMEN(YMM,6)
-	CASE_OFF2NAMEN(YMM,7)
-	CASE_OFF2NAMEN(YMM,8)
-	CASE_OFF2NAMEN(YMM,9)
-	CASE_OFF2NAMEN(YMM,10)
-	CASE_OFF2NAMEN(YMM,11)
-	CASE_OFF2NAMEN(YMM,12)
-	CASE_OFF2NAMEN(YMM,13)
-	CASE_OFF2NAMEN(YMM,14)
-	CASE_OFF2NAMEN(YMM,15)
-	CASE_OFF2NAMEN(YMM,16)
-	default: return NULL;
-	}
-	return NULL;
+void AMD64CPUState::setPC(guest_ptr ip) {
+	state2amd64()->guest_RIP = ip;
+}
+
+guest_ptr AMD64CPUState::getPC(void) const {
+	return guest_ptr(state2amd64()->guest_RIP);
 }
 
 void AMD64CPUState::setStackPtr(guest_ptr stack_ptr)

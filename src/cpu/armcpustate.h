@@ -28,12 +28,8 @@ public:
 	void setThreadPointer(uint32_t v);
 	virtual void print(std::ostream& os, const void*) const;
 
-	const char* off2Name(unsigned int off) const;
-
 	virtual unsigned int getRetOff(void) const;
 	virtual unsigned int getStackRegOff(void) const;
-
-	const struct guest_ctx_field* getFields(void) const;
 };
 
 #endif

@@ -14,33 +14,6 @@ extern "C" {
 
 #define state2i386()	((VexGuestX86State*)(state_data))
 
-I386CPUState::I386CPUState()
-{
-	state_byte_c = getFieldsSize(getFields());
-	state_data = new uint8_t[state_byte_c+1];
-	memset(state_data, 0, state_byte_c+1);
-	exit_type = &state_data[state_byte_c];
-	state2i386()->guest_DFLAG = 1;
-	xlate = std::make_unique<I386SyscallXlate>();
-}
-
-void I386CPUState::noteRegion(const char* name, guest_ptr g)
-{
-	if (strcmp(name, "regs.ldt") == 0)
-		state2i386()->guest_LDT = g.o;
-	else if (strcmp(name, "regs.gdt") == 0)
-		state2i386()->guest_GDT = g.o;
-	else
-		VexCPUState::noteRegion(name, g);
-}
-
-I386CPUState::~I386CPUState() {	delete [] state_data; }
-
-void I386CPUState::setPC(guest_ptr ip) { state2i386()->guest_EIP = ip; }
-
-guest_ptr I386CPUState::getPC(void) const
-{ return guest_ptr(state2i386()->guest_EIP); }
-
 /* ripped from libvex_guest_86 */
 static struct guest_ctx_field x86_fields[] =
 {
@@ -108,68 +81,33 @@ static struct guest_ctx_field x86_fields[] =
 	{0}	/* time to stop */
 };
 
-const char* I386CPUState::off2Name(unsigned int off) const
+I386CPUState::I386CPUState()
+	: VexCPUState(x86_fields)
 {
-	switch (off) {
-#define CASE_OFF2NAME(x) \
-	CASE_OFF2NAME_4(VexGuestX86State, guest_##x) \
-	return #x;
-
-	CASE_OFF2NAME(EAX)
-	CASE_OFF2NAME(ECX)
-	CASE_OFF2NAME(EDX)
-	CASE_OFF2NAME(EBX)
-	CASE_OFF2NAME(ESP)
-	CASE_OFF2NAME(EBP)
-	CASE_OFF2NAME(ESI)
-	CASE_OFF2NAME(EDI)
-	CASE_OFF2NAME(CC_OP)
-	CASE_OFF2NAME(CC_DEP1)
-	CASE_OFF2NAME(CC_DEP2)
-	CASE_OFF2NAME(CC_NDEP)
-	CASE_OFF2NAME(DFLAG)
-	CASE_OFF2NAME(IDFLAG)
-	CASE_OFF2NAME(ACFLAG)
-	CASE_OFF2NAME(EIP)
-	CASE_OFF2NAME(FPROUND)
-	CASE_OFF2NAME(FC3210)
-	CASE_OFF2NAME(FTOP)
-	CASE_OFF2NAME(SSEROUND)
-	CASE_OFF2NAME(XMM0)
-	CASE_OFF2NAME(XMM1)
-	CASE_OFF2NAME(XMM2)
-	CASE_OFF2NAME(XMM3)
-	CASE_OFF2NAME(XMM4)
-	CASE_OFF2NAME(XMM5)
-	CASE_OFF2NAME(XMM6)
-	CASE_OFF2NAME(XMM7)
-	
-#undef CASE_OFF2NAME
-#define CASE_OFF2NAME(x)	\
-	case offsetof(VexGuestX86State, guest_##x):	\
-	case 1+offsetof(VexGuestX86State, guest_##x):	\
-	return #x;
-
-	CASE_OFF2NAME(CS)
-	CASE_OFF2NAME(DS)
-	CASE_OFF2NAME(ES)
-	CASE_OFF2NAME(FS)
-	CASE_OFF2NAME(GS)
-	CASE_OFF2NAME(SS)
-	
-#undef CASE_OFF2NAME	
-#define CASE_OFF2NAME(x)				\
-	CASE_OFF2NAME_8(VexGuestX86State, guest_##x)	\
-	return #x;
-	CASE_OFF2NAME(LDT)
-	CASE_OFF2NAME(GDT)
-	default: return NULL;
-	}
-	return NULL;
+	state_byte_c = sizeof(VexGuestX86State);
+	state_data = new uint8_t[state_byte_c+1];
+	memset(state_data, 0, state_byte_c+1);
+	exit_type = &state_data[state_byte_c];
+	state2i386()->guest_DFLAG = 1;
+	xlate = std::make_unique<I386SyscallXlate>();
 }
 
-const struct guest_ctx_field* I386CPUState::getFields(void) const
-{ return x86_fields; }
+void I386CPUState::noteRegion(const char* name, guest_ptr g)
+{
+	if (strcmp(name, "regs.ldt") == 0)
+		state2i386()->guest_LDT = g.o;
+	else if (strcmp(name, "regs.gdt") == 0)
+		state2i386()->guest_GDT = g.o;
+	else
+		VexCPUState::noteRegion(name, g);
+}
+
+I386CPUState::~I386CPUState() {	delete [] state_data; }
+
+void I386CPUState::setPC(guest_ptr ip) { state2i386()->guest_EIP = ip; }
+
+guest_ptr I386CPUState::getPC(void) const
+{ return guest_ptr(state2i386()->guest_EIP); }
 
 void I386CPUState::setStackPtr(guest_ptr stack_ptr)
 {

@@ -21,8 +21,6 @@ public:
 	guest_ptr getPC(void) const override;
 
 	void print(std::ostream& os, const void*) const override;
-	const char* off2Name(unsigned int off) const override;
-	const struct guest_ctx_field* getFields(void) const override;
 	unsigned int getStackRegOff(void) const override;
 
 	void noteRegion(const char* name, guest_ptr addr) override;

@@ -21,7 +21,9 @@ enum GuestExitType {
 class VexCPUState : public GuestCPUState
 {
 public:
-	VexCPUState() : exit_type(nullptr) {}
+	VexCPUState(const guest_ctx_field *f)
+		: GuestCPUState(f)
+		, exit_type(nullptr) {}
 
 	static VexCPUState *create(Arch::Arch);
 

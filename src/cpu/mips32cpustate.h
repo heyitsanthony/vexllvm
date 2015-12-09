@@ -22,10 +22,6 @@ public:
 	
 	void print(std::ostream& os, const void*) const;
 
-	const char* off2Name(unsigned int off) const;
-
-	const struct guest_ctx_field* getFields(void) const;
-
 	static const char* abi_spim_scregs[];
 };
 

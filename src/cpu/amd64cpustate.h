@@ -51,11 +51,7 @@ public:
 	void setFSBase(uintptr_t base);
 	uintptr_t getFSBase() const;
 
-	const char* off2Name(unsigned int off) const;
-
 	virtual int cpu2gdb(int gdb_off) const;
-
-	virtual const struct guest_ctx_field* getFields(void) const;
 };
 
 #endif

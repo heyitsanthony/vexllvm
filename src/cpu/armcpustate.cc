@@ -20,28 +20,6 @@ struct ExtVexGuestARMState
 #define state2arm()	((VexGuestARMState*)(state_data))
 #define state2arm_ext() ((ExtVexGuestARMState*)(state_data))
 
-ARMCPUState::ARMCPUState(void)
-{
-	state_byte_c = getFieldsSize(getFields());
-	state_data = new uint8_t[state_byte_c+1];
-	memset(state_data, 0, state_byte_c+1);
-	exit_type = &state_data[state_byte_c];
-	xlate = std::make_unique<ARMSyscallXlate>();
-}
-
-ARMCPUState::~ARMCPUState()
-{
-	delete [] state_data;
-}
-
-void ARMCPUState::setPC(guest_ptr ip) { state2arm()->guest_R15T = ip; }
-
-guest_ptr ARMCPUState::getPC(void) const {
-	/* todo is this right, do we need to mask the low
-	   bits that control whether its in thumb mode or not? */
-	return guest_ptr(state2arm()->guest_R15T);
-}
-
 /* ripped from libvex_guest_arm */
 static struct guest_ctx_field arm_fields[] =
 {
@@ -108,101 +86,27 @@ static struct guest_ctx_field arm_fields[] =
 	{0}	/* time to stop */
 };
 
-const struct guest_ctx_field* ARMCPUState::getFields(void) const
-{ return arm_fields; }
-
-const char* ARMCPUState::off2Name(unsigned int off) const
+ARMCPUState::ARMCPUState(void)
+	: VexCPUState(arm_fields)
 {
-	switch (off) {
-#define CASE_OFF2NAME2(x,y)				\
-	CASE_OFF2NAME_4(VexGuestARMState, guest_##y)	\
-	return #x;
+	state_byte_c = sizeof(ExtVexGuestARMState);
+	state_data = new uint8_t[state_byte_c+1];
+	memset(state_data, 0, state_byte_c+1);
+	exit_type = &state_data[state_byte_c];
+	xlate = std::make_unique<ARMSyscallXlate>();
+}
 
-#define CASE_OFF2NAME(x)	\
-	CASE_OFF2NAME_4(VexGuestARMState, guest_##x)	\
-	return #x;
+ARMCPUState::~ARMCPUState()
+{
+	delete [] state_data;
+}
 
-#define CASE_OFF2NAME_NUM(x,y)	\
-	CASE_OFF2NAME_4(VexGuestARMState, guest_##x##y)	\
-	return #x"["#y"]";
+void ARMCPUState::setPC(guest_ptr ip) { state2arm()->guest_R15T = ip; }
 
-	CASE_OFF2NAME_NUM(R,0)
-	CASE_OFF2NAME_NUM(R,1)
-	CASE_OFF2NAME_NUM(R,2)
-	CASE_OFF2NAME_NUM(R,3)
-	CASE_OFF2NAME_NUM(R,4)
-	CASE_OFF2NAME_NUM(R,5)
-	CASE_OFF2NAME_NUM(R,6)
-	CASE_OFF2NAME_NUM(R,7)
-	CASE_OFF2NAME_NUM(R,8)
-	CASE_OFF2NAME_NUM(R,9)
-	CASE_OFF2NAME_NUM(R,10)
-	CASE_OFF2NAME2(FP, R11)
-	CASE_OFF2NAME2(IP, R12)
-	CASE_OFF2NAME2(SP, R13)
-	CASE_OFF2NAME2(LR, R14)
-	CASE_OFF2NAME2(PC, R15T)
-	CASE_OFF2NAME(CC_OP)
-	CASE_OFF2NAME(CC_DEP1)
-	CASE_OFF2NAME(CC_DEP2)
-	CASE_OFF2NAME(CC_NDEP)
-	CASE_OFF2NAME(QFLAG32)
-	CASE_OFF2NAME(GEFLAG0)
-	CASE_OFF2NAME(GEFLAG1)
-	CASE_OFF2NAME(GEFLAG2)
-	CASE_OFF2NAME(GEFLAG3)
-	CASE_OFF2NAME(EMNOTE)
-	CASE_OFF2NAME(CMSTART)
-	CASE_OFF2NAME(CMLEN)
-	CASE_OFF2NAME(NRADDR)
-	CASE_OFF2NAME(IP_AT_SYSCALL)
-	CASE_OFF2NAME_NUM(D,0)
-	CASE_OFF2NAME_NUM(D,1)
-	CASE_OFF2NAME_NUM(D,2)
-	CASE_OFF2NAME_NUM(D,3)
-	CASE_OFF2NAME_NUM(D,4)
-	CASE_OFF2NAME_NUM(D,5)
-	CASE_OFF2NAME_NUM(D,6)
-	CASE_OFF2NAME_NUM(D,7)
-	CASE_OFF2NAME_NUM(D,8)
-	CASE_OFF2NAME_NUM(D,9)
-	CASE_OFF2NAME_NUM(D,10)
-	CASE_OFF2NAME_NUM(D,11)
-	CASE_OFF2NAME_NUM(D,12)
-	CASE_OFF2NAME_NUM(D,13)
-	CASE_OFF2NAME_NUM(D,14)
-	CASE_OFF2NAME_NUM(D,15)
-	CASE_OFF2NAME_NUM(D,16)
-	CASE_OFF2NAME_NUM(D,17)
-	CASE_OFF2NAME_NUM(D,18)
-	CASE_OFF2NAME_NUM(D,19)
-	CASE_OFF2NAME_NUM(D,20)
-	CASE_OFF2NAME_NUM(D,21)
-	CASE_OFF2NAME_NUM(D,22)
-	CASE_OFF2NAME_NUM(D,23)
-	CASE_OFF2NAME_NUM(D,24)
-	CASE_OFF2NAME_NUM(D,25)
-	CASE_OFF2NAME_NUM(D,26)
-	CASE_OFF2NAME_NUM(D,27)
-	CASE_OFF2NAME_NUM(D,28)
-	CASE_OFF2NAME_NUM(D,29)
-	CASE_OFF2NAME_NUM(D,30)
-	CASE_OFF2NAME_NUM(D,31)
-	CASE_OFF2NAME(FPSCR)
-	CASE_OFF2NAME(TPIDRURO)
-	CASE_OFF2NAME(ITSTATE)
-#undef CASE_OFF2NAME2
-#undef CASE_OFF2NAME
-#define CASE_OFF2NAME2(x,y)	\
-	case offsetof(ExtVexGuestARMState, guest_##y) ... 3+offsetof(VexGuestARMState, guest_##y): \
-	return #x;
-#define CASE_OFF2NAME(x)				\
-	CASE_OFF2NAME_4(ExtVexGuestARMState, guest_##x)	\
-	return #x;
-	CASE_OFF2NAME(LINKED)
-	default: return NULL;
-	}
-	return NULL;
+guest_ptr ARMCPUState::getPC(void) const {
+	/* todo is this right, do we need to mask the low
+	   bits that control whether its in thumb mode or not? */
+	return guest_ptr(state2arm()->guest_R15T);
 }
 
 void ARMCPUState::setStackPtr(guest_ptr stack_ptr)
