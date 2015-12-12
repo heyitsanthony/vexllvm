@@ -16,43 +16,39 @@ extern "C" {
 const char* MIPS32CPUState::abi_spim_scregs[] =
 { "R2", "R4", "R5", "R6", "R7", "R8", "R9", NULL};
 
+#define reg_field_ent_w_n(x, w, n) { #x, w, n, offsetof(VexGuestMIPS32State, guest_##x), true }
+#define reg_field_ent(x) reg_field_ent_w_n(x, sizeof(((VexGuestMIPS32State*)0)->guest_##x), 1)
+#define raw_field_ent_w_n(x, w, n) { #x, w, n, offsetof(VexGuestMIPS32State, x), true }
+#define raw_field_ent(x) raw_field_ent_w_n(x, sizeof((VexGuestMIPS32State*)0)->x, 1)
+
+
 static struct guest_ctx_field mips32_fields[] =
 {
-//	{32, 32, "GPR"},
-	{32, 1, "R0"}, {32, 1, "R1"}, {32, 1, "R2"}, {32, 1, "R3"},
-	{32, 1, "R4"}, {32, 1, "R5"}, {32, 1, "R6"}, {32, 1, "R7"},
-	{32, 1, "R8"}, {32, 1, "R9"}, {32, 1, "R10"}, {32, 1, "R11"},
-	{32, 1, "R12"}, {32, 1, "R13"}, {32, 1, "R14"}, {32, 1, "R15"},
-	{32, 1, "R16"}, {32, 1, "R17"}, {32, 1, "R18"}, {32, 1, "R19"},
-	{32, 1, "R20"}, {32, 1, "R21"}, {32, 1, "R22"}, {32, 1, "R23"},
-	{32, 1, "R24"}, {32, 1, "R25"}, {32, 1, "R26"}, {32, 1, "R27"},
-	{32, 1, "R28"}, {32, 1, "R29"}, {32, 1, "R30"}, {32, 1, "R31"},
+	{ "R", 4, 32, offsetof(VexGuestMIPS32State, guest_r0), true },
+	reg_field_ent(PC),
+	reg_field_ent(HI),
+	reg_field_ent(LO),
+	{ "F", 8, 32, offsetof(VexGuestMIPS32State, guest_f0), true },
 
-	{32, 1, "PC"},
-	{32, 1, "HI"},
-	{32, 1, "LO"},
-	{32, 32, "FPR"},
+	reg_field_ent(FIR),
+	reg_field_ent(FCCR),
+	reg_field_ent(FEXR),
+	reg_field_ent(FENR),
+	reg_field_ent(FCSR),
 
-	{32, 1, "FIR"},
-	{32, 1, "FCCR"},
-	{32, 1, "FEXR"},
-	{32, 1, "FENR"},
-	{32, 1, "FCSR"},
+	reg_field_ent(ULR),
+	reg_field_ent(EMNOTE),
 
-	{32, 1, "ULR"},
-	{32, 1, "EMWARN"},
+	reg_field_ent(CMSTART),
+	reg_field_ent(CMLEN),
+	reg_field_ent(NRADDR),
 
-	{32, 1, "CMSTART"},
-	{32, 1, "CMLEN"},
-	{32, 1, "NRADDR"},
+	raw_field_ent(host_EvC_FAILADDR),
+	raw_field_ent(host_EvC_COUNTER),
+	reg_field_ent(COND),
 
-	{32, 1, "FAILADDR"},
-	{32, 1, "COUNTER"},
-	{32, 1, "COND"},
-
-	{32, 5, "pad"},
+	raw_field_ent(padding),
 	/* END VEX STRUCTURE */
-
 	{0}	/* time to stop */
 };
 

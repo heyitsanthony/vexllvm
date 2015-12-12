@@ -450,21 +450,37 @@ Type* GenLLVM::getGuestTy(void)
 	auto			i128ty = VectorType::get(i16ty, 8);
 	auto			i256ty = VectorType::get(i16ty, 16);
 
-	unsigned expected_off = 0;
+	struct guest_ctx_field	tmp_f;
+	unsigned		expected_off = 0;
 	/* add all fields to 'types' vector from guest fields */
 	for (auto p : *guest.getCPUState()) {
-		const auto	&f = guest.getCPUState()->getField(p.second);
+retry:
+		auto		f = &guest.getCPUState()->getField(p.second);
 		unsigned	cur_off = p.first;
 		Type		*t;
-
+		// mask anything with overlapping offset
 		if (expected_off > cur_off) continue;
+
 		if (expected_off < cur_off) {
-			std::cerr	<< "expected off: " << expected_off
-					<< ". got off: " << cur_off << '\n';
-			abort();
+//			std::cerr << "GOT: " << f->f_name << '\n';
+//			std::cerr	<< "expected off: " << expected_off
+//					<< ". got off: " << cur_off << '\n';
+			tmp_f.f_count = 1;
+			tmp_f.f_len = cur_off - expected_off;
+			switch (tmp_f.f_len) {
+			case 2:
+			case 4:
+			case 8:
+			case 16:
+			case 32: break;
+			default:
+				tmp_f.f_count = tmp_f.f_len;
+				tmp_f.f_len = 1;
+			}
+			f = &tmp_f;
 		}
 
-		switch (f.f_len) {
+		switch (f->f_len * 8) {
 		case 8:		t = i8ty;	break;
 		case 16:	t = i16ty;	break;
 		case 32:	t = i32ty;	break;
@@ -472,15 +488,17 @@ Type* GenLLVM::getGuestTy(void)
 		case 128:	t = i128ty;	break;
 		case 256:	t = i256ty;	break;
 		default:
-			std::cerr << "UGH w=" << f.f_len << '\n';
+			std::cerr << "UGH w=" << f->f_len << '\n';
 			assert( 0 == 1 && "BAD FIELD WIDTH");
 		}
 
-		for (unsigned int c = 0; c < f.f_count; c++) {
+
+		for (unsigned int c = 0; c < f->f_count; c++) {
 			types.push_back(t);
 		}
 
-		expected_off += f.f_count * (f.f_len / 8);
+		expected_off += f->f_count * f->f_len;
+		if (f == &tmp_f) goto retry;
 	}
 	return StructType::create(gctx, types, "guestCtxTy");
 }

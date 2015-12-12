@@ -14,68 +14,71 @@ extern "C" {
 
 #define state2i386()	((VexGuestX86State*)(state_data))
 
+#define reg_field_ent_w_n(x, w, n) { #x, w, n, offsetof(VexGuestX86State, guest_##x), true }
+#define reg_field_ent(x) reg_field_ent_w_n(x, sizeof(((VexGuestX86State*)0)->guest_##x), 1)
+#define raw_field_ent_w_n(x, w, n) { #x, w, n, offsetof(VexGuestX86State, x), true }
+#define raw_field_ent(x) raw_field_ent_w_n(x, sizeof((VexGuestX86State*)0)->x, 1)
+
+
 /* ripped from libvex_guest_86 */
 static struct guest_ctx_field x86_fields[] =
 {
-	{32, 1, "EvC_FAILADDR"},
-	{32, 1, "EvC_COUNTER"},
+	raw_field_ent(host_EvC_FAILADDR),
+	raw_field_ent(host_EvC_COUNTER),
 
-	{32, 1, "EAX"},
-	{32, 1, "ECX"},
-	{32, 1, "EDX"},
-	{32, 1, "EBX"},
-	{32, 1, "ESP"},
-	{32, 1, "EBP"},
-	{32, 1, "ESI"},
-	{32, 1, "EDI"},
+	reg_field_ent(EAX),
+	reg_field_ent(ECX),
+	reg_field_ent(EDX),
+	reg_field_ent(EBX),
+	reg_field_ent(ESP),
+	reg_field_ent(EBP),
+	reg_field_ent(ESI),
+	reg_field_ent(EDI),
 
-	{32, 1, "CC_OP"},
-	{32, 1, "CC_DEP1"},
-	{32, 1, "CC_DEP2"},
-	{32, 1, "CC_NDEP"},
+	reg_field_ent(CC_OP),
+	reg_field_ent(CC_DEP1),
+	reg_field_ent(CC_DEP2),
+	reg_field_ent(CC_NDEP),
 
-	{32, 1, "DFLAG"},
-	{32, 1, "IDFLAG"},
-	{32, 1, "ACFLAG"},
+	reg_field_ent(DFLAG),
+	reg_field_ent(IDFLAG),
+	reg_field_ent(ACFLAG),
 
-	{32, 1, "EIP"},
+	reg_field_ent(EIP),
 
-	{64, 8, "FPREG"},
-	{8, 8, "FPTAG"},
-	{32, 1, "FPROUND"},
-	{32, 1, "FC3210"},
-	{32, 1, "FTOP"},
+	reg_field_ent_w_n(FPREG, 8, 8),
+	reg_field_ent_w_n(FPTAG, 1, 8),
+	reg_field_ent(FPROUND),
+	reg_field_ent(FC3210),
+	reg_field_ent(FTOP),
 
-	{32, 1, "SSEROUND"},
-	{128, 8, "XMM"},
+	reg_field_ent(SSEROUND),
+	{ "XMM", 16, 8, offsetof(VexGuestX86State, guest_XMM0), true },
 
 
-	{16, 1, "CS"},
-	{16, 1, "DS"},
-	{16, 1, "ES"},
-	{16, 1, "FS"},
-	{16, 1, "GS"},
-	{16, 1, "SS"},
+	reg_field_ent(CS),
+	reg_field_ent(DS),
+	reg_field_ent(ES),
+	reg_field_ent(FS),
+	reg_field_ent(GS),
+	reg_field_ent(SS),
 
-	{64, 1, "LDT"},
-	{64, 1, "GDT"},
+	reg_field_ent(LDT),
+	reg_field_ent(GDT),
 
-	{32, 1, "EMWARN"},
+	reg_field_ent(EMNOTE),
 
-	{32, 1, "TISTART"},
-	{32, 1, "TILEN"},
+	reg_field_ent(CMSTART),
+	reg_field_ent(CMLEN),
 
 	/* unredirected guest addr at start of translation whose
 	 * start has been redirected */
-	{32, 1, "NRADDR"},
+	reg_field_ent(NRADDR),
 
 	/* darwin hax */
-	{64, 1, "SC_CLASS"},
-
-	{32, 1, "IP_AT_SYSCALL"},
-
-
-	{32, 4, "pad"},
+	reg_field_ent(SC_CLASS),
+	reg_field_ent(IP_AT_SYSCALL),
+	raw_field_ent(padding1),
 	/* END VEX STRUCTURE */
 
 	{0}	/* time to stop */

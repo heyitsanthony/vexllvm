@@ -7,70 +7,73 @@
 
 #include "sc_xlate.h"
 #include "cpu/amd64cpustate.h"
+#include <cstddef>
 
 #define state2amd64()	((VexGuestAMD64State*)(state_data))
+
+#define reg_field_ent_w_n(x, w, n) { #x, w, n, offsetof(VexGuestAMD64State, guest_##x), true }
+#define reg_field_ent(x) reg_field_ent_w_n(x, sizeof((VexGuestAMD64State*)0)->guest_##x, 1)
+#define raw_field_ent_w_n(x, w, n) { #x, w, n, offsetof(VexGuestAMD64State, x), true }
+#define raw_field_ent(x) raw_field_ent_w_n(x, sizeof((VexGuestAMD64State*)0)->x, 1)
 
 /* ripped from libvex_guest_amd64 */
 static struct guest_ctx_field amd64_fields[] =
 {
-	{64, 1, "EvC_FAILADDR"},
-	{32, 1, "EvC_COUNTER"},
-	{32, 1, "EvC_PAD"},
-//	{64, 16, "GPR"},	/* 0-15, 8*16 = 128*/
-	{64, 1, "RAX"},
-	{64, 1, "RCX"},
-	{64, 1, "RDX"},
-	{64, 1, "RBX"},
-	{64, 1, "RSP"},
-	{64, 1, "RBP"},
-	{64, 1, "RSI"},
-	{64, 1, "RDI"},
-	{64, 1, "R8"},
-	{64, 1, "R9"},
-	{64, 1, "R10"},
-	{64, 1, "R11"},
-	{64, 1, "R12"},
-	{64, 1, "R13"},
-	{64, 1, "R14"},
-	{64, 1, "R15"},
+	raw_field_ent(host_EvC_FAILADDR),
+	raw_field_ent(host_EvC_COUNTER),
+	raw_field_ent(pad0),
+	reg_field_ent(RAX),
+	reg_field_ent(RCX),
+	reg_field_ent(RDX),
+	reg_field_ent(RBX),
+	reg_field_ent(RSP),
+	reg_field_ent(RBP),
+	reg_field_ent(RSI),
+	reg_field_ent(RDI),
+	reg_field_ent(R8),
+	reg_field_ent(R9),
+	reg_field_ent(R10),
+	reg_field_ent(R11),
+	reg_field_ent(R12),
+	reg_field_ent(R13),
+	reg_field_ent(R14),
+	reg_field_ent(R15),
 
-	{64, 1, "CC_OP"},	/* 16, 128 */
-	{64, 1, "CC_DEP1"},	/* 17, 136 */
-	{64, 1, "CC_DEP2"},	/* 18, 144 */
-	{64, 1, "CC_NDEP"},	/* 19, 152 */
+	reg_field_ent(CC_OP),	/* 16, 128 */
+	reg_field_ent(CC_DEP1),	/* 17, 136 */
+	reg_field_ent(CC_DEP2),	/* 18, 144 */
+	reg_field_ent(CC_NDEP),	/* 19, 152 */
 
-	{64, 1, "DFLAG"},	/* 20, 160 */
-	{64, 1, "RIP"},		/* 21, 168 */
-	{64, 1, "ACFLAG"},	/* 22, 176 */
-	{64, 1, "IDFLAG"},	/* 23 */
+	reg_field_ent(DFLAG),	/* 20, 160 */
+	reg_field_ent(RIP),		/* 21, 168 */
+	reg_field_ent(ACFLAG),	/* 22, 176 */
+	reg_field_ent(IDFLAG),	/* 23 */
 
-	{64, 1, "FS_ZERO"},	/* 24 */
+	reg_field_ent(FS_ZERO),	/* 24 */
 
-	{64, 1, "SSEROUND"},
-	{256, 17, "YMM"},	/* there is an YMM16 for valgrind stuff */
+	reg_field_ent(SSEROUND),
 
-	{32, 1, "FTOP"},
-	{64, 8, "FPREG"},
-	{8, 8, "FPTAG"},
+	{ "YMM", 32, 17, offsetof(VexGuestAMD64State, guest_YMM0), true },
 
-	{64, 1, "FPROUND"},
-	{64, 1, "FC3210"},
+	reg_field_ent(FTOP),
+	reg_field_ent_w_n(FPREG, 8, 8),
+	reg_field_ent_w_n(FPTAG, 1, 8),
 
-	{32, 1, "EMWARN"},
+	reg_field_ent(FPROUND),
+	reg_field_ent(FC3210),
 
-	{64, 1, "TISTART"},
-	{64, 1, "TILEN"},
+	reg_field_ent(EMNOTE),
 
 	/* unredirected guest addr at start of translation whose
 	 * start has been redirected */
-	{64, 1, "NRADDR"},
+	reg_field_ent(NRADDR),
 
 	/* darwin hax */
-	{64, 1, "SC_CLASS"},
-	{64, 1, "GS_0x60"},
-	{64, 1, "IP_AT_SYSCALL"},
+	reg_field_ent(SC_CLASS),
+	reg_field_ent(GS_0x60),
+	reg_field_ent(IP_AT_SYSCALL),
 
-	{64, 1, "pad1"},
+	raw_field_ent(pad1),
 	/* END VEX STRUCTURE */
 
 	{0}	/* time to stop */

@@ -20,69 +20,50 @@ struct ExtVexGuestARMState
 #define state2arm()	((VexGuestARMState*)(state_data))
 #define state2arm_ext() ((ExtVexGuestARMState*)(state_data))
 
+#define reg_field_ent_w_n(x, w, n) { #x, w, n, offsetof(VexGuestARMState, guest_##x), true }
+#define reg_field_ent(x) reg_field_ent_w_n(x, sizeof(((VexGuestARMState*)0)->guest_##x), 1)
+#define raw_field_ent_w_n(x, w, n) { #x, w, n, offsetof(VexGuestARMState, x), true }
+#define raw_field_ent(x) raw_field_ent_w_n(x, sizeof((VexGuestARMState*)0)->x, 1)
+
 /* ripped from libvex_guest_arm */
 static struct guest_ctx_field arm_fields[] =
 {
-	{32, 2, "EvC"},
-//	{32, 16, "GPR"},
+	raw_field_ent(host_EvC_FAILADDR),
+	raw_field_ent(host_EvC_COUNTER),
+	{"R", 4, 16, offsetof(VexGuestARMState, guest_R0), true},
 
-	{32, 1, "R0"},
-	{32, 1, "R1"},
-	{32, 1, "R2"},
-	{32, 1, "R3"},
-	{32, 1, "R4"},
-
-	{32, 1, "R5"},
-	{32, 1, "R6"},
-	{32, 1, "R7"},
-	{32, 1, "R8"},
-	{32, 1, "R9"},
-
-	{32, 1, "R10"},
-	{32, 1, "R11"},
-	{32, 1, "R12"},
-	{32, 1, "R13"},
-	{32, 1, "R14"},
-
-	{32, 1, "R15T"},
-
-	{32, 1, "CC_OP"},
-	{32, 1, "CC_DEP1"},
-	{32, 1, "CC_DEP2"},
-	{32, 1, "CC_NDEP"},
-
-	{32, 1, "QFLAG32"},
-
-	{32, 1, "GEFLAG0"},
-	{32, 1, "GEFLAG1"},
-	{32, 1, "GEFLAG2"},
-	{32, 1, "GEFLAG3"},
-	
-	{32, 1, "EMNOTE"},
-	
-	{32, 1, "CMSTART"},
-	{32, 1, "CMLEN"},
+	reg_field_ent(CC_OP),
+	reg_field_ent(CC_DEP1),
+	reg_field_ent(CC_DEP2),
+	reg_field_ent(CC_NDEP),
+	reg_field_ent(QFLAG32),
+	reg_field_ent(GEFLAG0),
+	reg_field_ent(GEFLAG1),
+	reg_field_ent(GEFLAG2),
+	reg_field_ent(GEFLAG3),
+	reg_field_ent(EMNOTE),
+	reg_field_ent(CMSTART),
+	reg_field_ent(CMLEN),
 
 	/* unredirected guest addr at start of translation whose
 	 * start has been redirected */
-	{32, 1, "NRADDR"},
+	reg_field_ent(NRADDR),
+	reg_field_ent(IP_AT_SYSCALL),
 
-	{32, 1, "IP_AT_SYSCALL"},
 
-	{64, 32, "VFP_R"},
-	{32, 1, "FPSCR"},
+	{"D", 8, 32, offsetof(VexGuestARMState, guest_D0), true},
+	reg_field_ent(FPSCR),
 
-	{32, 1, "TPIDRURO"},
+	reg_field_ent(TPIDRURO),
 
-	{32, 1, "ITSTATE"},
-
-	{32, 5, "pad"},
+	reg_field_ent(ITSTATE),
+	raw_field_ent(padding1),
 
 	/* END VEX STRUCTURE */
-	{32, 1, "LINKED"},	/* we set this when load linked happens
-				   clear it when a later store conditional
-				   should fail */
-
+	/* we set this when load linked happens
+	   clear it when a later store conditional
+	   should fail */
+	{ "LINKED", 4, 1, sizeof(VexGuestARMState), true},
 	{0}	/* time to stop */
 };
 
