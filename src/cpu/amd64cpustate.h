@@ -43,8 +43,6 @@ public:
 		const user_fpregs_struct& fpregs);
 
 #endif
-	virtual void print(std::ostream& os, const void*) const;
-	static void print(std::ostream& os, const VexGuestAMD64State& vs);
 
 	static uint64_t getRFLAGS(const VexGuestAMD64State& v);
 

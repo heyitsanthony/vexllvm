@@ -108,61 +108,6 @@ void AMD64CPUState::setStackPtr(guest_ptr stack_ptr)
 guest_ptr AMD64CPUState::getStackPtr(void) const
 { return guest_ptr(state2amd64()->guest_RSP); }
 
-#define YMM_BASE	offsetof(VexGuestAMD64State, guest_YMM0)
-/* 32 because of YMM / AVX extensions */
-#define get_xmm_lo(x,i)	((const uint64_t*)(	\
-	&(((const uint8_t*)(x))[YMM_BASE+32*i])))[0]
-#define get_xmm_hi(x,i)	((const uint64_t*)(	\
-	&(((const uint8_t*)(x))[YMM_BASE+32*i])))[1]
-#define get_ymm_lo(x,i)	((const uint64_t*)(	\
-	&(((const uint8_t*)(x))[YMM_BASE+32*i])))[2]
-#define get_ymm_hi(x,i)	((const uint64_t*)(	\
-	&(((const uint8_t*)(x))[YMM_BASE+32*i])))[3]
-
-/* XXX: is there a smarter way to do this? */
-void AMD64CPUState::print(std::ostream& os, const VexGuestAMD64State& vs)
-{
-	os << "RIP: " << (void*)vs.guest_RIP << "\n";
-	os << "RAX: " << (void*)vs.guest_RAX << "\n";
-	os << "RBX: " << (void*)vs.guest_RBX << "\n";
-	os << "RCX: " << (void*)vs.guest_RCX << "\n";
-	os << "RDX: " << (void*)vs.guest_RDX << "\n";
-	os << "RSP: " << (void*)vs.guest_RSP << "\n";
-	os << "RBP: " << (void*)vs.guest_RBP << "\n";
-	os << "RDI: " << (void*)vs.guest_RDI << "\n";
-	os << "RSI: " << (void*)vs.guest_RSI << "\n";
-	os << "R8: " << (void*)vs.guest_R8 << "\n";
-	os << "R9: " << (void*)vs.guest_R9 << "\n";
-	os << "R10: " << (void*)vs.guest_R10 << "\n";
-	os << "R11: " << (void*)vs.guest_R11 << "\n";
-	os << "R12: " << (void*)vs.guest_R12 << "\n";
-	os << "R13: " << (void*)vs.guest_R13 << "\n";
-	os << "R14: " << (void*)vs.guest_R14 << "\n";
-	os << "R15: " << (void*)vs.guest_R15 << "\n";
-
-	os << "RFLAGS: " << (void*)getRFLAGS(vs) << '\n';
-
-	for (int i = 0; i < 16; i++) {
-		os
-		<< "YMM" << i
-		<< ": "<< (void*)get_xmm_hi(&vs,i)
-		<< "|" << (void*)get_xmm_lo(&vs,i)
-		<< "(" << (void*)get_ymm_hi(&vs,i)
-		<< "|" << (void*)get_ymm_lo(&vs,i)
-		<< ")" << std::endl;
-	}
-
-	for (int i = 0; i < 8; i++) {
-		int r  = (vs.guest_FTOP + i) & 0x7;
-		os	<< "ST" << i << ": "
-			<< (void*)vs.guest_FPREG[r] << std::endl;
-	}
-	os << "FPROUND: " << (void*)vs.guest_FPROUND << std::endl;
-	os << "FC3210: " << (void*)vs.guest_FC3210 << std::endl;
-	os << "EMNOTE: " << (void*)(intptr_t)vs.guest_EMNOTE << std::endl;
-	os << "fs_base = " << (void*)vs.guest_FS_ZERO << std::endl;
-}
-
 #define FLAGS_MASK	(0xff | (1 << 10) | (1 << 11))
 uint64_t AMD64CPUState::getRFLAGS(const VexGuestAMD64State& v)
 {
@@ -171,13 +116,6 @@ uint64_t AMD64CPUState::getRFLAGS(const VexGuestAMD64State& v)
 	guest_rflags &= FLAGS_MASK;
 	guest_rflags |= (1 << 1);
 	return guest_rflags;
-}
-
-void AMD64CPUState::print(std::ostream& os, const void* regctx) const
-{
-	VexGuestAMD64State	*s;
-	s = const_cast<VexGuestAMD64State*>((const VexGuestAMD64State*)regctx);
-	print(os, *s);
 }
 
 void AMD64CPUState::setFSBase(uintptr_t base)
