@@ -1,6 +1,8 @@
 #include <sys/ptrace.h>
 #include <asm/ptrace-abi.h>
+#include <sys/uio.h>
 #include <sys/mman.h>
+#include <linux/elf.h>
 
 #include "cpu/i386_macros.h"
 #include "cpu/i386cpustate.h"
@@ -52,27 +54,27 @@ void PTShadowI386::slurpRegisters(void)
 	auto vgs = (VexGuestX86State*)gs->getCPUState()->getStateData();
 	auto &regs = _pt_cpu->getRegs();
 
-	vgs->guest_EAX = regs.orig_rax;
-	vgs->guest_EBX = regs.rbx;
-      	vgs->guest_ECX = regs.rcx;
-      	vgs->guest_EDX = regs.rdx;
-      	vgs->guest_ESI = regs.rsi;
-	vgs->guest_ESP = regs.rsp;
-	vgs->guest_EBP = regs.rbp;
-	vgs->guest_EDI = regs.rdi;
-	vgs->guest_EIP = regs.rip;
+	vgs->guest_EAX = regs.orig_eax;
+	vgs->guest_EBX = regs.ebx;
+	vgs->guest_ECX = regs.ecx;
+	vgs->guest_EDX = regs.edx;
+	vgs->guest_ESI = regs.esi;
+	vgs->guest_ESP = regs.esp;
+	vgs->guest_EBP = regs.ebp;
+	vgs->guest_EDI = regs.edi;
+	vgs->guest_EIP = regs.eip;
 
-	vgs->guest_CS = regs.cs;
-	vgs->guest_DS = regs.ds;
-	vgs->guest_ES = regs.es;
-	vgs->guest_FS = regs.fs;
-	vgs->guest_GS = regs.gs;
-	vgs->guest_SS = regs.ss;
+	vgs->guest_CS = regs.xcs;
+	vgs->guest_DS = regs.xds;
+	vgs->guest_ES = regs.xes;
+	vgs->guest_FS = regs.xfs;
+	vgs->guest_GS = regs.xgs;
+	vgs->guest_SS = regs.xss;
 
 	/* allocate GDT */
 	if (!vgs->guest_GDT && !vgs->guest_LDT) {
 		fprintf(stderr, INFOSTR "gs=%p. fs=%p\n",
-			(void*)regs.gs, (void*)regs.fs);
+			(void*)regs.xgs, (void*)regs.xfs);
 		setupGDT();
 	}
 }
@@ -160,36 +162,39 @@ bool PTShadowI386::readThreadEntry(unsigned idx, VEXSEG* buf)
 
 bool PTShadowI386::patchCPUID(void)
 {
-	struct user_regs_struct regs;
+	struct x86_user_regs	regs;
 	VexGuestX86State	fakeState;
 	int			err;
 	static bool		has_patched = false;
+	struct iovec		iov;
 
-	err = ptrace((__ptrace_request)PTRACE_GETREGS, child_pid, NULL, &regs);
+	iov.iov_base = &regs;
+	iov.iov_len = sizeof(regs);
+	err = ptrace((__ptrace_request)PTRACE_GETREGSET, child_pid, NT_PRSTATUS, &iov);
 	assert(err != -1);
 
 	/* -1 because the trap opcode is dispatched */
-	if (has_patched && cpuid_insts.count(regs.rip-1) == 0) {
-		fprintf(stderr, INFOSTR "unpatched addr %p\n", (void*)regs.rip);
+	if (has_patched && cpuid_insts.count(regs.eip-1) == 0) {
+		fprintf(stderr, INFOSTR "unpatched addr %p\n", (void*)regs.eip);
 		return false;
 	}
 
-	fakeState.guest_EAX = regs.rax;
-	fakeState.guest_EBX = regs.rbx;
-	fakeState.guest_ECX = regs.rcx;
-	fakeState.guest_EDX = regs.rdx;
+	fakeState.guest_EAX = regs.eax;
+	fakeState.guest_EBX = regs.ebx;
+	fakeState.guest_ECX = regs.ecx;
+	fakeState.guest_EDX = regs.edx;
 	x86g_dirtyhelper_CPUID_sse2(&fakeState);
-	regs.rax = fakeState.guest_EAX;
-	regs.rbx = fakeState.guest_EBX;
-	regs.rcx = fakeState.guest_ECX;
-	regs.rdx = fakeState.guest_EDX;
+	regs.eax = fakeState.guest_EAX;
+	regs.ebx = fakeState.guest_EBX;
+	regs.ecx = fakeState.guest_ECX;
+	regs.edx = fakeState.guest_EDX;
 
-	fprintf(stderr, INFOSTR "patched CPUID @ %p\n", (void*)regs.rip);
+	fprintf(stderr, INFOSTR "patched CPUID @ %p\n", (void*)regs.eip);
 
 	/* skip over the extra byte from the cpuid opcode */
-	regs.rip += (has_patched) ? 1 : 2;
+	regs.eip += (has_patched) ? 1 : 2;
 
-	err = ptrace((__ptrace_request)PTRACE_SETREGS, child_pid, NULL, &regs);
+	err = ptrace((__ptrace_request)PTRACE_SETREGSET, child_pid, NT_PRSTATUS, &iov);
 	assert (err != -1);
 
 	has_patched = true;

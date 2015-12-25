@@ -380,7 +380,7 @@ tests-arm: all $(ARMTRACEDEPS_PATH)
 	RUNCMD=bin/elf_run ONLY_BUILTIN=1 BUSYBOX=1 REALARCH=`uname -m` EMUARCH=armv6l VEXLLVM_LIBARY_ROOT=/usr/arm-linux-gnueabi REALPATH=tests/traces-bin EMUPATH=tests/traces-arm-bin OUTPATH=tests/traces-arm-out tests/traces.sh
 
 tests-i386: all $(I386TRACEDEPS_PATH)
-	RUNCMD=bin/elf_run ONLY_BUILTIN=1 BUSYBOX=1 REALARCH=`uname -m` EMUARCH=i686 REALPATH=tests/traces-bin EMUPATH=tests/traces-i386-bin OUTPATH=tests/traces-i386-out tests/traces.sh
+	RUNCMD=bin/elf_run GUEST_32_ARCH=1 ONLY_BUILTIN=1 BUSYBOX=1 REALARCH=`uname -m` EMUARCH=i686 REALPATH=tests/traces-bin EMUPATH=tests/traces-i386-bin OUTPATH=tests/traces-i386-out tests/traces.sh
 
 tests-pt_xchk: all $(TRACEDEPS_PATH)
 	RUNCMD=bin/pt_xchk OUTPATH=tests/traces-xchk-out tests/traces.sh
