@@ -159,7 +159,7 @@ bool PTShadowAMD64::isMatch(void) const
 	for(int i = 0; i < 8; ++i) {
 		int r  = (state.guest_FTOP + i) & 0x7;
 		bool is_ok = fcompare(
-			&fpregs.st_space[4 * i],
+			&fpregs.st_space[2 * i],
 			state.guest_FPREG[r]);
 		if(!is_ok) {
 			x87_ok = false;
@@ -341,7 +341,7 @@ void PTShadowAMD64::printFPRegs(std::ostream& os) const
 	for(int i = 0; i < 8; ++i) {
 		int r  = (ref.guest_FTOP + i) & 0x7;
 		if (!fcompare(
-			&fpregs.st_space[i * 4],
+			&fpregs.st_space[i * 2],
 			ref.guest_FPREG[r]))
 		{
 			os << "***";
