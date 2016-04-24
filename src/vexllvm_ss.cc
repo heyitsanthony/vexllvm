@@ -13,8 +13,7 @@
 #include "guestptimg.h"
 #include "procargs.h"
 
-void dumpIRSBs(void)
-{ std::cerr << "DUMPING LOGS" << std::cerr; }
+void dumpIRSBs(void) { std::cerr << "DUMPING LOGS\n"; }
 
 GuestPTImg* createAttached(void)
 {

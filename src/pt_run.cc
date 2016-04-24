@@ -18,7 +18,7 @@ static VexExec *vexexec;
 
 void dumpIRSBs(void)
 {
-	std::cerr << "DUMPING LOGS" << std::cerr;
+	std::cerr << "DUMPING LOGS\n";
 	vexexec->dumpLogs(std::cerr);
 }
 
