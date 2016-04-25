@@ -80,7 +80,7 @@ std::unique_ptr<Module> VexHelpers::loadModFromPath(const char* path)
 			<< path << "': " << s << '\n';
 	}
 	assert (ret_mod && "Couldn't parse bitcode mod");
-	auto err = ret_mod->materializeAllPermanently();
+	auto err = ret_mod->materializeAll();
 	if (err) {
 		std::cerr << "Materialize failed... " << std::endl;
 		assert (0 == 1 && "BAD MOD");
