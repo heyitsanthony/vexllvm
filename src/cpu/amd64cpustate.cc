@@ -49,7 +49,7 @@ static struct guest_ctx_field amd64_fields[] =
 	reg_field_ent(ACFLAG),	/* 22, 176 */
 	reg_field_ent(IDFLAG),	/* 23 */
 
-	reg_field_ent(FS_ZERO),	/* 24 */
+	reg_field_ent(FS_CONST),	/* 24 */
 
 	reg_field_ent(SSEROUND),
 
@@ -70,7 +70,7 @@ static struct guest_ctx_field amd64_fields[] =
 
 	/* darwin hax */
 	reg_field_ent(SC_CLASS),
-	reg_field_ent(GS_0x60),
+	reg_field_ent(GS_CONST),
 	reg_field_ent(IP_AT_SYSCALL),
 
 	raw_field_ent(pad1),
@@ -119,10 +119,10 @@ uint64_t AMD64CPUState::getRFLAGS(const VexGuestAMD64State& v)
 }
 
 void AMD64CPUState::setFSBase(uintptr_t base)
-{ state2amd64()->guest_FS_ZERO = base; }
+{ state2amd64()->guest_FS_CONST = base; }
 
 uintptr_t AMD64CPUState::getFSBase() const
-{ return state2amd64()->guest_FS_ZERO; }
+{ return state2amd64()->guest_FS_CONST; }
 
 static const int arg2reg[] =
 {
@@ -159,7 +159,7 @@ void AMD64CPUState::setRegs(
 	v.guest_RIP = regs.rip;
 
 	assert (regs.fs_base != 0 && "TLS is important to have!!!");
-	v.guest_FS_ZERO = regs.fs_base;
+	v.guest_FS_CONST = regs.fs_base;
 
 	/* XXX: in the future we want to slurp the full YMM registers */
 	/* definitely need smarter ptrace code GETREGSET */

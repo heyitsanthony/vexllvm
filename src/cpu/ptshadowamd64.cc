@@ -1,6 +1,7 @@
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
 #include <sys/mman.h>
+#include <stddef.h>
 #include <signal.h>
 
 #include "cpu/ptshadowamd64.h"
@@ -47,7 +48,7 @@ const struct user_regs_desc user_regs_desc_tab[REG_COUNT] =
 	USERREG_ENTRY(r13, R13),
 	USERREG_ENTRY(r14, R14),
 	USERREG_ENTRY(r15, R15),
-	USERREG_ENTRY(fs_base, FS_ZERO)
+	USERREG_ENTRY(fs_base, FS_CONST)
 	// TODO: segments?
 	// but valgrind/vex seems to not really fully handle them, how sneaky
 };
@@ -121,7 +122,7 @@ bool PTShadowAMD64::isMatch(void) const
 	// if ptrace fs_base == 0, then we have a fixup but the ptraced
 	// process doesn't-- don't flag as an error!
 	seg_fail = (regs->fs_base != 0)
-		? (regs->fs_base ^ state.guest_FS_ZERO)
+		? (regs->fs_base ^ state.guest_FS_CONST)
 		: false;
 
 	//TODO: consider evaluating CC fields, ACFLAG, etc?

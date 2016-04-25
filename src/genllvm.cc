@@ -98,10 +98,12 @@ void GenLLVM::beginBB(const char* name)
 	Function::arg_iterator arg = cur_f->arg_begin();
 
 	//arg->addAttr(Attributes(Attributes::NoAlias));
-	cur_guest_ctx = arg++;
+	cur_guest_ctx = &(*arg);
+	arg++;
 
 	if (log_last_store) {
-		cur_memory_log = arg++;
+		cur_memory_log = &(*arg);
+		arg++;
 		memlog_slot = 0;
 	}
 }

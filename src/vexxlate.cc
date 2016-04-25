@@ -76,9 +76,12 @@ static IRSB* vex_finaltidy(IRSB* irsb)
 	return irsb;
 }
 
-static UInt vex_needs_self_check(void*, VexGuestExtents* ) { return 0; }
+static UInt vex_needs_self_check(
+	void*,
+	VexRegisterUpdates*,
+	const VexGuestExtents* ) { return 0; }
 
-static void vex_log(HChar* hc, Int nbytes)
+static void vex_log(const HChar* hc, SizeT nbytes)
 {
 	switch (log_type) {
 	case VexXlate::VX_LOG_NONE:
@@ -93,7 +96,7 @@ static void vex_log(HChar* hc, Int nbytes)
 	}
 }
 
-static Bool vex_chase_ok(void* cb, Addr64 x) { return false; }
+static Bool vex_chase_ok(void* cb, Addr x) { return false; }
 
 #define ARM_HWCAPS	\
 			VEX_HWCAPS_ARM_NEON |	\
@@ -154,7 +157,7 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 		vc.guest_chase_thresh = 0;
 	}
 
-	LibVEX_Init(vex_exit, vex_log, VEX_DEBUG_LEVEL, false, &vc);
+	LibVEX_Init(vex_exit, vex_log, VEX_DEBUG_LEVEL, &vc);
 
 	LibVEX_default_VexAbiInfo(&vbi);
 
@@ -279,10 +282,10 @@ VexSB* VexXlate::xlate(const void* guest_bytes, uint64_t guest_addr)
 		/* amd64 reserves 128 bytes below the stack frame
 		 * for turbo-nerd functions like memcpy. kind of breaks things */
 		vbi.guest_stack_redzone_size = 128;
-		/* gs_is_0x60: necessary so kernel code will decode */
-		vbi.guest_amd64_assume_gs_is_0x60 = 1;
+		/* gs_is_const: necessary so kernel code will decode */
+		vbi.guest_amd64_assume_gs_is_const = 1;
 	}
-	vbi.guest_amd64_assume_fs_is_zero = true;	/* XXX LIBVEX FIXME */
+	vbi.guest_amd64_assume_fs_is_const = true;	/* XXX LIBVEX FIXME */
 	vta.abiinfo_both = vbi;
 
 	g_cb.cb_guestaddr = guest_addr;
