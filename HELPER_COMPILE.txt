@@ -1,5 +1,0 @@
-clang -emit-llvm -DHAVE_CONFIG_H -I. -I..  -I.. -I../include -I../VEX/pub -DVGA_amd64=1 -DVGO_linux=1 -DVGP_amd64_linux=1 -Ipriv  -m64 -fomit-frame-pointer -O3 -g -Wall -Wmissing-prototypes -Wshadow -Wpointer-arith -Wstrict-prototypes -Wmissing-declarations -Wno-format-zero-length -fno-strict-aliasing -Wbad-function-cast -Wcast-qual -Wcast-align -fstrict-aliasing -Wno-long-long  -Wno-pointer-sign -fno-stack-protector -MT libvex_amd64_linux_a-guest_amd64_helpers.o -MD -MP -MF .deps/libvex_amd64_linux_a-guest_amd64_helpers.Tpo -c -o libvex_amd64_helpers.bc  priv/guest_amd64_helpers_llvm.c
-
-opt -strip-debug libvex_amd64_helpers.bc >opt.bc
-
-mv opt.bc libvex_amd64_helpers.bc
