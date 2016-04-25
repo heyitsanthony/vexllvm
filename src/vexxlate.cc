@@ -238,6 +238,7 @@ VexSB* VexXlate::patchBadDecode(const void* guest_bytes, uint64_t guest_addr)
 		}
 	}
 
+#if PATCH_DECODE_STI
 	if (arch == VexArchAMD64) {
 		for (unsigned i = 0; i < 128; i++) {
 			if (gb[i] == 0xfa || gb[i] == 0xfb) {
@@ -249,6 +250,7 @@ VexSB* VexXlate::patchBadDecode(const void* guest_bytes, uint64_t guest_addr)
 			}
 		}
 	}
+#endif
 
 	/* XXX: add 32-bit syscall patch */
 
