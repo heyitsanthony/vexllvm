@@ -22,7 +22,7 @@ class VexHelpers
 public:
 	static std::unique_ptr<VexHelpers> create(Arch::Arch);
 	virtual ~VexHelpers();
-	mod_list getModules(void) const;
+	umod_list takeModules(void);
 	virtual llvm::Function* getHelper(const char* s) const;
 	void moveToJITEngine(JITEngine&);
 	void loadUserMod(const char* path);

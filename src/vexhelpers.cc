@@ -92,14 +92,16 @@ std::unique_ptr<Module> VexHelpers::loadModFromPath(const char* path)
 	return ret_mod;
 }
 
-mod_list VexHelpers::getModules(void) const
+umod_list VexHelpers::takeModules(void)
 {
-	mod_list	l;
-	for (auto& m : user_mods) {
-		l.push_back(m.get());
+	umod_list	l;
+	while (!user_mods.empty()) {
+		auto m = (user_mods.front()).release();
+		user_mods.pop_front();
+		l.emplace_back(m);
 	}
-	if (helper_mod) l.push_back(helper_mod.get());
-	l.push_back(vexop_mod.get());
+	if (helper_mod) l.emplace_back(std::move(helper_mod));
+	l.emplace_back(std::move(vexop_mod));
 	return l;
 }
 
