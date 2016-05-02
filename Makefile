@@ -110,7 +110,7 @@ VEXLIB="/usr/lib/valgrind/libvex-arm-linux.a"
 endif
 
 ifeq ($(shell uname -m), x86_64)
-VEXLIB="/usr/lib/valgrind/libvex-amd64-linux.a"
+VEXLIB="/usr/lib/valgrind/libvexmultiarch-amd64-linux.a" "/usr/lib/valgrind/libvex-amd64-linux.a"
 OBJBASE +=	cpu/ptshadowamd64.o	\
 		cpu/ptshadowi386.o	\
 		cpu/amd64_trampoline.o
