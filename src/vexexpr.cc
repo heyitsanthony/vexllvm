@@ -191,7 +191,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpLE64F0x2);
 	BINOP_TAGOP(CmpEQ64F0x2);
 	BINOP_TAGOP(CmpUN64F0x2);
-	
+
 	BINOP_TAGOP(SetV128lo64);
 	BINOP_TAGOP(SetV128lo32);
 
@@ -472,7 +472,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(QAdd32Sx4);
 	BINOP_TAGOP(QAdd32Ux2);
 	BINOP_TAGOP(QAdd32Ux4);
-	
+
 	BINOP_TAGOP(QAdd16Sx2);
 	BINOP_TAGOP(QAdd16Sx4);
 	BINOP_TAGOP(QAdd16Sx8);
@@ -601,7 +601,7 @@ return new VexExprUnop##x(in_parent, expr)
 	BINOP_TAGOP(CmpUN64Fx2);
 	BINOP_TAGOP(Perm8x8);
 	BINOP_TAGOP(Perm8x16);
-	
+
 	TRIOP_TAGOP(PRemF64);
 	TRIOP_TAGOP(PRemC3210F64);
 
@@ -648,7 +648,10 @@ VexExprConst* VexExprConst::createConst(
 	CONST_TAGOP(F64);
 	CONST_TAGOP(F64i);
 	CONST_TAGOP(V128);
-	default: break;
+	CONST_TAGOP(V256);
+	default:
+		fprintf(stderr, "bad const tag 0x%x\n", expr->Iex.Const.con->tag);
+		abort();
 	}
 	return NULL;
 }
@@ -687,17 +690,30 @@ Value* VexExprConstV128::emit(void) const
 		std::vector<Constant*>(
 			data,
 			data + sizeof(data)/sizeof(Constant*)));
-			
+
 	return theGenLLVM->to16x8i(cv);
 }
 
-// 3.7.0
-#if 0
-Value* VexExprConstF32::emit(void) const {
-	return ConstantFP::get(
-		getGlobalContext(),
-		APFloat(F32)); }
-#endif
+Value* VexExprConstV256::emit(void) const
+{
+	using namespace llvm;
+	Constant	* data[] = {
+		ConstantInt::get(getGlobalContext(),
+			APInt(64, bitmask8_to_bytemask64((V256 >> 0) & 0xFF))),
+		ConstantInt::get(getGlobalContext(),
+			APInt(64, bitmask8_to_bytemask64((V256 >> 8) & 0xFF))),
+		ConstantInt::get(getGlobalContext(),
+			APInt(64, bitmask8_to_bytemask64((V256 >> 16) & 0xFF))),
+		ConstantInt::get(getGlobalContext(),
+			APInt(64, bitmask8_to_bytemask64((V256 >> 24) & 0xFF))),
+	};
+	Value	*cv = ConstantVector::get(
+		std::vector<Constant*>(
+			data,
+			data + sizeof(data)/sizeof(Constant*)));
+
+	return theGenLLVM->to32x8i(cv);
+}
 
 Value* VexExprConstF64i::emit(void) const
 {

@@ -137,7 +137,6 @@ Type* GenLLVM::vexTy2LLVM(IRType ty)
 	case Ity_I64:	return IntegerType::get(getGlobalContext(), 64);
 	case Ity_F32:	return Type::getFloatTy(getGlobalContext());
 	case Ity_F64:	return Type::getDoubleTy(getGlobalContext());
-//	case Ity_I128:	 TODO
 	case Ity_V128:
 		return VectorType::get(
 			Type::getInt8Ty(getGlobalContext()),
@@ -435,6 +434,15 @@ Value* GenLLVM::to16x8i(Value* v) const
 		VectorType::get(
 			Type::getInt8Ty(getGlobalContext()), 16));
 }
+
+Value* GenLLVM::to32x8i(Value* v) const
+{
+	return builder->CreateBitCast(
+		v,
+		VectorType::get(
+			Type::getInt8Ty(getGlobalContext()), 32));
+}
+
 
 void GenLLVM::memFence(void) { builder->CreateFence(SequentiallyConsistent); }
 

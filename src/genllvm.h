@@ -54,6 +54,7 @@ public:
 	llvm::Function* endBB(llvm::Value*);
 	void setExitType(uint8_t exit_type);
 	llvm::Value* to16x8i(llvm::Value*) const;
+	llvm::Value* to32x8i(llvm::Value*) const;
 	void memFence(void);
 	void setFakeSysReads(void) { fake_vsys_reads = true; }
 
