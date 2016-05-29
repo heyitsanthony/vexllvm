@@ -26,7 +26,7 @@ public:
 	virtual llvm::Function* getHelper(const char* s) const;
 	void moveToJITEngine(JITEngine&);
 	void loadUserMod(const char* path);
-	void useExternalMod(std::shared_ptr<llvm::Module> m);
+	void useExternalMod(llvm::Module* m);
 
 	static std::unique_ptr<llvm::Module> loadModFromPath(const char* path);
 protected:
@@ -42,7 +42,7 @@ private:
 	umod_list		user_mods;
 	const char		*bc_dirpath;
 
-	std::shared_ptr<llvm::Module>		ext_mod;
+	llvm::Module		*ext_mod; // owned by someone else
 };
 
 class VexHelperDummy : public VexHelpers

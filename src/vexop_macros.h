@@ -164,7 +164,7 @@ Value* VexExprUnop##x::emit(void) const					\
 	std::vector<llvm::Type*> call_args;				\
 	call_args.push_back(y->getScalarType());			\
 	f = Intrinsic::getDeclaration(					\
-		theGenLLVM->getModule(),				\
+		&theGenLLVM->getModule(),				\
 		Intrinsic::z, ArrayRef<Type*>(call_args));		\
 	assert (f != NULL);						\
 	a1 = builder->CreateCall(f, a1);

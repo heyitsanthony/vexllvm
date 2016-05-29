@@ -15,7 +15,7 @@ void vexop_setup_fp(VexHelpers* vh) {}
 	std::vector<llvm::Type*> call_args;				\
 	call_args.push_back(y);						\
 	f = Intrinsic::getDeclaration(					\
-		theGenLLVM->getModule(),				\
+		&theGenLLVM->getModule(),				\
 		Intrinsic::z, ArrayRef<Type*>(call_args)); 		\
 	assert (f != NULL);						\
 	v1 = builder->CreateCall(f, v1);				

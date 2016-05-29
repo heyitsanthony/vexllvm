@@ -22,6 +22,7 @@ extern void vexop_setup_fp(VexHelpers* vh);
 
 VexHelpers::VexHelpers(Arch::Arch in_arch)
 : arch(in_arch)
+, ext_mod(nullptr)
 {
 	/* env not set => assume running from git root */
 	bc_dirpath = getenv("VEXLLVM_HELPER_PATH");
@@ -169,7 +170,7 @@ std::unique_ptr<llvm::Module> VexHelperDummy::loadMod(const char* path)
 	return nullptr;
 }
 
-void VexHelpers::useExternalMod(std::shared_ptr<Module> m)
+void VexHelpers::useExternalMod(Module* m)
 {
 	assert (ext_mod == nullptr);
 	destroyMods();

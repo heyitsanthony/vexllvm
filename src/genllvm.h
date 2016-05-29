@@ -27,7 +27,7 @@ public:
 	virtual ~GenLLVM(void) {}
 
 	llvm::IRBuilder<>* getBuilder(void) { return builder.get(); }
-	llvm::Module* getModule(void) { return mod.get(); }
+	llvm::Module& getModule(void) { return *mod; }
 	std::unique_ptr<llvm::Module> takeModule(const char* new_name = nullptr);
 
 	static llvm::Type* vexTy2LLVM(IRType ty);
