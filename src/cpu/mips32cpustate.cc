@@ -24,6 +24,9 @@ const char* MIPS32CPUState::abi_spim_scregs[] =
 
 static struct guest_ctx_field mips32_fields[] =
 {
+	raw_field_ent(host_EvC_FAILADDR),
+	raw_field_ent(host_EvC_COUNTER),
+
 	{ "R", 4, 32, offsetof(VexGuestMIPS32State, guest_r0), true },
 	reg_field_ent(PC),
 	reg_field_ent(HI),
@@ -43,11 +46,18 @@ static struct guest_ctx_field mips32_fields[] =
 	reg_field_ent(CMLEN),
 	reg_field_ent(NRADDR),
 
-	raw_field_ent(host_EvC_FAILADDR),
-	raw_field_ent(host_EvC_COUNTER),
 	reg_field_ent(COND),
 
-	raw_field_ent(padding),
+	reg_field_ent(DSPControl),
+	{ "AC", 8, 4, offsetof(VexGuestMIPS32State, guest_ac0), true },
+
+	reg_field_ent(CP0_status),
+	reg_field_ent(CP0_Config5),
+	reg_field_ent(LLaddr),
+	reg_field_ent(LLdata),
+	{ "W", 16, 32, offsetof(VexGuestMIPS32State, guest_w0), true },
+	reg_field_ent(MSACSR),
+	raw_field_ent(_padding3),
 	/* END VEX STRUCTURE */
 	{0}	/* time to stop */
 };

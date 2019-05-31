@@ -55,9 +55,9 @@ static struct guest_ctx_field arm_fields[] =
 	reg_field_ent(FPSCR),
 
 	reg_field_ent(TPIDRURO),
+	reg_field_ent(TPIDRURW),
 
 	reg_field_ent(ITSTATE),
-	raw_field_ent(padding1),
 
 	/* END VEX STRUCTURE */
 	/* we set this when load linked happens

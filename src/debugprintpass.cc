@@ -6,6 +6,7 @@
 #include <set>
 #include <iostream>
 
+#include "genllvm.h"
 #include "debugprintpass.h"
 
 char DebugPrintPass::ID;

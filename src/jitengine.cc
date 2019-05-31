@@ -16,6 +16,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "genllvm.h"
+
 #include "jitobjcache.h"
 #include "jitengine.h"
 
@@ -231,6 +233,10 @@ std::unique_ptr<ExecutionEngine> JITEngine::mod_to_engine(
 	std::set<std::string> new_fns;
 	for (auto & f : *m) {
 		std::string fn = f.getName().str();
+		if (func_addrs.count(fn)) {
+			if (!f.isMaterializable())
+				continue;
+		}
 		assert(!func_addrs.count(fn));
 		new_fns.insert(fn);
 	}
@@ -255,7 +261,9 @@ std::unique_ptr<ExecutionEngine> JITEngine::mod_to_engine(
 
 	new_engine->finalizeObject();
 	for (auto & fn : new_fns) {
-		void	*fptr = new_engine->getPointerToNamedFunction(fn, false);
+		if (fn.empty())
+			continue;
+		auto fptr = new_engine->getPointerToNamedFunction(fn, false);
 		if (!fptr) {
 			// std::cerr << "Ignoring " << fn << '\n';
 			continue;
@@ -295,7 +303,7 @@ void JITEngine::runPasses(llvm::Module& m)
 		return;
 
 	// Create a function pass manager for this engine
-	auto fpm = std::make_unique<FunctionPassManager>(&m);
+	auto fpm = std::make_unique<llvm::legacy::FunctionPassManager>(&m);
 
 	// Set up the optimizer pipeline.  Start with registering info about how the
 	// target lays out data structures.

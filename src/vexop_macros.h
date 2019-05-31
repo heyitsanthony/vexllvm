@@ -178,7 +178,7 @@ Value* VexExprUnop##x::emit(void) const	\
 	llvm::Function	*f;	\
 	llvm::Value	*v;	\
 	v = args[0]->emit();	\
-	f = theVexHelpers->getHelper(y);	\
+	f = theVexHelpers->getCallHelper(y);	\
 	assert (f != NULL);	\
 	return builder->CreateCall(f, v);	\
 }
@@ -188,7 +188,7 @@ Value* VexExprBinop##x::emit(void) const	\
 {						\
 	llvm::Function	*f;			\
 	BINOP_SETUP				\
-	f = theVexHelpers->getHelper(y);	\
+	f = theVexHelpers->getCallHelper(y);	\
 	assert (f != NULL);			\
 	std::vector<Value*>	v_(2);		\
 	v_[0] = builder->CreateBitCast(v1, z);	\

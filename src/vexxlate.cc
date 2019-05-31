@@ -127,6 +127,7 @@ VexXlate::VexXlate(Arch::Arch in_arch)
 	case Arch::X86_64:
 		arch = VexArchAMD64;
 		vai_guest.hwcaps |=	VEX_HWCAPS_AMD64_SSE3
+				| 	VEX_HWCAPS_AMD64_SSSE3
 				|	VEX_HWCAPS_AMD64_CX16
 				|	VEX_HWCAPS_AMD64_LZCNT
 				|	VEX_HWCAPS_AMD64_AVX

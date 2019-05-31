@@ -14,6 +14,7 @@
 #include "genllvm.h"
 #include "memlog.h"
 
+llvm::LLVMContext GenLLVM::llvm_ctx;
 std::unique_ptr<GenLLVM> theGenLLVM;
 
 #define GET_VEXSTATE	((VexCPUState*)guest.getCPUState())
@@ -21,6 +22,10 @@ std::unique_ptr<GenLLVM> theGenLLVM;
 using namespace llvm;
 
 unsigned int GenLLVM::mod_c = 0;
+
+llvm::LLVMContext& getGlobalContext() {
+	return GenLLVM::getContext();
+}
 
 GenLLVM::GenLLVM(const Guest& gs, const char* name)
 : guest(gs)
@@ -87,10 +92,7 @@ void GenLLVM::beginBB(const char* name)
 	// XXX: marking the regctx as noalias could mess up any instrumentation
 	// that wants to modify registers, but I'm not sure if that would ever
 	// be a thing I'd want to do
-	auto aa = Attribute::AttrKind::NoAlias;
-	ArrayRef<decltype(aa)>	ar(aa);
-	auto as = AttributeSet::get(getGlobalContext(), 0, ar);
-	cur_f->arg_begin()->addAttr(as);
+	cur_f->arg_begin()->addAttr(Attribute::AttrKind::NoAlias);
 
 	entry_bb = BasicBlock::Create(getGlobalContext(), "entry", cur_f);
 	builder->SetInsertPoint(entry_bb);
@@ -444,7 +446,7 @@ Value* GenLLVM::to32x8i(Value* v) const
 }
 
 
-void GenLLVM::memFence(void) { builder->CreateFence(SequentiallyConsistent); }
+void GenLLVM::memFence(void) { builder->CreateFence(AtomicOrdering::SequentiallyConsistent); }
 
 Type* GenLLVM::getGuestTy(void)
 {

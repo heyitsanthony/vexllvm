@@ -26,7 +26,8 @@ VexHelpers::VexHelpers(Arch::Arch in_arch)
 {
 	/* env not set => assume running from git root */
 	bc_dirpath = getenv("VEXLLVM_HELPER_PATH");
-	if (bc_dirpath == nullptr) bc_dirpath = "bitcode";
+	if (bc_dirpath == nullptr || strlen(bc_dirpath) == 0)
+		bc_dirpath = "bitcode";
 }
 
 void VexHelpers::loadDefaultModules(void)
@@ -58,11 +59,8 @@ void VexHelpers::loadDefaultModules(void)
 
 std::unique_ptr<VexHelpers> VexHelpers::create(Arch::Arch arch)
 {
-	VexHelpers	*vh;
-
-	vh = new VexHelpers(arch);
+	auto vh = new VexHelpers(arch);
 	vh->loadDefaultModules();
-
 	return std::unique_ptr<VexHelpers>(vh);
 }
 
@@ -72,7 +70,6 @@ std::unique_ptr<Module> VexHelpers::loadMod(const char* path)
 std::unique_ptr<Module> VexHelpers::loadModFromPath(const char* path)
 {
 	SMDiagnostic	diag;	
-
 	auto ret_mod = llvm::parseIRFile(path, diag, getGlobalContext());
 	if (ret_mod == nullptr) {
 		std::string	s(diag.getMessage());
@@ -85,10 +82,6 @@ std::unique_ptr<Module> VexHelpers::loadModFromPath(const char* path)
 	if (err) {
 		std::cerr << "Materialize failed... " << std::endl;
 		assert (0 == 1 && "BAD MOD");
-	}
-
-	if (ret_mod == nullptr) {
-		std::cerr << "OOPS. No mod. (path=" << path << ")\n";
 	}
 	return ret_mod;
 }
@@ -130,6 +123,24 @@ VexHelpers::~VexHelpers()
 	destroyMods();
 }
 
+Function* VexHelpers::getCallHelper(const char* s)
+{
+	auto &mod = theGenLLVM->getModule();
+	auto in_mod_f = mod.getFunction(s);
+	if (!in_mod_f) {
+		auto f = getHelper(s);
+		if (!f) {
+			return nullptr;
+		}
+		in_mod_f = Function::Create(
+			f->getFunctionType(),
+			Function::ExternalLinkage,
+			s,
+			mod);
+	}
+	return in_mod_f;
+}
+
 Function* VexHelpers::getHelper(const char* s) const
 {
 	Function	*f;
@@ -157,11 +168,11 @@ void VexHelpers::moveToJITEngine(JITEngine& je)
 	if (helper_mod)
 		je.moveModule(
 			std::unique_ptr<Module>(
-				CloneModule(helper_mod.get())));
+				CloneModule(*helper_mod)));
 	if (vexop_mod)
 		je.moveModule(
 			std::unique_ptr<Module>(
-				CloneModule(vexop_mod.get())));
+				CloneModule(*vexop_mod)));
 }
 
 std::unique_ptr<llvm::Module> VexHelperDummy::loadMod(const char* path)

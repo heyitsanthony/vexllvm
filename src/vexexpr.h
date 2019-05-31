@@ -216,11 +216,11 @@ private:
       VexExpr	*exprX;	/* false expr */
 };
 
-class VexExprBBPTR : public VexExpr
+class VexExprGSPTR : public VexExpr
 {
 public:
-	VexExprBBPTR(VexStmt* in_parent, const IRExpr* expr);
-	virtual ~VexExprBBPTR(void) {}
+	VexExprGSPTR(VexStmt* in_parent, const IRExpr* expr);
+	virtual ~VexExprGSPTR(void) {}
 	virtual llvm::Value* emit(void) const;
 	virtual void print(std::ostream& os) const;
 private:

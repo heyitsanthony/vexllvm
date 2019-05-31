@@ -67,9 +67,7 @@ void VexExec::setupStatics(Guest* in_gs)
 
 const VexSB* VexExec::getCachedVSB(guest_ptr p) const
 {
-	return jit_cache->getVSB(
-		gs->getMem()->getHostPtr(p),
-		p);
+	return jit_cache->getVSB(gs->getMem()->getHostPtr(p), p);
 }
 
 VexExec::~VexExec() {}
@@ -327,7 +325,6 @@ void VexExec::beginStepping(void)
 
 bool VexExec::stepVSB(void)
 {
-	const VexSB	*sb;
 	guest_ptr	top_addr;
 
 	if (exited) goto done_with_all;
@@ -339,18 +336,14 @@ bool VexExec::stepVSB(void)
 		gs->print(std::cerr);
 	}
 
-	sb = doNextSB();
-	if (sb) return true;
+	if (doNextSB())
+		return true;
 
 done_with_all:
 	/* ran out of stuff to do, but didn't exit */
 	if (!exited) return false;
 
-	/* exited */
-	std::cerr
-		<< "[VEXLLVM] Exit call. This should be fixed. "
-		<< "Exitcode=" << exit_code
-		<< std::endl;
+	std::cerr << "[VEXLLVM] Exiting. Exitcode=" << exit_code << '\n';
 	return false;
 }
 

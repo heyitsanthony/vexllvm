@@ -42,10 +42,14 @@ LLVMCONFIG_PATH = llvm-config
 endif
 
 
-ifeq ($(shell readlink guestlib),)
-$(error "No symlink 'guestlib' pointing to guestlib")
-endif
+ifneq ($(shell readlink guestlib),)
 GUESTLIB_PATH=`pwd`/guestlib
+else
+ifndef GUESTLIB_PATH
+$(error "GUESTLIB_PATH not defined")
+endif
+endif
+
 GUESTLIB=$(GUESTLIB_PATH)/bin/guestlib.a
 ifeq ($(shell ls $(GUESTLIB)),)
 $(error "No guestlib.a compiled?")
@@ -58,8 +62,6 @@ CFLAGS += $(CFLAG_LIBS)
 
 LLVMCC=clang
 LLVMCFLAGS=$(shell echo $(CFLAGS) | sed "s/-g//g")
-#CORECC=g++-4.4.5
-#CORELINK=g++
 CORECC=clang++
 CORELINK=clang++
 
@@ -87,13 +89,13 @@ OBJBASE=	vexcpustate.o		\
 		cpu/armsyscalls.o	\
 		cpu/mips32cpustate.o
 
-OBJSLLVM=	vexxlate.o		\
+OBJSLLVM=	genllvm.o		\
+		vexxlate.o		\
 		vexstmt.o		\
 		vexsb.o			\
 		vexexpr.o		\
 		vexop.o			\
 		memlog.o		\
-		genllvm.o		\
 		debugprintpass.o	\
 		jitengine.o		\
 		jitobjcache.o		\
@@ -119,23 +121,14 @@ endif
 OBJDEPS=$(OBJBASE) $(OBJSLLVM)
 
 #LLVMCONFIG_PATH=llvm-config
-CFLAGS += -I$(shell $(LLVMCONFIG_PATH) --includedir)
+CFLAGS +=-I$(shell $(LLVMCONFIG_PATH) --includedir)
 LLVMLDFLAGS=$(shell $(LLVMCONFIG_PATH) --ldflags)
 LLVMLINK=$(shell $(LLVMCONFIG_PATH) --bindir)/llvm-link
 LLVM_FLAGS_ORIGINAL=$(shell $(LLVMCONFIG_PATH) --ldflags --cxxflags --libs all)
 LLVMFLAGS:=$(shell echo "$(LLVM_FLAGS_ORIGINAL)" |  sed "s/c++11/c++14/g;s/-Woverloaded-virtual//;s/-fPIC//;s/-DNDEBUG//g;s/-O3/ /g;s/-Wno-maybe-uninitialized//g;") -Wall
 
-ifndef VALGRIND_TRUNK
-VALGRIND_TRUNK=/home4/ajromano/valgrind
-endif
-HAS_VALGRIND_TRUNK=$(shell [ -d $(VALGRIND_TRUNK) ] && echo \'yes\' )
-ifeq ($(HAS_VALGRIND_TRUNK), 'yes')
-	VEXLIB=$(VALGRIND_TRUNK)/lib/valgrind/libvex-amd64-linux.a
-	CFLAGS += -I$(VALGRIND_TRUNK)/include -DVALGRIND_TRUNK
-endif
-
 CFLAGS0= $(shell echo $(CFLAGS) | sed "s|-[lL][A-Za-z].*[^ ] | |g")
-LLVMFLAGS0= $(shell echo $(LLVMFLAGS) | sed "s| -[lL][A-Za-z0-9]*| |g;s|-L/usr/lib64[/ ]| |g")
+LLVMFLAGS0= $(shell echo $(LLVMFLAGS) | sed "s| -[lL][A-Za-z0-9_]*| |g;s|-L/usr/lib64/[^ ].*| |g")
 
 FPDEPS= vexop_fp.o
 SOFTFLOATDEPS=vexop_softfloat.o

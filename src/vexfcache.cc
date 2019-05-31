@@ -1,8 +1,10 @@
+#include <llvm/IR/Function.h>
+#include <llvm/Support/raw_ostream.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <list>
-#include "llvm/IR/Function.h"
 
 #include "Sugar.h"
 #include "vexsb.h"
@@ -146,7 +148,8 @@ Function* VexFCache::genFunctionByVSB(VexSB* vsb)
 	func_cache[vsb->getGuestAddr()] = f;
 	func_dc.put(vsb->getGuestAddr(), f);
 
-	if (dump_llvm) f->dump();
+	if (dump_llvm)
+		f->print(errs());
 
 	return f;
 }

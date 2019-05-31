@@ -74,7 +74,7 @@ VexExpr* VexExpr::create(VexStmt* in_parent, const IRExpr* expr)
 	ret = new VexExprMux0X(in_parent, expr);
 	break;
 
-	EXPR_TAGOP(BBPTR);
+	EXPR_TAGOP(GSPTR);
 
 	EXPR_TAGOP(CCall);
 	case Iex_Binder:
@@ -843,7 +843,7 @@ VexExprCCall::VexExprCCall(VexStmt* in_parent, const IRExpr* expr)
 			expr->Iex.CCall.args[i])));
 	}
 
-	func = theVexHelpers->getHelper(callee->name);
+	func = theVexHelpers->getCallHelper(callee->name);
 	assert (func != NULL && "No helper func for CCall. Ack.");
 }
 
@@ -851,11 +851,8 @@ VexExprCCall::VexExprCCall(VexStmt* in_parent, const IRExpr* expr)
 Value* VexExprCCall::emit(void) const
 {
 	std::vector<Value*>	args_v;
-
 	for (auto &arg : args) args_v.push_back(arg->emit());
-
-	return theGenLLVM->getBuilder()->CreateCall(
-		func, llvm::ArrayRef<llvm::Value*>(args_v));
+	return theGenLLVM->getBuilder()->CreateCall(func, args_v);
 }
 
 void VexExprCCall::print(std::ostream& os) const
@@ -868,14 +865,14 @@ void VexExprCCall::print(std::ostream& os) const
 	os << ")";
 }
 
-VexExprBBPTR::VexExprBBPTR(VexStmt* in_parent, const IRExpr* expr)
+VexExprGSPTR::VexExprGSPTR(VexStmt* in_parent, const IRExpr* expr)
 : VexExpr(in_parent)
 {}
 
-llvm::Value* VexExprBBPTR::emit(void) const
+llvm::Value* VexExprGSPTR::emit(void) const
 { return theGenLLVM->getCtxBase(); }
 
-void VexExprBBPTR::print(std::ostream& os) const { os << "BPP"; }
+void VexExprGSPTR::print(std::ostream& os) const { os << "BPP"; }
 
 VexExprMux0X::VexExprMux0X(VexStmt* in_parent, const IRExpr* expr)
 : VexExpr(in_parent),
@@ -894,10 +891,13 @@ VexExprMux0X::~VexExprMux0X(void)
 inline Value* flattenType(IRBuilder<> *builder, Value* v)
 {
 	if (isa<VectorType>(v->getType())) {
+		auto vt = static_cast<const VectorType*>(v->getType());
+		if (vt->getBitWidth() > 64) {
+			return v;
+		}
 		return builder->CreateBitCast(v, IntegerType::get(
 			getGlobalContext(),
-			static_cast<const VectorType*>(
-				v->getType())->getBitWidth()));
+			vt->getBitWidth()));
 	}
 
 	return v;

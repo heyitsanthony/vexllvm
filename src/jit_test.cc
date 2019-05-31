@@ -493,7 +493,7 @@ void doTest(Guest& gs, TestSB* tsb)
 	vsb = tsb->getSB();
 	f = vsb->emit(emitstr);
 	std::cerr << "TESTING: " << tsb->getName() << std::endl;
-	f->dump();
+	f->print(errs());
 	delete vsb;
 
 	assert (f && "FAILED TO EMIT FUNC??");

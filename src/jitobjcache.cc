@@ -1,4 +1,3 @@
-#include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/raw_os_ostream.h>
@@ -70,7 +69,7 @@ void JITObjectCache::notifyObjectCompiled(const Module *m, MemoryBufferRef obj)
 	}
 
 	std::error_code err;
-	raw_fd_ostream ir_obj_os(p.c_str(), err, sys::fs::F_RW);
+	raw_fd_ostream ir_obj_os(p.c_str(), err, sys::fs::FA_Read | sys::fs::FA_Write);
 	ir_obj_os << obj.getBuffer();
 }
 

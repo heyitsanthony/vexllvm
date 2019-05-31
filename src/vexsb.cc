@@ -1,3 +1,5 @@
+#include <llvm/Support/raw_ostream.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -141,7 +143,7 @@ void VexSB::printRegisters(std::ostream& os) const
 		if (v == NULL) continue;
 		std::string s = v->getName().str();
 		os << s;
-		v->dump();
+		v->print(errs());
 		os << "\n";
 	}
 }
@@ -155,8 +157,8 @@ llvm::Function* VexSB::emit(const char* fname)
 
 	theGenLLVM->beginBB(fname);
 
-	/* instructions */
-	foreach (it, stmts.begin(), stmts.end()) (*it)->emit();
+	for (auto &stmt : stmts)
+		stmt->emit();
 
 	/* compute goto */
 	ret_v = jump_expr->emit();

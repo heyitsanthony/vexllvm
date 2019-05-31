@@ -1,7 +1,6 @@
 #ifndef GENLLVM_H
 #define GENLLVM_H
 
-/* fuck it */
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -59,6 +58,8 @@ public:
 	void setFakeSysReads(void) { fake_vsys_reads = true; }
 
 	void setUseReloc(bool v) { use_reloc = v; }
+
+	static llvm::LLVMContext& getContext() { return llvm_ctx; }
 private:
 	llvm::Type* getGuestTy(void);
 	void mkFuncTy(void);
@@ -92,7 +93,11 @@ private:
 	bool			use_reloc;
 
 	static unsigned int	mod_c;
+
+	static llvm::LLVMContext	llvm_ctx;
 };
+
+llvm::LLVMContext& getGlobalContext();
 
 extern std::unique_ptr<GenLLVM> theGenLLVM;
 

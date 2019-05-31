@@ -283,10 +283,10 @@ CASE_OP(HSub8Sx4)
 CASE_OP(Sad8Ux4)
 CASE_OP(CmpNEZ16x2)
 CASE_OP(CmpNEZ8x4)
-CASE_OP(I32UtoFx2)
-CASE_OP(I32StoFx2)
-CASE_OP(FtoI32Ux2_RZ)
-CASE_OP(FtoI32Sx2_RZ)
+CASE_OP(I32UtoF32x2_DEP)
+CASE_OP(I32StoF32x2_DEP)
+CASE_OP(F32toI32Ux2_RZ)
+CASE_OP(F32toI32Sx2_RZ)
 CASE_OP(F32ToFixed32Ux2_RZ)
 CASE_OP(F32ToFixed32Sx2_RZ)
 CASE_OP(Fixed32UToF32x2_RN)
@@ -482,12 +482,12 @@ CASE_OP(RSqrtEst32Fx4)
 CASE_OP(RecipEst32Fx4)
 CASE_OP(RecipStep32Fx4)
 CASE_OP(RSqrtStep32Fx4)
-CASE_OP(I32UtoFx4)
-CASE_OP(I32StoFx4)
-CASE_OP(FtoI32Ux4_RZ)
-CASE_OP(FtoI32Sx4_RZ)
-CASE_OP(QFtoI32Ux4_RZ)
-CASE_OP(QFtoI32Sx4_RZ)
+CASE_OP(I32UtoF32x4_DEP)
+CASE_OP(I32StoF32x4_DEP)
+CASE_OP(F32toI32Ux4_RZ)
+CASE_OP(F32toI32Sx4_RZ)
+CASE_OP(QF32toI32Ux4_RZ)
+CASE_OP(QF32toI32Sx4_RZ)
 CASE_OP(RoundF32x4_RM)
 CASE_OP(RoundF32x4_RP)
 CASE_OP(RoundF32x4_RN)
@@ -1103,12 +1103,12 @@ Value* VexExprUnop##x::emit(void) const			\
 	llvm::Value	*v;	\
 	Value *res(builder->CreateBitCast(get_c(y->getBitWidth(), 0), y)); \
 	v = builder->CreateBitCast(args[0]->emit(), y); 	\
-	f = theVexHelpers->getHelper(fn);			\
+	f = theVexHelpers->getCallHelper(fn);			\
 	assert (f != NULL);		\
 	for (unsigned i = 0; i < y->getNumElements(); i++) {	\
 		Value	*e;	\
 		e = builder->CreateCall(	\
-			f,	\
+			f,		\
 			builder->CreateExtractElement(v, get_32i(i)));	\
 		res = builder->CreateInsertElement(res, e, get_32i(i)); \
 	} \

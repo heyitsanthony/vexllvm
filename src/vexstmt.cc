@@ -326,7 +326,7 @@ VexStmtDirty::VexStmtDirty(VexSB* in_parent, const IRStmt* in_stmt)
 
 	/* load function */
 	func_name = in_stmt->Ist.Dirty.details->cee->name;
-	func = theVexHelpers->getHelper(func_name);
+	func = theVexHelpers->getCallHelper(func_name);
 	if (func == NULL) {
 		std::cerr << "Could not find dirty function \"" <<
 			func_name << "\". Bye" << std::endl;
@@ -348,30 +348,37 @@ void VexStmtDirty::emit(void) const
 {
 	IRBuilder<>		*builder;
 	Value			*v_cmp, *v_call;
-	BasicBlock		*bb_then, *bb_merge, *bb_origin;
+	BasicBlock		*bb_merge, *bb_origin;
 	std::vector<Value*>	args_v;
 
 	builder = theGenLLVM->getBuilder();
 	bb_origin = builder->GetInsertBlock();
-	bb_then = BasicBlock::Create(
-		getGlobalContext(), "dirty_then",
-		bb_origin->getParent());
-	bb_merge = BasicBlock::Create(
-		getGlobalContext(), "dirty_merge",
-		bb_origin->getParent());
 
 	/* evaluate guard condition */
 	builder->SetInsertPoint(bb_origin);
 	v_cmp = guard->emit();
-	builder->CreateCondBr(v_cmp, bb_then, bb_merge);
 
-	/* guard condition OK, make drty call */
-	builder->SetInsertPoint(bb_then);
+	auto c = dyn_cast<Constant>(v_cmp);
+	bool is_br = !c || !c->isOneValue();
+	if (is_br) {
+		auto bb_then = BasicBlock::Create(
+			getGlobalContext(), "dirty_then",
+			bb_origin->getParent());
+		bb_merge = BasicBlock::Create(
+			getGlobalContext(), "dirty_merge",
+			bb_origin->getParent());
+		builder->CreateCondBr(v_cmp, bb_then, bb_merge);
 
-	foreach (it, args.begin(), args.end())
-		args_v.push_back((*it)->emit());
-	v_call = builder->CreateCall(
-		func, llvm::ArrayRef<llvm::Value*>(args_v));
+		/* guard condition OK, make drty call */
+		builder->SetInsertPoint(bb_then);
+	}
+
+	for (auto &v : args)
+		args_v.push_back(v->emit());
+	args_v[0] = builder->CreatePointerCast(
+		args_v[0],
+		func->arg_begin()->getType());
+	v_call = builder->CreateCall(func, args_v);
 
 	/* sometimes dirty calls don't set temporaries */
 	if (tmp_reg != -1) {
@@ -400,8 +407,10 @@ void VexStmtDirty::emit(void) const
 		parent->setRegValue(tmp_reg, result);
 	}
 
-	builder->CreateBr(bb_merge);
-	builder->SetInsertPoint(bb_merge);
+	if (is_br) {
+		builder->CreateBr(bb_merge);
+		builder->SetInsertPoint(bb_merge);
+	}
 }
 
 void VexStmtDirty::print(std::ostream& os) const
@@ -610,6 +619,9 @@ void VexStmtLoadG::emit(void) const
 	case ILGop_Ident32:
 		c_v = theGenLLVM->load(addr_v, get_i(32));
 		break;
+	case ILGop_IdentV128:
+		c_v = theGenLLVM->load(addr_v, Ity_V128);
+		break;
 	case ILGop_8Sto32:
 	case ILGop_8Uto32:
 		c_v = theGenLLVM->load(addr_v, get_i(8));
@@ -622,7 +634,9 @@ void VexStmtLoadG::emit(void) const
 	}
 
 	switch (loadg_op) {
-	case ILGop_Ident32: break;
+	case ILGop_Ident32:
+	case ILGop_IdentV128:
+		break;
 	case ILGop_16Uto32:
 	case ILGop_8Uto32:
 		c_v = builder->CreateZExt(c_v, get_i(32));
@@ -641,7 +655,6 @@ void VexStmtLoadG::emit(void) const
 	builder->SetInsertPoint(bb_merge);
 
 	pn = builder->CreatePHI(c_v->getType(), 0, "loadg_phi");
-
 	pn->addIncoming(c_v, bb_then);
 	pn->addIncoming(alt_v, bb_alt);
 	parent->setRegValue(dst_tmp, pn);
